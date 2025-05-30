@@ -1,0 +1,47 @@
+#ifndef _XLH_FORTREND_DATAHISTORY_SUBSYSTEM_INCLUDE_
+#define _XLH_FORTREND_DATAHISTORY_SUBSYSTEM_INCLUDE_
+
+#include <QWidget>
+
+#include <QWebEngineView>
+#include <QtWebEngine/QtWebEngine>
+#include <QWebEngineSettings>
+#include <QHash>
+
+namespace FC {
+class DataHistoryWidget;
+
+
+class DataHistoryWidgetPrivate;
+class DataHistoryWidget : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit DataHistoryWidget(QWidget *parent = 0);
+    ~DataHistoryWidget();
+public:
+    void resizeEvent(QResizeEvent *event);
+    void httpUpdate(const QList<QString> &name, const QList<int> &data);
+
+	QHash<QString, QHash<QString,int>> Data;
+
+    QList<int> httpdata;//单个线条的值
+    QList<QString> lineName;//线条名称
+private:
+    QList<QString> httpname;//x 时间轴
+
+
+public slots:
+    void onclick();
+	void onSelect();
+
+
+private:
+	Q_DECLARE_PRIVATE(DataHistoryWidget)
+	DataHistoryWidgetPrivate *d_ptr;
+};
+
+}
+#endif // WIDGET_H
+

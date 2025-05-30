@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="ValveWheel.svg" version="1.1" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd">
+ <sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="layer1" inkscape:cx="52.283347" inkscape:cy="110.35616" inkscape:deskcolor="#d1d1d1" inkscape:document-units="px" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="5.6136422" pagecolor="#ffffff"/>
+ <g inkscape:groupmode="layer" inkscape:label="图层 1">
+  <g transform="matrix(.93266 0 0 .96342 -9.9257 -48.261)" fill="#04a">
+   <g stroke-width="0">
+    <path d="m75.97 60.606a91.137 88.227 0 0 1 62.341-2e-6l-31.171 82.906z" inkscape:label="5" sodipodi:arc-type="slice" sodipodi:cx="107.14031" sodipodi:cy="143.51189" sodipodi:end="5.0614548" sodipodi:rx="91.136803" sodipodi:ry="88.227081" sodipodi:start="4.3633231" sodipodi:type="arc"/>
+    <path d="m21.5 173.69a91.137 88.227 0 0 1 0-60.351l85.641 30.175z" inkscape:label="4" sodipodi:arc-type="slice" sodipodi:cx="107.14031" sodipodi:cy="143.51189" sodipodi:end="3.4906585" sodipodi:rx="91.136803" sodipodi:ry="88.227081" sodipodi:start="2.7925268" sodipodi:type="arc"/>
+    <path d="m138.31 226.42a91.137 88.227 0 0 1-62.341 0l31.171-82.906z" inkscape:label="3" sodipodi:arc-type="slice" sodipodi:cx="107.14031" sodipodi:cy="143.51189" sodipodi:end="1.9198622" sodipodi:rx="91.136803" sodipodi:ry="88.227081" sodipodi:start="1.2217305" sodipodi:type="arc"/>
+    <path d="m192.78 113.34a91.137 88.227 0 0 1 0 60.351l-85.641-30.175z" inkscape:label="2" sodipodi:arc-type="slice" sodipodi:cx="107.14031" sodipodi:cy="143.51189" sodipodi:end="0.34906585" sodipodi:rx="91.136803" sodipodi:ry="88.227081" sodipodi:start="5.9341195" sodipodi:type="arc"/>
+   </g>
+   <ellipse cx="107.14" cy="143.51" rx="26.3" ry="25.46" stroke-width="3.9872" inkscape:label="6"/>
+  </g>
+  <ellipse cx="90" cy="90" rx="85" ry="85" fill="none" stroke="#0055d4" stroke-linejoin="round" stroke-width="10" inkscape:label="1"/>
+ </g>
+</svg>

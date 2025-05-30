@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="background">
+    <file>station_status.png</file>
+  </qresource>
+</RCC>

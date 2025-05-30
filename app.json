@@ -1,0 +1,32 @@
+{
+	"core": {
+		"defaultUser": "admin"
+	},
+	"xui": {
+		"panels": [
+            {
+                "name": "主界面",
+                "icon": ":/Imageblack/main_homepage.png",
+                "access": 0
+            },
+            {
+				"name": "设置",
+				"icon": ":/Imageblack/main_controlsettin.png",
+				"access": 3
+			},
+            {
+                "name": "配方",
+                "icon": ":/Imageblack/main_formula.png",
+                "access": 5
+            },
+			{
+				"name": "报警信息",
+				"icon": ":/Imageblack/main_alert.png",
+				"access": 5
+			}
+			
+		]
+
+	}
+
+}

@@ -1,0 +1,166 @@
+#include "Data/fortrend_data_subsystem_widget.h"
+#include "device/ui_fortrend_data_subsystem_widget.h"
+#include "Data/fortrend_data_subsystem_helper.h"
+
+#include "kernel/kernel_log.h"
+#include "Kernel/kernel_exception.h"
+
+#include "Poco/Format.h"
+
+#include <QDir>
+#include <QDebug>
+#include <QTimer>
+#include <QList>
+
+namespace FC{
+
+	class DataWidgetPrivate{
+		Q_DECLARE_PUBLIC(DataWidget)
+	public:
+		DataWidgetPrivate(DataWidget* p);
+		~DataWidgetPrivate();
+
+	private:
+		Ui::DataWidget *ui;
+
+	public:
+		DataWidget* q_ptr;
+		std::shared_ptr<DataSubSystemHelper> datahelper;
+		//database
+		bool db_en = true;
+		std::string db_file;
+	};
+	DataWidgetPrivate::DataWidgetPrivate(DataWidget* p) :
+		q_ptr(p),
+		datahelper(new DataSubSystemHelper()){
+
+	}
+	DataWidgetPrivate::~DataWidgetPrivate(){
+		
+	}
+
+
+	DataWidget::DataWidget(QWidget *parent) :
+		QWidget(parent),
+		d_ptr(new DataWidgetPrivate(this))
+	{
+		Q_D(DataWidget);
+		d->ui = new Ui::DataWidget();
+		d->ui->setupUi(this);
+
+		//数据加载
+		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/line-stack.html";
+		d->ui->qweb->load(QUrl(appDirPath));
+		lineName.append("gate 01");
+		lineName.append("gate 02");
+		lineName.append("gate 03");
+
+	
+
+		std::string db_file = "./data.data";
+		
+		int rc = 0;
+		rc = d->datahelper->opendb(db_file);
+		printf("DATA openDB %d \n",rc);
+
+		d->datahelper->createTable(
+			"CREATE TABLE IF NOT EXISTS test("
+			"id INTEGER PRIMARY KEY AUTOINCREMENT, "
+			"value INTEGER, "
+			"date TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')))"
+			);
+
+		//    更新数据
+	/*	QTimer * time = new QTimer(this);
+		connect(time, &QTimer::timeout, this, [=]{
+			onclick();
+		});
+		time->start(200);*/
+		
+
+	}
+
+	void DataWidget::onclick()
+	{
+		Q_D(DataWidget);
+		QString dateTime = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");//获取系统当前的时间
+		httpname.append(dateTime);
+
+		int randcount = 10;
+		qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime()));
+		randcount += qrand() % 10 + 10;
+
+		d->datahelper->exce(Poco::format(
+			"INSERT OR REPLACE INTO test "
+			"(value) "
+			"VALUES(%d);"
+			, randcount));
+
+		httpdata.append(randcount);//随机数
+
+		httpUpdate(httpname, httpdata);//更新html
+		if (httpdata.count() > 500){
+			httpdata.erase(httpdata.begin(), httpdata.begin() + 400);
+		}
+		if (httpname.count() > 500){
+			httpname.erase(httpname.begin(), httpname.begin() + 400);
+		}
+	}
+
+	DataWidget::~DataWidget()
+	{
+		Q_D(DataWidget);
+		delete d->ui;
+	}
+
+	//数据解析函数
+	void DataWidget::httpUpdate(const QList<QString> &name, const QList<int> &data)
+	{
+		Q_D(DataWidget);
+		//在QT中我们需要组成一个字符串将数据传过去
+		QString jscode = "onDataReceived([";
+		for (int i = 0; i < name.size(); i++)
+		{
+			jscode += QString("\"%1\"").arg(name[i]);
+			if (i < name.size() - 1)
+				jscode += ",";
+		}
+		jscode += "],";
+
+		//线条数据 拼接
+		QString lineData = "[";
+		for (int i = 0; i < data.size(); i++)
+		{
+			lineData += QString::number(data[i]);
+			if (i < data.size() - 1)
+				lineData += ",";
+		}
+		lineData += "]";
+
+		jscode += "[{name:'" + lineName[0] + "',data: " + lineData + ",type: 'line',stack: 'Total',smooth: true}";//第一个线条
+		jscode += ",{name:'" + lineName[1] + "',data: " + lineData + ",type: 'line',stack: 'Total',smooth: true}";//第二个线条
+		jscode += "])";
+		d->ui->qweb->page()->runJavaScript(jscode);
+	}
+
+
+
+
+	//自适应窗体
+	void DataWidget::resizeEvent(QResizeEvent *event){
+		Q_D(DataWidget);
+		// 调用父类的resizeEvent
+		QWidget::resizeEvent(event);
+
+		//重新加载
+		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/line-stack.html";
+		d->ui->qweb->load(QUrl(appDirPath));
+
+
+		// 获取窗体的大小
+		int width = event->size().width();
+		int height = event->size().height();
+		// 将自定义控件的大小设为窗体的大小
+		d->ui->qweb->setGeometry(0, 0, width, height);
+	}
+}

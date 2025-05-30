@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg enable-background="new 0 0 56.42 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="DigitalPressureOpenMeter.svg" version="1.1" viewBox="0 0 77 112.5" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd">
+ <sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="svg1" inkscape:cx="38.536564" inkscape:cy="49.951889" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="12.702222" pagecolor="#ffffff"/>
+ <g>
+  <title>Layer 1</title>
+  <g fill="#0055d4">
+   <rect x="56.494" y="42.422" width="16.55" height="17.543" fill="#0055d4" stroke-width="0"/>
+   <path d="m31.845 112.5 1.6817-2.4762v-13.947h1.6828v-74.243h-10.335v74.243h1.6817v13.948l1.6817 2.4762h3.6068"/>
+   <path d="m27.519 96.077h5.0463" stroke="#7f7f7f" stroke-width=".25811"/>
+   <path d="m27.519 110.02h5.0463" stroke="#7f7f7f" stroke-width=".25811"/>
+   <g stroke-width=".96859">
+    <g id="Group_Dial" transform="matrix(1.0671 0 0 .99889 .00013424 .12486)">
+     <ellipse cx="28.209" cy="50.946" rx="28.211" ry="28.063" fill="#0055d4" stroke-width=".96859"/>
+    </g>
+    <g id="Group_Bevel" transform="matrix(1.0671 0 0 .99889 .00013424 .12486)" stroke="#fff">
+     <path d="m46.284 61.824h-36.036l-1.352-1.576-0.9-3.153-0.45-3.829v-4.279l0.45-3.829 0.9-2.928 1.126-1.576h36.262l1.126 1.576 0.901 2.928 0.449 3.829v4.279l-0.449 3.829-0.901 3.153-1.126 1.576z" fill="#0055d4" stroke="#fff" stroke-width=".24215"/>
+    </g>
+    <g id="Group_Display" transform="matrix(1.0671 0 0 .99889 .00013424 .12486)">
+     <path d="m44.708 60.021h-33.109l-0.901-1.352-0.788-2.475-0.45-3.153v-3.604l0.45-3.153 0.788-2.703 0.901-1.352h33.108l1.126 1.352 0.676 2.478 0.45 3.378v3.604l-0.45 3.153-0.676 2.477-1.125 1.35z" fill="#0055d4" stroke="#c4c4c4" stroke-width=".24215"/>
+    </g>
+   </g>
+   <g stroke="#fff">
+    <g transform="matrix(1.0671 0 0 .99889 .00013424 .12486)">
+     <path d="m11.599 32.996h4.392v2.928h-4.392v-2.928z" stroke-width=".09686"/>
+     <path d="m22.41 32.996h4.054v2.928h-4.054v-2.928z" stroke-width=".09686"/>
+     <path d="m37.05 73.536-1.802-1.577v-2.477l1.802-1.803h2.479l1.576 1.803v2.477l-1.576 1.577h-2.479z" stroke-width=".09705"/>
+    </g>
+    <path d="m18.266 73.579-2.0424-1.5752v-2.4743l2.0424-1.801h2.5237l1.6817 1.801v2.4743l-1.6817 1.5752h-2.5237z" stroke-width=".1002"/>
+    <ellipse cx="38.215" cy="32.971" rx="5.6481" ry="5.2871" stroke-width=".1002"/>
+   </g>
+   <path d="m33.767 32.409h8.8931v1.1248h-8.8931v-1.1248z"/>
+   <path d="m23.914 21.16 0.48019-10.461 0.72135-0.67425 0.48126-9.2238 0.72029-0.67625h7.4494l0.72135 0.67525 0.72242 9.2238 0.48019 0.67425 0.72135 10.461-0.72135 0.67525h-11.296l-0.48019-0.67425" stroke="#4c4c4c" stroke-width=".25811"/>
+   <ellipse cx="72.611" cy="51.193" rx="1.3021" ry="12.818" fill="#0055d4" stroke-width="0"/>
+  </g>
+ </g>
+</svg>

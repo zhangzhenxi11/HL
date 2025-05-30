@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+  <meta charset="utf-8">
+</head>
+<body style="height: 100%; margin: 0">
+  <div id="container" style="height: 100%"></div>
+
+  <script src="./echarts.js"></script>
+  <script type="text/javascript">
+    var dom = document.getElementById('container');
+    var myChart = echarts.init(dom, null, {
+      renderer: 'canvas',
+      useDirtyRect: false
+    });
+    var app = {};
+    
+    var option;
+	
+	option = {
+	  title: {
+		text: 'Stacked Line'
+	  },
+	  tooltip: {
+		trigger: 'axis'
+	  },
+	   dataZoom: [
+          {
+	        show: true,
+	        type: 'slider',
+	        handleSize: 32, // 两边的按钮大小
+	        startValue: 0,  // 重点在这   -- 开始的值
+	        endValue: 10   // 重点在这   -- 结束的值
+	      },
+	      {
+	        // zoomLock: true, // 这个开启之后只能通过鼠标左右拉动，不能滚动显示
+	        type: 'inside'
+	      }
+       ],
+	  legend: {
+		data: ['gate 01', 'gate 02', 'gate 03', 'gate 04', 'gate 05']
+	  },
+	  grid: {
+		left: '3%',
+		right: '4%',
+		bottom: '3%',
+		containLabel: true
+	  },
+	  toolbox: {
+		feature: {
+		  saveAsImage: {}
+		}
+	  },
+	  xAxis: {
+		type: 'category',
+		boundaryGap: false,
+		data: []
+	  },
+	  yAxis: {
+		type: 'value'
+	  },
+	  series: [
+		
+	  ]
+	};
+	
+	//数据接收函数，原理就是需要改变数据的地方，重置那部分数据就可以
+     function onDataReceived(name, datalen) {
+         var option = {
+             xAxis: {
+                 data: name,
+				 interval: 3000,
+				 splitLine: {
+				     show: false
+				 }
+             },
+			 series:datalen
+         };
+         myChart.setOption(option)
+     }
+         
+      myChart.setOption(option);
+   
+  </script>
+</body>
+</html>

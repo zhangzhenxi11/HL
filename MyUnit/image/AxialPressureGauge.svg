@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg enable-background="new 0 0 96.732 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="AxialPressureGauge.svg" version="1.1" viewBox="0 0 96.732 112.5" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"><sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="svg35" inkscape:cx="24.6875" inkscape:cy="84.4375" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="8" pagecolor="#ffffff" showguides="true"><sodipodi:guide inkscape:locked="false" orientation="1,0" position="29.772113,83.120244"/><sodipodi:guide inkscape:locked="false" orientation="1,0" position="66.681247,77.733567"/></sodipodi:namedview>
+ 
+ <g transform="translate(0,6)" fill="#0055d4">
+  <title>Layer 1</title><g fill="#0055d4">
+  <g id="Group_Lower">
+   <g transform="rotate(180 48.191 49.808)">
+   <path d="m29.842 103.9v-10.585h36.712v10.585h-36.712"/>
+   <path d="m41.778 82.082v11.542h13.063v-12.477c-0.472 0.28493-9.695 1.491-13.063 0.93482z"/>
+  </g><path d="m29.842 103.9v-10.585h36.712v10.585h-36.712"/>
+   <path d="m41.778 81.659v11.797h13.063v-12.753c-0.472 0.29124-9.695 1.524-13.063 0.9555z"/>
+  </g>
+  <g id="Group_Analog_Guage">
+   <circle cx="48.309" cy="49.662" r="32.657" stroke="#4C4C4C" stroke-width=".25"/>
+   <circle cx="48.309" cy="49.662" r="27.477" stroke="#fff"/><g stroke="#fff" stroke-width="1.5">
+   <path d="m58.445 59.797 7.432 7.434"/>
+   <path d="m62.723 49.662h10.359"/>
+   <path d="m58.445 39.527 7.432-7.432"/>
+   <path d="m48.309 35.248v-10.585"/>
+   <path d="m38.175 39.527-7.432-7.432"/>
+   <path d="m33.895 49.662h-10.585"/>
+   <path d="m38.175 59.797-7.432 7.434"/>
+   <path d="m64.301 61.148 4.055 3.152"/>
+   <path d="m65.877 58.671 4.505 2.253"/>
+   <path d="m67.003 55.743 4.955 1.577"/>
+   <path d="m67.678 52.59 5.181 0.901"/>
+   <path d="m67.678 46.509 5.181-0.901"/>
+   <path d="m67.003 43.582 4.955-1.577"/>
+   <path d="m65.877 40.653 4.505-2.252"/>
+   <path d="m64.301 38.176 4.055-3.153"/>
+   <path d="m59.796 33.672 3.153-4.279"/>
+   <path d="m57.094 32.095 2.478-4.729"/>
+   <path d="m54.39 30.969 1.576-5.18"/>
+   <path d="m51.238 30.293 0.9-5.405"/>
+   <path d="m45.157 30.293-0.901-5.18"/>
+   <path d="m42.228 30.969-1.803-4.955"/>
+   <path d="m39.301 32.095-2.478-4.729"/>
+   <path d="m36.823 33.672-3.378-4.279"/>
+   <path d="m32.319 38.176-4.279-3.153"/>
+   <path d="m30.743 40.653-4.729-2.252"/>
+   <path d="m29.616 43.582-5.18-1.577"/>
+   <path d="m28.941 46.509-5.405-0.676"/>
+   <path d="m28.941 52.59-5.182 1.126"/>
+   <path d="m29.616 55.743-4.954 1.577"/>
+   <path d="m30.743 58.671-4.729 2.253"/>
+   <path d="m32.319 61.148-4.279 3.152"/>
+  </g></g>
+  <g id="Group_Red_Center">
+   <circle cx="48.309" cy="49.662" r="2.703" fill="#0055d4"/>
+  </g>
+ </g></g>
+<ellipse cx="48.535" cy="55.519" rx="1.8501" ry="1.9682" fill="#fff" stroke-width="0"/></svg>

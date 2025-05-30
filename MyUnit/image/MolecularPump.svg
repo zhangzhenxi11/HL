@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="92" height="120.5" enable-background="new 0 0 92.002 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="MolecularPump.svg" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"><sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="g41" inkscape:cx="33.331252" inkscape:cy="62.309765" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="8.3855236" pagecolor="#ffffff"/>
+ 
+ <g>
+  <title>Layer 1</title><g fill="#0055d4">
+  <g id="Group_Fume_Support" transform="matrix(.82843 0 0 1.0004 1.7351 -.036569)" stroke="#4c4c4c" stroke-width=".25">
+   <path d="m68.737 63.726h-56.305v56.304h56.305z"/>
+   <path d="m66.485 65.977h-51.576v49.322h51.575z"/>
+   <path d="m71.214 115.3h-61.034v4.729h61.034z"/>
+  </g>
+  <g id="Group_Port" transform="rotate(-89.47 59.746 28.158)" stroke="#4C4C4C" stroke-width=".25">
+   <rect x="32.945" y="8.8447" width="49.772" height="38.513"/>
+   <path d="m86.547 55.015v-53.714h-3.829v53.714h3.829"/>
+  </g>
+  <g id="Group_Radial_Box">
+   <ellipse cx="42.781" cy="52.266" rx="38.625" ry="38.227"/>
+   <circle cx="42.943" cy="52.939" r="30.742"/>
+   <ellipse cx="42.493" cy="52.689" rx="22.936" ry="22.575"/>
+  </g>
+  </g><g id="Group_Bolt" fill="#003D5C">
+   <path d="m31.746 100.3 0.9-0.449 0.226-0.901-0.226-0.675-0.9-0.45-0.901 0.45-0.226 0.675 0.226 0.901 0.901 0.449z"/>
+   <path d="m31.746 109.53 0.9-0.225 0.226-0.901-0.226-0.901-0.9-0.225-0.901 0.225-0.226 0.901 0.226 0.901 0.901 0.225z"/>
+   <path d="m43.457 80.254v-1.802h-2.027v1.802h2.027z"/>
+   <path d="m17.556 52.552h-2.026v1.801h2.026v-1.801z"/>
+   <path d="m43.457 28.453v-2.027h-2.027v2.027h2.027z"/>
+   <path d="m69.582 52.552h-2.026v1.801h2.026v-1.801z"/>
+  </g>
+  
+ </g>
+</svg>

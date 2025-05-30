@@ -1,0 +1,74 @@
+1,0,Unknown Command
+1,1,Invalid Command
+1,2,Permanent macros not loaded
+1,3,MACRO not loaded*
+1,4,Unknown Macro Command*
+1,5,Download command when not in Download mode
+1,6,Too many permanent Macros
+1,7,Permanent macro space exceeded
+1,8,Invalid command while downloading perm
+1,9,Invalid macro move*
+1,10,Home to an Illegal Position*
+1,11,Move failed to reach sensor*
+1,12,Move start unknown*
+1,13,Move attempted to an illegal position*
+1,14,Move failed to detect end*
+1,15,Position incorrect after move*
+1,16,Move: Device not Homed*
+1,17,Multiple Sensors Detected*
+1,18,Bad NVM Checksum*
+1,19,Read of Flash Memory Failed*
+1,21,Invalid Motor*
+1,22,Invalid Macro Location*
+1,23,Encoder Count Error*
+1,24,MACRO in Standby*
+1,26,Macro Aborted*
+1,27,Too Much Recursion*
+1,28,Communication Error*
+1,29,Too Many Stops for Movement*
+1,30,Monitor Stop Failure*
+1,32,Encoder Reset Failure*
+1,33,Too Many Mapper Returns*
+1,34,Virtual Stop Failure*
+1,35,Special Home Seek Failure*
+1,36,RFID Antenna Failure
+1,37,RFID Miscellaneous Error
+1,38,Mapper Failure*
+1,39,Servo Reset Failure*
+1,40,NVM Write Failure*
+1,41,Move Off Sensor Failed*
+2,0,House Air Failure*
+2,1,House Vacuum Failure*
+2,2,Slot Moves not Allowed*
+2,3,Invalid Slot for Move*
+2,4,Command to Non-Existent RFID*
+2,5,Command to Non-Existent OCR*
+2,6,External Macro Timeout*
+2,7,External Reset Detected*
+2,8,External Error Detected*
+2,9,External Communication Timeout*
+2,10,Move Restriction Fault*
+2,11,No Encoder for Device*
+2,12,Invalid Map Move*
+2,13,Invalid Map Start Location*
+2,14,Invalid Slot Transitions*
+2,15,Slot Position Failed*
+3,00,POD Not Present
+3,0,Not Defined
+3,1,Parm3 Is Not Incorrect
+3,2,VAC 1 Failed
+3,3,VAC 2 Failed
+3,4,Invalid Station
+3,5,Invalid Door Signal
+3,6,Not Defined
+3,7,Wafer On Arm 1
+3,8,Wafer On Arm 2
+3,9,No Wafer On Arm 1
+3,10,No Wafer On Arm 2
+3,11,Not Defined
+3,12,Parm1 Is Not Incorrect
+3,13,PLM1 Not Ready
+3,14,PLM2 Not Ready
+3,15,PLM3 Not Ready
+3,16,PLM4 Not Ready
+3,17,PLM6 Not Ready

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64px" height="64px" enable-background="new 0 0 112.5 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="LT.svg" version="1.1" viewBox="0 0 112.5 112.5" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"><sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="svg26" inkscape:cx="32" inkscape:cy="32" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="22.328125" pagecolor="#ffffff"/>
+
+<g fill="#0055d4">
+
+<rect y="62.271" width="60.486" height="5.491"/>
+
+<rect x="69.408" width="4.269" height="55.207"/>
+
+<path d="M71.319,0C36.547,0,0,21.826,0,65.055l60.45,0.162c1.263-7.605,4.71-9.44,10.676-9.932  C71.827,40.793,71.319,0,71.319,0z"/>
+
+<rect y="63.209" width="60.486" height="49.54"/>
+
+<rect x="70.908" y=".056" width="41.752" height="55.207"/>
+</g>
+</svg>

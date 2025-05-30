@@ -1,0 +1,1203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>tmwidgettow</class>
+ <widget class="QWidget" name="tmwidgettow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1889</width>
+    <height>1080</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="pipeLineWidget" name="widget_4" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1260</x>
+     <y>430</y>
+     <width>91</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_13" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1349</x>
+     <y>80</y>
+     <width>10</width>
+     <height>451</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="AxialPressureGauge" name="widget_5" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1324</x>
+     <y>530</y>
+     <width>61</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="ManualDiaphragmValve" name="widget_11" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1312</x>
+     <y>670</y>
+     <width>61</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_17" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1350</x>
+     <y>600</y>
+     <width>10</width>
+     <height>71</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_22" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1350</x>
+     <y>740</y>
+     <width>10</width>
+     <height>121</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_25" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1260</x>
+     <y>440</y>
+     <width>10</width>
+     <height>270</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_26" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1260</x>
+     <y>300</y>
+     <width>10</width>
+     <height>130</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="RTWidget" name="widget_27" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1240</x>
+     <y>270</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="RBWidget" name="widget_28" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1240</x>
+     <y>697</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_29" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1179</x>
+     <y>272</y>
+     <width>71</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_30" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1199</x>
+     <y>718</y>
+     <width>51</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_31" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1180</x>
+     <y>490</y>
+     <width>81</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="CleanFilter" name="widget_32" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1110</x>
+     <y>680</y>
+     <width>111</width>
+     <height>91</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="CleanFilter" name="widget_33" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1090</x>
+     <y>450</y>
+     <width>111</width>
+     <height>91</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="CleanFilter" name="widget_34" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1080</x>
+     <y>230</y>
+     <width>111</width>
+     <height>91</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_35" native="true">
+   <property name="geometry">
+    <rect>
+     <x>950</x>
+     <y>270</y>
+     <width>161</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_36" native="true">
+   <property name="geometry">
+    <rect>
+     <x>950</x>
+     <y>490</y>
+     <width>171</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_37" native="true">
+   <property name="geometry">
+    <rect>
+     <x>950</x>
+     <y>720</y>
+     <width>191</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="MeteringValve" name="widget_38" native="true">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>660</y>
+     <width>41</width>
+     <height>71</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="MeteringValve" name="widget_39" native="true">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>430</y>
+     <width>41</width>
+     <height>71</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="MeteringValve" name="widget_40" native="true">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>210</y>
+     <width>41</width>
+     <height>71</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_41" native="true">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>720</y>
+     <width>120</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_42" native="true">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>490</y>
+     <width>120</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_43" native="true">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>270</y>
+     <width>120</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_44" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1040</x>
+     <y>389</y>
+     <width>10</width>
+     <height>111</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="RTWidget" name="widget_45" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1020</x>
+     <y>370</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_46" native="true">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>372</y>
+     <width>241</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="SlideValveWidget" name="widget_47" native="true">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>350</y>
+     <width>61</width>
+     <height>41</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="SlideValveWidget" name="widget_48" native="true">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>470</y>
+     <width>61</width>
+     <height>41</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_49" native="true">
+   <property name="geometry">
+    <rect>
+     <x>660</x>
+     <y>370</y>
+     <width>80</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_50" native="true">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>490</y>
+     <width>441</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="LTWidget" name="widget_51" native="true">
+   <property name="geometry">
+    <rect>
+     <x>630</x>
+     <y>368</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_52" native="true">
+   <property name="geometry">
+    <rect>
+     <x>634</x>
+     <y>400</y>
+     <width>10</width>
+     <height>90</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_53" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1050</x>
+     <y>619</y>
+     <width>10</width>
+     <height>111</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="LTWidget" name="widget_54" native="true">
+   <property name="geometry">
+    <rect>
+     <x>630</x>
+     <y>598</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_55" native="true">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>602</y>
+     <width>241</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="SlideValveWidget" name="widget_56" native="true">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>580</y>
+     <width>61</width>
+     <height>41</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_57" native="true">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>720</y>
+     <width>441</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_58" native="true">
+   <property name="geometry">
+    <rect>
+     <x>634</x>
+     <y>630</y>
+     <width>10</width>
+     <height>90</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="SlideValveWidget" name="widget_59" native="true">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>700</y>
+     <width>61</width>
+     <height>41</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="RTWidget" name="widget_60" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1030</x>
+     <y>600</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_61" native="true">
+   <property name="geometry">
+    <rect>
+     <x>660</x>
+     <y>600</y>
+     <width>80</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_62" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1020</x>
+     <y>169</y>
+     <width>10</width>
+     <height>111</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="LTWidget" name="widget_63" native="true">
+   <property name="geometry">
+    <rect>
+     <x>630</x>
+     <y>148</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_64" native="true">
+   <property name="geometry">
+    <rect>
+     <x>800</x>
+     <y>152</y>
+     <width>211</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="SlideValveWidget" name="widget_65" native="true">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>130</y>
+     <width>61</width>
+     <height>41</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_66" native="true">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>270</y>
+     <width>441</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLine90Widget" name="widget_67" native="true">
+   <property name="geometry">
+    <rect>
+     <x>634</x>
+     <y>180</y>
+     <width>10</width>
+     <height>90</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="SlideValveWidget" name="widget_68" native="true">
+   <property name="geometry">
+    <rect>
+     <x>740</x>
+     <y>250</y>
+     <width>61</width>
+     <height>41</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="RTWidget" name="widget_69" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1000</x>
+     <y>150</y>
+     <width>35</width>
+     <height>35</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_70" native="true">
+   <property name="geometry">
+    <rect>
+     <x>660</x>
+     <y>150</y>
+     <width>80</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="FeedAndDischarge" name="widget_71" native="true">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>200</y>
+     <width>101</width>
+     <height>91</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="TMCavity" name="widget_72" native="true">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>410</y>
+     <width>141</width>
+     <height>141</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="FeedAndDischarge" name="widget_73" native="true">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>650</y>
+     <width>101</width>
+     <height>91</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="SafetyValve" name="widget_74" native="true">
+   <property name="geometry">
+    <rect>
+     <x>390</x>
+     <y>610</y>
+     <width>41</width>
+     <height>101</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_75" native="true">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>720</y>
+     <width>141</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="DigitalPressureOpenMeter" name="widget_76" native="true">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>675</y>
+     <width>71</width>
+     <height>111</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="DigitalPressureOpenMeter" name="widget_77" native="true">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>445</y>
+     <width>71</width>
+     <height>111</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_78" native="true">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>490</y>
+     <width>91</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_79" native="true">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>270</y>
+     <width>141</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="DigitalPressureOpenMeter" name="widget_80" native="true">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>225</y>
+     <width>71</width>
+     <height>111</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_81" native="true">
+   <property name="geometry">
+    <rect>
+     <x>303</x>
+     <y>670</y>
+     <width>91</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="SafetyValve" name="widget_82" native="true">
+   <property name="geometry">
+    <rect>
+     <x>387</x>
+     <y>370</y>
+     <width>41</width>
+     <height>101</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_83" native="true">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>430</y>
+     <width>91</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="SafetyValve" name="widget_84" native="true">
+   <property name="geometry">
+    <rect>
+     <x>387</x>
+     <y>165</y>
+     <width>41</width>
+     <height>101</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_85" native="true">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>226</y>
+     <width>91</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_86" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1360</x>
+     <y>110</y>
+     <width>61</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="pipeLineWidget" name="widget_87" native="true">
+   <property name="geometry">
+    <rect>
+     <x>1360</x>
+     <y>140</y>
+     <width>61</width>
+     <height>10</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>170</y>
+     <width>54</width>
+     <height>12</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>LoadlockA</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>620</y>
+     <width>54</width>
+     <height>12</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>LoadlockB</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_3">
+   <property name="geometry">
+    <rect>
+     <x>220</x>
+     <y>380</y>
+     <width>54</width>
+     <height>12</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>TM腔</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>390</x>
+     <y>320</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>安全阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>390</x>
+     <y>120</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>安全阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_6">
+   <property name="geometry">
+    <rect>
+     <x>390</x>
+     <y>580</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>安全阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_7">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>80</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>隔膜阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_8">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>220</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>隔膜阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_9">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>330</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>隔膜阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_10">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>440</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>隔膜阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_11">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>560</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>隔膜阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_12">
+   <property name="geometry">
+    <rect>
+     <x>750</x>
+     <y>680</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>隔膜阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_13">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>640</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>计量阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_14">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>410</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>计量阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_15">
+   <property name="geometry">
+    <rect>
+     <x>920</x>
+     <y>180</y>
+     <width>54</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>计量阀</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_16">
+   <property name="geometry">
+    <rect>
+     <x>1120</x>
+     <y>420</y>
+     <width>71</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>洁净过滤器</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_17">
+   <property name="geometry">
+    <rect>
+     <x>1170</x>
+     <y>650</y>
+     <width>71</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>洁净过滤器</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_18">
+   <property name="geometry">
+    <rect>
+     <x>1150</x>
+     <y>190</y>
+     <width>71</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>洁净过滤器</string>
+   </property>
+  </widget>
+  <zorder>widget_35</zorder>
+  <zorder>widget_36</zorder>
+  <zorder>widget_37</zorder>
+  <zorder>widget_75</zorder>
+  <zorder>widget_57</zorder>
+  <zorder>widget_50</zorder>
+  <zorder>widget_70</zorder>
+  <zorder>widget_61</zorder>
+  <zorder>widget_85</zorder>
+  <zorder>widget_83</zorder>
+  <zorder>widget_81</zorder>
+  <zorder>widget_79</zorder>
+  <zorder>widget_78</zorder>
+  <zorder>widget_53</zorder>
+  <zorder>widget_62</zorder>
+  <zorder>widget_44</zorder>
+  <zorder>widget_67</zorder>
+  <zorder>widget_58</zorder>
+  <zorder>widget_52</zorder>
+  <zorder>widget_41</zorder>
+  <zorder>widget_29</zorder>
+  <zorder>widget_31</zorder>
+  <zorder>widget_30</zorder>
+  <zorder>widget_4</zorder>
+  <zorder>widget_13</zorder>
+  <zorder>widget_5</zorder>
+  <zorder>widget_11</zorder>
+  <zorder>widget_17</zorder>
+  <zorder>widget_22</zorder>
+  <zorder>widget_25</zorder>
+  <zorder>widget_26</zorder>
+  <zorder>widget_27</zorder>
+  <zorder>widget_28</zorder>
+  <zorder>widget_32</zorder>
+  <zorder>widget_33</zorder>
+  <zorder>widget_34</zorder>
+  <zorder>widget_38</zorder>
+  <zorder>widget_39</zorder>
+  <zorder>widget_40</zorder>
+  <zorder>widget_42</zorder>
+  <zorder>widget_43</zorder>
+  <zorder>widget_45</zorder>
+  <zorder>widget_46</zorder>
+  <zorder>widget_47</zorder>
+  <zorder>widget_48</zorder>
+  <zorder>widget_49</zorder>
+  <zorder>widget_51</zorder>
+  <zorder>widget_54</zorder>
+  <zorder>widget_55</zorder>
+  <zorder>widget_56</zorder>
+  <zorder>widget_59</zorder>
+  <zorder>widget_60</zorder>
+  <zorder>widget_63</zorder>
+  <zorder>widget_64</zorder>
+  <zorder>widget_65</zorder>
+  <zorder>widget_66</zorder>
+  <zorder>widget_68</zorder>
+  <zorder>widget_69</zorder>
+  <zorder>widget_71</zorder>
+  <zorder>widget_72</zorder>
+  <zorder>widget_73</zorder>
+  <zorder>widget_74</zorder>
+  <zorder>widget_76</zorder>
+  <zorder>widget_77</zorder>
+  <zorder>widget_80</zorder>
+  <zorder>widget_82</zorder>
+  <zorder>widget_84</zorder>
+  <zorder>widget_86</zorder>
+  <zorder>widget_87</zorder>
+  <zorder>label</zorder>
+  <zorder>label_2</zorder>
+  <zorder>label_3</zorder>
+  <zorder>label_4</zorder>
+  <zorder>label_5</zorder>
+  <zorder>label_6</zorder>
+  <zorder>label_7</zorder>
+  <zorder>label_8</zorder>
+  <zorder>label_9</zorder>
+  <zorder>label_10</zorder>
+  <zorder>label_11</zorder>
+  <zorder>label_12</zorder>
+  <zorder>label_13</zorder>
+  <zorder>label_14</zorder>
+  <zorder>label_15</zorder>
+  <zorder>label_16</zorder>
+  <zorder>label_17</zorder>
+  <zorder>label_18</zorder>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>pipeLineWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">pipelinewidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RBWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">rbwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TMCavity</class>
+   <extends>QWidget</extends>
+   <header location="global">tmcavity.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>pipeLine90Widget</class>
+   <extends>QWidget</extends>
+   <header location="global">pipeline90widget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LTWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">ltwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RTWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">rtwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SlideValveWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">slidevalvewidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>FeedAndDischarge</class>
+   <extends>QWidget</extends>
+   <header location="global">feedanddischarge.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AxialPressureGauge</class>
+   <extends>QWidget</extends>
+   <header location="global">axialpressuregauge.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ManualDiaphragmValve</class>
+   <extends>QWidget</extends>
+   <header location="global">manualdiaphragmvalve.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CleanFilter</class>
+   <extends>QWidget</extends>
+   <header location="global">cleanfilter.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MeteringValve</class>
+   <extends>QWidget</extends>
+   <header location="global">meteringvalve.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SafetyValve</class>
+   <extends>QWidget</extends>
+   <header location="global">safetyvalve.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DigitalPressureOpenMeter</class>
+   <extends>QWidget</extends>
+   <header location="global">digitalpressureopenmeter.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

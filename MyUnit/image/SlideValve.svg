@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64px" height="64px" enable-background="new 0 0 112.5 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="SlideValve.svg" version="1.1" viewBox="0 0 112.5 112.5" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"><sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="svg30" inkscape:cx="32" inkscape:cy="32" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="22.328125" pagecolor="#ffffff"/><g fill="#0055d4">
+<g id="Group_Body">
+	
+	<path d="M18.9,47.025h74.925v56.025H18.9V47.025z" fill="#0055d4"/>
+</g>
+
+	
+	<path d="M0,37.575h18.9V112.5H0V37.575z"/>
+
+
+	
+	<path d="M93.825,37.575H112.5V112.5H93.825V37.575z"/>
+
+<g id="Group_Rod">
+	
+	<path d="m65.664 46.89v-28.459h-18.639v29.112c0 4.706 4.181 8.519 9.338 8.519s9.337-3.813 9.337-8.519c0-0.22-0.018-0.437-0.036-0.653z" fill="#0055d4"/>
+</g>
+<g id="Group_Handle">
+	
+	<path d="m18.787 4.959v6.976c0 3.717 16.772 6.731 37.462 6.731s37.463-3.014 37.463-6.731v-6.976h-74.925z"/>
+	<ellipse cx="56.249" cy="4.959" rx="37.463" ry="4.726"/>
+</g>
+</g></svg>

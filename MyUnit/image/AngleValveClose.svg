@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64px" height="64px" enable-background="new 0 0 102.744 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="AngleValve.svg" version="1.1" viewBox="0 0 102.74 112.5" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:xlink="http://www.w3.org/1999/xlink"><sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="svg5" inkscape:cx="32.044787" inkscape:cy="32.044787" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1017" inkscape:window-maximized="1" inkscape:window-width="1920" inkscape:window-x="-8" inkscape:window-y="-8" inkscape:zoom="22.328125" pagecolor="#ffffff"/><g fill="#f00">
+<g id="Group_Pipe">
+	<g fill="#f00">
+		<defs>
+			<rect id="SVGID_1_" x="47.403" y="32.435" width="7.485" height="53.979"/>
+		</defs>
+		<clipPath id="SVGID_2_">
+			<use overflow="visible" xlink:href="#SVGID_1_"/>
+		</clipPath>
+		
+			
+		<rect x="47.403" y="32.435" width="7.485" height="53.979" clip-path="url(#SVGID_2_)" fill="#f00"/>
+	</g>
+</g>
+
+	
+	<path d="M0,60.393l51.834,26.097L0,112.97V60.393"/>
+
+
+	
+	<path d="m102.74 60.393-51.835 26.096 51.835 26.48v-52.576"/>
+
+<g id="Group_Box">
+	<g fill="#f00">
+		<defs>
+			<path id="SVGID_6_" d="m91.622 16.348 1.239 16.314 4.545 3.386c-0.073-1.252-0.01-30.573-0.01-32.629l-3.725-3.417-2.049 16.346z"/>
+		</defs>
+		<clipPath id="SVGID_7_">
+			<use overflow="visible" xlink:href="#SVGID_6_"/>
+		</clipPath>
+		
+			
+		<rect x="91.622" y=".002" width="5.784" height="36.046" clip-path="url(#SVGID_7_)" fill="#f00"/>
+	
+	
+		<defs>
+			<path id="SVGID_9_" d="m8.846 32.662 3.75 3.192c3.174-0.033 83.323 0.118 84.81 0.195l-3.734-3.965-42.3-1.56-42.526 2.138z"/>
+		</defs>
+		<clipPath id="SVGID_10_">
+			<use overflow="visible" xlink:href="#SVGID_9_"/>
+		</clipPath>
+		
+			
+		<rect x="8.846" y="30.524" width="88.56" height="5.525" clip-path="url(#SVGID_10_)" fill="#f00"/>
+	
+	
+		<defs>
+			<rect id="SVGID_12_" x="8.846" y=".032" width="84.826" height="32.63"/>
+		</defs>
+		<clipPath id="SVGID_13_">
+			<use overflow="visible" xlink:href="#SVGID_12_"/>
+		</clipPath>
+		
+			
+		<rect x="8.846" y=".032" width="84.826" height="32.63" clip-path="url(#SVGID_13_)" fill="#f00"/>
+	</g>
+</g>
+</g></svg>

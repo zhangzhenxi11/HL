@@ -1,0 +1,286 @@
+// Library: FortrendUI
+// Package: Subsystem/LoadPort
+//
+// abstract loadport subsystem widget
+//
+// author xielonghua
+//
+
+#include "EFEM/efem_loadport_subsystem.h" 
+#include  "EFEM/efem_loadport_abstract_subsystem_widget.h" 
+#include  "Kernel/FortrendUI/cassette_widget.h"
+#include  "Kernel/FortrendUI/mapper_status_widget.h"
+#include "Kernel/kernel_api.h"
+#include  "Kernel/Fortrend/loadport_abstract_command.h"
+#include  "Kernel/Fortrend/fortrend_cassette_manager.h"
+#include  "Kernel/Fortrend/cassette.h"
+#include  "Kernel/kernel.h"
+#include  "Kernel/kernel_subsystem_reset_command.h"
+#include  "Kernel/kernel_subsystem_update_command.h"
+
+#include "device/ui_efem_loadport_abstract_subsystem_widget.h"
+#include "Kernel/CoreUI/kernel_subsystem_status_widget.h"  
+#include <QMessageBox>
+#include <QDebug>
+#include <QCheckBox>
+#if _MSC_VER >1600
+#pragma execution_character_set("utf-8")
+#endif
+KERNEL_NS_BEGIN
+	
+/**
+ * QEFEMLoadPortAbstractSubsystemWidgetPrivate
+ */
+class QEFEMLoadPortAbstractSubsystemWidgetPrivate: public KernelListener<FortrendCassetteManager> ,KernelListener<FortrendStation>{
+Q_DECLARE_PUBLIC(QEFEMLoadPortAbstractSubsystemWidget)
+public:
+	QEFEMLoadPortAbstractSubsystemWidgetPrivate(QEFEMLoadPortAbstractSubsystemWidget* p);
+	virtual void onAttributeChange(const FortrendCassetteManager* arg);
+	virtual void onAttributeChange(const FortrendStation* arg);
+
+private:
+	Ui::EFEMLoadPortAbstractSubsystemWidget* ui;
+	QEFEMLoadPortAbstractSubsystemWidget* q_ptr;
+	QFortrendCassetteWidget* cassette_Widget = 0;
+	QCheckBox* accessBtn = 0, *doorBtn = 0, *presentBtn = 0, *placementBtn = 0;
+	std::shared_ptr<EFEMLPSubsystem> elp;
+
+};
+
+QEFEMLoadPortAbstractSubsystemWidgetPrivate::QEFEMLoadPortAbstractSubsystemWidgetPrivate(
+	QEFEMLoadPortAbstractSubsystemWidget* p)
+	:q_ptr(p){
+
+}
+
+void QEFEMLoadPortAbstractSubsystemWidgetPrivate::onAttributeChange(const FortrendCassetteManager* arg){
+	QMetaObject::invokeMethod(q_ptr, "updateCassette", Qt::AutoConnection);
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidgetPrivate::onAttributeChange(const FortrendStation* arg){
+	QMetaObject::invokeMethod(q_ptr, "updateStation", Qt::AutoConnection);
+}
+
+
+
+/**
+* QEFEMLoadPortAbstractSubsystemWidget
+*/
+QEFEMLoadPortAbstractSubsystemWidget::QEFEMLoadPortAbstractSubsystemWidget(
+	const std::shared_ptr<LoadPortAbstractSubsystem>& loadport,
+	QWidget*parent) 
+	: QAbstractSubsystemWidget<LoadPortAbstractSubsystem>(loadport,parent)
+	, d_ptr(new QEFEMLoadPortAbstractSubsystemWidgetPrivate(this)){
+
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	auto cassManager = loadport->getKernel()->getKernelModule<FortrendCassetteManager>();
+
+	d->ui = new Ui::EFEMLoadPortAbstractSubsystemWidget;
+	d->ui->setupUi(this);
+	init();
+	d->elp= std::dynamic_pointer_cast<EFEMLPSubsystem>(loadport);
+	connect(d->ui->reset_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::onReset);
+	connect(d->ui->clear_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::onClear);
+	connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::onGetStatus);
+	connect(d->ui->closebox_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::closeBox);
+	connect(d->ui->openbox_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::openBox);
+	connect(d->ui->close_door_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::closeDoor);
+	connect(d->ui->open_door_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::openDoor);
+
+	connect(d->ui->lock_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::lockBox);
+	connect(d->ui->unlock_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::unlockBox);
+	connect(d->ui->map_btn, &QAbstractButton::clicked, this, &QEFEMLoadPortAbstractSubsystemWidget::getmap);
+	
+
+	//update information
+	updateCassette();
+	updateStation();
+
+	//listen
+	cassManager->addListener(d);
+	loadport->FortrendStation::addListener(d);
+
+
+	//config ui
+	configUI(loadport->getConfigure());
+}
+
+QEFEMLoadPortAbstractSubsystemWidget::~QEFEMLoadPortAbstractSubsystemWidget(){
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::setButtonVisible(ButtonFlag btns, bool visible){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	if (btns & Button::OPENBOX_BTN) d->ui->openbox_btn->setVisible(visible);
+	if (btns & Button::CLOSEBOX_BTN) d->ui->closebox_btn->setVisible(visible);
+	if (btns & Button::OPENDOOR_BTN) d->ui->open_door_btn->setVisible(visible);
+	if (btns & Button::CLOSEDOOR_BTN) d->ui->close_door_btn->setVisible(visible);
+	if (btns & Button::LOCK_BTN) d->ui->lock_btn->setVisible(visible);
+	if (btns & Button::UNLOCK_BTN) d->ui->unlock_btn->setVisible(visible);
+	if (btns & Button::RETMAP_BTN) d->ui->map_btn->setVisible(visible);
+	if (btns & Button::UPDATE_BTN) d->ui->generate_btn->setVisible(visible);
+	if (btns & Button::CLEAR_BTN) d->ui->clear_btn->setVisible(visible);
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::init(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+
+	d->accessBtn = new QCheckBox("远程模式");
+	d->doorBtn = new QCheckBox("门状态");
+	d->presentBtn = new QCheckBox("有晶圆盒");
+	d->placementBtn = new QCheckBox("晶圆盒在位");
+	
+	d->accessBtn->setObjectName("io_object");
+	d->doorBtn->setObjectName("io_object");
+	d->presentBtn->setObjectName("io_object");
+	d->placementBtn->setObjectName("io_object");
+
+	d->doorBtn->setEnabled(false);
+	d->presentBtn->setEnabled(false);
+	d->placementBtn->setEnabled(false);
+
+	QHBoxLayout* status_layout = new QHBoxLayout;
+	status_layout->addWidget(d->accessBtn); //add access model button
+	status_layout->addWidget(d->doorBtn); //add door button
+	status_layout->addWidget(d->presentBtn); //add present status button
+	status_layout->addWidget(d->placementBtn); //add placement status button
+	status_layout->addStretch();
+
+
+	//subsystem status
+	QKernelSubsystemStatusWidget* status_widget = new QKernelSubsystemStatusWidget(getSubsystem());
+	d->ui->right_verticalLayout->insertWidget(0, status_widget);
+
+	d->ui->verticalLayout_2->addLayout(status_layout); //add  status layout
+	d->ui->verticalLayout_2->addStretch();
+
+
+
+	connect(d->accessBtn, &QCheckBox::clicked, this, [=](){
+		//if (this->checkOffline(getSubsystem()->getKernel())){
+			if (d->elp->api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING){
+				
+				d->elp->onSetCommunicationState(KernelApi::CommunicationState::NOT_COMMUNICATING);
+			}
+			else{
+				d->elp->onSetCommunicationState(KernelApi::CommunicationState::COMMUNICATING);
+			}
+		//}
+		//update
+		//d->accessBtn->setChecked(d->elp->api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING);
+	});
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::insertWidget(QWidget*widget, int position){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	d->ui->extern_layout->insertWidget(position,widget);
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::closeBox(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createCloseBoxCommand();
+	executeCommand(getSubsystem(),cmd);
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::openBox(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createOpenBoxCommand();
+	executeCommand(getSubsystem(), cmd);
+}
+
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::closeDoor(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createCloseDoorCommand();
+	executeCommand(getSubsystem(), cmd);
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::openDoor(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createOpenDoorCommand();
+	executeCommand(getSubsystem(), cmd);
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::lockBox(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createLockBoxCommand();
+	executeCommand(getSubsystem(), cmd);
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::unlockBox(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createUnlockBoxCommand();
+	executeCommand(getSubsystem(), cmd);
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::onClear(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	executeCommand(getSubsystem(), getSubsystem()->createResetCommand());
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::onGetStatus(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	executeCommand(getSubsystem(), getSubsystem()->createUpdateCommand());
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::onReset(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	executeCommand(getSubsystem(), getSubsystem()->createResetCommand());
+}
+
+void QEFEMLoadPortAbstractSubsystemWidget::getmap(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createGetMapCommand();
+	executeCommand(getSubsystem(), cmd);
+
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::updateCassette(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+
+	auto cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+	auto cass = cassManager->getCassette(getSubsystem().get());
+
+	if (cass){
+		if (!d->cassette_Widget){
+			d->cassette_Widget = new QFortrendCassetteWidget(cass, cassManager); //max row count = 25
+			d->ui->verticalLayout_2->insertWidget(1, d->cassette_Widget);
+		}
+	}
+	else{
+		if (d->cassette_Widget){
+			d->ui->verticalLayout_2->removeWidget(d->cassette_Widget);
+			d->cassette_Widget->setParent(0);
+			delete d->cassette_Widget;
+		}
+		d->cassette_Widget = 0;
+	}
+}
+
+
+void QEFEMLoadPortAbstractSubsystemWidget::updateStation(){
+	Q_D(QEFEMLoadPortAbstractSubsystemWidget);
+	//access mode
+	d->accessBtn->setText(d->elp->api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING
+		? "远程模式"
+		: "本地模式");
+	d->accessBtn->setChecked(d->elp->api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING);
+	d->doorBtn->setChecked(getSubsystem()->hasDoorOpend());
+	d->presentBtn->setChecked(getSubsystem()->hasBoxPresent());
+	d->placementBtn->setChecked(getSubsystem()->hasBoxPlacement());
+}
+
+KERNEL_NS_END

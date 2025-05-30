@@ -1,0 +1,267 @@
+﻿/**
+* @file     fortrend_sunwayrobot_reset_command.h
+* @brief    reset command for SunwayRobot
+* @author   xielonghua
+*/
+
+// Library: Fortrend
+// Package: SubSystem/SunwayRobot
+#include "Kernel/kernel_log.h"
+
+#include "Kernel/kernel.h"
+#include "Kernel/kernel_log.h"
+#include "Kernel/kernel_block.h"
+#include "Kernel/kernel_block_manager.h"
+#include "Kernel/kernel_default_block_manager.h"
+#include "kernel/kernel_command_reject_exception.h"
+#include "kernel/Fortrend/abstract_io_subsystem.h"
+#include "Kernel/Fortrend/fortrend_station.h"
+#include "Kernel/Fortrend/fortrend_wafer_robot_subsystem.h"
+#include "Kernel/Fortrend/fortrend_cassette_manager.h"
+#include "Kernel/kernel.h"
+#include "Kernel/kernel_action_subsystem.h"
+#include "Kernel/kernel_command.h"
+#include "kernel/kernel_command_reject_exception.h"
+
+
+#include "SunwayRobot/fortrend_sunwayrobot_check_load_command.h"
+#include "SunwayRobot/fortrend_sunwayrobot_subsystem.h"
+#include "SunwayRobot/fortrend_sunwayrobot_update_command.h"
+
+#include "iostream"
+#include "Poco/Format.h"
+
+#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+
+namespace FC{
+
+	/**
+	* SunwayRobotCheckLoadCommandPrivate
+	*/
+	class SunwayRobotCheckLoadCommandPrivate{
+	
+	public:
+		//std::shared_ptr<FortrendStation> station = 0;
+		int arm = 0;
+		int station_id = 20;
+	};
+
+	/**
+	* SunwayRobotCheckLoadCommand
+	*/
+	SunwayRobotCheckLoadCommand::SunwayRobotCheckLoadCommand(int arm,int station_id, SunwaySubSystemHelper* helper)
+		:SunwayCommandExecuter(helper)
+		, d(new SunwayRobotCheckLoadCommandPrivate){
+		//setMessageName("CheckLoad");
+		//setDescription("CheckLoad on SunwayRobot");
+		//d->station = station;
+		d->arm = arm;
+		d->station_id = station_id;
+	};
+
+
+
+	SunwayRobotCheckLoadCommand::RunResult SunwayRobotCheckLoadCommand::onRun() throw(KernelException){
+		FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
+		//
+		if (!robot){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
+		}
+		//check subsystem state
+		if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 不在正常状态.", robot->getName()), this);
+		}
+		if (d->station_id != 20 && d->station_id != 21)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_SAFE_ALARM, Poco::format("%s 查询手指有无晶圆工位ID只能是20或者21.", robot->getName()), this);
+		}
+		if (robot->getBusyState())
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s 处于忙碌中.", robot->getName()), this);
+		}
+		//check door open
+		/*if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(d->station)){
+			if (!sub->hasDoorOpend()){
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 当前门阀处于关闭状态（逻辑错误）.", d->station->getName()), this);
+			}
+		}*/
+		//check modules
+		auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
+		//get cass
+		auto robot_cass = cassManager->getCassette(robot);
+		//get command configure
+		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
+		//fill params
+		std::string str_arm = (d->arm == 0) ? "A" : "B";
+		int timeout = command_config->getInt("timeout", 100000);
+		if (timeout < 10){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
+				Poco::format("超时: %s 查询手指有位晶圆超时参数错误", robot->getName()), this);
+		}
+		std::string command = "";
+		//std::string station_name = d->station->getName();
+		int error_type = 1;
+		int error_code = 0;
+		std::string error_message;
+		//QRY:LOAD/A;
+		//A:机械手手指
+		command = "QRY:LOAD/";
+		command.append(str_arm);
+		command.append(";");
+
+		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行", str_arm).c_str());
+		sendRequest(command);
+		std::string res = recvResponse(timeout);
+		if (res != std::string("ACK;"))
+		{
+			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误", str_arm).c_str());
+			
+			std::string error_str = "ERR";
+			if (!handleErrorCode(res, error_str, error_type, error_code)) {
+				error_type = 5;
+				error_code = 1;
+				error_message = ("执行查询手指命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "执行查询手指命令执行失败，机械手返回的指令未定义：%s", res);
+			}
+			else
+			{
+				logError(robot->getName().c_str(), "执行执行查询手指时存在一个错误");
+				auto error_strucct = getErrorCode(error_type, error_code);
+				error_type = error_strucct->type;
+				error_code = error_strucct->code;
+				error_message = error_strucct->message;
+			}
+			//set alarm data
+			AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+
+		}
+		else
+		{
+			//ACK
+			// RPS:LOAD/ON;  或者 RPS:LOAD/OFF;
+			//等待机械手返回指令
+			auto startTime2 = std::chrono::high_resolution_clock::now();
+			auto timeout3 = std::chrono::seconds(30);
+
+			while (true)
+			{
+				auto currentTime = std::chrono::high_resolution_clock::now();
+				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
+
+				if (res != std::string("ACK;"))
+				{
+					break;
+				}
+				if (elapsed >= timeout3)
+				{
+					error_message = "机械手返回指令超时";
+					error_code = 0x100;
+					AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+					setAlarm(alarm);
+					return RunResult::RUN_FAILD;
+				}
+				res = recvResponse(timeout);
+				Sleep(200);
+			}
+			std::string recvMessage = "RPS:LOAD;";
+			std::string robot_staus = "";
+			size_t found = res.find("RPS:LOAD");
+
+			auto search_found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
+
+			if (search_found != res.end())
+			{
+				//找到了
+				if (found != std::string::npos)
+				{
+					try {
+						size_t lastCommaPos = res.find('/', found);
+						size_t semicolonPos = res.find(';', lastCommaPos + 3);
+						robot_staus = res.substr(lastCommaPos + 1, semicolonPos - (lastCommaPos + 1));
+						std::cout << "robot_staus:" << robot_staus << std::endl;
+					}
+					catch (const std::invalid_argument& e)
+					{
+						error_message = "处理字符串失败";
+						logError(getName().c_str(), "处理字符串失败");
+					}
+				}
+			}
+			else
+			{
+				error_code = 101;
+				error_message = ("执行查询手指命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "执行查询手指命令执行失败，机械手返回的指令未定义：%s", res);
+
+				//robot->getKernel()->getKernelBlockManager()->releaseBlock(robot); //释放资源
+				AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+				setAlarm(alarm);
+				return RunResult::RUN_FAILD;
+			}
+
+			if (str_arm == "A")
+			{
+				if (robot_staus == "ON")
+				{
+					robot->setObject(0,true);
+					robot_cass->setMapping(1, Cassette::Mapping::Present);
+				}
+				else if (robot_staus == "OFF")
+				{
+					robot->setObject(0, false);
+					robot_cass->setMapping(1, Cassette::Mapping::Empty);
+				}
+				else
+				{
+					robot->setObject(0, false);
+					robot_cass->setMapping(1, Cassette::Mapping::Unknown);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+						Poco::format("工位: %s 获取手臂A状态通讯错误,返回到数据：%s", robot->getName(), res), this);
+				}
+			}
+			else if (str_arm == "B")
+			{
+				if (robot_staus == "ON")
+				{
+					robot->setObject(1, true);
+					robot_cass->setMapping(2, Cassette::Mapping::Present);
+				}
+				else if (robot_staus == "OFF")
+				{
+					robot->setObject(1, false);
+					robot_cass->setMapping(2, Cassette::Mapping::Empty);
+				}
+				else
+				{
+					robot->setObject(1, false);
+					robot_cass->setMapping(2, Cassette::Mapping::Unknown);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, 
+						Poco::format("工位: %s 获取手臂B状态通讯错误，返回到数据：%s",
+						robot->getName(), res), this);
+				}
+			}
+
+			Sleep(200);
+			//auto cmd_update = robot->createRQLoadCommand(d->arm);
+			//robot->startCommand(cmd_update);
+			//cmd_update->wait();
+			//if (cmd_update->hasError())
+			//{
+			//	//set alarm data
+			//	AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "更新手臂状态命令执行失败！"));
+			//	setAlarm(alarm);
+			//	return RunResult::RUN_FAILD;
+			//}
+			
+			logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令执行结束", str_arm).c_str());
+		}
+		return RunResult::RUN_OK;
+
+	}
+
+}

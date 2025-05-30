@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg enable-background="new 0 0 56.76 112.5" inkscape:version="1.3 (0e150ed6c4, 2023-07-21)" sodipodi:docname="SafetyValve.svg" version="1.1" viewBox="0 0 56.76 112.5" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"><sodipodi:namedview bordercolor="#000000" borderopacity="0.25" inkscape:current-layer="svg9" inkscape:cx="26.664953" inkscape:cy="40.470607" inkscape:deskcolor="#d1d1d1" inkscape:pagecheckerboard="0" inkscape:pageopacity="0.0" inkscape:showpageshadow="2" inkscape:window-height="1706" inkscape:window-maximized="1" inkscape:window-width="2880" inkscape:window-x="-11" inkscape:window-y="-11" inkscape:zoom="8.9818273" pagecolor="#ffffff"/>
+ 
+ <g fill="#0055d4">
+  <title>Layer 1</title><g fill="#0055d4">
+  
+  
+   
+  
+  
+   <rect x="4.2039" y="60.248" width="7.545" height="26.126"/>
+  
+  <g id="Group_SafetyValve">
+   <path d="m19.032 49.212v-43.803s3.191-4.959 9.253-4.959c5.781 0 9.328 4.959 9.328 4.959v43.802h-18.581"/>
+   <path d="m19.032 5.18s3.191-4.73 9.253-4.73c5.781 0 9.328 4.73 9.328 4.73"/>
+   <rect x="19.032" y="44.595" width="18.582" height=".488"/>
+   <rect x="14.415" y="19.032" width="27.815" height="4.729"/>
+   <rect x="14.415" y="32.996" width="27.815" height="4.617"/>
+  </g>
+  <g id="Group_ValveBody">
+   <polygon points="37.613 46.959 19.032 46.959 16.78 49.212 16.78 84.009 19.032 86.374 37.613 86.374 39.979 84.009 39.979 49.212"/>
+   <polygon points="32.996 86.374 23.762 86.374 21.397 88.626 21.397 102.59 23.762 104.96 32.996 104.96 35.361 102.59 35.361 88.626"/>
+   <rect x="18.962" y="49.212" width="18.667" height="34.797"/>
+   <rect x="23.691" y="88.626" width="9.25" height="13.937"/>
+  </g>
+  <g stroke="null">
+   <rect x="9.717" y="68.412" width="27.948" height="11.538" fill="#0055d4" stroke="null"/>
+  </g>
+ </g></g>
+</svg>
