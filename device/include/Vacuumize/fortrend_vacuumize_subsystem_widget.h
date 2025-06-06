@@ -18,7 +18,7 @@
 
 
 namespace FC{
-	
+	//³éÕæ¿Õ
 class QVacuumizeSubsystemWidgetPrivate;
 class QVacuumizeSubsystemWidget : public QWidget{
     Q_OBJECT

@@ -61,9 +61,9 @@ public:
 	std::shared_ptr<PumpMechanicalOpenCommand> createMechanicalOpenCommand()const;
 	std::shared_ptr<PumpMolecularCloseCommand> createMolecularCloseCommand(std::string name)const;
 	std::shared_ptr<PumpMolecularOpenCommand> createMolecularOpenCommand(std::string name)const;
-	std::shared_ptr<PumpOpenLoadLock1AutoVacuumCommand> createOpenLoadLock1AutoVacuumCommand() const;
-	std::shared_ptr<PumpOpenLoadLock2AutoVacuumCommand> createOpenLoadLock2AutoVacuumCommand() const;
-	std::shared_ptr<PumpOpenTMCavityAutoVacuumCommand> createOpenTMCavityAutoVacuumCommand() const;
+	std::shared_ptr<PumpOpenLoadLock1AutoVacuumCommand> createOpenLoadLock1AutoVacuumCommand() const;//LL1打开真空（抽真空）
+	std::shared_ptr<PumpOpenLoadLock2AutoVacuumCommand> createOpenLoadLock2AutoVacuumCommand() const;//LL2打开真空（抽真空）
+	std::shared_ptr<PumpOpenTMCavityAutoVacuumCommand> createOpenTMCavityAutoVacuumCommand() const;//TM打开真空（抽真空）
 	std::shared_ptr<PumpClearErrorCommand> createClearErrorCommand()const;
 
 public:

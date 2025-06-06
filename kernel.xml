@@ -458,12 +458,10 @@
 				<timeout>30000</timeout>
 			</Reset>
 			<Update>
-
 				<open_cassette_door_address>MR30002</open_cassette_door_address>
 				<close_cassette_door_address>MR30003</close_cassette_door_address>
 				<open_tm_cavity_door_address>MR30000</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30001</close_tm_cavity_door_address>
-				
                 <diaphragm_valve_address1>MR30812</diaphragm_valve_address1>
 				<diaphragm_valve_address2>MR30813</diaphragm_valve_address2>
 				<!-- LLA挡板阀-开信号 -->
@@ -716,8 +714,10 @@
 				<TMCavityPressureGageAddress>R60105</TMCavityPressureGageAddress>
 				<!--传输腔破真空设定值-->
 				<TMCavityBreakSetValue>99900</TMCavityBreakSetValue>
-				<!--分子泵管路读取真空度地址-->
+				<!-- 分子泵管路读取真空度地址-->
 				<MoleculePipelineReadValueAddress>DM30302</MoleculePipelineReadValueAddress>
+				<!-- 前级泵管道读取真空度地址 -->
+				<BackingPipelineReadValueAddress>DM5560</BackingPipelineReadValueAddress>
 			</Vacuum>
 			<SignalAddress>
 				<!--腔盖安全锁-->
@@ -738,19 +738,13 @@
 			</IO>
 			<!-- 打开隔膜阀 -->
 			<OpenDiaphragmValve>
-				<address1>MR20212</address1>
-				<address2>MR20213</address2>
-				<pid_slow_address>MR507</pid_slow_address>
-				<pid_fast_address>MR508</pid_fast_address>
-				<pid_close_address>MR509</pid_close_address>
+				<Slow_inflation_address> MR29308</Slow_inflation_address>
+				<Fast_inflation_address> MR29306</Fast_inflation_address>
 			</OpenDiaphragmValve>
 			<!-- 关闭隔膜阀 -->
 			<CloseDiaphragmValve>
-				<address1>MR20212</address1>
-				<address2>MR20213</address2>
-				<pid_slow_address>MR507</pid_slow_address>
-				<pid_fast_address>MR508</pid_fast_address>
-				<pid_close_address>MR509</pid_close_address>
+				<Slow_inflation_address> MR29309</Slow_inflation_address>
+				<Fast_inflation_address> MR29307</Fast_inflation_address>
 			</CloseDiaphragmValve>
 			<!-- 高度真空挡板阀 -->
 			<OpenHeightVacuumBaffleValve>
@@ -781,12 +775,14 @@
 				<address_1>MR29302</address_1>
 				<address_2>MR29302</address_2>
 				<finish_address>MR29906</finish_address>
+				<failed_address>MR29907 </failed_address>
 				<timeout>5000</timeout>
 			</OpenAngleValve>
 			<CloseAngleValve>
 				<address_1>MR29303</address_1>
 				<address_2>MR29303</address_2>
 				<finish_address>MR29908</finish_address>
+				<failed_address> MR29909 </failed_address>
 				<timeout>5000</timeout>
 			</CloseAngleValve>
 			<!-- 流量计隔膜阀 -->
@@ -818,7 +814,14 @@
 				<close_inserting_plate_valve_address>MR30205</close_inserting_plate_valve_address>
 				<open_pid_address>MR503</open_pid_address>
 				<close_pid_address>MR504</close_pid_address>
-				
+				<!--PM1门阀打开完成 -->
+				<pm1_cavity_door_address>MR35100</pm1_cavity_door_address>	
+				<!--PM2门阀打开完成-->
+				<pm2_cavity_door_address>MR35201</pm2_cavity_door_address>
+				<!--PM3门阀打开完成 -->
+				<pm3_cavity_door_address>MR35205</pm3_cavity_door_address>
+				<!--PM4门阀打开完成 -->
+				<pm3_cavity_door_address>MR35302</pm3_cavity_door_address>
 			</Update>
 		</TM>
 
@@ -1556,6 +1559,7 @@
 				<timeout>30000</timeout>
 			</Reset>					
 		</PM4>
+		
 		<Aligner>
 			<!--PLC端口号-->	
 			<port>1102</port>
@@ -1571,6 +1575,7 @@
 				<WTR>6</WTR>
 			</Station>			
 		</Aligner>
+		
 		<!--冷却腔 配置项 名称为CoolingCavity-->			
 		<CoolingCavity>
 			<!--PLC端口号-->	
@@ -1656,12 +1661,15 @@
 			<!--PLCIP地址-->	
 			<ip>127.0.0.1</ip>
 			<IsVacuum>true</IsVacuum>
+			<!-- 分子泵ACC信号 -->
 			<acc_tm>MR35408</acc_tm>
 			<acc_lla>MR35306</acc_lla>
 			<acc_llb>MR35315</acc_llb>
+			<!-- TM分子泵运行中 -->
 			<running_tm>MR35410</running_tm>
 			<running_lla>MR35308</running_lla>
 			<running_llb>MR35401</running_llb>
+			<!-- 分子泵故障信号 -->
 			<alarm_tm>MR35409</alarm_tm>
 			<alarm_lla>MR35307</alarm_lla>
 			<alarm_llb>MR35400</alarm_llb>
@@ -1674,6 +1682,7 @@
 				<mechanical_pump_address>MR4210</mechanical_pump_address>
 				<timeout>30000</timeout>
 			</Update>
+			<!-- 打开前级泵-->
 			<OpenMechanical>
 				<start_address>MR35411</start_address>
 				<finish_address>MR35413</finish_address>
@@ -1688,19 +1697,21 @@
 				<error_code_address>DM5567</error_code_address>
 				<timeout>4500</timeout>
 			</CloseMechanical>
+			<!-- 打开分子泵-->
 			<OpenMolecular>
+				<!-- lla -->
 				<start_address_lla>MR35300</start_address_lla>
 				<finish_address_lla>MR35302</finish_address_lla>
 				<failed_address_lla>MR35304</failed_address_lla>
 				<error_code_address_lla>DM5567</error_code_address_lla>
 				<timeout_lla>450000</timeout_lla>
-				
+				<!-- llb -->
 				<start_address_llb>MR35309</start_address_llb>
 				<finish_address_llb>MR35311</finish_address_llb>
 				<failed_address_llb>MR35313</failed_address_llb>
 				<error_code_address_llb>DM5567</error_code_address_llb>
 				<timeout_llb>450000</timeout_llb>
-				
+				<!-- tm -->
 				<start_address_tm>MR35402</start_address_tm>
 				<finish_address_tm>MR35404</finish_address_tm>
 				<failed_address_tm>MR35406</failed_address_tm>

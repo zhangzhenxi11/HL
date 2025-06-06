@@ -941,6 +941,70 @@ namespace FC{
 		setAlarm(alarm);
 	}
 
+	bool PumpOpenTMCavityAutoVacuumCommand::executeCommand(std::shared_ptr<IKernelSubSystem> subsystem, std::shared_ptr<IKernelCommand> cmd, int currentStep, const std::string errorMessage)
+	{
+		return false;
+	}
+
+	void PumpOpenTMCavityAutoVacuumCommand::initializeStateHandlers()
+	{
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep10()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1050()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1030()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1040()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1041()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1042()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1060()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1310()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep1100()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep5210()
+	{
+		return 0;
+	}
+
+	int PumpOpenTMCavityAutoVacuumCommand::handleStep10000()
+	{
+		return 0;
+	}
+
 
 
 }

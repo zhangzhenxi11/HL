@@ -36,10 +36,7 @@ namespace FC{
 	* TMCavityResetCommand
 	*/
 	TMCavityResetCommand::TMCavityResetCommand(KeyencePlcSubSystemHelper* helper)
-		:KeyencePlcCommandExecuter(helper){
-		
-
-		
+		:KeyencePlcCommandExecuter(helper){	
 		
 	};
 
@@ -50,9 +47,11 @@ namespace FC{
 	TMCavityResetCommand::RunResult TMCavityResetCommand::onRun() throw(KernelException){
 		FortrendTMCavitySubsystem* sub = dynamic_cast<FortrendTMCavitySubsystem*>(getSubsystem());
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
+		
 		for (auto robot : sub->getRobots()){
 			if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("机械手: %s 未处于正常状态.", robot->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, 
+					Poco::format("机械手: %s 未处于正常状态.", robot->getName()), this);
 			}
 		}
 		

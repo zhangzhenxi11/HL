@@ -108,7 +108,7 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "LLA腔插板阀未关闭(逻辑错误)", this);
 			}
 
-		/*	if (lla->getHeightVacuumBaffleValveOpend() && lla->getInsertingPlateValveOpend())
+			/*if (lla->getHeightVacuumBaffleValveOpend() && lla->getInsertingPlateValveOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "LLA高真空挡板阀未关闭(逻辑错误)", this);
 			}*/

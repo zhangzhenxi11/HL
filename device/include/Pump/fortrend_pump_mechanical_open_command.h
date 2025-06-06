@@ -25,7 +25,6 @@ namespace FC{
 		DECLARE_PTR(PumpMechanicalOpenCommand)
 		PumpMechanicalOpenCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "OpenMechanical"; }
-
 	protected:
 		virtual RunResult onRun() throw(KernelException);		
 	private:

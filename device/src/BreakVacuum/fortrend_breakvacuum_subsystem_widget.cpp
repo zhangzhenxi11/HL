@@ -361,7 +361,7 @@ namespace FC{
 		d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 
 		if (d->tm->getFastDiaphragmValveOpend()){
-			d->ui->gmfk_tm_w_1->setWaterDirection(1);
+			d->ui->gmfk_tm_w_1->setWaterDirection(1);//流动方向,0从左往右，1从右往左，其他停止流动
 			d->ui->gmfk_tm_h_1->setWaterDirection(0);
 			d->ui->gmfm_tm_w_1->setWaterDirection(1);
 			d->ui->gmfk_tm->open();

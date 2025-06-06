@@ -86,7 +86,7 @@ namespace FC{
 		std::shared_ptr<LoadLockCloseInsertingPlateValveCommand> FortrendLoadLockSubsystem::createCloseInsertingPlateValveCommand()const;
 		std::shared_ptr<LoadLockOpenHeightVacuumBaffleValveCommand> FortrendLoadLockSubsystem::createOpenHeightVacuumBaffleValveCommand()const;
 		std::shared_ptr<LoadLockCloseHeightVacuumBaffleValveCommand> FortrendLoadLockSubsystem::createCloseHeightVacuumBaffleValveCommand()const;
-		std::shared_ptr<LoadLockAutoBreakVacuumCommand> FortrendLoadLockSubsystem::createAutoBreakVacuumCommand()const;
+		std::shared_ptr<LoadLockAutoBreakVacuumCommand> FortrendLoadLockSubsystem::createAutoBreakVacuumCommand()const;//破真空指令
 
 	public:
 		bool getCassetteDoorOpend()const;
@@ -124,14 +124,19 @@ namespace FC{
 
 		bool getVacuumValueReachesTheSetValue()const;
 		bool getVacuumValueUpperLimitReachesTheSetValue()const;
+
 		bool getExhaustVacuumValueReachesTheSetValue()const;
 		bool getQuickInflationValueReachesTheSetValue()const;
+
 		bool getLoadLockRoughVacuumReachesTheSetValue()const;
 		bool getLoadLockRoughVacuumReachesTheSetValue(int value)const;
 
 		void setVacuumUpperLimitAndExtractionValue(const double upper_limit_value, const double extraction_value);
 		void setVacuumFastDiapgragmValueAndAngleValue(const double diaphragm_value, const double angle_value);
+
+		//设置粗抽真空值
 		void setRoughVacuumValue(const double rough_vacuum_set_value);
+		
 		bool getFastAngleValveReachesTheSetValue() const;
 
 		bool getVacuumEnable()const;

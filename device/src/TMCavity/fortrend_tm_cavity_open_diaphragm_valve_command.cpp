@@ -70,58 +70,51 @@ namespace FC{
 				}
 			}
 		}
-		if (sub->getHeightVacuumBaffleValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("子系统: %s 腔高真空档板阀未关闭（逻辑错误）", sub->getName()), this);
-		}
+
+		//if (sub->getHeightVacuumBaffleValveOpend())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+		// Poco::format("子系统: %s 腔高真空档板阀未关闭（逻辑错误）", sub->getName()), this);
+		//}
+
 		if (d->opening != TMCavityValveOpening::TMCavity_Slow)
 		{
-			if (sub->getInsertingPlateValveOpend())
+			if (sub->getAngleValveOpend())
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("子系统: %s 腔插板阀未关闭（逻辑错误）", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
+					Poco::format("子系统: %s 角阀阀未关闭（逻辑错误", sub->getName()), this);
 			}
 		}
+
 		/*if (sub->getPIDOpend())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("子系统: %s PID已打开（逻辑错误）", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
+			Poco::format("子系统: %s PID已打开（逻辑错误）", sub->getName()), this);
 		}*/
+
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
 		//fill params
-		std::string address1 = command_config->getString("address1", "");
-		std::string address2 = command_config->getString("address2", "");
-		std::string pid_slow_address = command_config->getString("pid_slow_address", "");
-		std::string pid_fast_address = command_config->getString("pid_fast_address", "");
-		std::string pid_close_address = command_config->getString("pid_close_address", "");
-		if (address1 == "" || address2 == "" || pid_slow_address == "" || pid_fast_address == "" || pid_close_address == "")
+		std::string address1 = command_config->getString("Slow_inflation_address", "");
+		std::string address2 = command_config->getString("Fast_inflation_address", "");
+		if (address1 == "" || address2 == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开隔膜阀命令地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
+				Poco::format("地址: 打开隔膜阀命令地址未定义", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "打开隔膜阀命令开始");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		bool write_result = false;
 		if (d->opening == TMCavityValveOpening::TMCavity_Slow)
 		{
-			writeBit(pid_close_address, false);
-			writeBit(pid_fast_address, false);
-			writeBit(pid_slow_address, true);
 			write_result = writeBit(address1, true);
 		}
 		else if (d->opening == TMCavityValveOpening::TMCavity_Fast)
 		{
-			writeBit(pid_close_address, false);
-			writeBit(pid_slow_address, false);
-			writeBit(pid_fast_address, true);
-			
 			write_result = writeBit(address2, true);
 		}
 		else{
-			
-			writeBit(pid_close_address, false);
-			writeBit(pid_slow_address, false);
-			writeBit(pid_fast_address, true);
-			
 			write_result = (writeBit(address1, true) && writeBit(address2, true));
 		}
 		if (write_result)

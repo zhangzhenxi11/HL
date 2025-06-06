@@ -5,9 +5,9 @@
 #include <QWidget>
 
 
-
+/*破真空*/
 namespace FC{
-
+	
 class QBreakVacuumSubsystemWidgetPrivate;
 class QBreakVacuumSubsystemWidget : public QWidget{
     Q_OBJECT
@@ -16,12 +16,12 @@ public:
     ~QBreakVacuumSubsystemWidget();
 
 private slots:
-	void onTMGMFKClicked(bool status);
-	void onTMGMFMClicked(bool status);
-	void onLLAGMFKClicked(bool status);
-	void onLLAGMFMClicked(bool status);
-	void onLLBGMFKClicked(bool status);
-	void onLLBGMFMClicked(bool status);
+	void onTMGMFKClicked(bool status);//快
+	void onTMGMFMClicked(bool status);//慢
+	void onLLAGMFKClicked(bool status);//快
+	void onLLAGMFMClicked(bool status);//慢
+	void onLLBGMFKClicked(bool status);//快
+	void onLLBGMFMClicked(bool status);//慢
 	void showMessage(const QString& message);
 	void onOpenLoadLock1AutoBreakVacuumCommand();
 	void onOpenLoadLock2AutoBreakVacuumCommand();

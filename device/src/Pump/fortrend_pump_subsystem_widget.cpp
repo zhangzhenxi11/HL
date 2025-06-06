@@ -87,19 +87,27 @@ namespace FC{
 		d->ui->wafer_state_layout->addStretch();*/
 
 		init();
+		d->ui->molecular_open_lla_btn->setVisible(false);
+		d->ui->molecular_close_lla_btn->setVisible(false);
+		d->ui->molecular_open_llb_btn->setVisible(false);
+		d->ui->molecular_close_llb_btn->setVisible(false);
+		d->ui->molecular_open_tm_btn->setVisible(false);
+		d->ui->molecular_close_tm_btn->setVisible(false);
 
 		onAttributeUpdate();
 		connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onGetStatus);
 		connect(d->ui->mechanical_open_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMechanicalOpen);
 		connect(d->ui->mechanical_close_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMechanicalClose);
-		connect(d->ui->molecular_open_lla_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularOpenLLA);
+
+	/*	connect(d->ui->molecular_open_lla_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularOpenLLA);
 		connect(d->ui->molecular_close_lla_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularCloseLLA);
 
 		connect(d->ui->molecular_open_llb_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularOpenLLB);
 		connect(d->ui->molecular_close_llb_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularCloseLLB);
 
 		connect(d->ui->molecular_open_tm_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularOpenTM);
-		connect(d->ui->molecular_close_tm_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularCloseTM);
+		connect(d->ui->molecular_close_tm_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMolecularCloseTM);*/
+
 
 		connect(d->ui->open_loadlock1_vacuum_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onOpenLoadLock1AutoVacuum);
 		connect(d->ui->open_loadlock2_vacuum_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onOpenLoadLock2AutoVacuum);

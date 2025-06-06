@@ -80,19 +80,29 @@ namespace FC{
 
 		onAttributeUpdate();
 
+		d->ultrahigh_vacuum_baffle_valve_ckb->setVisible(false);
+		d->inserting_plate_value_ckb->setVisible(false);
+		d->ui->open_height_vacuum_baffle_valve_btn->setVisible(false);
+		d->ui->close_height_vacuum_baffle_valve_btn->setVisible(false);
+		d->ui->open_inserting_plate_valve_btn->setVisible(false);
+		d->ui->close_inserting_plate_valve_btn->setVisible(false);
+		d->ui->open_pid_btn->setVisible(false);
+		d->ui->close_pid_btn->setVisible(false);
+		d->pid_ckb->setVisible(false);
+
 		connect(d->ui->reset_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onReset);
 		connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onGetStatus);
 		connect(d->ui->open_diaphragm_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenDiaphragmValve);
 		connect(d->ui->close_diaphragm_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onCloseDiaphragmValve);
-		connect(d->ui->open_height_vacuum_baffle_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenHeightVacuumBaffleValve);
-		connect(d->ui->close_height_vacuum_baffle_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onCloseHeightVacuumBaffleValve);
-		connect(d->ui->open_inserting_plate_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenInsertingPlateValve);
-		connect(d->ui->close_inserting_plate_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onCloseInsertingPlateValve);
+		//connect(d->ui->open_height_vacuum_baffle_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenHeightVacuumBaffleValve);
+		//connect(d->ui->close_height_vacuum_baffle_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onCloseHeightVacuumBaffleValve);
+		//connect(d->ui->open_inserting_plate_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenInsertingPlateValve);
+		//connect(d->ui->close_inserting_plate_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onCloseInsertingPlateValve);
 
 		connect(d->ui->open_angle_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenAngleValve);
 		connect(d->ui->close_angle_valve_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onCloseAngleValve);
-		connect(d->ui->open_pid_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenPID);
-		connect(d->ui->close_pid_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onClosePID);
+		//connect(d->ui->open_pid_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onOpenPID);
+		//connect(d->ui->close_pid_btn, &QAbstractButton::clicked, this, &QTMCavitySubsystemWidget::onClosePID);
 
 	}
 
@@ -280,7 +290,9 @@ namespace FC{
 
 			d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(getSubsystem()->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
 			d->ui->molecule_pipeline_value_let->setText(QString::number(getSubsystem()->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
+			d->ui->backing_pipeline_value_let->setText(QString::number(getSubsystem()->getBackingPipelineVacuumValue()).append("Pa"));
 			d->ui->vacuum_pressure_gage_ckb->setChecked(getSubsystem()->getTMCavityVacuumPressureGageState() == 1);
+			//backing_pipeline_value_let
 
 		}
 		catch (KernelException& e){

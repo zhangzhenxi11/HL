@@ -55,15 +55,12 @@ namespace FC{
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 		//fill params
-		std::string address1 = command_config->getString("address1", "");
-		std::string address2 = command_config->getString("address2", "");
-		std::string pid_slow_address = command_config->getString("pid_slow_address", "");
-		std::string pid_fast_address = command_config->getString("pid_fast_address", "");
-		std::string pid_close_address = command_config->getString("pid_close_address", "");
-
-		if (address1 == "" || address2 == "" || pid_slow_address == "" || pid_fast_address == "" || pid_close_address == "")
+		std::string address1 = command_config->getString("Slow_inflation_address", "");
+		std::string address2 = command_config->getString("Fast_inflation_address", "");
+		if (address1 == "" || address2 == "" )
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭隔膜阀命令地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
+				Poco::format("地址: 关闭隔膜阀命令地址未定义", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "关闭隔膜阀命令开始");
 		
@@ -71,35 +68,15 @@ namespace FC{
 		bool write_resuslt = false;
 		if (d->opening == TMCavityValveOpening::TMCavity_Slow)
 		{
-			
 			write_resuslt = writeBit(address1, false);
-			writeBit(pid_close_address, false);
-			Sleep(30);
-			writeBit(pid_fast_address, false);
-			Sleep(30);
-			writeBit(pid_slow_address, true);
-
 		}
 		else if (d->opening == TMCavityValveOpening::TMCavity_Fast)
 		{
 			write_resuslt = writeBit(address2, false);
-			writeBit(pid_close_address, false);
-			Sleep(30);
-			writeBit(pid_slow_address, false);
-			Sleep(30);
-			writeBit(pid_fast_address, true);
-			
 		}
 		else
 		{
-			write_resuslt = (writeBit(address1, false) && writeBit(address2, false));
-			
-			writeBit(pid_slow_address, false);
-			Sleep(30);
-			writeBit(pid_fast_address, false);
-			Sleep(30);
-			writeBit(pid_close_address, true);
-			
+			write_resuslt = (writeBit(address1, false) && writeBit(address2, false));//都关
 		}
 		if (write_resuslt)
 		{

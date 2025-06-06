@@ -64,7 +64,11 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭传输腔门阀地址未定义", getName()), this);
 		}
-
+		if (SIMULATION_TEST == 1)
+		{
+			logInform(sub->getName().c_str(), "模拟关闭传输腔门阀命令...");
+			return RunResult::RUN_OK;
+		}
 		logInform(sub->getName().c_str(), "关闭传输腔门阀命令开始");
 		if (!writeBit(open_address, false))
 		{

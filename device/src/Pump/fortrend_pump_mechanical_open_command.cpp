@@ -52,7 +52,14 @@ namespace FC{
 		}
 		if (sub->getMechanicalPumpHasAlarm())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("工位: %s 机械泵报警中！", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
+				Poco::format("工位: %s 机械泵报警中！", sub->getName()), this);
+		}
+
+		if (SIMULATION_TEST == 1)
+		{
+			logInform(sub->getName().c_str(), "模拟执行机械泵命令...");
+			return RunResult::RUN_OK;
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
@@ -63,16 +70,19 @@ namespace FC{
 		int	timeout = command_config->getInt("timeout", 45000);
 		if (address == "" || finish_address == "" || failed_address == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开机械泵地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
+				Poco::format("地址: 打开机械泵地址未定义", getName()), this);
 		}
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开机械泵超时参数错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
+				Poco::format("超时: %s 打开机械泵超时参数错误", sub->getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "打开机械泵命令开始");
 		if (!writeBit(address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开机械泵地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+				Poco::format(" %s 写1到打开机械泵地址错误", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;

@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout_3">
+  <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
@@ -66,8 +66,21 @@
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="molecule_pipeline_value_let">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label">
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>50</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>传输腔体真空值</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="tm_cavity_current_vacuum_value_let">
             <property name="maximumSize">
              <size>
               <width>150</width>
@@ -99,8 +112,8 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="tm_cavity_current_vacuum_value_let">
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="molecule_pipeline_value_let">
             <property name="maximumSize">
              <size>
               <width>150</width>
@@ -112,16 +125,29 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_3">
             <property name="maximumSize">
              <size>
-              <width>200</width>
+              <width>150</width>
               <height>50</height>
              </size>
             </property>
             <property name="text">
-             <string>传输腔体真空值</string>
+             <string>前级泵管路真空值</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="backing_pipeline_value_let">
+            <property name="maximumSize">
+             <size>
+              <width>150</width>
+              <height>50</height>
+             </size>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

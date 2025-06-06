@@ -34,6 +34,8 @@
 #include "KeyencePLC/keyence_plc_command_executer.h"
 #include "KeyencePLC/keyence_plc_subsystem_helper.h"
 
+#define TEST_STATUS 1
+
 namespace FC{
 
 
@@ -63,28 +65,38 @@ namespace FC{
 	public:
 		std::shared_ptr<TMCavityOpenDiaphragmValveCommand> createOpenDiaphragmValveCommand(const TMCavityValveOpening opening)const;
 		std::shared_ptr<TMCavityCloseDiaphragmValveCommand> createCloseDiaphragmValveCommand(const TMCavityValveOpening opening)const;
+
 		std::shared_ptr<TMCavityOpenHeightVacuumBaffleValveCommand> createOpenHeightVacuumBaffleValveCommand()const;
 		std::shared_ptr<TMCavityCloseHeightVacuumBaffleValveCommand> createCloseHeightVacuumBaffleValveCommand()const;
+
 		std::shared_ptr<TMCavityOpenAngleValveCommand> createOpenAngleValveCommand()const;
 		std::shared_ptr<TMCavityCloseAngleValveCommand> createCloseAngleValveCommand()const;
+
 		std::shared_ptr<TMCavityOpenInsertingPlateValveCommand> createOpenInsertingPlateValveCommand()const;
 		std::shared_ptr<TMCavityCloseInsertingPlateValveCommand> createCloseInsertingPlateValveCommand()const;
+
 		std::shared_ptr<TMCavityOpenFlowmeterDiaphragmValveCommand> createOpenFlowmeterDiaphragmValveCommand()const;
 		std::shared_ptr<TMCavityCloseFlowmeterDiaphragmValveCommand> createCloseFlowmeterDiaphragmValveCommand()const;
+
 		std::shared_ptr<TMCavityOpenPIDCommand> createOpenPIDCommand()const;
 		std::shared_ptr<TMCavityClosePIDCommand> createClosePIDCommand()const;
 
 	public:
 		bool getSlowDiaphragmValveOpend()const;
 		void setSlowDiaphragmValveOpend(const bool value);
+
 		bool getFastDiaphragmValveOpend()const;
 		void setFastDiaphragmValveOpend(const bool value);
+
 		bool getHeightVacuumBaffleValveOpend()const;
 		void setHeightVacuumBaffleValveOpend(const bool value);
+
 		bool getInsertingPlateValveOpend()const;
 		void setInsertingPlateValveOpend(const bool value);
+
 		bool getAngleValveOpend()const;
 		void setAngleValveOpend(const bool value);
+
 		bool getPIDOpend() const;
 		void setPIDOpend(const bool value);
 
@@ -93,18 +105,30 @@ namespace FC{
 		*/
 		bool TMCavityCoverSafetyLock();
 
+		//获取TM腔体真空值
 		double getTMCavityVacuumValue()const;
+
 		//获取分子管道真空值
 		double getMoleculePipelineVacuumValue()const;
-		//获取tmcv腔真空压力表状态
+
+		//获取前级泵管道真空值
+		double getBackingPipelineVacuumValue()const;
+
+		//获取tm腔真空压力表状态
 		int getTMCavityVacuumPressureGageState()const;
 
 		bool getTMCavityVacuumValueReachesTheSetValue() const;
+
+		//TM真空上限达到设定值
 		bool getTMCavityVacuumValueUpperLimitReachesTheSetValue()const;
 		bool getTMCavityVacuumValueReachesThePIDSetValue() const;
 		bool getTMCavityRoughVacuumReachesTheSetValue()const;
 		bool getTMCavityRoughVacuumReachesTheSetValue(int value)const;
-		
+
+		//pm腔门
+		bool getPMCavityDoorOpend(int number)const;
+		void setPMCavityDoorOpend(int number, bool state);
+
 		bool getVacuumEnable()const;
 		void setVacuumEnable(const bool value);
 

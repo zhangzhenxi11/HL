@@ -27,6 +27,7 @@ namespace FC{
 		TMCavityOpenAngleValveCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "OpenAngleValve"; }
 
+
 	protected:
 		virtual RunResult onRun() throw(KernelException);		
 	private:

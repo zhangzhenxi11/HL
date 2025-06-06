@@ -53,24 +53,62 @@ namespace FC{
 		if (!sub || !pump || !lk1 || !lk2){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
+		//1.全部的PM门阀关闭，2.TM腔的隔膜阀关闭，3.LLK-TM侧门阀关闭 4.TM腔盖已关闭 5.确保干泵处于打开状态
 
-		if (sub->getHeightVacuumBaffleValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s高真空挡板阀未关闭(逻辑错误)", sub->getName()), this);
+		for (auto& ll : getSubsystem()->getKernel()->getKernelModules<FortrendLoadLockSubsystem>()) {
+			if (ll->getTMCavityDoorOpend())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+					Poco::format("子系统: %s TM腔门阀未关闭（逻辑错误）", ll->getName()), this);
+			}
 		}
+
+		for (int i = 0; i <= 3; i++)
+		{
+			if (sub->getPMCavityDoorOpend(i))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+					Poco::format("子系统: %s PM%d腔门阀未关闭（逻辑错误）", sub->getName(), i), this);
+			}
+		}
+		if (sub->getSlowDiaphragmValveOpend())
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+				Poco::format("子系统: %s TM腔慢充隔膜阀未关闭（逻辑错误）", sub->getName()), this);
+		}
+		if (sub->getFastDiaphragmValveOpend())
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+				Poco::format("子系统: %s TM腔快充隔膜阀未关闭（逻辑错误）", sub->getName()), this);
+		}
+
+		//if (sub->getHeightVacuumBaffleValveOpend())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
+		//		Poco::format("%s高真空挡板阀未关闭(逻辑错误)", sub->getName()), this);
+		//}
 
 		/*if (lk2->getAngleValveOpend() && pump->getMolecularPumpOpenedLLB() && sub->getTMCavityVacuumValue() > 15.0)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk2->getName(), sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
+			Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk2->getName(), sub->getName()), this);
 		}
 
 		if (lk1->getAngleValveOpend() && pump->getMolecularPumpOpenedLLA() && sub->getTMCavityVacuumValue() > 15.0)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk1->getName(), sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
+			Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk1->getName(), sub->getName()), this);
 		}*/
 
-		if (sub->getMoleculePipelineVacuumValue() > 30 && pump->getMolecularPumpOpenedTM()){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 分子泵已打开，%s 前级管道当前压力未小于30Pa（逻辑错误）", sub->getName(), sub->getName()), this);
+		if (!pump->getMechanicalPumpOpened())
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
+				Poco::format("前级泵未打开（逻辑错误）", sub->getName()), this);
+
+		}
+		if (sub->getMoleculePipelineVacuumValue() > 30){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
+				Poco::format("前级管道当前压力未小于30Pa（逻辑错误）",sub->getName()), this);
 		}
 		
 		//get command configure
@@ -80,35 +118,45 @@ namespace FC{
 		std::string address_1 = command_config->getString("address_1", "");
 		std::string address_2 = command_config->getString("address_2", "");
 		std::string finish_address = command_config->getString("finish_address", "");
+		std::string failed_address = command_config->getString("failed_address","");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开角阀命令超时参数设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
+				Poco::format("超时: 打开角阀命令超时参数设置错误", sub->getName()), this);
 		}
 
-		if ((address_1 == "") || (address_2 == "") || (finish_address == ""))
+		if ((address_1 == "") || (address_2 == "") || (finish_address == "")|| (failed_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开角阀命令定义未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
+				Poco::format("地址: 打开角阀命令定义未定义", getName()), this);
 		}
+
 		logInform(sub->getName().c_str(), "打开角阀命令执行开始");
 		if (!writeBit(address_1, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开角阀命令地址1错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+				Poco::format(" %s 写1到打开角阀命令地址1错误", sub->getName()), this);
 		}
 		if (!writeBit(address_2, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开角阀命令地址2错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, 
+				Poco::format(" %s 写1到打开角阀命令地址2错误", sub->getName()), this);
 		}
 
 		Sleep(500);
+		logInform(sub->getName().c_str(),"打开角阀命令开始执行");
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;
 		bool readState = false;
+		bool readRes_failed = false;
+		bool readState_failed = false;
 		while (count <= loopCount)
 		{
 			Sleep(20);
 			readState = readBit(finish_address, readRes);
-			if (readRes)
+			readState_failed = readBit(failed_address, readRes_failed);
+			if (readRes || readRes_failed)
 			{
 				break;
 			}
@@ -122,23 +170,20 @@ namespace FC{
 			logInform(sub->getName().c_str(), "打开角阀命令执行结束");
 
 		}
-		else if (readState)
+		else if (readRes_failed)
 		{
-			
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开角阀命令执行失败，打开角阀到位信号异常"));
 			setAlarm(alarm);
 			logError(sub->getName().c_str(), "打开角阀命令执行失败，打开角阀到位信号异常");
 		}
 		else
 		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开角阀命令通讯超时"));
+			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
+				KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开角阀命令通讯超时"));
 			setAlarm(alarm);
 			logError(sub->getName().c_str(), "打开角阀命令通讯超时");
 		}
 		return ret;
-
 	}
-
-
 
 }

@@ -11,7 +11,6 @@
 #define FORTREND_TM_CAVITY_OPEN_FLOWMETER_DIAPHRAGM_VALVE_COMMAND_INCLUDE_
 
 #include "kernel/kernel_subsystem_command.h"
-
 #include "KeyencePLC/keyence_plc_command_executer.h"
 #include "KeyencePLC/keyence_plc_subsystem_helper.h"
 

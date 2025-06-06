@@ -198,7 +198,7 @@ public:
 	QObject::connect(d->ui->widget_pbv_lla, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLAClicked);//
 	QObject::connect(d->ui->widget_pbv_llb, &SlideValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLBClicked);//
 
-	QObject::connect(d->ui->open_loadlock1_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand);//一键抽真空
+	QObject::connect(d->ui->open_loadlock1_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand);//一键抽真空（打开真空）
 	QObject::connect(d->ui->open_loadlock2_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock2AutoVacuumCommand);//
 	QObject::connect(d->ui->open_tm_cavity_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenTMCavityAutoVacuumCommand);//
 

@@ -79,7 +79,7 @@ namespace FC{
 		int vacuum_pressure_gage_state = -1;			//真空压力表信号
 
 		double rough_vacuum_set_value = 6.0;        //粗抽设定值
-		double vacuum_diaphragm_valve_fast_charge_set_value = 5000.0;	//隔膜阀快充真空设定值
+		double vacuum_diaphragm_valve_fast_charge_set_value = 5000.0;	   //隔膜阀快充真空设定值
 		double vacuum_angle_valve_fast_vacuumization_set_value = 10000.0;	//角阀快充真空设定值
 
 		std::string diaphragm_valve_address1 = "";
@@ -399,19 +399,23 @@ namespace FC{
 
 	void FortrendLoadLockSubsystem::onInitialize()throw(KernelException){
 
-		setState(IKernelSubSystem::State::SUB_NORMAL);
-		//try{
-		//	if (enableProtocol())
-		//		setState(IKernelSubSystem::State::SUB_IDEL);//SUB_IDEL
-		//	else
-		//		setState(IKernelSubSystem::State::SUB_UNKNOWN);
-
-
-		//}
-		//catch (KernelException& e){
-		//	logError(getName().c_str(), e.what());
-		//	//throw e;
-		//}
+		if (SIMULATION_TEST == 1)
+		{
+			setState(IKernelSubSystem::State::SUB_NORMAL);
+		}
+		else
+		{
+			try {
+				if (enableProtocol())
+					setState(IKernelSubSystem::State::SUB_IDEL);
+				else
+					setState(IKernelSubSystem::State::SUB_UNKNOWN);
+			}
+			catch (KernelException& e) {
+				logError(getName().c_str(), e.what());
+				//throw e;
+			}
+		}
 	}
 
 	void FortrendLoadLockSubsystem::onUnInitialize()throw(KernelException){

@@ -15,7 +15,7 @@
 #include "KeyencePLC/keyence_plc_command_executer.h"
 #include "KeyencePLC/keyence_plc_subsystem_helper.h"
 
-
+#include <unordered_map>
 namespace FC{
 
 	/**
@@ -28,6 +28,13 @@ namespace FC{
 		virtual std::string getName()const override { return "LoadLockAutoBreakVacuum"; }
 		virtual void addCommandExecutionAlarmMessage(const std::string subsytem_name, const std::string message, const int code_id);
 		virtual void addSubsystemNotNormalAlarmMessage(const int code_id, const std::string subsytem_name);
+
+	public:
+		using StateHandler = std::function<int()>;
+
+		std::unordered_map<int, StateHandler> stateHandlers;
+
+		void initializeHLStateHandlers();
 
 	protected:
 		virtual RunResult onRun() throw(KernelException);

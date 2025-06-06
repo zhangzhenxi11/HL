@@ -78,6 +78,13 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭放晶圆盒门阀地址未定义", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令开始");
+
+		if (SIMULATION_TEST == 1)
+		{
+			logInform(sub->getName().c_str(), "模拟关闭放晶圆盒门阀命令...");
+			return RunResult::RUN_OK;
+		}
+
 		if (!writeBit(open_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到打开晶圆盒门阀地址错误", sub->getName()), this);

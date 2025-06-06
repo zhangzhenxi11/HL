@@ -55,6 +55,7 @@ namespace FC{
 		std::string address_1 = command_config->getString("address_1", "");
 		std::string address_2 = command_config->getString("address_2", "");
 		std::string finish_address = command_config->getString("finish_address", "");
+		std::string failed_address = command_config->getString("failed_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时:关闭角阀命令超时参数设置错误", sub->getName()), this);
@@ -63,6 +64,11 @@ namespace FC{
 		if ((address_1 == "") || (address_2 == "") || (finish_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭角阀命令地址未定义", getName()), this);
+		}
+		if (SIMULATION_TEST == 1)
+		{
+			logInform(sub->getName().c_str(), "模拟关闭角阀命令...");
+			return RunResult::RUN_OK;
 		}
 		logInform(sub->getName().c_str(), "关闭角阀命令开始");
 		if (!writeBit(address_1, true))
@@ -78,11 +84,14 @@ namespace FC{
 		int count = 0;
 		bool readRes = false;
 		bool readState = false;
+		bool readRes_failed = false;
+		bool readState_failed = false;
 		while (count <= loopCount)
 		{
 			Sleep(20);
 			readState = readBit(finish_address, readRes);
-			if (readRes)
+			readState_failed = readBit(failed_address, readRes_failed);
+			if (readRes || readRes_failed)
 			{
 				break;
 			}
@@ -95,7 +104,7 @@ namespace FC{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			logInform(sub->getName().c_str(), "关闭角阀命令执行完成");
 		}
-		else if (readState)
+		else if (readRes_failed)
 		{
 
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "关闭角阀命令执行失败，关闭角阀到位信号异常"));

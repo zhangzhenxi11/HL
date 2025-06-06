@@ -68,6 +68,10 @@ namespace FC{
 	};
 
 
+	void LoadLockAutoBreakVacuumCommand::initializeHLStateHandlers()
+	{
+	}
+
 	/**
 	* return true if success else false.
 	*/

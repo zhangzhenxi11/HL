@@ -19,12 +19,11 @@
 #include "Kernel/kernel_log.h"
 #include "kernel/kernel_iocontrol.h"
 #include "kernel/kernel_configure.h"
-#include "Kernel/kernel_configure.h"
-
 #include "TMCavity/fortrend_tm_cavity_subsystem.h" 
 #include "TMCavity/fortrend_tm_cavity_reset_command.h"
 #include "TMCavity/fortrend_tm_cavity_update_command.h"
 #include "TMCavity/fortrend_tm_cavity_output_command.h"
+
 
 
 #if _MSC_VER >= 1600
@@ -52,10 +51,17 @@ namespace FC{
 
 		std::string tm_cavity_vacuum_pressure_gage_address = "";    //传输腔真空压力表信号地址
 		int tm_cavity_vacuum_pressure_gage_state = -1;				//传输腔真空压力表信号
+
 		std::string tm_cavity_cover_safety_lock_address = "";		//传输腔腔盖安全锁地址
 		std::string tm_cavity_pid_set_value_address = "";			//传输腔腔盖安全锁地址
+
 		std::string molecule_pipeline_vacuum_read_value_address = "";  //分子泵管路真空值地址
 		double molecule_pipeline_vacuum_current_value = 100000.0;	   //分子泵管路当前真空值
+
+		std::string backing_pipeline_vacuum_read_value_address = "";   //前级泵管路真空值地址
+		double backing_pipeline_vacuum_current_value = 100000.0;	   //前级泵管路当前真空值
+
+
 		double rough_vacuum_set_value = 6;
 
 
@@ -66,7 +72,19 @@ namespace FC{
 		std::string close_angle_valve_address = "";
 		std::string open_inserting_plate_valve_address = "";
 		std::string close_inserting_plate_valve_address = "";
+		bool pm1_cavity_door_opend = false;
+		std::string  pm1_cavity_door_opend_address = "";
+
+		bool pm2_cavity_door_opend = false;
+		std::string  pm2_cavity_door_opend_address = "";
+
+		bool pm3_cavity_door_opend = false;
+		std::string  pm3_cavity_door_opend_address = "";
+
+		bool pm4_cavity_door_opend = false;
+		std::string  pm4_cavity_door_opend_address = "";
 		
+		std::map<int, bool> pm_cavity_door_Opend; //PM腔门开关
 
 		unsigned short io_input_count = 0;
 		std::vector<bool> io_input_last_value;
@@ -224,13 +242,15 @@ namespace FC{
 	}
 
 	double FortrendTMCavitySubsystem::getTMCavityVacuumValue()const{
-		//return 50000;
 		return d->tm_cavity_vacuum_current_value;
 	}
 
 	double FortrendTMCavitySubsystem::getMoleculePipelineVacuumValue() const{
-		//return 2.5;
 		return d->molecule_pipeline_vacuum_current_value;
+	}
+
+	double FortrendTMCavitySubsystem::getBackingPipelineVacuumValue() const{
+		return d->backing_pipeline_vacuum_current_value;
 	}
 
 	int FortrendTMCavitySubsystem::getTMCavityVacuumPressureGageState()const{
@@ -250,6 +270,23 @@ namespace FC{
 	*/
 	bool FortrendTMCavitySubsystem::getTMCavityRoughVacuumReachesTheSetValue(int value)const{
 		return d->tm_cavity_vacuum_current_value < (d->rough_vacuum_set_value + value);
+	}
+
+	bool FortrendTMCavitySubsystem::getPMCavityDoorOpend(int number) const
+	{
+		bool value = false;
+		auto select = d->pm_cavity_door_Opend.find(number);
+		if (select != d->pm_cavity_door_Opend.end())
+		{
+			value = select->second;
+		}
+		return value;
+	}
+
+	void FortrendTMCavitySubsystem::setPMCavityDoorOpend(int number, bool state)
+	{
+		d->pm_cavity_door_Opend[number] = state;
+		AbstractIOSubsystem::emitAttributeChanged(this);
 	}
 
 	/*
@@ -312,18 +349,25 @@ namespace FC{
 
 
 	void FortrendTMCavitySubsystem::onInitialize()throw(KernelException){
-		try{
-			if (enableProtocol())
-				setState(IKernelSubSystem::State::SUB_NORMAL);
-			else
-				setState(IKernelSubSystem::State::SUB_UNKNOWN);
 
+		if (TEST_STATUS == 1)
+		{
+			setState(IKernelSubSystem::State::SUB_NORMAL);
+		}
+		else
+		{
+			try {
+				if (enableProtocol())
+					setState(IKernelSubSystem::State::SUB_NORMAL);
+				else
+					setState(IKernelSubSystem::State::SUB_UNKNOWN);
+			}
+			catch (KernelException& e) {
+				logError(getName().c_str(), e.what());
+				//throw e;
+			}
+		}
 
-		}
-		catch (KernelException& e){
-			logError(getName().c_str(), e.what());
-			//throw e;
-		}
 	}
 
 	void FortrendTMCavitySubsystem::onUnInitialize()throw(KernelException){
@@ -371,6 +415,70 @@ namespace FC{
 					io_changed = true;
 				}
 			}
+
+			if (d->backing_pipeline_vacuum_read_value_address != "")
+			{
+				double buff_vacuum = 0.0;
+				if (readDouble(d->backing_pipeline_vacuum_read_value_address, buff_vacuum) &&
+					d->backing_pipeline_vacuum_current_value != buff_vacuum)
+				{
+
+					d->backing_pipeline_vacuum_current_value = buff_vacuum;
+					io_changed = true;
+				}
+			}
+#pragma region 更新PM门阀状态
+			bool pm_flag = false;
+			bool value = false;
+
+			pm_flag = d->pm1_cavity_door_opend;
+			value = 0;
+			if (d->pm1_cavity_door_opend_address != "" && readBit(d->pm1_cavity_door_opend_address, value))//PM1门阀
+			{
+				if (pm_flag != value)
+				{
+					io_changed = true;
+					d->pm1_cavity_door_opend = value;
+					setPMCavityDoorOpend(1, value);
+				}
+			}
+
+			pm_flag = d->pm2_cavity_door_opend;
+			value = 0;
+			if (d->pm2_cavity_door_opend_address != "" && readBit(d->pm2_cavity_door_opend_address, value))//PM2门阀
+			{
+				if (pm_flag != value)
+				{
+					io_changed = true;
+					d->pm2_cavity_door_opend = value;
+					setPMCavityDoorOpend(2, value);
+				}
+			}
+
+			pm_flag = d->pm3_cavity_door_opend;
+			value = 0;
+			if (d->pm3_cavity_door_opend_address != "" && readBit(d->pm3_cavity_door_opend_address, value))//PM3门阀
+			{
+				if (pm_flag != value)
+				{
+					io_changed = true;
+					d->pm3_cavity_door_opend = value;
+					setPMCavityDoorOpend(3, value);
+				}
+			}
+			pm_flag = d->pm4_cavity_door_opend;
+			value = 0;
+			if (d->pm4_cavity_door_opend_address != "" && readBit(d->pm4_cavity_door_opend_address, value))//PM4门阀
+			{
+				if (pm_flag != value)
+				{
+					io_changed = true;
+					d->pm4_cavity_door_opend = value;
+					setPMCavityDoorOpend(4, value);
+				}
+			}
+#pragma endregion
+
 #pragma region 自动更新门阀状态 
 			bool flag = false;
 
@@ -536,6 +644,7 @@ namespace FC{
 			d->tm_cavity_vacuum_break_set_value = config->getDouble("Vacuum.TMCavityBreakSetValue", 0.0);
 
 			d->molecule_pipeline_vacuum_read_value_address = config->getString("Vacuum.MoleculePipelineReadValueAddress", "");
+			d->backing_pipeline_vacuum_read_value_address = config->getString("Vacuum.BackingPipelineReadValueAddress","");
 
 		}
 		if (config->has("SignalAddress"))
@@ -552,6 +661,11 @@ namespace FC{
 			d->close_angle_valve_address = config->getString("Update.close_angle_valve_address", "");
 			d->open_inserting_plate_valve_address = config->getString("Update.open_inserting_plate_valve_address", "");
 			d->close_inserting_plate_valve_address = config->getString("Update.close_inserting_plate_valve_address", "");
+
+			d->pm1_cavity_door_opend_address = config->getString("Update.pm1_cavity_door_address","");
+			d->pm2_cavity_door_opend_address = config->getString("Update.pm2_cavity_door_address", "");
+			d->pm3_cavity_door_opend_address = config->getString("Update.pm3_cavity_door_address", "");
+			d->pm4_cavity_door_opend_address = config->getString("Update.pm4_cavity_door_address", "");
 		}
 		
 	}

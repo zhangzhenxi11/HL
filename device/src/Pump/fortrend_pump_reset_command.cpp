@@ -49,8 +49,10 @@ namespace FC{
 		FortrendPumpSubsystem* sub = dynamic_cast<FortrendPumpSubsystem*>(getSubsystem());
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		Sleep(3000);
+
 		//get command configure
 		return IKernelCommand::RunResult::RUN_OK;
+
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 		//fill params
 		std::string mechanical_reset_address = command_config->getString("mechanical_reset_address", "");

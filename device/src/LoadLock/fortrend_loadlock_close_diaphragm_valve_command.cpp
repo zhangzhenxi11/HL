@@ -53,9 +53,12 @@ namespace FC{
 		if (!sub){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
-		
-		
-		
+
+		if (SIMULATION_TEST == 1)
+		{
+			logInform(sub->getName().c_str(),"模拟执行关闭隔膜阀命令结束");
+			return RunResult::RUN_OK;
+		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
@@ -93,7 +96,6 @@ namespace FC{
 				sub->setFastDiaphragmValveOpend(false);
 			}
 			logInform(sub->getName().c_str(), "关闭隔膜阀命令结束");
-
 		}
 		else
 		{
@@ -102,9 +104,5 @@ namespace FC{
 			//logError(sub->getName().c_str(), "关闭隔膜阀命令通讯错误");
 		}
 		return ret;
-
 	}
-
-
-
 }

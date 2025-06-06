@@ -134,17 +134,29 @@ FortrendPumpSubsystem::FortrendPumpSubsystem(IKernel*  kernel, const std::string
 } 
 
 void FortrendPumpSubsystem::onInitialize()throw(KernelException){
-	try{
-		if (KeyencePlcSubSystemHelper::enableProtocol())
-			setState(IKernelSubSystem::State::SUB_NORMAL);
-		else
-			setState(IKernelSubSystem::State::SUB_UNKNOWN);
+	
+	if (SIMULATION_TEST == 1)
+	{
+		setState(IKernelSubSystem::State::SUB_NORMAL);
+	}
+	else
+	{
+		try {
+			if (KeyencePlcSubSystemHelper::enableProtocol())
+				setState(IKernelSubSystem::State::SUB_NORMAL);
+			else
+				setState(IKernelSubSystem::State::SUB_UNKNOWN);
 
+		}
+		catch (KernelException& e) {
+			logError(getName().c_str(), e.what());
+			//throw e;
+		}
 	}
-	catch (KernelException& e){
-		logError(getName().c_str(), e.what());
-		//throw e;
-	}
+
+	
+
+
 }
 
 void FortrendPumpSubsystem::onUnInitialize()throw(KernelException){
@@ -628,6 +640,7 @@ void FortrendPumpSubsystem::setMolecularPumpOpenedLLB(const bool value){
 		AbstractIOSubsystem::emitAttributeChanged(this);
 	}
 }
+//TM 分子泵打开
 bool FortrendPumpSubsystem::getMolecularPumpOpenedTM()const{
 
 	return d->molecular_pump_opened_tm;
