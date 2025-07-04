@@ -44,8 +44,10 @@ namespace FC{
 
 		//关闭传输腔门阀(LL-TM之间的门)
 		int handleStep1040();
+
 		//关闭晶圆盒门
 		int handleStep1045();
+
 		//关闭TM腔的角阀
 		int handleStep1050();
 

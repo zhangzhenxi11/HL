@@ -67,20 +67,19 @@ namespace FC{
 		//VTM TOWER
 		std::shared_ptr<FortrendVTMSignalTower> tower(new FortrendVTMSignalTower(this, api));
 		//tower->setEnabled(false);
-
 		
 		//std::shared_ptr<FortrendSMIFSubsystem> smif(new FortrendSMIFSubsystem(this, "SMIF"));
 
 		//VTM 
 		std::shared_ptr<FortrendLoadLockSubsystem> loadlock1(new FortrendLoadLockSubsystem(this, "LLA"));
 		std::shared_ptr<FortrendLoadLockSubsystem> loadlock2(new FortrendLoadLockSubsystem(this, "LLB"));
-
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr(new FortrendSunwayRobotSubsystem(this, "WTR"));
-
 		std::shared_ptr<FortrendTMCavitySubsystem> tm(new FortrendTMCavitySubsystem(this, "TM"));
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm1(new FortrendPMCavitySubsystem(this, "PM1"));
-		std::shared_ptr<FortrendPMCavitySubsystem> pm2(new FortrendPMCavitySubsystem(this, "PM"));
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm3(new FortrendPMCavitySubsystem(this, "PM3"));
+		//add
+		std::shared_ptr<FortrendPMCavitySubsystem> pm1(new FortrendPMCavitySubsystem(this, "PM1"));
+		std::shared_ptr<FortrendPMCavitySubsystem> pm2(new FortrendPMCavitySubsystem(this, "PM2"));
+		std::shared_ptr<FortrendPMCavitySubsystem> pm3(new FortrendPMCavitySubsystem(this, "PM3"));
+		std::shared_ptr<FortrendPMCavitySubsystem> pm4(new FortrendPMCavitySubsystem(this, "PM4"));
 		std::shared_ptr<FortrendPumpSubsystem> pump(new FortrendPumpSubsystem(this, "PUMP"));
 
 		//std::shared_ptr<FortrendAlignerSubsystem> aligner(new FortrendAlignerSubsystem(this, "Aligner"));
@@ -92,22 +91,17 @@ namespace FC{
 		//USER SCRIPT SUBSYSTEM
 		//std::shared_ptr<KernelScriptSubsystem> user_script(new KernelScriptSubsystem(this, "UserScript"));
 
-
-
 		//this->addKernelModule(smif);
 
 		this->addKernelModule(cassManager);
-
 		this->addKernelModule(wtr);
-
 		this->addKernelModule(loadlock1);
 		this->addKernelModule(loadlock2);
-
 		this->addKernelModule(tm);
-		//this->addKernelModule(pm1);
+		this->addKernelModule(pm1);
 		this->addKernelModule(pm2);
-		//this->addKernelModule(pm3);
-		////this->addKernelModule(pm4);
+		this->addKernelModule(pm3);
+		this->addKernelModule(pm4);
 		this->addKernelModule(pump);
 		//this->addKernelModule(aligner);
 		//this->addKernelModule(cooling);
@@ -129,9 +123,10 @@ namespace FC{
 		cassManager->addStation(loadlock1.get());
 		cassManager->addStation(loadlock2.get());
 		cassManager->addStation(wtr.get());
+		cassManager->addStation(pm1.get());
 		cassManager->addStation(pm2.get());
-		//cassManager->addStation(pm3.get());
-		//cassManager->addStation(pm4.get());
+		cassManager->addStation(pm3.get());
+		cassManager->addStation(pm4.get());
 
 		//cassManager->addStation(aligner.get());
 		//cassManager->addStation(cooling.get());
@@ -241,6 +236,7 @@ namespace FC{
 		//	}
 		//	cassManager->loadCassette(aligner.get(), cass);
 		//}
+
 		//set pm virtual cassette
 		for (auto& pm : getKernelModules<FortrendPMCavitySubsystem>()){
 			//virtual cassette
@@ -252,17 +248,18 @@ namespace FC{
 			}
 			cassManager->loadCassette(pm.get(), cass);
 		}
+
 		//set cooling virtual cassette
-		for (auto& col : getKernelModules<FortrendCoolingCavitySubsystem>()){
-			//virtual cassette
-			Cassette::Ptr cass(new Cassette(col.get(),1, true));
-			cass->setBoxId(Poco::format("%s", col->getName()));
-			cass->setBoxOpened(true);
-			for (size_t i = 0; i < 1; i++){
-				cass->setMapping(i + 1, Cassette::Empty);
-			}
-			cassManager->loadCassette(col.get(), cass);
-		}
+		//for (auto& col : getKernelModules<FortrendCoolingCavitySubsystem>()){
+		//	//virtual cassette
+		//	Cassette::Ptr cass(new Cassette(col.get(),1, true));
+		//	cass->setBoxId(Poco::format("%s", col->getName()));
+		//	cass->setBoxOpened(true);
+		//	for (size_t i = 0; i < 1; i++){
+		//		cass->setMapping(i + 1, Cassette::Empty);
+		//	}
+		//	cassManager->loadCassette(col.get(), cass);
+		//}
 
 		try{
 			IKernel::initialize();

@@ -28,7 +28,8 @@ namespace  FC {
 	class  QSlotTransferCycleVTMWidget : public QKernelModuleWidget{
 		Q_OBJECT
 	public:
-		QSlotTransferCycleVTMWidget(const std::shared_ptr<IKernel>& kernel, QFortrendStationStatusVTMWidget* ptr, QWidget* parent = NULL);
+		QSlotTransferCycleVTMWidget(const std::shared_ptr<IKernel>& kernel, 
+			QFortrendStationStatusVTMWidget* ptr, QWidget* parent = NULL);
 		~QSlotTransferCycleVTMWidget();
 		void onUpdateRecipe(int model);
 		void clickStart();
@@ -61,7 +62,8 @@ namespace  FC {
 		void update_cycle_data();
 		void updateProcessControlEnabled(const bool enabled);
 		void updateControlEnabled(const QString control,const bool enabled);
-		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value = 3);
+		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 
+			double max_value, double single_step, double value, int decimals_value = 3);
 	private:
 		void startVacuumAction();
 		void startVacuumMoniterAction();

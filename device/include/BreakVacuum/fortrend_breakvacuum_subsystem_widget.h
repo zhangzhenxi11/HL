@@ -16,15 +16,18 @@ public:
     ~QBreakVacuumSubsystemWidget();
 
 private slots:
-	void onTMGMFKClicked(bool status);//快
-	void onTMGMFMClicked(bool status);//慢
-	void onLLAGMFKClicked(bool status);//快
-	void onLLAGMFMClicked(bool status);//慢
-	void onLLBGMFKClicked(bool status);//快
-	void onLLBGMFMClicked(bool status);//慢
+	void onTMGMFKClicked(bool status);//TM快
+	void onTMGMFMClicked(bool status);//TM慢
+	void onLLAGMFKClicked(bool status);//LLA快
+	void onLLAGMFMClicked(bool status);//LLA慢
+	void onLLBGMFKClicked(bool status);//LLB快
+	void onLLBGMFMClicked(bool status);//LLB慢
 	void showMessage(const QString& message);
-	void onOpenLoadLock1AutoBreakVacuumCommand();
+
+	void onOpenLoadLock1AutoBreakVacuumCommand();//破真空
+
 	void onOpenLoadLock2AutoBreakVacuumCommand();
+
 	void onOpenTMCavityAutoBreakVacuumCommand();
 	
 private:

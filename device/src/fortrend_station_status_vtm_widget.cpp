@@ -87,6 +87,7 @@
 #include <QPalette>
 #include <QCoreApplication>
 #include <QString>
+#include <qdebug.h>
 #include "QMessageBox"
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
@@ -101,7 +102,7 @@ namespace FC{
 		Q_DECLARE_PUBLIC(QFortrendStationStatusVTMWidget)
 		QFortrendStationStatusVTMWidgetPrivate(QFortrendStationStatusVTMWidget* p, const std::shared_ptr<IKernel>& kernel);
 		~QFortrendStationStatusVTMWidgetPrivate();
-		void onAttributeChange();
+		void onAttributeChange();  
 		virtual void onAttributeChange(const KernelAbstractSubSystem* arg);
 		void onProcess();
 		void onKernelEvent(FC::KernelEventModule* kernelModule, const std::shared_ptr<FC::IEventId>& eventId, FC::KernelEventParameter* context)override;
@@ -112,13 +113,17 @@ namespace FC{
 
 	private:
 		Ui::FortrendStationStatusVTMWidget* ui;
+
+		//stackedWidget显示，就是模组手动界面
 		QMainLoadLockSubsystemWidget* mainLoadlock1Widget;
 		QMainLoadLockSubsystemWidget* mainLoadlock2Widget;
 		QMainSunwayRobotSubsystemWidget* mainRobotWidget;
 		QMainTMCavitySubsystemWidget* mainTMWidget;
-		//QMainPMCavitySubsystemWidget* mainPM1Widget;
+
+		QMainPMCavitySubsystemWidget* mainPM1Widget;//add
 		QMainPMCavitySubsystemWidget* mainPM2Widget;
-		//QMainPMCavitySubsystemWidget* mainPM3Widget;
+		QMainPMCavitySubsystemWidget* mainPM3Widget;//add
+		QMainPMCavitySubsystemWidget* mainPM4Widget;
 
 		std::vector<QLabel*> loadlock1_cassete_slot_state;
 		std::vector<QLabel*> loadlock2_cassete_slot_state;
@@ -129,22 +134,32 @@ namespace FC{
 
 		std::shared_ptr<IKernel> kernel;
 		QFortrendStationStatusVTMWidget* q_ptr;
+
+		//模组指针
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm1;
+		//pM
+		std::shared_ptr<FortrendPMCavitySubsystem> pm1;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2;
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm3;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm3;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm4;
+
 		std::shared_ptr<FortrendTMCavitySubsystem> tm;
 		std::shared_ptr<FortrendAlignerSubsystem> aligner;
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr;
 		std::shared_ptr<FortrendCassetteManager> cassManager;
+
+		//执行指令的widget，继承了QKernelModuleWidget
 		QAbstractSubsystemWidget<FortrendLoadLockSubsystem> *lk1widget;
 		QAbstractSubsystemWidget<FortrendLoadLockSubsystem> *lk2widget;
-		//QAbstractSubsystemWidget<FortrendPMCavitySubsystem> *pm1widget;
+		QAbstractSubsystemWidget<FortrendPMCavitySubsystem> *pm1widget;
 		QAbstractSubsystemWidget<FortrendPMCavitySubsystem> *pm2widget;
-		//QAbstractSubsystemWidget<FortrendPMCavitySubsystem> *pm3widget;
+		QAbstractSubsystemWidget<FortrendPMCavitySubsystem> *pm3widget;
+		QAbstractSubsystemWidget<FortrendPMCavitySubsystem>* pm4widget;
+		
 		QAbstractSubsystemWidget<FortrendTMCavitySubsystem> *tmwidget;
 		QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem> *wtrwidget;
+
 
 		int stationidlk1=0;
 		int stationidlk2=4;
@@ -162,9 +177,12 @@ namespace FC{
 		//setBackgroundImage("images/station_status.png");
 		lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-		//pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
-		pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM");
-		//pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+
+		pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
+		pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+		pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+		pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
+
 		tm  = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		aligner = kernel->getKernelModule<FortrendAlignerSubsystem>("Aligner");
@@ -178,12 +196,13 @@ namespace FC{
 		stationidpm2 = pm2->getStationId(wtr->getName());
 		//stationidaligner = aligner->getStationId(wtr->getName());
 		
-
+		//添加到订阅者中，， event发生，lk1模组接收到信息
 		lk1->addEventListener(this);
 		lk2->addEventListener(this);
-		//pm1->addEventListener(this);
+		pm1->addEventListener(this);
 		pm2->addEventListener(this);
-		//pm3->addEventListener(this);
+		pm3->addEventListener(this);
+		pm4->addEventListener(this);
 		tm->addEventListener(this);
 		wtr->addEventListener(this);
 		//aligner->addEventListener(this);
@@ -243,7 +262,12 @@ namespace FC{
 			return;
 		}
 		//logInform("Test", "name=%s isopened=%d %s", station->getName(), arg->isBoxOpened(), wtr->getName());
-		QMetaObject::invokeMethod(q_ptr, "updateCassetteAnimation", Qt::AutoConnection, Q_ARG(std::string, station->getName()), Q_ARG(bool, arg->isBoxOpened()), Q_ARG(std::vector<Cassette::Mapping>, arg->getAllMapping()));
+
+		QMetaObject::invokeMethod(q_ptr, "updateCassetteAnimation", 
+			Qt::AutoConnection, 
+			Q_ARG(std::string, station->getName()),
+			Q_ARG(bool, arg->isBoxOpened()), 
+			Q_ARG(std::vector<Cassette::Mapping>, arg->getAllMapping()));
 	}
 
 	void QFortrendStationStatusVTMWidgetPrivate::onAttributeChange(const FC::FortrendCassetteManager *arg) {
@@ -520,42 +544,55 @@ namespace FC{
 
 		d->ui = new Ui::FortrendStationStatusVTMWidget;
 		d->ui->setupUi(this);
-		//d->ui->pm1_widget->setRotationAngle(180);
-		d->ui->pm2_widget->setRotationAngle(270);
+		d->ui->pm1_widget->setRotationAngle(0);
+		d->ui->pm2_widget->setRotationAngle(60);
+		d->ui->pm3_widget->setRotationAngle(120);
+		d->ui->pm4_widget->setRotationAngle(180);
 		d->ui->loadlockB_widget->SetIsLeft(false);
+
+		d->ui->pm1_widget->setStatus(true);
 		d->ui->pm2_widget->setStatus(true);
-		//d->ui->pm3_widget->setStatus(true);
+		d->ui->pm3_widget->setStatus(true);
+		d->ui->pm4_widget->setStatus(true);
+
 		d->ui->loadlockB_widget->SetName("LLB");
 		d->ui->loadlockA_widget->SetName("LLA");
 		d->ui->robot_widget->SetName("WTR");
-		//d->ui->pm1_widget->SetName("PM1");
-		d->ui->pm2_widget->SetName("PM");
-		//d->ui->pm3_widget->SetName("PM3");
+		d->ui->pm1_widget->SetName("PM1");
+		d->ui->pm2_widget->SetName("PM2");
+		d->ui->pm3_widget->SetName("PM3");
+		d->ui->pm4_widget->SetName("PM4");
 
 		d->ui->tm_widget->SetName("TM");
 
 		d->lk1widget = new QAbstractSubsystemWidget<FortrendLoadLockSubsystem>(d->lk1, this);
 		d->lk2widget = new QAbstractSubsystemWidget<FortrendLoadLockSubsystem>(d->lk2, this);
-		//d->pm1widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm1, this);
+
+		d->pm1widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm1, this);
 		d->pm2widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm2, this);
-		//d->pm3widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm3, this);
+		d->pm3widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm3, this);
+		d->pm4widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm4, this);
+
 		d->tmwidget = new QAbstractSubsystemWidget<FortrendTMCavitySubsystem>(d->tm, this);
 		d->wtrwidget = new QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem>(d->wtr, this);
 	
-
-
 		d->mainLoadlock1Widget = new QMainLoadLockSubsystemWidget(d->lk1,this);
 		d->mainLoadlock2Widget = new QMainLoadLockSubsystemWidget(d->lk2, this);
-		//d->mainPM1Widget = new QMainPMCavitySubsystemWidget(d->pm1, this);
+
+		d->mainPM1Widget = new QMainPMCavitySubsystemWidget(d->pm1, this);
 		d->mainPM2Widget = new QMainPMCavitySubsystemWidget(d->pm2, this);
-		//d->mainPM3Widget = new QMainPMCavitySubsystemWidget(d->pm3, this);
+		d->mainPM3Widget = new QMainPMCavitySubsystemWidget(d->pm3, this);
+		d->mainPM4Widget = new QMainPMCavitySubsystemWidget(d->pm4, this);
+
 		d->mainTMWidget = new QMainTMCavitySubsystemWidget(d->tm,d->aligner, this);
 		d->mainRobotWidget = new QMainSunwayRobotSubsystemWidget(d->wtr, this);
 
+		//加入到stackedWidget中
 	    d->ui->stackedWidget->addWidget(d->mainLoadlock1Widget);
-		//d->ui->stackedWidget->addWidget(d->mainPM1Widget);
+		d->ui->stackedWidget->addWidget(d->mainPM1Widget);
 		d->ui->stackedWidget->addWidget(d->mainPM2Widget);
-		//d->ui->stackedWidget->addWidget(d->mainPM3Widget);
+		d->ui->stackedWidget->addWidget(d->mainPM3Widget);
+		d->ui->stackedWidget->addWidget(d->mainPM4Widget);
 		d->ui->stackedWidget->addWidget(d->mainLoadlock2Widget);
 		d->ui->stackedWidget->addWidget(d->mainTMWidget);
 		d->ui->stackedWidget->addWidget(d->mainRobotWidget);
@@ -571,11 +608,11 @@ namespace FC{
 			QWidget* cassette_Widget = new QFortrendCassetteWidget(casslk1, d->cassManager, true, true, 25, this); //max row count = 25
 			d->ui->center_layout->addWidget(cassette_Widget);
 		}
-		//auto  casspm1 = d->cassManager->getCassette(d->pm1.get());
-		//if (casspm1){
-		//	QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm1, d->cassManager, true, true, 25, this); //max row count = 25
-		//	d->ui->center_layout->addWidget(cassette_Widget);
-		//}
+		auto  casspm1 = d->cassManager->getCassette(d->pm1.get());
+		if (casspm1){
+			QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm1, d->cassManager, true, true, 25, this); //max row count = 25
+			d->ui->center_layout->addWidget(cassette_Widget);
+		}
 		auto  casspm2 = d->cassManager->getCassette(d->pm2.get());
 		if (casspm2){
 			if (casspm2->getMapping(1) == Cassette::Present){
@@ -584,11 +621,12 @@ namespace FC{
 			QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm2, d->cassManager, true, true, 25, this); //max row count = 25
 			d->ui->center_layout->addWidget(cassette_Widget);
 		}
-		//auto  casspm3 = d->cassManager->getCassette(d->pm3.get());
-		//if (casspm3){
-		//	QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm3, d->cassManager, true, true, 25, this); //max row count = 25
-		//	d->ui->center_layout->addWidget(cassette_Widget);
-		//}
+		auto  casspm3 = d->cassManager->getCassette(d->pm3.get());
+		if (casspm3){
+			QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm3, d->cassManager, true, true, 25, this); //max row count = 25
+			d->ui->center_layout->addWidget(cassette_Widget);
+		}
+
 		auto  casslk2 = d->cassManager->getCassette(d->lk2.get());
 		if (casslk2){
 			casslk2->setBoxId("B");
@@ -614,6 +652,13 @@ namespace FC{
 
 		auto  casswtr = d->cassManager->getCassette(d->wtr.get());
 		if (casswtr){
+
+
+			//std::string mapResult = casswtr->toString();
+			//logInform(d->wtr->getName().c_str(),"mapResult:%s", mapResult);
+			//qDebug() << "mapResult:" << mapResult.c_str() << endl;
+			//casswtr->setMapping(1, Cassette::Empty);
+
 			if (casswtr->getMapping(1) == Cassette::Present){
 				if (!d_ptr->ui->robot_widget->getIsWaferArm1()){
 					d_ptr->ui->robot_widget->setIsWaferArm1(true);
@@ -631,16 +676,26 @@ namespace FC{
 
 		
 		
-
+		//lambada 表达式做槽函数
 		d->ui->stackedWidget->setCurrentIndex(7);
 		connect(d->ui->loadlockA_widget, &LoadLockA::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(2); d->ui->center_layout->setCurrentIndex(2);});
-		//connect(d->ui->pm1_widget, &chamberWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(3); d->ui->center_layout->setCurrentIndex(3);});
-		connect(d->ui->pm2_widget, &PMGDTWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(3); d->ui->center_layout->setCurrentIndex(3);});
-		//connect(d->ui->pm3_widget, &chamberWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(5); d->ui->center_layout->setCurrentIndex(5);});
-		connect(d->ui->loadlockB_widget, &LoadLockB::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(4); d->ui->center_layout->setCurrentIndex(4);});
-		connect(d->ui->tm_widget, &TM::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(5); d->ui->center_layout->setCurrentIndex(5);});
-		connect(d->ui->robot_widget, &vtmrobot::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(6); d->ui->center_layout->setCurrentIndex(6);});
+		
+		connect(d->ui->pm1_widget, &PMGDTWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(3); d->ui->center_layout->setCurrentIndex(3);});
+		
+		connect(d->ui->pm2_widget, &PMGDTWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(4); d->ui->center_layout->setCurrentIndex(4);});
+		
+		connect(d->ui->pm3_widget, &PMGDTWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(5); d->ui->center_layout->setCurrentIndex(5);});
+		
+		connect(d->ui->pm4_widget, &PMGDTWidget::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(6); d->ui->center_layout->setCurrentIndex(6); });
+
+		connect(d->ui->loadlockB_widget, &LoadLockB::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(7); d->ui->center_layout->setCurrentIndex(7);});
+
+		connect(d->ui->tm_widget, &TM::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(8); d->ui->center_layout->setCurrentIndex(8);});
+		
+		connect(d->ui->robot_widget, &vtmrobot::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(9); d->ui->center_layout->setCurrentIndex(9);});
+		
 		connect(d->ui->recipe_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onRecipe);
+
 		d->ui->recipe_box->addItem("单A模式");
 		d->ui->recipe_box->addItem("单B模式");
 		d->ui->recipe_box->addItem("先A后B模式");
@@ -752,12 +807,12 @@ namespace FC{
 #pragma endregion
 
 #pragma region PM模块信号槽绑定
-	/*	QObject::connect(d->ui->pm1_widget, &chamberWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
-		QObject::connect(d->ui->pm1_widget, &chamberWidget::signalPMCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor);
-		QObject::connect(d->ui->pm1_widget, &chamberWidget::signalPMGetFinished, this, &QFortrendStationStatusVTMWidget::onPMGetFinished);
-		QObject::connect(d->ui->pm1_widget, &chamberWidget::signalPMUplaodFinished, this, &QFortrendStationStatusVTMWidget::onPMUplaodFinished);
-		QObject::connect(d->ui->pm1_widget, &chamberWidget::signalPMGetStatus, this, &QFortrendStationStatusVTMWidget::onPMGetStatus);
-		QObject::connect(d->ui->pm1_widget, &chamberWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);*/
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor);
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMGetFinished, this, &QFortrendStationStatusVTMWidget::onPMGetFinished);
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMUplaodFinished, this, &QFortrendStationStatusVTMWidget::onPMUplaodFinished);
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMGetStatus, this, &QFortrendStationStatusVTMWidget::onPMGetStatus);
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
 
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor);
@@ -766,12 +821,21 @@ namespace FC{
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMGetStatus, this, &QFortrendStationStatusVTMWidget::onPMGetStatus);
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
 
-		/*QObject::connect(d->ui->pm3_widget, &chamberWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
-		QObject::connect(d->ui->pm3_widget, &chamberWidget::signalPMCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor);
-		QObject::connect(d->ui->pm3_widget, &chamberWidget::signalPMGetFinished, this, &QFortrendStationStatusVTMWidget::onPMGetFinished);
-		QObject::connect(d->ui->pm3_widget, &chamberWidget::signalPMUplaodFinished, this, &QFortrendStationStatusVTMWidget::onPMUplaodFinished);
-		QObject::connect(d->ui->pm3_widget, &chamberWidget::signalPMGetStatus, this, &QFortrendStationStatusVTMWidget::onPMGetStatus);
-		QObject::connect(d->ui->pm3_widget, &chamberWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);*/
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor);
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMGetFinished, this, &QFortrendStationStatusVTMWidget::onPMGetFinished);
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMUplaodFinished, this, &QFortrendStationStatusVTMWidget::onPMUplaodFinished);
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMGetStatus, this, &QFortrendStationStatusVTMWidget::onPMGetStatus);
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
+
+
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor);
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMGetFinished, this, &QFortrendStationStatusVTMWidget::onPMGetFinished);
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMUplaodFinished, this, &QFortrendStationStatusVTMWidget::onPMUplaodFinished);
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMGetStatus, this, &QFortrendStationStatusVTMWidget::onPMGetStatus);
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
+
 #pragma endregion
 
 	}
@@ -1506,6 +1570,6 @@ namespace FC{
 
 	void QFortrendStationStatusVTMWidget::setAxislocation(double location){
 		Q_D(QFortrendStationStatusVTMWidget);
-		//d->ui->pm2_widget->setYOffset(location);
+		d->ui->pm2_widget->setYOffset(location);
 	}
 }

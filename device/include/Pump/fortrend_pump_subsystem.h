@@ -78,6 +78,7 @@ public:
 	int getMolecularPumpRunningStateLLB()const;
 	void setMolecularPumpRunningStateLLB(const int value);
 
+	//自动运行状态
 	void setAutomaticRunningStateTM(const bool value);
 	bool getAutomaticRunningStateTM() const;
 	void setAutomaticRunningStateLLA(const bool value);
@@ -85,10 +86,21 @@ public:
 	void setAutomaticRunningStateLLB(const bool value);
 	bool getAutomaticRunningStateLLB() const;
 
+	//打开
 	bool getMechanicalPumpOpened()const;
 	void setMechanicalPumpOpened(const bool value);
-	bool getMechanicalPumpHasAlarm();
 
+	//干泵报警
+	bool getMechanicalPumpHasAlarm()const;
+	bool getMechanicalPumpHasWarn()const;
+
+	//干泵是否运行
+	bool getMechanicalPumpRunningState()const;
+	//acc 加速状态
+	bool getMechanicalPumpAcc()const;
+
+
+	//是否打开
 	bool getMolecularPumpOpenedLLA()const;
 	void setMolecularPumpOpenedLLA(const bool value);
 	bool getMolecularPumpOpenedLLB()const;
@@ -96,6 +108,7 @@ public:
 	bool getMolecularPumpOpenedTM()const;
 	void setMolecularPumpOpenedTM(const bool value);
 
+	//分子泵达到转速
 	bool getMolecularPumpReachSpeedLLA() const;
 	void setMolecularPumpReachSpeedLLA(const bool value);
 	bool getMolecularPumpReachSpeedLLB() const;
@@ -103,10 +116,13 @@ public:
 	bool getMolecularPumpReachSpeedTM() const;
 	void setMolecularPumpReachSpeedTM(const bool value);
 
+	//分子泵转速
 	int getMolecularPumpRev()const;
 	void setMolecularPumpRev(const int value);
 
+	//真空模式
 	void setVacuumEnable(const bool value);
+	//带片模式
 	void setWithWaferModeEnable(const bool value);
 	/*
 	*更新分子泵状态

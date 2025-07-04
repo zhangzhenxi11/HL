@@ -58,10 +58,10 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 快充隔膜阀已打开（逻辑错误）", sub->getName()), this);
 		}
-		/*if (sub->getAngleValveOpend())
+		if (sub->getAngleValveOpend())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
-		}*/
+		}
 		/*if (sub->getExhaustValveOpend())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 排气阀已打开（逻辑错误）", sub->getName()), this);
@@ -81,11 +81,14 @@ namespace FC{
 		std::string open_address = command_config->getString("open_address", "");
 		std::string close_address = command_config->getString("close_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
+		std::string failed_address = command_config->getString("failed_address", "");
+		//std::string error_code_address = command_config->getString("error_code_address","");
+
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开晶圆盒门阀超时参数设置错误", sub->getName()), this);
 		}
-		if ((open_address == "") || (close_address == "") || (finish_address == ""))
+		if ((open_address == "") || (close_address == "") || (finish_address == "") ||(failed_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开晶圆盒门阀地址未定义", getName()), this);
 		}
@@ -103,12 +106,15 @@ namespace FC{
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;
+		bool failedRes = false;
 		bool readState = false;
+		bool readFailedState = false;
 		while (count <= loopCount)
 		{
 			Sleep(20);
 			readState = readBit(finish_address,readRes);
-			if (readRes)
+			readFailedState = readBit(failed_address, failedRes);
+			if (readRes || failedRes)
 			{
 				break;
 			}
@@ -122,9 +128,9 @@ namespace FC{
 			logInform(sub->getName().c_str(), "打开放晶圆盒门阀命令执行结束");
 
 		}
-		else if (readState)
+		else if (readFailedState && failedRes)
 		{
-			short failed_code = 0;
+
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开放晶圆盒门阀执行失败，打开晶圆盒门阀到位信号异常"));
 			setAlarm(alarm);
 			logError(sub->getName().c_str(), "打开放晶圆盒门阀执行失败，打开晶圆盒门阀到位信号异常");

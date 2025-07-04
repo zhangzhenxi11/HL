@@ -45,10 +45,9 @@
 #include "TMCavity/fortrend_tm_cavity_open_height_vacuum_baffle_valve_command.h"
 #include "TMCavity/fortrend_tm_cavity_open_inserting_plate_valve_command.h"
 
-
-
-
 #include <windows.h>
+
+#include <chrono>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -70,6 +69,9 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
+
+		std::chrono::steady_clock::time_point start_time;//开始时间点
+		const  std::chrono::hours timeout = std::chrono::hours(1); //超时时间
 	};
 	PumpOpenLoadLock1AutoVacuumCommandPrivate::
 	PumpOpenLoadLock1AutoVacuumCommandPrivate(PumpOpenLoadLock1AutoVacuumCommand* p)
@@ -158,23 +160,33 @@ namespace FC{
 	void PumpOpenLoadLock1AutoVacuumCommand::initializeHLStateHandlers()
 	{
 		/*
-		1.打开干泵							 handleStep10
-		2.打开对应的角阀						 handleStep1310
+		* 前提：例如loadLockA 抽真空：casste门，tM传输腔门，快慢隔膜阀，其他腔体的角阀是否关闭
+		*
+		1.打开干泵							 handleStep10  
+		2.打开对应的角阀						 handleStep1310：判断是否达到粗抽真空设定值，超时时间1小时，超时报警。最后结束
 		3.关闭当前腔体的隔膜阀				 handleStep1030
 		4.检查casste门和LL-TM腔体门是否关闭    handleStep1045 ,handleStep1040
 		5.关闭其他腔体的角阀					 handleStep1050,handleStep1060
 		6.抽到达标真空值结束                   handleStep1100  handleStep5210
 		*/
+		/*
+		loadLockA 抽真空：
+		1.casste门，tM传输腔门，快慢隔膜阀，loadlockb腔体的角阀,TM角阀是否关闭
+		2.打开干泵
+		3.打开loadLockA腔体的角阀（先慢后快）
+		4.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
+		5.最后结束，打印结束日志
+		*/
 
 
 		stateHandlers = std::unordered_map<int, StateHandler>{
-			{10, [this]() { return handleStep10(); }},
-			{1310,[this]() { return handleStep1310(); }},
-			{1030,[this]() {return handleStep1030(); }},
 			{1045,[this]() {return handleStep1045(); }},
 			{1040,[this]() {return handleStep1040(); }},
+			{1030,[this]() {return handleStep1030(); }},
 			{1050,[this]() {return handleStep1050(); }},
 			{1060,[this]() {return handleStep1060(); }},
+			{10, [this]() { return handleStep10(); }},
+			{1310,[this]() { return handleStep1310(); }},
 			{1100,[this]() {return handleStep1100(); }},
 			{5210,[this]() {return handleStep5210(); }},
 			{10000, [this]() { return handleStep10000(); }}
@@ -315,11 +327,14 @@ namespace FC{
 				}
 				else
 				{
+					//开始计时
+					d->start_time = std::chrono::steady_clock::now();
 					step = 1310;
 				}
 			}
 			else
 			{
+				d->start_time = std::chrono::steady_clock::now();
 				step = 1310;
 			}
 		}
@@ -409,12 +424,12 @@ namespace FC{
 				}
 				else
 				{
-					step = 1045;
+					step = 1050;
 				}
 			}
 			else
 			{
-				step = 1045;
+				step = 1050;
 			}
 		}
 		else
@@ -441,11 +456,11 @@ namespace FC{
 				}
 				else
 				{
-					step = 1050;
+					step = 1030;
 				}
 			}
 			else {
-				step = 1050;
+				step = 1030;
 			}
 		}
 		else
@@ -572,11 +587,11 @@ namespace FC{
 				else
 				{
 					isColseAngleValvellb = true;
-					step = 1100;
+					step = 10;
 				}
 			}
 			else {
-				step = 1100;
+				step = 10;
 			}
 		}
 		else
@@ -625,22 +640,23 @@ namespace FC{
 	{
 		int step = 1100;
 		std::string errorMessage = "干泵粗抽超时";
+		auto now_time = std::chrono::steady_clock::now();
+		auto elapsed = now_time - d->start_time;
+
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 		//是否达到粗抽压力
 		if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue() == false)
 		{
 			//达到
-			lla_loop_count = 0;
 			step = 5210;
 		}
 		else
 		{
-			Sleep(100);
-			++lla_loop_count;
-			if (lla_loop_count > 30)
-			{
+			if (elapsed >= d->timeout) {
+			
 				//超时
 				lla_loop_count = 0;
-				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待loadlockA腔体压力小于5Pa,当前压力：%f",
+				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待loadlockA腔体压力小于1Pa,当前压力：%f",
 					getName(), d->lk1->getVacuumValue()).c_str());
 
 				addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
@@ -648,6 +664,9 @@ namespace FC{
 			}
 			else
 			{
+				auto remaining = d->timeout - elapsed;
+				auto sec = std::chrono::duration_cast<std::chrono::seconds>(remaining).count();
+				//std::cout << "\r剩余时间: " << sec << " 秒" << std::flush;
 				//继续当前函数
 				step = 1100;
 			}	
@@ -848,12 +867,12 @@ namespace FC{
 				}
 				else
 				{
-					step = 1030;
+					step = 1100;
 				}
 			}
 			else
 			{
-				step = 1030;
+				step = 1100;
 			}
 		}
 		else

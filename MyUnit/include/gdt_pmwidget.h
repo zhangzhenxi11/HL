@@ -24,10 +24,10 @@ public:
     ~PMGDTWidget();
     void paintEvent(QPaintEvent *event);
 	void mousePressEvent(QMouseEvent *event) override;
-     void updateColor();
+    void updateColor();
     void setStatus(bool busy);
     bool getStatus();
-    void setRotationAngle(int angle);
+    void setRotationAngle(int angle);//½Ç¶È
     void setWafer(bool wafer);
 	std::string GetName();
 	void SetName(std::string name);

@@ -69,9 +69,13 @@ public:
 private:
 	bool initialize();
 	bool reconnect(); // 新增重连函数
-private:
+
+public:
 	bool isConnected = false;
+private:
+	bool isReconnect = false;     //此次连接是否为重连
 	int max_retries = 5;         // 最大重连次数
+	int attempts = 0;            //重连次数
 	int retry_delay = 2000;      // 每次重连的间隔时间（毫秒）
 };
 
@@ -84,13 +88,18 @@ SunwaySubSystemHelperPrivate::SunwaySubSystemHelperPrivate(SunwaySubSystemHelper
 }
 
 bool SunwaySubSystemHelperPrivate::reconnect() {
-	int attempts = 0;
+
+	isReconnect = true;
+
 	while (attempts < max_retries) {
 		logInform1(name.c_str(), Poco::format("尝试重新连接服务器, 尝试次数: %d", attempts + 1).c_str());
 
 		close(); // 先关闭现有连接
 		Sleep(retry_delay); // 等待重连间隔
-		if (initialize()) { // 重新连接
+
+		if (initialize())
+		{ // 重新连接
+			isReconnect = false;
 			logInform1(name.c_str(), "重新连接服务器成功.");
 			return true;
 		}
@@ -171,18 +180,23 @@ bool SunwaySubSystemHelperPrivate::initialize()
 		return false;
 	}
 	isConnected = true;
-	if (!sendRequest("HLLO"))
+	if (!isReconnect)
 	{
-		logError(name.c_str(), "机械手查找失败！.");
-		closesocket(*client);
-		return false;
+		//未重连，第一次连接
+		if (!sendRequest("HELLO"))
+		{
+			logError(name.c_str(), "机械手查找失败！.");
+			closesocket(*client);
+			return false;
+		}
+		std::string data = recvResponse(1000);
+		if (data != "ACK;")
+		{
+			logError(name.c_str(), "接收机械手数据错误.");
+			return false;
+		}
 	}
-	std::string data = recvResponse(1000);
-	if (data != "ACK")
-	{
-		logError(name.c_str(),"接收机械手数据错误.");
-		return false;
-	}
+
 	return true;
 }
 bool SunwaySubSystemHelperPrivate::setTimeout(const uint32_t milsecTime)
@@ -195,7 +209,9 @@ bool SunwaySubSystemHelperPrivate::setTimeout(const uint32_t milsecTime)
 * Send command to sunway (auto add 0x0D)
 */
 bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw(KernelException){
-	std::lock_guard<std::mutex> lock(mtx); // 使用lock_guard管理锁
+
+	std::lock_guard<std::mutex> lock(mtx); 
+
 	if (!isConnected)
 	{
 		logInform1(name.c_str(), "检测到连接已断开，开始重连...");
@@ -204,21 +220,23 @@ bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw
 			return false; // 重连失败
 		}
 	}
-	//int optval = 1;
-	//setsockopt(*client, SOL_SOCKET, SO_RCVBUF, (const char*)&optval, sizeof(optval));
 	//command
 	is_busy = true;
 	std::string data = command;
 	data.push_back(0x0D);
+
 	int err = send(*client, data.c_str(), data.size(), 0);
-	if (err == SOCKET_ERROR || err == 0){
+	if (err == SOCKET_ERROR || err == 0)
+	{
 		logError(name.c_str(), "发送命令: %s 失败", command.c_str());
 		is_busy = false;
 		isConnected = false; // 连接已断开
+		
 		if (!reconnect()) {
 			logError(name.c_str(), "重连失败，发送命令终止.");
 			return false;
 		}
+
 		// 重新发送命令
 		err = send(*client, data.c_str(), data.size(), 0);
 		if (err == SOCKET_ERROR || err == 0) {
@@ -228,6 +246,7 @@ bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw
 	};
 	Sleep(50);
 	//log
+	is_busy = false;
 	logInform1(name.c_str(), "Snd: %s ", command.c_str());
 	return true;
 }
@@ -243,7 +262,6 @@ std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) 
 			throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "重连失败，无法接收数据.");
 		}
 	}
-
 	setTimeout(timeout_ms);
 	std::string data;
 	char receiveBuf[1024];
@@ -264,15 +282,12 @@ std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) 
 			is_busy = false;
 			throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "重连后接收数据失败.");
 		}
-
-
 	}
 	data.append(receiveBuf, recvLen);
 	size_t found = data.find("\r"); //0x0D
 	if (found != std::string::npos)
 	{
-		data.erase(found, -1);
-		
+		data.erase(found, -1);	
 	}
 	else
 	{
@@ -518,6 +533,11 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelper::getE
 
 bool SunwaySubSystemHelper::getBusyState(){
 	return d->getBusyState();
+}
+
+bool SunwaySubSystemHelper::getIsConnected()
+{
+	return d->isConnected;
 }
 
 KERNEL_NS_END

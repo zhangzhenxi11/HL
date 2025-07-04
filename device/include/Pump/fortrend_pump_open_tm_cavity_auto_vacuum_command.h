@@ -26,48 +26,58 @@ namespace FC{
 		DECLARE_PTR(PumpOpenTMCavityAutoVacuumCommand)
 		PumpOpenTMCavityAutoVacuumCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "OpenTMCavityAutoVacuum"; }
-		virtual void addCommandExecutionAlarmMessage(const int code_id, const std::string subsytem_name, const std::string message);
+		void addCommandExecutionAlarmMessage(const int code_id, const std::string subsytem_name, const std::string message);
 		virtual void addSubsystemNotNormalAlarmMessage(const int code_id, const std::string subsytem_name);
 
-		using StateHandler = std::function<int()>;
 
-		std::unordered_map<int, StateHandler> stateHandlers;
+		enum class SystemState {
+			OPEN_MECHANICAL_PUMP = 10,
+			OPEN_TM_ANGLE_VALVE = 20,
+			CLOSE_TM_DIAPHRAGM_VALVE = 30,
+			CLOSE_LLA_TM_CAVITY_DOOR = 40,
+			CLOSE_LLB_TM_CAVITY_DOOR = 50,
+			CLOSE_LLA_ANGLE_VALVE = 60,
+			CLOSE_LLB_ANGLE_VALVE = 70,
+			CLOSE_PM_CAVITY_DOOR = 80,
+			JUDGE_COARSE_SUCTION_PRESSURE =90,
+			CREATE_END = 10000
+		};
 
-		bool executeCommand(std::shared_ptr<IKernelSubSystem> subsystem, std::shared_ptr<IKernelCommand> cmd, int currentStep, const std::string errorMessage);
+		using StateHandler = std::function<SystemState()>;
+		std::unordered_map<SystemState, StateHandler> stateHandlers;
 
 		void initializeStateHandlers();
 
 		//打开干泵
-		int handleStep10();
+		SystemState handleStepOpenMechanicalPump();
 
 		//打开TM腔的角阀
-		int handleStep1050();
+		SystemState handleStepOpenAngleValve();
 
 		//关闭隔膜阀
-		int handleStep1030();
+		SystemState handleStepCLoseDiaphragmValve();
 
 		//关闭传输腔门阀(LL1-TM之间的门)
-		int handleStep1040();
+		SystemState handleStepCloseLlaTmDoor();
 
 		//关闭传输腔门阀(LL2-TM之间的门)
-		int handleStep1041();
+		SystemState handleStepCloseLlbTmDoor();
 
 		//关闭PM腔门阀(PM1~PM4)
-		int handleStep1042();
+		SystemState handleStepClosePmDoor();
 
 		//关闭loadLock2的角阀
-		int handleStep1060();
+		SystemState handleStepCloseLlbAngleValve();
 
 		//关闭loadlock1角阀
-		int handleStep1310();
+		SystemState handleStepCloseLlaAngleValve();
 
 		//TM是否达到粗抽压力判断
-		int handleStep1100();
-
-		int handleStep5210();
+		SystemState handleStepCoarseSuctionPressure();
 
 		//退出循环
-		int handleStep10000();
+		SystemState handleStepEND();
+
 
 	protected:
 		virtual RunResult onRun() throw(KernelException);

@@ -11,6 +11,8 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 	SetConsoleOutputCP(CP_UTF8);
 #endif
+	
+
 	//高分辨率自动缩放
 	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	 FC::CoreRunner app(argc, argv); 

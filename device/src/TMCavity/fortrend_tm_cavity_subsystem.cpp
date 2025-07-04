@@ -61,7 +61,12 @@ namespace FC{
 		std::string backing_pipeline_vacuum_read_value_address = "";   //前级泵管路真空值地址
 		double backing_pipeline_vacuum_current_value = 100000.0;	   //前级泵管路当前真空值
 
+		std::string Axial_pressure_gage_address = "";                  //轴向压力表-1 NL/真空
+		bool axial_pressure_gage_state = false;                            //轴向压力表信号
 
+		std::string CDA_pressure_address = "";                         //总气源空压三联件信号
+		bool cda_signal_state = false;
+		
 		double rough_vacuum_set_value = 6;
 
 
@@ -234,6 +239,16 @@ namespace FC{
 
 	}
 
+	bool FortrendTMCavitySubsystem::getAxialPressureGageState() const
+	{
+		return d->axial_pressure_gage_state;
+	}
+
+	bool FortrendTMCavitySubsystem::getCDAPressureState() const
+	{
+		return d->cda_signal_state;
+	}
+
 	/*
 	*传输腔腔盖门锁信号
 	*/
@@ -261,7 +276,6 @@ namespace FC{
 	*达到粗抽压力
 	*/
 	bool FortrendTMCavitySubsystem::getTMCavityRoughVacuumReachesTheSetValue()const{
-		//return true;
 		return d->tm_cavity_vacuum_current_value < d->rough_vacuum_set_value;
 	}
 
@@ -548,14 +562,7 @@ namespace FC{
 				int buff_vacuum_pressure_gage_state = -1;
 				if (readBit(d->tm_cavity_vacuum_pressure_gage_address, buff_vacuum_pressure_gage))
 				{
-					if (buff_vacuum_pressure_gage)
-					{
-						buff_vacuum_pressure_gage_state = 1;
-					}
-					else
-					{
-						buff_vacuum_pressure_gage_state = 0;
-					}
+					buff_vacuum_pressure_gage_state = (buff_vacuum_pressure_gage)? 1:0;	
 				}
 				if (buff_vacuum_pressure_gage_state != d->tm_cavity_vacuum_pressure_gage_state)
 				{
@@ -563,6 +570,33 @@ namespace FC{
 					io_changed = true;
 				}
 			}
+
+			if (d->Axial_pressure_gage_address != "")
+			{
+				bool axial_signal = false;
+				if (readBit(d->Axial_pressure_gage_address, axial_signal))
+				{
+					if (d->axial_pressure_gage_state != axial_signal)
+					{
+						d->axial_pressure_gage_state = axial_signal;
+						io_changed = true;
+					}
+				}
+			}
+			
+			if (d->CDA_pressure_address != "")
+			{
+				bool cda_signal = false;
+				if (readBit(d->CDA_pressure_address, cda_signal))
+				{
+					if (d->cda_signal_state != cda_signal)
+					{
+						d->cda_signal_state = cda_signal;
+						io_changed = true;
+					}
+				}
+			}
+
 			if (io_changed)
 			{
 				AbstractIOSubsystem::emitAttributeChanged(this);
@@ -645,12 +679,15 @@ namespace FC{
 
 			d->molecule_pipeline_vacuum_read_value_address = config->getString("Vacuum.MoleculePipelineReadValueAddress", "");
 			d->backing_pipeline_vacuum_read_value_address = config->getString("Vacuum.BackingPipelineReadValueAddress","");
+			d->Axial_pressure_gage_address = config->getString("Vacuum.AxialPressureGageAddress","");
 
 		}
 		if (config->has("SignalAddress"))
 		{
 			d->tm_cavity_cover_safety_lock_address = config->getString("SignalAddress.CavityCoverSafetyLockAddress", "R60100");
 			d->tm_cavity_pid_set_value_address = config->getString("SignalAddress.PIDSetValueAddress", "DM400");
+			d->CDA_pressure_address = config->getString("CdaPressureAddress","MR30506");
+			
 		}
 		if (config->has("Update"))
 		{

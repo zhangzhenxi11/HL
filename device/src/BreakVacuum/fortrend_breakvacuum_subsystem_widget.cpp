@@ -24,11 +24,16 @@
 #include "LoadLock/fortrend_loadlock_cavity_open_height_vacuum_baffle_valve_command.h"
 #include "LoadLock/fortrend_loadlock_cavity_close_height_vacuum_baffle_valve_command.h"
 
+#include "Pump/fortrend_pump_subsystem.h"
+#include "Pump/fortrend_pump_open_tm_cavity_auto_vacuum_command.h"
+
 #include <QMessageBox>
 #include <QCheckBox>
 
+#include <iostream>
+
 namespace FC{
-	class QBreakVacuumSubsystemWidgetPrivate : public KernelListener<IKernelCommand> {//public FC::KernelEventListener,
+	class QBreakVacuumSubsystemWidgetPrivate : public KernelListener<IKernelCommand> {
 		Q_DECLARE_PUBLIC(QBreakVacuumSubsystemWidget)
 	public:
 		QBreakVacuumSubsystemWidgetPrivate(QBreakVacuumSubsystemWidget* p, const std::shared_ptr<IKernel>& kernel);
@@ -39,20 +44,40 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
 		std::shared_ptr<FortrendTMCavitySubsystem> tm;
+		std::shared_ptr<FortrendPumpSubsystem> pump;
+
 		QCheckBox *gmfk_tm_ckb = 0, *gmfm_tm_ckb = 0, *gmfk_lla_ckb = 0, *gmfm_lla_ckb = 0, *gmfk_llb_ckb = 0, *gmfm_llb_ckb = 0;
+
 		virtual void onAttributeChange(const IKernelCommand* cmd){
 			const KernelSubsystemCommand* subCmd = dynamic_cast<const KernelSubsystemCommand*>(cmd);
-			if (subCmd && subCmd->hasError()){
+			if (subCmd && subCmd->hasError())
+			{
 				AlarmMessage::Ptr alarm = cmd->alarmMessage();
-				QString msg = QString("%1 %2: \n[T=%3][C=0x%4]%5")
-					.arg(subCmd->getSubsystem()->getName().c_str())
-					.arg(cmd->getName().c_str())
-					.arg(alarm->type())
-					.arg(alarm->code(), 0, 16)
-					.arg(alarm->message().c_str());
+				std::cout << "message:%s" << alarm->message().c_str() << std::endl;
+				logInform("AlarmMessage", "alarm type:%d,code:%d,message:%s,name:%s", alarm->type(), alarm->code(), alarm->message().c_str());
+				QString msg;
+				if (alarm == nullptr)
+				{
+					msg = QString("%1 %2: \n[T=%3][C=0x%4]%5")
+						.arg(subCmd->getSubsystem()->getName().c_str())
+						.arg(cmd->getName().c_str())
+						.arg(1)
+						.arg(1, 0, 16)
+						.arg("未知报警");
+				}
+				else
+				{
+					msg = QString("%1 %2: \n[T=%3][C=0x%4]%5")
+						.arg(subCmd->getSubsystem()->getName().c_str())
+						.arg(cmd->getName().c_str())
+						.arg(alarm->type())
+						.arg(alarm->code(), 0, 16)
+						.arg(alarm->message().c_str());
+				}
 
 				QMetaObject::invokeMethod(q_ptr, "showMessage", Qt::AutoConnection,
 					Q_ARG(QString, msg));
+				
 			}
 		}
 
@@ -65,6 +90,7 @@ namespace FC{
 		lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 		tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
+		pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
 	}
 
 
@@ -93,7 +119,7 @@ namespace FC{
 			onAttributeUpdate();
 		});
 
-		QObject::connect(d->ui->gmfk_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFKClicked);
+		//QObject::connect(d->ui->gmfk_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFKClicked);
 		QObject::connect(d->ui->gmfm_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFMClicked);
 		
 		QObject::connect(d->ui->gmfk_lla, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onLLAGMFKClicked);
@@ -120,7 +146,7 @@ namespace FC{
 		d->gmfk_llb_ckb->setObjectName("io_object");
 		d->gmfm_llb_ckb->setObjectName("io_object");
 
-		d->ui->gmfk_tm_layout->addWidget(d->gmfk_tm_ckb, 0, 0);
+//		d->ui->gmfk_tm_layout->addWidget(d->gmfk_tm_ckb, 0, 0);
 		d->ui->gmfm_tm_layout->addWidget(d->gmfm_tm_ckb, 0, 0);
 		d->ui->gmfk_lla_layout->addWidget(d->gmfk_lla_ckb, 0, 0);
 		d->ui->gmfm_lla_layout->addWidget(d->gmfm_lla_ckb, 0, 0);
@@ -191,8 +217,8 @@ namespace FC{
 		d->ui->widget_41->setWaterDirection(1);//设置从下往上流动
 		d->ui->widget_42->setWaterDirection(1);//设置从下往上流动
 		d->ui->widget_43->setWaterDirection(1);//设置从下往上流动
-		d->ui->widget_44->setWaterDirection(1);//设置从下往上流动
-		d->ui->widget_46->setWaterDirection(1);//设置从下往上流动
+//		d->ui->widget_44->setWaterDirection(1);//设置从下往上流动
+//		d->ui->widget_46->setWaterDirection(1);//设置从下往上流动
 		d->ui->widget_53->setWaterDirection(1);//设置从下往上流动
 		d->ui->widget_55->setWaterDirection(1);//设置从下往上流动
 		d->ui->widget_62->setWaterDirection(1);//设置从下往上流动
@@ -361,16 +387,16 @@ namespace FC{
 		d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 
 		if (d->tm->getFastDiaphragmValveOpend()){
-			d->ui->gmfk_tm_w_1->setWaterDirection(1);//流动方向,0从左往右，1从右往左，其他停止流动
-			d->ui->gmfk_tm_h_1->setWaterDirection(0);
+//			d->ui->gmfk_tm_w_1->setWaterDirection(1);//流动方向,0从左往右，1从右往左，其他停止流动
+//			d->ui->gmfk_tm_h_1->setWaterDirection(0);
 			d->ui->gmfm_tm_w_1->setWaterDirection(1);
-			d->ui->gmfk_tm->open();
+//			d->ui->gmfk_tm->open();
 			d->gmfk_tm_ckb->setChecked(true);
 		}
 		else{
-			d->ui->gmfk_tm_w_1->setWaterDirection(2);
-			d->ui->gmfk_tm_h_1->setWaterDirection(2);
-			d->ui->gmfk_tm->close();
+//			d->ui->gmfk_tm_w_1->setWaterDirection(2);
+//			d->ui->gmfk_tm_h_1->setWaterDirection(2);
+//			d->ui->gmfk_tm->close();
 			d->gmfk_tm_ckb->setChecked(false);
 		}
 
@@ -451,10 +477,10 @@ namespace FC{
 			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位", d->tm->getName().c_str());
 			return;
 		}
-		/*KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
+		KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
 		cmd->setOrigin("GUI");
 		cmd->addListener(d);
-		d->pump->startCommand(cmd);*/
+		d->pump->startCommand(cmd);
 	}
 	void QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);

@@ -88,8 +88,12 @@ namespace FC{
 		connect(d->ui->to_get_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToGetStation);
 		connect(d->ui->to_put_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToPutStation);
 
-		d->ui->open_tm_cavity_door_btn->hide();
-		d->ui->close_tm_cavity_door_btn->hide();
+		//d->ui->open_tm_cavity_door_btn->hide();
+		//d->ui->close_tm_cavity_door_btn->hide();
+		d->ui->upload_finished_btn->hide();
+		d->ui->get_finished_btn->hide();
+		d->ui->to_get_btn->hide();
+		d->ui->to_put_btn->hide();
 		d->ui->get_finished_btn->hide();
 		d->ui->upload_finished_btn->hide();
 		d->ui->label_50->hide();

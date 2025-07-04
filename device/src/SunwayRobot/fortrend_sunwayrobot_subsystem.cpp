@@ -78,6 +78,7 @@ namespace FC{
 		, SunwaySubSystemHelper(name)
 		, d(new FortrendSunwayRobotSubsystemPrivate(this)){
 		//init 
+		
 
 	}
 

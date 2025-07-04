@@ -51,10 +51,10 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	if (!sub){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "subsystem type error.", this);
 	}
-	if (sub->getBusyState())
-	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s 处于忙碌中.", sub->getName()), this);
-	}
+	//if (sub->getBusyState())
+	//{
+	//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s 处于忙碌中.", sub->getName()), this);
+	//}
 	//check modules
 	auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 	//get cass
@@ -69,8 +69,18 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	}
 	//ARM A
 	std::string command = "QRY:LOAD/A;";
-	sendRequest(command);
+
+	if (!sendRequest(command))
+	{
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
+			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+			Poco::format("%s 机械手通讯错误", sub->getName())));
+		setAlarm(alarm);
+		return RunResult::RUN_FAILD;
+	};
+
 	std::string res = recvResponse(timeout);
+
 	if (res == "RPS:LOAD/ON;")
 	{
 		sub->setObject(0, true);
@@ -85,9 +95,17 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	{
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("工位: %s 获取手臂A状态通讯错误.", sub->getName()), this);
 	}
+
 	//ARM B
 	command = "QRY:LOAD/B;";
-	sendRequest(command);
+	if (!sendRequest(command))
+	{
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
+			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+			Poco::format("%s 机械手通讯错误", sub->getName())));
+		setAlarm(alarm);
+		return RunResult::RUN_FAILD;
+	};
 	res = recvResponse(timeout);
 	if (res == "RPS:LOAD/ON;")
 	{

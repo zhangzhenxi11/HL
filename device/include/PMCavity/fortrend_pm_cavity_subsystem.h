@@ -61,11 +61,11 @@ namespace FC{
 		virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
 		virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
 
-
 	public:
 
 		std::shared_ptr<PMCavityOpenTMCavityDoorCommand> createOpenTMCavityDoorCommand()const;
 		std::shared_ptr<PMCavityCloseTMCavityDoorCommand> createCloseTMCavityDoorCommand()const;
+
 		std::shared_ptr<PMCavityGetFinishedCommand> createGetFinishedCommand()const;
 		std::shared_ptr<PMCavityUploadFinishedCommand> createUploadFinishedCommand()const;
 
@@ -77,12 +77,13 @@ namespace FC{
 		std::shared_ptr<PMCavityClearStateCommand> createClearStateCommand()const;
 		std::shared_ptr<PMCavityInsertingPlateOpeningControllerCommand> createInsertingPlateOpeningControllerCommand(const float percentage) const;
 
-
 	public:
 		void setDoorOpen(const bool value);
+		//add 
+		bool getPMCavityDoorrOpend()const;
+
 		double getVacuumValue()const;
 		double getTemperatureValue()const;
-
 		void setVacuumEnable(const bool value);
 		void setWithWaferModeEnable(const bool value);
 
@@ -105,6 +106,7 @@ namespace FC{
 		bool getPMCavityMotorForwardSignal();
 		bool getPMCavityMotorRunSignal();
 		bool getPMCavityRemoteMode();
+		//
 		bool getPMCavityEnable()const;
 		void setPMCavityEnable(const bool value);
 
@@ -127,7 +129,6 @@ namespace FC{
 		*/
 		short getPMCavityProcessingStep();
 
-
 		double getPMCavityMagnitude()const;
 		double getPMCavityAxleSpeed()const;
 		double getPMCavityMotorSpeed()const;
@@ -136,8 +137,8 @@ namespace FC{
 		void setPMCavityTurnSpeed(double speed);
 		void setPMCavityForward(bool forward);
 		void setPMCavityBackward(bool backward);
-		int getPMCavityCrftCountLLA()const;
-		int getPMCavityCrftCountLLB()const;
+		int  getPMCavityCrftCountLLA()const;
+		int  getPMCavityCrftCountLLB()const;
 		void setPMCavityCrftCountLLA(int count);
 		void setPMCavityCrftCountLLB(int count);
 		void setVacuumSettingAndMagnitudeValue(const double setting_value, const double magnitude_value);

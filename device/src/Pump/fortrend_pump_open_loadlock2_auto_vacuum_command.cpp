@@ -48,7 +48,7 @@
 #include "TMCavity/fortrend_tm_cavity_open_inserting_plate_valve_command.h"
 
 #include <windows.h>
-
+#include <chrono>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -68,6 +68,9 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
+
+		std::chrono::steady_clock::time_point start_time;//开始时间点
+		const  std::chrono::hours timeout = std::chrono::hours(1); //超时时间
 
 		bool isColseBaffleValvetm = false;//tm挡板阀
 		bool isColseAngleValvetm = false; //tm角阀
@@ -108,14 +111,24 @@ namespace FC{
 
 	void PumpOpenLoadLock2AutoVacuumCommand::initializeStateHandlers()
 	{
+
+		/*
+		loadLockB 抽真空：
+		1.casste门，tM传输腔门，快慢隔膜阀，loadlockA腔体的角阀,TM角阀是否关闭
+		2.打开干泵
+		3.打开loadLockB腔体的角阀（先慢后快）
+		4.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
+		5.最后结束，打印结束日志
+		*/
+
 		stateHandlers = std::unordered_map<int, StateHandler>{
-			{10, [this]() { return handleStep10(); }},
-			{1310, [this]() { return handleStep1310(); }},
-			{1030,[this]() {return handleStep1030(); }},
 			{1045,[this]() {return handleStep1045(); }},
 			{1040,[this]() {return handleStep1040(); }},
+			{1030,[this]() {return handleStep1030(); }},
 			{1050,[this]() {return handleStep1050(); }},
 			{1060,[this]() {return handleStep1060(); }},
+			{10, [this]() { return handleStep10(); }},
+			{1310, [this]() { return handleStep1310(); }},
 			{1100,[this]() {return handleStep1100(); }},
 			{5210,[this]() {return handleStep5210(); }},
 			{10000, [this]() { return handleStep10000(); }}
@@ -140,11 +153,15 @@ namespace FC{
 				}
 				else
 				{
+					//开始计时
+					d->start_time = std::chrono::steady_clock::now();
 					step = 1310;
 				}
 			}
 			else
 			{
+				//开始计时
+				d->start_time = std::chrono::steady_clock::now();
 				step = 1310;
 			}
 		}
@@ -173,12 +190,12 @@ namespace FC{
 				}
 				else
 				{
-					step = 1045;
+					step = 1050;
 				}
 			}
 			else
 			{
-				step = 1045;
+				step = 1050;
 			}
 		}
 		else
@@ -205,11 +222,11 @@ namespace FC{
 				}
 				else
 				{
-					step = 1050;
+					step = 1030;
 				}
 			}
 			else {
-				step = 1050;
+				step = 1030;
 			}
 		}
 		else
@@ -303,11 +320,11 @@ namespace FC{
 				else
 				{
 					//d->isColseAngleValvellb = true;
-					step = 1100;
+					step = 10;
 				}
 			}
 			else {
-				step = 1100;
+				step = 10;
 			}
 		}
 		else
@@ -324,22 +341,26 @@ namespace FC{
 	{
 		int step = 1100;
 		std::string errorMessage = "干泵粗抽超时";
+
+		auto now_time = std::chrono::steady_clock::now();
+		auto elapsed = now_time - d->start_time;
+
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+
 		//是否达到粗抽压力
 		if (d->lk2->getLoadLockRoughVacuumReachesTheSetValue() == false)
 		{
-			//达到
-			d->llb_loop_count = 0;
 			step = 5210;
 		}
 		else
 		{
 			Sleep(100);
-			++d->llb_loop_count;
-			if (d->llb_loop_count > 30)
+
+			if (elapsed >= d->timeout)
 			{
 				//超时
 				d->llb_loop_count = 0;
-				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待loadlockB腔体压力小于5Pa,当前压力：%f",
+				logInform(d->pump->getName().c_str(), Poco::format("%s:  等待loadlockB腔体压力小于1Pa,当前压力：%f",
 					getName(), d->lk2->getVacuumValue()).c_str());
 
 				addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
@@ -372,12 +393,12 @@ namespace FC{
 				}
 				else
 				{
-					step = 1030;
+					step = 1100;
 				}
 			}
 			else
 			{
-				step = 1030;
+				step = 1100;
 			}
 		}
 		else
@@ -489,13 +510,14 @@ namespace FC{
 				d->loop = false;
 				break;
 			}
-			}
-			if (d->ret == IKernelCommand::RunResult::RUN_OK)
-			{
-				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->lk2->getName()).c_str());
-			}
-			return d->ret;
 		}
+			
+		if (d->ret == IKernelCommand::RunResult::RUN_OK)
+		{
+			logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->lk2->getName()).c_str());
+		}
+		return d->ret;
+	}
 
 		void PumpOpenLoadLock2AutoVacuumCommand::addCommandExecutionAlarmMessage(const int code_id, const std::string subsytem_name, const std::string message){
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败", subsytem_name, message)));

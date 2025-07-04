@@ -37,7 +37,13 @@
 #include "TMCavity/fortrend_tm_cavity_open_height_vacuum_baffle_valve_command.h"
 #include "TMCavity/fortrend_tm_cavity_open_inserting_plate_valve_command.h"
 
+#include "PMCavity/fortrend_pm_cavity_subsystem.h"
+#include "PMCavity/fortrend_pm_cavity_open_tm_cavity_door_command.h"
+#include "PMCavity/fortrend_pm_cavity_close_tm_cavity_door_command.h"
+#include "PMCavity/fortrend_pm_cavity_defined.h"
+
 #include <windows.h>
+#include <vector>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -47,15 +53,49 @@
 
 namespace FC{
 
+	class PumpOpenTMCavityAutoVacuumCommandPrivate
+	{
+	public:
+		PumpOpenTMCavityAutoVacuumCommandPrivate(PumpOpenTMCavityAutoVacuumCommand* p);
+
+		PumpOpenTMCavityAutoVacuumCommandPrivate* p;
+		
+		std::shared_ptr<FortrendPumpSubsystem> pump;
+		std::shared_ptr<FortrendTMCavitySubsystem> tm;
+		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
+		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm1;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm2;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm3;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm4;
+
+		std::vector<std::shared_ptr<FortrendPMCavitySubsystem>> Pm_list;
+
+		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
+
+		std::chrono::steady_clock::time_point start_time;//开始时间点
+		const  std::chrono::hours timeout = std::chrono::hours(1); //超时时间
+
+		bool isColseAngleValvetm = false; //tm角阀
+		bool isColseAngleValvellb = false;
+		bool isColseAngleValvella = false;
+		bool loop = true;
+		int tm_loop_count = 0;
+	};
+
+
+	PumpOpenTMCavityAutoVacuumCommandPrivate::PumpOpenTMCavityAutoVacuumCommandPrivate(PumpOpenTMCavityAutoVacuumCommand* p)
+	{
+
+	}
 
 
 	/**
 	* PumpOpenTMCavityAutoVacuumCommand
 	*/
 	PumpOpenTMCavityAutoVacuumCommand::PumpOpenTMCavityAutoVacuumCommand(KeyencePlcSubSystemHelper* helper)
-		:KeyencePlcCommandExecuter(helper){
-		//setMessageName("OpenTMCavityAutoVacuum");
-		//setDescription("open tm cavity auto cauum for pump");
+		:KeyencePlcCommandExecuter(helper),d(new PumpOpenTMCavityAutoVacuumCommandPrivate(this)){
+		initializeStateHandlers();
 	};
 
 
@@ -63,872 +103,89 @@ namespace FC{
 	* return true if success else false.
 	*/
 	PumpOpenTMCavityAutoVacuumCommand::RunResult PumpOpenTMCavityAutoVacuumCommand::onRun() throw(KernelException){
-		std::shared_ptr<FortrendPumpSubsystem> pump = getSubsystem()->getKernel()->getKernelModule<FortrendPumpSubsystem>("PUMP");
+		d->pump = getSubsystem()->getKernel()->getKernelModule<FortrendPumpSubsystem>("PUMP");
 		//
-		if (!pump){
+		if (!d->pump){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
-		std::shared_ptr<FortrendTMCavitySubsystem> tm = getSubsystem()->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM");
-		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-		if (!tm)
+		d->tm = getSubsystem()->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM");
+		d->lk1 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		d->lk2 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+
+		d->pm1 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM1");
+		d->pm2 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+		d->pm3 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+		d->pm4 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM4");
+		d->Pm_list.push_back(d->pm1);
+		d->Pm_list.push_back(d->pm2);
+		d->Pm_list.push_back(d->pm3);
+		d->Pm_list.push_back(d->pm4);
+		if (!d->tm)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "TM子系统类型错误", this);
 		}
-		if (tm->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", tm->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->tm->getName()), this);
 		}
-		if (!lk1)
+		if (!d->lk1)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "LoadLock1子系统类型错误", this);
 		}
-		if (lk1->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", lk1->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->lk1->getName()), this);
 		}
-		if (!lk2)
+		if (!d->lk2)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "LoadLock2子系统类型错误", this);
 		}
-		if (lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", lk2->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->lk2->getName()), this);
 		}
 
-		std::shared_ptr<KernelConfiguration> command_config = pump->getConfigure()->createView(getName());
+		std::shared_ptr<KernelConfiguration> command_config = d->pump->getConfigure()->createView(getName());
 		//fill params
 		int timeout = command_config->getInt("timeout", 2 * 60 * 60);
 		timeout = timeout * 1000;
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开%s 真空命令超时参数错误", pump->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开%s 真空命令超时参数错误", d->pump->getName()), this);
 		}
 		
-		bool isColseBaffleValvella = false;
-		bool isColseBaffleValvellb = false;
-		bool isColseAngleValvella = false;
-		bool isColseAngleValvellb = false;
-		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
-		logInform(pump->getName().c_str(), Poco::format("打开%s真空命令开始", tm->getName()).c_str());
-		bool loop = true;
-		int tm_loop_count = 0;
-		int step = 10;
+		logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令开始", d->tm->getName()).c_str());
+
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
-		while (loop)
+		SystemState currentState = SystemState::OPEN_MECHANICAL_PUMP;
+		while (d->loop)
 		{
-			switch (step)
-			{
-			case 10:
-			{
-				if (pump->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (pump->getMechanicalPumpOpened() == false)
-					{
-						auto cmd_open_mechanical = pump->createMechanicalOpenCommand();
-						pump->startCommand(cmd_open_mechanical);
-						cmd_open_mechanical->wait();
-						if (cmd_open_mechanical->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, pump->getName(), "打开机械泵");
-							step = 10000;
-						}
-						else
-						{
-							step = 100;
-						}
-					}
-					else
-					{
-						step = 100;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, pump->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 100:
-			{
-				//分子泵没有达到转速或TM腔没有达到真空设定值
-				if (tm->getTMCavityRoughVacuumReachesTheSetValue() == false || pump->getMolecularPumpReachSpeedTM() == false)// || 
-				{
-					step = 1000;
-				}
-				else if (tm->getFastDiaphragmValveOpend() || tm->getSlowDiaphragmValveOpend())//隔膜阀打开或PID打开 tm->getPIDOpend() || 
-				{
-					step = 1010;
-				}
-				else if (tm->getInsertingPlateValveOpend() == false)//插板阀关闭
-				{
-					step = 1300;
-				}
-				else
-				{
-					step = 5000;
-				}
-
-			}
-			break;
-
-			/* ----------------- 打开分子泵流程 ------------------------*/
-			case 1000:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					//关闭插板阀
-					if (tm->getInsertingPlateValveOpend())
-					{
-						auto cmd = tm->createCloseInsertingPlateValveCommand();
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "关闭插板阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1010;
-						}
-					}
-					else{
-						step = 1010;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1010:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (tm->getPIDOpend())
-					{
-						auto cmd = tm->createClosePIDCommand();
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "关闭PID");
-							step = 10000;
-						}
-						else{
-							step = 1030;
-						}
-					}
-					else{
-						step = 1030;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1030:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (tm->getFastDiaphragmValveOpend() || tm->getSlowDiaphragmValveOpend())
-					{
-						//关闭隔膜阀
-						auto cmd = tm->createCloseDiaphragmValveCommand(TMCavityValveOpening::TMCavity_Both);
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "关闭隔膜阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1040;
-						}
-					}
-					else{
-						step = 1040;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-
-			}
-			break;
-			case 1040:
-			{
-				if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (lk1->getTMCavityDoorOpend())
-					{
-						//关闭传输腔门
-						auto cmd = lk1->createCloseTMCavityDoorCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk1->getName(), "关闭传输腔门阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1045;
-						}
-					}
-					else{
-						step = 1045;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, lk1->getName());
-					step = 10000;
-				}
-
-			}
-			break;
-			case 1045:
-			{
-				if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (lk2->getTMCavityDoorOpend())
-					{
-						//关闭传输腔门
-						auto cmd = lk2->createCloseTMCavityDoorCommand();
-						lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk2->getName(), "关闭传输腔门阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1050;
-						}
-					}
-					else{
-						step = 1050;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, lk2->getName());
-					step = 10000;
-				}
-
-			}
-			break;
-			case 1050:
-			{
-				if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (lk1->getAngleValveOpend() && tm->getTMCavityVacuumValue()>300)
-					{
-						auto cmd = lk1->createCloseAngleValveCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk1->getName(), "关闭角阀");
-							step = 10000;
-						}
-						else{
-							isColseAngleValvella = true;
-							step = 1055;
-						}
-					}
-					else{
-						step = 1055;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, lk1->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1055:
-			{
-				if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (lk1->getHeightVacuumBaffleValveOpend() && tm->getTMCavityVacuumValue()>300)
-					{
-						auto cmd = lk1->createCloseHeightVacuumBaffleValveCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk1->getName(), "关闭高真空挡板阀");
-							step = 10000;
-						}
-						else{
-							isColseBaffleValvella = true;
-							step = 1060;
-						}
-					}
-					else{
-						step = 1060;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, lk1->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1060:
-			{
-				if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (lk2->getAngleValveOpend() && tm->getTMCavityVacuumValue()>300)
-					{
-						auto cmd = lk2->createCloseAngleValveCommand();
-						lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk2->getName(), "关闭角阀");
-							step = 10000;
-						}
-						else
-						{
-							isColseAngleValvellb = true;
-							step = 1065;
-						}
-					}
-					else{
-						step = 1065;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, lk2->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1065:
-			{
-				if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (lk2->getHeightVacuumBaffleValveOpend() && tm->getTMCavityVacuumValue()>300)
-					{
-						auto cmd = lk2->createCloseHeightVacuumBaffleValveCommand();
-						lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk2->getName(), "关闭高真空挡板阀");
-							step = 10000;
-						}
-						else
-						{
-							isColseBaffleValvellb = true;
-							step = 1100;
-						}
-					}
-					else{
-						step = 1100;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, lk2->getName());
-					step = 10000;
-				}
-			}
-			break;
-
-			case 1100:
-			{
-				//是否达到粗抽压力
-				if (tm->getTMCavityRoughVacuumReachesTheSetValue() == false)
-				{
-					step = 1120;
-				}
-				else
-				{
-					step = 1300;
-				}
-			}
-			break;
-			case 1120:
-			{
-				//分子泵打开或者运行状态
-				if (pump->getMolecularPumpOpenedTM() || (pump->getMolecularPumpRunningStateTM() == 1))
-				{
-					step = 1140;
-				}
-				else
-				{
-					step = 1140;
-				}
-			}
-			break;
-			case 1140:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (tm->getAngleValveOpend())
-					{
-						//关闭角阀
-						auto cmd = tm->createCloseAngleValveCommand();
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "关闭角阀");
-							step = 10000;
-						}
-						else{
-							step = 1200;
-						}
-					}
-					else{
-						step = 1200;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1200:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					//打开高真空挡板阀
-					if (tm->getHeightVacuumBaffleValveOpend() == false)
-					{
-						auto cmd = tm->createOpenHeightVacuumBaffleValveCommand();
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "打开高真空挡板阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1210;
-						}
-					}
-					else
-					{
-						step = 1210;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1210:
-			{
-				//达到粗抽压力
-				if (tm->getTMCavityRoughVacuumReachesTheSetValue())
-				{
-					Sleep(1000);
-					step = 1300;
-				}
-				else
-				{
-					Sleep(100);
-					
-				}
-			}
-			break;
-			case 1300:
-			{
-				if (tm->getTMCavityRoughVacuumReachesTheSetValue(10)){
-					if (isColseAngleValvella){
-						auto cmd = lk1->createOpenAngleValveCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk1->getName(), "重新打开角阀");
-						}
-						else{
-							isColseAngleValvella = false;
-						}
-
-					}
-					if (isColseAngleValvellb){
-						auto cmd = lk2->createOpenAngleValveCommand();
-						lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, lk2->getName(), "重新打开角阀");
-						}
-						else{
-							isColseAngleValvellb = false;
-						}
-					}
-				}
-
-				if (tm->getMoleculePipelineVacuumValue() < 5.0)
-				{
-					tm_loop_count = 0;
-					Sleep(1000);
-					step = 1305;
-				}
-				else
-				{
-					Sleep(100);
-					++tm_loop_count;
-					if (tm_loop_count > 30)
-					{
-						tm_loop_count = 0;
-						logInform(pump->getName().c_str(), Poco::format("%s: 等待前级管路压力小于5Pa,当前压力：%f", getName(), tm->getMoleculePipelineVacuumValue()).c_str());
-					}
-				}
-			}
-			break;
-			case 1305:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					//关闭高真空挡板阀
-					if (tm->getHeightVacuumBaffleValveOpend())
-					{
-						auto cmd = tm->createCloseHeightVacuumBaffleValveCommand();
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "关闭高真空挡板阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1310;
-						}
-					}
-					else{
-						step = 1310;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1310:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (tm->getAngleValveOpend() == false)
-					{
-						auto cmd = tm->createOpenAngleValveCommand();
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(step, tm->getName(), "打开角阀");
-							step = 10000;
-						}
-						else
-						{
-							step = 1320;
-							tm_loop_count = 0;
-						}
-					}
-					else
-					{
-						step = 1320;
-						tm_loop_count = 0;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-			}
-			break;
-			case 1320:
-			{
-				if (tm->getAngleValveOpend() && tm->getMoleculePipelineVacuumValue() < 10.0)
-				{
-					if (pump->getMolecularPumpOpenedTM() == false)
-					{
-						if (pump->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							//打开分子泵
-							auto cmd = pump->createMolecularOpenCommand("TM");
-							pump->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
-							{
-								addCommandExecutionAlarmMessage(step, pump->getName(), "打开分子泵");
-								step = 10000;
-							}
-							else
-							{
-								step = 1330;
-							}
-						}
-						else
-						{
-							addSubsystemNotNormalAlarmMessage(step, pump->getName());
-							step = 10000;
-						}
-					}
-					else
-					{
-						step = 1330;
-					}
-				}
-				else
-				{
-					step = 1000;
-				}
-
-
-			}
-			break;
-			case 1330:
-			{
-				if (pump->getMolecularPumpReachSpeedTM())
-				{
-					step = 1340;
-				}
-				else
-				{
-					Sleep(1000);
-				}
-			}
-			break;
-			case 1340:
-			{
-				if (tm->getMoleculePipelineVacuumValue() < 5.0 && tm->getAngleValveOpend())
-				{
-					if (pump->getMolecularPumpReachSpeedTM())
-					{
-						step = 1355;
-
-					}
-					else
-					{
-						step = 1100;
-					}
-				}
-				else
-				{
-					Sleep(100);
-				}
-
-			}
-			break;
-			
-			case 1355:
-			{
-				/*if (isColseAngleValvella){
-					auto cmd = lk1->createOpenAngleValveCommand();
-					lk1->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(step, lk1->getName(), "重新打开角阀");
-					}
-					else{
-						isColseAngleValvella = false;
-					}
-					
-				}
-				if (isColseAngleValvellb){
-					auto cmd = lk2->createOpenAngleValveCommand();
-					lk2->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(step, lk2->getName(), "重新打开角阀");
-					}
-					else{
-						isColseAngleValvellb = false;
-					}
-				}*/
-				step = 1360;
-			}
-			break;
-			case 1360:
-			{
-				if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (tm->getInsertingPlateValveOpend() == false)
-					{
-						if (tm->getTMCavityRoughVacuumReachesTheSetValue(10)){
-							//打开插板阀
-							auto cmd = tm->createOpenInsertingPlateValveCommand();
-							tm->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
-							{
-								if (!tm->getTMCavityRoughVacuumReachesTheSetValue(10)){
-									auto cmd2 = pump->createResetCommand();
-									pump->startCommand(cmd2);
-									cmd2->wait();
-									step = 1000;
-								}
-								else{
-									addCommandExecutionAlarmMessage(step, tm->getName(), "打开插板阀");
-									step = 10000;
-								}
-							}
-							else{
-								step = 1380;
-							}
-						}
-						else{//没有达到粗抽压力值
-							step = 1000;
-						}
-						
-					}
-					else{
-						step = 1380;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, tm->getName());
-					step = 10000;
-				}
-
-			}
-			break;
-			case 1380:
-			{
-				step = 10;
-			}
-			break;
-
-			case 5000:
-			{
-				if (tm->getTMCavityVacuumValueReachesTheSetValue())
-				{
-					Sleep(1000);
-					step = 5210;
-				}
-				else
-				{
-					Sleep(100);
-				}
-			}
-			break;
-			case 5100:
-			{
-				//if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				//{
-				//	if (tm->getInsertingPlateValveOpend())
-				//	{
-				//		//关闭插板阀
-				//		auto cmd = tm->createCloseInsertingPlateValveCommand();
-				//		tm->startCommand(cmd);
-				//		cmd->wait();
-				//		if (cmd->hasError())
-				//		{
-				//			addCommandExecutionAlarmMessage(step, tm->getName(), "关闭插板阀");
-				//			step = 10000;
-				//		}
-				//		else{
-				//			step = 5200;
-				//		}
-				//	}
-				//	else{
-				//		step = 5200;
-				//	}
-				//}
-				//else
-				//{
-				//	addSubsystemNotNormalAlarmMessage(step, tm->getName());
-				//	step = 10000;
-				//}
-
-			}
-			break;
-			case 5200:
-			{
-				//if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				//{
-				//	if (tm->createCloseAngleValveCommand())
-				//	{
-				//		//关闭角阀
-				//		auto cmd = tm->createCloseInsertingPlateValveCommand();
-				//		tm->startCommand(cmd);
-				//		cmd->wait();
-				//		if (cmd->hasError())
-				//		{
-				//			addCommandExecutionAlarmMessage(step, tm->getName(), "关闭角阀");
-				//			step = 10000;
-				//		}
-				//		else{
-				//			step = 5210;
-				//		}
-				//	}
-				//	else{
-				//		step = 5210;
-				//	}
-				//}
-				//else
-				//{
-				//	addSubsystemNotNormalAlarmMessage(step, tm->getName());
-				//	step = 10000;
-				//}
-
-			}
-			break;
-			case 5210:
-			{
-				ret = IKernelCommand::RunResult::RUN_OK;
-				step = 10000;
-
-			}
-			break;
-			case 10000:
-			{
-				loop = false;
-			}
-			break;
-			default:
-				break;
-			}
-			Sleep(10);
-			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
-			if (pass >= timeout && loop)
-			{
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("打开%s真空命令执行超时", tm->getName())));
+			auto it = stateHandlers.find(currentState);
+			if (it == stateHandlers.end()) {
+				logError(d->pump->getName().c_str(), Poco::format("未知的状态码：%d", int(currentState)).c_str());
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行失败", d->pump->getName())));
 				setAlarm(alarm);
-				step = 10000;
-				loop = false;
+				d->ret = IKernelCommand::RunResult::RUN_FAILD;
+				break;
+			}
+			auto nextState = it->second();//执行回调函数
+			currentState = nextState;
+			Sleep(100);
+			
+			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
+			if (pass >= timeout && d->loop)
+			{
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("打开%s真空命令执行超时", d->tm->getName())));
+				setAlarm(alarm);
+				currentState = SystemState::CREATE_END;
+				d->loop = false;
 				break;
 			}
 		}
-		if (ret == IKernelCommand::RunResult::RUN_OK)
+		if (d->ret == IKernelCommand::RunResult::RUN_OK)
 		{
-			logInform(pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", tm->getName()).c_str());
+			logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->tm->getName()).c_str());
 		}
-		return ret;
+		return d->ret;
 	}
 
 	void PumpOpenTMCavityAutoVacuumCommand::addCommandExecutionAlarmMessage(const int code_id, const std::string subsytem_name, const std::string message){
@@ -941,70 +198,361 @@ namespace FC{
 		setAlarm(alarm);
 	}
 
-	bool PumpOpenTMCavityAutoVacuumCommand::executeCommand(std::shared_ptr<IKernelSubSystem> subsystem, std::shared_ptr<IKernelCommand> cmd, int currentStep, const std::string errorMessage)
-	{
-		return false;
-	}
-
 	void PumpOpenTMCavityAutoVacuumCommand::initializeStateHandlers()
 	{
-	}
+		//TM 抽真空：
+		//1.pM工艺腔门（备用），tm快慢隔膜阀，loadlockb,loadlocka传输腔阀门, loadlockb,loadlocka角阀是否关闭
+		//2.打开干泵
+		//3.打开TM腔体的角阀（先慢后快）
+		//4.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
+		//5.最后结束，打印结束日志
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep10()
+		stateHandlers = std::unordered_map<SystemState, StateHandler>{
+			{SystemState::CLOSE_PM_CAVITY_DOOR,[this]() {return handleStepClosePmDoor(); }},
+			{SystemState::CLOSE_TM_DIAPHRAGM_VALVE,[this]() {return handleStepCLoseDiaphragmValve(); }},
+			{SystemState::CLOSE_LLA_TM_CAVITY_DOOR,[this]() {return handleStepCloseLlaTmDoor(); }},
+			{SystemState::CLOSE_LLB_TM_CAVITY_DOOR,[this]() {return handleStepCloseLlbTmDoor(); }},
+			{SystemState::CLOSE_LLA_ANGLE_VALVE,[this]() {return handleStepCloseLlaAngleValve(); }},
+			{SystemState::CLOSE_LLB_ANGLE_VALVE,[this]() {return handleStepCloseLlbAngleValve(); }},
+			{SystemState::OPEN_MECHANICAL_PUMP,[this]() {return handleStepOpenMechanicalPump(); }},
+			{SystemState::OPEN_TM_ANGLE_VALVE,[this]() {return handleStepOpenAngleValve(); }},
+			{SystemState::JUDGE_COARSE_SUCTION_PRESSURE,[this]() {return handleStepCoarseSuctionPressure(); }},
+			{SystemState::CREATE_END,[this]() {return handleStepEND(); }}
+		};
+
+	}
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepOpenMechanicalPump()
 	{
-		return 0;
+		int step = 10;
+		if (d->pump->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->pump->getMechanicalPumpOpened() == false)
+			{
+				auto cmd_open_mechanical = d->pump->createMechanicalOpenCommand();
+				d->pump->startCommand(cmd_open_mechanical);
+				cmd_open_mechanical->wait();
+				if (cmd_open_mechanical->hasError())
+				{
+					
+					addCommandExecutionAlarmMessage(step, d->pump->getName(), "打开机械泵");
+					step = 10000;
+				}
+				else
+				{
+					//开始计时
+					d->start_time = std::chrono::steady_clock::now();
+					step = 20;
+				}
+			}
+			else
+			{
+				//开始计时
+				d->start_time = std::chrono::steady_clock::now();
+				step = 20;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->pump->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1050()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepOpenAngleValve()
 	{
-		return 0;
+		int step = 20;
+		std::string errorMessage = "打开TM腔的角阀";
+		if (d->tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->tm->getAngleValveOpend())
+			{
+				auto cmd = d->tm->createOpenAngleValveCommand();
+				d->tm->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->tm->getName(), errorMessage);
+					step = 10000;
+				}
+				else {
+					step = 90;
+				}
+			}
+			else {
+				step = 90;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1030()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCLoseDiaphragmValve()
 	{
-		return 0;
+
+		int step = 30;
+		std::string errorMessage = "关闭TM腔的隔膜阀";
+		if (d->tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->tm->getFastDiaphragmValveOpend() || d->tm->getSlowDiaphragmValveOpend())
+			{
+				//关闭隔膜阀
+				auto cmd = d->tm->createCloseDiaphragmValveCommand(TMCavityValveOpening::TMCavity_Both);
+				d->tm->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->tm->getName(), errorMessage);
+					step = 10000;
+				}
+				else
+				{
+					step = 40; 
+					//SystemState::CLOSE_LLA_TM_CAVITY_DOOR;
+				}
+			}
+			else
+			{
+				step = 40;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1040()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCloseLlaTmDoor()
 	{
-		return 0;
+		int step = 40;
+		std::string errorMessage = "关闭LLA_TM传输腔门阀";
+		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->lk1->getTMCavityDoorOpend())
+			{
+				//关闭传输腔门
+				auto cmd = d->lk1->createCloseTMCavityDoorCommand();
+				d->lk1->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
+					step = 10000;
+				}
+				else
+				{
+					step = 50;
+				}
+			}
+			else {
+				step = 50;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->lk1->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1041()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCloseLlbTmDoor()
 	{
-		return 0;
+		int step = 50;
+		std::string errorMessage = "关闭LLB_TM传输腔门阀";
+		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->lk2->getTMCavityDoorOpend())
+			{
+				//关闭传输腔门
+				auto cmd = d->lk2->createCloseTMCavityDoorCommand();
+				d->lk2->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
+					step = 10000;
+				}
+				else
+				{
+					step = 60;
+				}
+			}
+			else {
+				step = 60;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->lk2->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
-
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1042()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCloseLlaAngleValve()
 	{
-		return 0;
+		int step = 60;
+		std::string errorMessage = "关闭LLA腔的角阀";
+		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->lk1->getAngleValveOpend())
+			{
+				auto cmd = d->lk1->createCloseAngleValveCommand();
+				d->lk1->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
+					step = 10000;
+				}
+				else {
+					d->isColseAngleValvella = true;
+					step = 70;
+				}
+			}
+			else {
+				step = 70;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
-
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1060()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCloseLlbAngleValve()
 	{
-		return 0;
+
+		int step = 70;
+		std::string errorMessage = "关闭LLB腔的角阀";
+		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->lk2->getAngleValveOpend())
+			{
+				auto cmd = d->lk2->createCloseAngleValveCommand();
+				d->lk2->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
+					step = 10000;
+				}
+				else {
+					//d->isColseAngleValvellb = true;
+					step = 10;
+				}
+			}
+			else {
+				step = 10;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1310()
+	
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepClosePmDoor()
 	{
-		return 0;
+		//PM1~PM4
+		int step = 80;
+		std::string errorMessage = "关闭PM1~PM4腔的门";
+		//d->pm1
+		for (int i = 0; i < 4; i++)
+		{
+			auto pmPtr = d->Pm_list.at(i);
+			if (pmPtr != nullptr)
+			{
+				if (!(pmPtr->getState() == IKernelSubSystem::State::SUB_NORMAL))
+				{
+					logError(pmPtr.get()->getName().c_str(), "当前PM状态异常");
+					addSubsystemNotNormalAlarmMessage(step, pmPtr.get()->getName());
+					step = 10000;
+					break;
+				}
+				if (d->tm->getPMCavityDoorOpend(i))
+				{
+					//关闭传输腔门
+					auto cmd = pmPtr->createCloseTMCavityDoorCommand();
+					pmPtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError())
+					{
+						addCommandExecutionAlarmMessage(step, pmPtr->getName(), errorMessage);
+						step = 10000;
+						break;
+					}
+					else
+					{
+						step = 30; 
+					}
+				}
+				else {
+					step = 30;
+				}
+			}
+			else
+			{
+				logError(pmPtr.get()->getName().c_str(), "获取当前PM不存在,请检查PM的是否实例化");
+				step = 10000;
+				break;
+			}
+		}
+		return SystemState(step);
 	}
-
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep1100()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCoarseSuctionPressure()
 	{
-		return 0;
+		int step = 90;
+		std::string errorMessage = "干泵粗抽超时";
+		//是否达到粗抽压力
+		auto now_time = std::chrono::steady_clock::now();
+		auto elapsed = now_time - d->start_time;
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+
+		if (d->tm->getTMCavityRoughVacuumReachesTheSetValue() == false) //5000PA
+		{
+			//达到
+			step = 10000;
+		}
+		else
+		{
+			if (elapsed >= d->timeout)
+			{
+				//超时
+				d->tm_loop_count = 0;
+				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待TM腔体压力达到1pa超时,当前压力：%f",
+					getName(), d->tm->getTMCavityVacuumValue()).c_str());
+				addCommandExecutionAlarmMessage(step, d->tm->getName(), errorMessage);
+				step = 10000;
+			}
+			else
+			{
+				step = 90;//继续当前步骤
+			}
+		}
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep5210()
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepEND()
 	{
-		return 0;
+		int step = 10000;
+		d->ret = IKernelCommand::RunResult::RUN_OK;
+		logInform(d->lk1->getName().c_str(), "循环结束");
+		d->loop = false;
+		step = 10;
+		return SystemState(step);
 	}
 
-	int PumpOpenTMCavityAutoVacuumCommand::handleStep10000()
-	{
-		return 0;
-	}
-
-
+	
 
 }

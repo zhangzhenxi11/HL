@@ -48,8 +48,17 @@ namespace FC{
 		//std::vector<QCheckBox*> arm_stat;
 		std::vector<QCheckBox*> input_checkboxs;
 
-		QCheckBox *slow_diaphragm_valve_ckb = 0, *fast_diaphragm_valve_ckb = 0, *ultrahigh_vacuum_baffle_valve_ckb = 0, *inserting_plate_value_ckb = 0, *angle_valve_ckb = 0, *door_lock_valve_ckb = 0;
-		QCheckBox *pid_ckb = 0;
+		QCheckBox* slow_diaphragm_valve_ckb = 0;
+		QCheckBox* fast_diaphragm_valve_ckb = 0;
+		QCheckBox* ultrahigh_vacuum_baffle_valve_ckb = 0;
+		QCheckBox* inserting_plate_value_ckb = 0;
+		QCheckBox* angle_valve_ckb = 0;
+		QCheckBox* door_lock_valve_ckb = 0;
+		QCheckBox* pid_ckb = 0;
+		QCheckBox* cda_ckb = 0;
+		QCheckBox* Axial_pressure_ckb = 0;
+
+
 	};
 
 	QTMCavitySubsystemWidgetPrivate::QTMCavitySubsystemWidgetPrivate(
@@ -130,7 +139,9 @@ namespace FC{
 		d->fast_diaphragm_valve_ckb = new QCheckBox("快充隔膜阀");
 		d->pid_ckb = new QCheckBox("PID调节");
 		d->door_lock_valve_ckb = new QCheckBox("腔盖门锁");
-		
+		d->cda_ckb = new QCheckBox("CDA");
+		d->Axial_pressure_ckb = new QCheckBox("轴向压力表");
+
 		d->ultrahigh_vacuum_baffle_valve_ckb->setObjectName("io_object");
 		d->inserting_plate_value_ckb->setObjectName("io_object");
 		d->angle_valve_ckb->setObjectName("io_object");
@@ -138,6 +149,8 @@ namespace FC{
 		d->fast_diaphragm_valve_ckb->setObjectName("io_object");
 		d->pid_ckb->setObjectName("io_object");
 		d->door_lock_valve_ckb->setObjectName("io_object");
+		d->cda_ckb->setObjectName("io_object");
+		d->Axial_pressure_ckb->setObjectName("io_object");
 		
 		d->ultrahigh_vacuum_baffle_valve_ckb->setEnabled(false);
 		d->inserting_plate_value_ckb->setEnabled(false);
@@ -149,15 +162,18 @@ namespace FC{
 
 		d->ui->vacuum_pressure_gage_ckb->setObjectName("io_object");
 		d->ui->vacuum_pressure_gage_ckb->setEnabled(false);
-
+		d->cda_ckb->setEnabled(false);
+		d->Axial_pressure_ckb->setEnabled(false);
 		
-		d->ui->operation_state_gridLayout->addWidget(d->ultrahigh_vacuum_baffle_valve_ckb, 0, 0);
-		d->ui->operation_state_gridLayout->addWidget(d->angle_valve_ckb, 0, 1);
-		d->ui->operation_state_gridLayout->addWidget(d->inserting_plate_value_ckb, 0, 2);
-		d->ui->operation_state_gridLayout->addWidget(d->slow_diaphragm_valve_ckb, 1, 0);
-		d->ui->operation_state_gridLayout->addWidget(d->fast_diaphragm_valve_ckb, 1, 1);
-		d->ui->operation_state_gridLayout->addWidget(d->pid_ckb, 1, 2);
-		d->ui->operation_state_gridLayout->addWidget(d->door_lock_valve_ckb, 2, 0);
+		//d->ui->operation_state_gridLayout->addWidget(d->ultrahigh_vacuum_baffle_valve_ckb, 0, 0);
+		d->ui->operation_state_gridLayout->addWidget(d->angle_valve_ckb, 0, 0);
+		//d->ui->operation_state_gridLayout->addWidget(d->inserting_plate_value_ckb, 0, 2);
+		d->ui->operation_state_gridLayout->addWidget(d->slow_diaphragm_valve_ckb, 0, 1);
+		d->ui->operation_state_gridLayout->addWidget(d->fast_diaphragm_valve_ckb, 0, 2);
+		//d->ui->operation_state_gridLayout->addWidget(d->pid_ckb, 1, 2);
+		d->ui->operation_state_gridLayout->addWidget(d->door_lock_valve_ckb, 1, 0);
+		d->ui->operation_state_gridLayout->addWidget(d->cda_ckb,1,1);
+		d->ui->gridLayout->addWidget(d->Axial_pressure_ckb, 1, 2);
 
 	}
 
@@ -289,10 +305,11 @@ namespace FC{
 			d->door_lock_valve_ckb->setChecked(getSubsystem()->TMCavityCoverSafetyLock());
 
 			d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(getSubsystem()->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
-			d->ui->molecule_pipeline_value_let->setText(QString::number(getSubsystem()->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
+			//d->ui->molecule_pipeline_value_let->setText(QString::number(getSubsystem()->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
 			d->ui->backing_pipeline_value_let->setText(QString::number(getSubsystem()->getBackingPipelineVacuumValue()).append("Pa"));
 			d->ui->vacuum_pressure_gage_ckb->setChecked(getSubsystem()->getTMCavityVacuumPressureGageState() == 1);
-			//backing_pipeline_value_let
+			d->Axial_pressure_ckb->setChecked(getSubsystem()->getAxialPressureGageState());
+			d->cda_ckb->setChecked(getSubsystem()->getCDAPressureState());
 
 		}
 		catch (KernelException& e){

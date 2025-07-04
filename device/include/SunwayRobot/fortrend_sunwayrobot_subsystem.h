@@ -25,7 +25,8 @@
 #include "fortrend_sunwayrobot_rq_load_command.h"
 #include "fortrend_sunwayrobot_clear_error_command.h"
 
-
+//调试宏
+#define WTR_SIM_MODE 1
 
 namespace FC{
 
@@ -79,6 +80,7 @@ namespace FC{
 
 	public:
 		virtual void setObject(unsigned int arm_id, bool has);
+
 		AWCRecordData getAWCRecordData(const int channel) const;
 		void setAWCRecordData(const int channel, const AWCRecordData value);
 
@@ -91,6 +93,9 @@ namespace FC{
 
 		bool getHasResetFlag()const;
 		void setHasResetFlag(const bool value);
+
+
+
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

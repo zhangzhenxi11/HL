@@ -156,7 +156,7 @@ void TM::paintEvent(QPaintEvent *){
     QPainter painter(this);
     int centerX = width() / 3.16;
     int centerY = height() / 1.265;
-    QPixmap pixmap("image/TM.png");
+    QPixmap pixmap("image/image/TM.png");
     painter.drawPixmap(0,0,pixmap);
 	if (IsWaferAligner){
 		// 设置旋转

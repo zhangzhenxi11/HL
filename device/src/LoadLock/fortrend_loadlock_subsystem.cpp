@@ -25,6 +25,8 @@
 #include "LoadLock/fortrend_loadlock_update_command.h"
 #include "LoadLock/fortrend_loadlock_output_command.h"
 
+#include "kernel/Fortrend/fortrend_cassette_manager.h"
+
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
@@ -51,7 +53,14 @@ namespace FC{
 		std::string io_protruding_sensor_names = "";
 		std::string io_protruding_sensor_address = "";
 		bool io_protruding_sensor_last_value = false; //突出检测信号
-		
+
+		//Layer detection sensor  
+		std::string io_first_layer_detection_sensor_address = "";
+		bool io_first_layer_wafer_presence_value = false;
+
+		std::string io_second_layer_detection_sensor_address = "";
+		bool io_second_layer_wafer_presence_value = false;
+
 		
 		bool box_placement = false;
 		bool cassette_door_opend = false;
@@ -74,6 +83,7 @@ namespace FC{
 		double vacuum_extraction_set_value = 1.3;       //真空抽气设定值
 		double vacuum_upper_limit_set_value = 8.0;      //真空上限设定值
 		double vacuum_break_set_value = 99600.0;        //真空破气设定值
+
 		double vacuum_current_value = 100000.0;		    //真空当前值
 		std::string vacuum_pressure_gage_address = "";  //真空压力表信号地址
 		int vacuum_pressure_gage_state = -1;			//真空压力表信号
@@ -302,6 +312,8 @@ namespace FC{
 		return false;
 	}
 
+
+
 	/*
 	*达到LoadLock粗抽压力,看分子泵工作条件判断
 	*/
@@ -323,10 +335,10 @@ namespace FC{
 	}
 
 	/**
-	*@brief  角阀快抽达到设定值
+	*@brief  角阀快抽条件
 	*/
 	bool FortrendLoadLockSubsystem::getFastAngleValveReachesTheSetValue() const{
-		return d->vacuum_current_value <= d->vacuum_angle_valve_fast_vacuumization_set_value;
+		return d->vacuum_current_value >= d->vacuum_angle_valve_fast_vacuumization_set_value;
 	}
 
 	/**
@@ -429,22 +441,54 @@ namespace FC{
 
 	void FortrendLoadLockSubsystem::onProcess(){
 		//pollProtocol();
-		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN && (d->io_present_sensor_names.size() > 0))
+
+
+		//auto cassManager = this->getKernel()->getKernelModule<FortrendCassetteManager>();
+		//auto subsystem_cass = cassManager->getCassette(this);
+
+		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 		{
 			bool io_changed = false;
-			if (readBits(d->io_present_sensor_address, d->io_present_sensor_names.size(), d->ptr_io_present_sensor_state))
+			//if (readBits(d->io_present_sensor_address, d->io_present_sensor_names.size(), d->ptr_io_present_sensor_state))
+			//{
+			//	
+			//	for (size_t i = 0; i < d->io_present_sensor_names.size(); i++)
+			//	{
+			//		if (d->ptr_io_present_sensor_state[i] != d->io_present_sensor_last_value[i])
+			//		{
+			//			d->io_present_sensor_last_value[i] = d->ptr_io_present_sensor_state[i];
+			//			io_changed = true;
+			//		}
+			//	}
+			//}
+
+
+			bool wafer_prsence = false;
+			
+			//d->io_first_layer_wafer_presence_value = true;
+			//io_changed = true;
+
+			if (d->io_first_layer_detection_sensor_address != "" && readBit(d->io_first_layer_detection_sensor_address, wafer_prsence))
 			{
-				
-				for (size_t i = 0; i < d->io_present_sensor_names.size(); i++)
+				if (wafer_prsence != d->io_first_layer_wafer_presence_value)
 				{
-					if (d->ptr_io_present_sensor_state[i] != d->io_present_sensor_last_value[i])
-					{
-						d->io_present_sensor_last_value[i] = d->ptr_io_present_sensor_state[i];
-						io_changed = true;
-					}
+					io_changed = true;
+					d->io_first_layer_wafer_presence_value = wafer_prsence;
 				}
 			}
 
+			//d->io_second_layer_wafer_presence_value = true;
+			//io_changed = true;
+
+			if (d->io_second_layer_detection_sensor_address != "" && readBit(d->io_second_layer_detection_sensor_address, wafer_prsence))
+			{
+				if (wafer_prsence != d->io_second_layer_wafer_presence_value)
+				{
+					io_changed = true;
+					d->io_second_layer_wafer_presence_value = wafer_prsence;
+				}
+			}
+			
 #pragma region 自动更新门阀状态 
 			bool flag = false;
 			flag = d->slow_diaphragm_valve_opend;
@@ -461,12 +505,12 @@ namespace FC{
 					io_changed = true;
 			}
 
-			flag = d->ultrahigh_vacuum_baffle_valve_opend;
-			if (d->high_vacuum_baffle_value_address != ""&&readBit(d->high_vacuum_baffle_value_address, d->ultrahigh_vacuum_baffle_valve_opend))
-			{
-				if (flag != d->ultrahigh_vacuum_baffle_valve_opend)
-					io_changed = true;
-			}
+			//flag = d->ultrahigh_vacuum_baffle_valve_opend;
+			//if (d->high_vacuum_baffle_value_address != ""&&readBit(d->high_vacuum_baffle_value_address, d->ultrahigh_vacuum_baffle_valve_opend))
+			//{
+			//	if (flag != d->ultrahigh_vacuum_baffle_valve_opend)
+			//		io_changed = true;
+			//}
 
 			//bool open_angle_valve_value = false;
 			//bool close_angle_valve_value = false;
@@ -490,12 +534,12 @@ namespace FC{
 			//bool open_inserting_plate_valve_value = false;
 			//bool close_inserting_plate_valve_value = false;
 
-			flag = d->inserting_plate_valve_opend;
-			if (d->open_inserting_plate_valve_address != ""&&readBit(d->open_inserting_plate_valve_address, d->inserting_plate_valve_opend))
-			{
-				if (flag != d->angle_valve_opend)
-					io_changed = true;
-			}
+			//flag = d->inserting_plate_valve_opend;
+			//if (d->open_inserting_plate_valve_address != ""&&readBit(d->open_inserting_plate_valve_address, d->inserting_plate_valve_opend))
+			//{
+			//	if (flag != d->angle_valve_opend)
+			//		io_changed = true;
+			//}
 
 			flag = d->cassette_door_opend;
 			if (d->open_cassette_door_address != ""&&readBit(d->open_cassette_door_address, d->cassette_door_opend))
@@ -513,16 +557,17 @@ namespace FC{
 
 #pragma endregion
 
-			if (d->io_protruding_sensor_address != "")
-			{
-				bool buff_protruding = false;
-				if (readBit(d->io_protruding_sensor_address, buff_protruding) && d->io_protruding_sensor_last_value != buff_protruding)
-				{
-					//printf("%s buff_protruding=%d io_protruding_sensor_address=%s\n", getName(), buff_protruding, d->io_protruding_sensor_address);
-					d->io_protruding_sensor_last_value = buff_protruding;
-					io_changed = true;
-				}
-			}
+			//if (d->io_protruding_sensor_address != "")
+			//{
+			//	bool buff_protruding = false;
+			//	if (readBit(d->io_protruding_sensor_address, buff_protruding) && d->io_protruding_sensor_last_value != buff_protruding)
+			//	{
+			//		//printf("%s buff_protruding=%d io_protruding_sensor_address=%s\n", getName(), buff_protruding, d->io_protruding_sensor_address);
+			//		d->io_protruding_sensor_last_value = buff_protruding;
+			//		io_changed = true;
+			//	}
+			//}
+
 			if (d->vacuum_read_value_address != "")
 			{
 				double buff_vacuum = 0.0;
@@ -561,6 +606,7 @@ namespace FC{
 			
 		}
 	}
+
 	void FortrendLoadLockSubsystem::recardVacuum()const{
 
 		int count = 0;
@@ -583,6 +629,52 @@ namespace FC{
 		d->has_reset_flag = value;
 	}
 
+	void FortrendLoadLockSubsystem::getFirstLayerMapping(Cassette::Mapping &map)
+	{
+		short first_wafer_res = 0;
+		first_wafer_res = (d->io_first_layer_wafer_presence_value) ? 2:1;
+		Cassette::Mapping slotState = handleSingleSlotMapping(first_wafer_res);
+		map = slotState;
+	}
+
+	bool FortrendLoadLockSubsystem::setFirstLayerMapping(const bool value)
+	{
+		d->io_first_layer_wafer_presence_value = value;
+		return true;
+	}
+
+	void FortrendLoadLockSubsystem::getSecondLayerMapping(Cassette::Mapping &map)
+	{
+		short second_wafer_res = 0;
+		second_wafer_res = (d->io_second_layer_wafer_presence_value) ? 2 : 1;
+		Cassette::Mapping slotState = handleSingleSlotMapping(second_wafer_res);
+		map = slotState;
+	}
+
+	bool FortrendLoadLockSubsystem::setSecondLayerMapping(const bool value)
+	{
+		d->io_second_layer_wafer_presence_value = value;
+		return true;
+	}
+	//返回mapping 结果
+	Cassette::Mapping FortrendLoadLockSubsystem::handleSingleSlotMapping(short mapRes)
+	{
+		Cassette::Mapping slotState = Cassette::Mapping::Unknown;
+		switch (mapRes)
+		{
+			case 1:
+				slotState = Cassette::Mapping::Empty;
+				break;
+			case 2:
+				slotState = Cassette::Mapping::Present;
+				break;
+			default:
+				slotState = Cassette::Mapping::Unknown;
+			break;
+		}
+		return slotState;
+	}
+
 	void FortrendLoadLockSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){
 		KernelAbstractSubSystem::onConfigure(config);
 		FortrendAbstractStation::configure(config);
@@ -591,27 +683,29 @@ namespace FC{
 		if (config->has("IO"))
 		{
 			//mapping Present Sensor Names
-			do{
-				Poco::StringTokenizer token(config->getString("IO.PresentSensorNames", ""), ",", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
-				for (int i = 0; i < token.count(); i++){
-					d->io_present_sensor_names.push_back(token[i]);
+			//do{
+			//	Poco::StringTokenizer token(config->getString("IO.PresentSensorNames", ""), ",", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
+			//	for (int i = 0; i < token.count(); i++){
+			//		std::cout <<"token:"<< token[i] << std::endl;
 
-				}
-			} while (false);
-			d->io_present_sensor_address = config->getString("IO.PresentSensorAddress", "");//LoadLock1/在位感应器1
+			//		d->io_present_sensor_names.push_back(token[i]);
 
-			int count = d->io_present_sensor_names.size();
+			//	}
+			//} while (false);
+			//d->io_present_sensor_address = config->getString("IO.PresentSensorAddress", "");//LoadLock1/在位感应器1
 
-			d->ptr_io_present_sensor_state = new bool[count];
+			//int count = d->io_present_sensor_names.size();
 
-			for (size_t i = 0; i < d->io_present_sensor_names.size(); i++)
-			{
-				d->io_present_sensor_last_value.push_back(false);
-				d->ptr_io_present_sensor_state[i] = false;
-			}
-			
-			d->io_protruding_sensor_names = config->getString("IO.ProtrudingSensorName", "Protruding Detection Sensor"); //突出检测传感器
-			d->io_protruding_sensor_address = config->getString("IO.ProtrudingSensorAddress", "");
+			//d->ptr_io_present_sensor_state = new bool[count];
+
+			//for (size_t i = 0; i < d->io_present_sensor_names.size(); i++)
+			//{
+			//	d->io_present_sensor_last_value.push_back(false);
+			//	d->ptr_io_present_sensor_state[i] = false;
+			//}
+			//
+			//d->io_protruding_sensor_names = config->getString("IO.ProtrudingSensorName", "Protruding Detection Sensor"); //突出检测传感器
+			//d->io_protruding_sensor_address = config->getString("IO.ProtrudingSensorAddress", "");
 		}
 		if (config->has("Vacuum"))
 		{
@@ -637,6 +731,9 @@ namespace FC{
 			d->close_inserting_plate_valve_address = config->getString("Update.close_inserting_plate_valve_address", "");
 			d->open_cassette_door_address = config->getString("Update.open_cassette_door_address", "");
 			d->open_tm_cavity_door_address = config->getString("Update.open_tm_cavity_door_address", "");
+
+			d->io_first_layer_detection_sensor_address = config->getString("Update.first_layer_detection_sensor","");
+			d->io_second_layer_detection_sensor_address = config->getString("Update.second_layer_detection_sensor", "");
 		}
 	}
 

@@ -67,7 +67,6 @@ namespace FC{
 		virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
 		virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
 
-
 	public:
 		std::shared_ptr<LoadLockOpenCassetteDoorCommand> createOpenCassetteDoorCommand()const;
 		std::shared_ptr<LoadLockCloseCassetteDoorCommand> createCloseCassetteDoorCommand()const;
@@ -86,6 +85,7 @@ namespace FC{
 		std::shared_ptr<LoadLockCloseInsertingPlateValveCommand> FortrendLoadLockSubsystem::createCloseInsertingPlateValveCommand()const;
 		std::shared_ptr<LoadLockOpenHeightVacuumBaffleValveCommand> FortrendLoadLockSubsystem::createOpenHeightVacuumBaffleValveCommand()const;
 		std::shared_ptr<LoadLockCloseHeightVacuumBaffleValveCommand> FortrendLoadLockSubsystem::createCloseHeightVacuumBaffleValveCommand()const;
+
 		std::shared_ptr<LoadLockAutoBreakVacuumCommand> FortrendLoadLockSubsystem::createAutoBreakVacuumCommand()const;//破真空指令
 
 	public:
@@ -93,12 +93,16 @@ namespace FC{
 		void setCassetteDoorOpend(const bool value);
 		bool getTMCavityDoorOpend()const;
 		void setTMCavityDoorOpend(const bool value);
+
 		bool getSlowDiaphragmValveOpend()const;
 		void setSlowDiaphragmValveOpend(const bool value);
+
 		bool getFastDiaphragmValveOpend()const;
 		void setFastDiaphragmValveOpend(const bool value);
+
 		bool getAngleValveOpend()const;
 		void setAngleValveOpend(const bool value);
+
 		bool getExhaustValveOpend()const;
 		void setExhaustValveOpend(const bool value);
 
@@ -114,20 +118,24 @@ namespace FC{
 		void setInsertingPlateValveOpend(const bool value);
 
 		void setBoxPlacement(const bool value);
+
 		int getLastMoveSlot()const;
 		void setLastMoveSlot(const int value);
 
 		int getCassetteSlotCount() const;
 
+		//当前腔室真空值
 		double getVacuumValue()const;
 		int getVacuumPressureGageState()const;
 
 		bool getVacuumValueReachesTheSetValue()const;
 		bool getVacuumValueUpperLimitReachesTheSetValue()const;
 
+		//排气泄压
 		bool getExhaustVacuumValueReachesTheSetValue()const;
 		bool getQuickInflationValueReachesTheSetValue()const;
 
+		
 		bool getLoadLockRoughVacuumReachesTheSetValue()const;
 		bool getLoadLockRoughVacuumReachesTheSetValue(int value)const;
 
@@ -136,7 +144,8 @@ namespace FC{
 
 		//设置粗抽真空值
 		void setRoughVacuumValue(const double rough_vacuum_set_value);
-		
+
+		//达到角阀快抽条件
 		bool getFastAngleValveReachesTheSetValue() const;
 
 		bool getVacuumEnable()const;
@@ -149,9 +158,21 @@ namespace FC{
 
 		bool getHasResetFlag()const;
 		void setHasResetFlag(const bool value);
+
 		//SMIF Lock
 		bool hasReadyCloseDoor();
 		void setReadyCloseDoorFlag(const bool value);
+
+		void getFirstLayerMapping(Cassette::Mapping &map);
+		bool setFirstLayerMapping(const bool value);
+
+		void getSecondLayerMapping(Cassette::Mapping &map);
+		bool setSecondLayerMapping(const bool value);
+
+		//单槽mapping
+		Cassette::Mapping handleSingleSlotMapping(short mapRes);
+
+
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

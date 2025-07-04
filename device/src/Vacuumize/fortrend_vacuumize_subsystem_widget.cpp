@@ -59,6 +59,7 @@
 #include <QColor>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <qdebug.h>
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
@@ -118,16 +119,17 @@ public:
 	d_ptr(new QVacuumizeSubsystemWidgetPrivate(this, kernel))
 {
     Q_D(QVacuumizeSubsystemWidget);
+	
 	//pump->addEventListener(d_ptr);
     d->ui = new Ui::VacuumizeSubsystemWidget;
     d->ui->setupUi(this);
 
 	//d->ui->widget_18->angle = 90;//90度旋转
-	d->ui->widget_pbv_llb->angle = 90;//90度旋转
-	d->ui->widget_21->angle = 90;//90度旋转
-	d->ui->widget_24->angle = 90;//90度旋转
-	d->ui->widget_46->angle = 90;//90度旋转
-	d->ui->widget_72->angle = 90;//90度旋转
+	//d->ui->widget_pbv_llb->angle = 90;//90度旋转
+	//d->ui->widget_21->angle = 90;//90度旋转
+//	d->ui->widget_24->angle = 90;//90度旋转
+	//d->ui->widget_46->angle = 90;//90度旋转
+//	d->ui->widget_72->angle = 90;//90度旋转
 	d->ui->widget_54->angle = 90;//90度旋转
     //init samethong
 	//d->ui->widget_13->setWaterDirection(0);//设置从下往上流动
@@ -160,9 +162,9 @@ public:
 	//d->ui->widget_4->setWaterDirection(2);//设置从下往上流动
 
 	
-	d->ui->widget_tm_tmp->colorLine = QColor(153, 194, 255);
-	d->ui->widget_lla_tmp->colorLine = QColor(153, 194, 255);
-	d->ui->widget_llb_tmp->colorLine = QColor(153, 194, 255);
+	//d->ui->widget_tm_tmp->colorLine = QColor(153, 194, 255);
+	//d->ui->widget_lla_tmp->colorLine = QColor(153, 194, 255);
+	//d->ui->widget_llb_tmp->colorLine = QColor(153, 194, 255);
 	d->ui->widget_vp->colorLine = QColor(153, 194, 255);
 	
 	//d->ui->widget_vp->open();
@@ -181,94 +183,98 @@ public:
 	// 设置窗口属性，使背景色可以自动填充整个窗口
 	setAutoFillBackground(true);
 
-	QObject::connect(d->ui->widget_tm_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPTMClicked);//TM腔分子泵
-	QObject::connect(d->ui->widget_lla_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLAClicked);//LoadLockA腔分子泵
-	QObject::connect(d->ui->widget_llb_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLBClicked);//LoadLockB腔分子泵
+	//QObject::connect(d->ui->widget_tm_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPTMClicked);//TM腔分子泵
+	//QObject::connect(d->ui->widget_lla_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLAClicked);//LoadLockA腔分子泵
+	//QObject::connect(d->ui->widget_llb_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLBClicked);//LoadLockB腔分子泵
 	QObject::connect(d->ui->widget_vp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onVPClicked);//干泵
 
 	QObject::connect(d->ui->widget_pav_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVTMClicked);//气动角阀
 	QObject::connect(d->ui->widget_pav_lla, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVLLAClicked);//
 	QObject::connect(d->ui->widget_pav_llb, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVLLBClicked);//
 	
-	QObject::connect(d->ui->widget_ppv_tm, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVTMClicked);//插板阀
-	QObject::connect(d->ui->widget_ppv_lla, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVLLAClicked);//
-	QObject::connect(d->ui->widget_ppv_llb, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVLLBClicked);//
+	//QObject::connect(d->ui->widget_ppv_tm, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVTMClicked);//插板阀
+	//QObject::connect(d->ui->widget_ppv_lla, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVLLAClicked);//
+	//QObject::connect(d->ui->widget_ppv_llb, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVLLBClicked);//
 
-	QObject::connect(d->ui->widget_pbv_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVTMClicked);//高真空挡板阀
-	QObject::connect(d->ui->widget_pbv_lla, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLAClicked);//
-	QObject::connect(d->ui->widget_pbv_llb, &SlideValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLBClicked);//
+	//QObject::connect(d->ui->widget_pbv_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVTMClicked);//高真空挡板阀
+	//QObject::connect(d->ui->widget_pbv_lla, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLAClicked);//
+	//QObject::connect(d->ui->widget_pbv_llb, &SlideValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLBClicked);//
 
 	QObject::connect(d->ui->open_loadlock1_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand);//一键抽真空（打开真空）
 	QObject::connect(d->ui->open_loadlock2_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock2AutoVacuumCommand);//
 	QObject::connect(d->ui->open_tm_cavity_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenTMCavityAutoVacuumCommand);//
 
 
-	d->widget_tm_tmp_ckb = new QCheckBox("TM分子泵");
-	d->widget_lla_tmp_ckb = new QCheckBox("LLA分子泵");
-	d->widget_llb_tmp_ckb = new QCheckBox("LLB分子泵");
-	d->widget_vp_ckb = new QCheckBox("干泵");
+	//d->widget_tm_tmp_ckb = new QCheckBox("TM分子泵");
+	//d->widget_lla_tmp_ckb = new QCheckBox("LLA分子泵");
+	//d->widget_llb_tmp_ckb = new QCheckBox("LLB分子泵");
+	//d->widget_vp_ckb = new QCheckBox("干泵");
 	d->widget_pav_tm_ckb = new QCheckBox("TM角阀");
 	d->widget_pav_lla_ckb = new QCheckBox("LLA角阀");
 	d->widget_pav_llb_ckb = new QCheckBox("LLB角阀");
-	d->widget_ppv_tm_ckb = new QCheckBox("TM插板阀");
-	d->widget_ppv_lla_ckb = new QCheckBox("LLA插板阀");
-	d->widget_ppv_llb_ckb = new QCheckBox("LLB插板阀");
-	d->widget_pbv_tm_ckb = new QCheckBox("TM挡板阀");
-	d->widget_pbv_lla_ckb = new QCheckBox("LLA挡板阀");
-	d->widget_pbv_llb_ckb = new QCheckBox("LLB挡板阀");
+	//d->widget_ppv_tm_ckb = new QCheckBox("TM插板阀");
+	//d->widget_ppv_lla_ckb = new QCheckBox("LLA插板阀");
+	//d->widget_ppv_llb_ckb = new QCheckBox("LLB插板阀");
+	//d->widget_pbv_tm_ckb = new QCheckBox("TM挡板阀");
+	//d->widget_pbv_lla_ckb = new QCheckBox("LLA挡板阀");
+	//d->widget_pbv_llb_ckb = new QCheckBox("LLB挡板阀");
 
-	d->widget_tm_tmp_ckb->setObjectName("io_object");
-	d->widget_lla_tmp_ckb->setObjectName("io_object");
-	d->widget_llb_tmp_ckb->setObjectName("io_object");
-	d->widget_vp_ckb->setObjectName("io_object");
+	//d->widget_tm_tmp_ckb->setObjectName("io_object");
+	//d->widget_lla_tmp_ckb->setObjectName("io_object");
+	//d->widget_llb_tmp_ckb->setObjectName("io_object");
+	//d->widget_vp_ckb->setObjectName("io_object");
+
 	d->widget_pav_tm_ckb->setObjectName("io_object");
 	d->widget_pav_lla_ckb->setObjectName("io_object");
 	d->widget_pav_llb_ckb->setObjectName("io_object");
-	d->widget_ppv_tm_ckb->setObjectName("io_object");
-	d->widget_ppv_lla_ckb->setObjectName("io_object");
-	d->widget_ppv_llb_ckb->setObjectName("io_object");
-	d->widget_pbv_tm_ckb->setObjectName("io_object");
-	d->widget_pbv_lla_ckb->setObjectName("io_object");
-	d->widget_pbv_llb_ckb->setObjectName("io_object");
 
-	d->ui->widget_tm_tmp_layout->addWidget(d->widget_tm_tmp_ckb, 0, 0);
-	d->ui->widget_lla_tmp_layout->addWidget(d->widget_lla_tmp_ckb, 0, 0);
-	d->ui->widget_llb_tmp_layout->addWidget(d->widget_llb_tmp_ckb, 0, 0);
-	d->ui->widget_vp_layout->addWidget(d->widget_vp_ckb, 0, 0);
+	//d->widget_ppv_tm_ckb->setObjectName("io_object");
+	//d->widget_ppv_lla_ckb->setObjectName("io_object");
+	//d->widget_ppv_llb_ckb->setObjectName("io_object");
+	//d->widget_pbv_tm_ckb->setObjectName("io_object");
+	//d->widget_pbv_lla_ckb->setObjectName("io_object");
+	//d->widget_pbv_llb_ckb->setObjectName("io_object");
+
+	//d->ui->widget_tm_tmp_layout->addWidget(d->widget_tm_tmp_ckb, 0, 0);
+	//d->ui->widget_lla_tmp_layout->addWidget(d->widget_lla_tmp_ckb, 0, 0);
+	//d->ui->widget_llb_tmp_layout->addWidget(d->widget_llb_tmp_ckb, 0, 0);
+	//d->ui->widget_vp_layout->addWidget(d->widget_vp_ckb, 0, 0);
+
 	d->ui->widget_pav_tm_layout->addWidget(d->widget_pav_tm_ckb, 0, 0);
 	d->ui->widget_pav_lla_layout->addWidget(d->widget_pav_lla_ckb, 0, 0);
 	d->ui->widget_pav_llb_layout->addWidget(d->widget_pav_llb_ckb, 0, 0);
-	d->ui->widget_ppv_tm_layout->addWidget(d->widget_ppv_tm_ckb, 0, 0);
-	d->ui->widget_ppv_lla_layout->addWidget(d->widget_ppv_lla_ckb, 0, 0);
-	d->ui->widget_ppv_llb_layout->addWidget(d->widget_ppv_llb_ckb, 0, 0);
-	d->ui->widget_pbv_tm_layout->addWidget(d->widget_pbv_tm_ckb, 0, 0);
-	d->ui->widget_pbv_lla_layout->addWidget(d->widget_pbv_lla_ckb, 0, 0);
-	d->ui->widget_pbv_llb_layout->addWidget(d->widget_pbv_llb_ckb, 0, 0);
 
-	connect(d->widget_tm_tmp_ckb, &QCheckBox::clicked, this, [=](){
-		if (d->widget_tm_tmp_ckb->checkState() == Qt::CheckState::Checked){
-			onTMPTMClicked(true);
-		}
-		else{
-			onTMPTMClicked(false);
-		}
-	});
-	connect(d->widget_lla_tmp_ckb, &QCheckBox::clicked, this, [=](){
-		if (d->widget_lla_tmp_ckb->checkState() == Qt::CheckState::Checked){
-			onTMPLLAClicked(true);
-		}
-		else{
-			onTMPLLAClicked(false);
-		}
-	});
-	connect(d->widget_llb_tmp_ckb, &QCheckBox::clicked, this, [=](){
-		if (d->widget_llb_tmp_ckb->checkState() == Qt::CheckState::Checked){
-			onTMPLLBClicked(true);
-		}
-		else{
-			onTMPLLBClicked(false);
-		}
-	});
+	//d->ui->widget_ppv_tm_layout->addWidget(d->widget_ppv_tm_ckb, 0, 0);
+	//d->ui->widget_ppv_lla_layout->addWidget(d->widget_ppv_lla_ckb, 0, 0);
+	//d->ui->widget_ppv_llb_layout->addWidget(d->widget_ppv_llb_ckb, 0, 0);
+	//d->ui->widget_pbv_tm_layout->addWidget(d->widget_pbv_tm_ckb, 0, 0);
+	//d->ui->widget_pbv_lla_layout->addWidget(d->widget_pbv_lla_ckb, 0, 0);
+	//d->ui->widget_pbv_llb_layout->addWidget(d->widget_pbv_llb_ckb, 0, 0);
+
+	//connect(d->widget_tm_tmp_ckb, &QCheckBox::clicked, this, [=](){
+	//	if (d->widget_tm_tmp_ckb->checkState() == Qt::CheckState::Checked){
+	//		onTMPTMClicked(true);
+	//	}
+	//	else{
+	//		onTMPTMClicked(false);
+	//	}
+	//});
+	//connect(d->widget_lla_tmp_ckb, &QCheckBox::clicked, this, [=](){
+	//	if (d->widget_lla_tmp_ckb->checkState() == Qt::CheckState::Checked){
+	//		onTMPLLAClicked(true);
+	//	}
+	//	else{
+	//		onTMPLLAClicked(false);
+	//	}
+	//});
+	//connect(d->widget_llb_tmp_ckb, &QCheckBox::clicked, this, [=](){
+	//	if (d->widget_llb_tmp_ckb->checkState() == Qt::CheckState::Checked){
+	//		onTMPLLBClicked(true);
+	//	}
+	//	else{
+	//		onTMPLLBClicked(false);
+	//	}
+	//});
 	connect(d->widget_vp_ckb, &QCheckBox::clicked, this, [=](){
 		if (d->widget_vp_ckb->checkState() == Qt::CheckState::Checked){
 			onVPClicked(true);
@@ -301,14 +307,14 @@ public:
 			onPAVLLBClicked(false);
 		}
 	});
-	connect(d->widget_ppv_tm_ckb, &QCheckBox::clicked, this, [=](){
-		if (d->widget_ppv_tm_ckb->checkState() == Qt::CheckState::Checked){
-			onPPVTMClicked(true);
-		}
-		else{
-			onPPVTMClicked(false);
-		}
-	});
+	//connect(d->widget_ppv_tm_ckb, &QCheckBox::clicked, this, [=](){
+	//	if (d->widget_ppv_tm_ckb->checkState() == Qt::CheckState::Checked){
+	//		onPPVTMClicked(true);
+	//	}
+	//	else{
+	//		onPPVTMClicked(false);
+	//	}
+	//});
 	connect(d->widget_ppv_lla_ckb, &QCheckBox::clicked, this, [=](){
 		if (d->widget_ppv_lla_ckb->checkState() == Qt::CheckState::Checked){
 			onPPVLLAClicked(true);
@@ -350,15 +356,15 @@ public:
 		}
 	});
 
-	//connect(d->widget_pav_tm_ckb, &QCheckBox::clicked, this, [=](){
-	//	if (d->widget_pav_tm_ckb->checkState() == Qt::CheckState::Checked){
-	//		onPAVTMClicked(true);
-	//	}
-	//	else{
-	//		onPAVTMClicked(false);
-	//	}
-	//	//logInform("Test", "widget_pav_tm_ckb %d", d->widget_pav_tm_ckb->checkState() == Qt::CheckState::Checked);
-	//});
+	connect(d->widget_pav_tm_ckb, &QCheckBox::clicked, this, [=](){
+		if (d->widget_pav_tm_ckb->checkState() == Qt::CheckState::Checked){
+			onPAVTMClicked(true);
+		}
+		else{
+			onPAVTMClicked(false);
+		}
+		//logInform("Test", "widget_pav_tm_ckb %d", d->widget_pav_tm_ckb->checkState() == Qt::CheckState::Checked);
+	});
 
 	/*d->ui->widget_pav_tm->close();
 	d->ui->widget_pav_lla->close();
@@ -421,97 +427,29 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	d->ui->molecule_pipeline_value_let->setText(QString::number(d->tm->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
-	//初始化管道的流动状态
-	if (d->pump->getMechanicalPumpOpened()){
-		//干泵开启状态
-		d->ui->widget_vp->open();
-		d->widget_vp_ckb->setChecked(true);
-		d->ui->vp_h_1->setWaterDirection(0);//干泵
-		d->ui->vp_h_2->setWaterDirection(0);
-		d->ui->vp_h_3->setWaterDirection(0);
-		d->ui->vp_w_1->setWaterDirection(0);
-		d->ui->vp_w_2->setWaterDirection(0);
-		d->ui->vp_w_3->setWaterDirection(1);//1从右往左，从下往上，0从左往右，从上往下
-		d->ui->vp_w_4->setWaterDirection(1);
-		d->ui->vp_w_5->setWaterDirection(1);
-		d->ui->vp_w_6->setWaterDirection(1);
-		d->ui->vp_w_7->setWaterDirection(1);
-		d->ui->vp_w_8->setWaterDirection(1);
-	}
-	else{
-		d->ui->widget_vp->close();
-		d->widget_vp_ckb->setChecked(false);
-		d->ui->vp_h_1->setWaterDirection(2);//干泵关闭
-		d->ui->vp_h_2->setWaterDirection(2);
-		d->ui->vp_h_3->setWaterDirection(2);
-		d->ui->vp_w_1->setWaterDirection(2);
-		d->ui->vp_w_2->setWaterDirection(2);
-		d->ui->vp_w_3->setWaterDirection(2);//1从右往左，从下往上，0从左往右，从上往下
-		d->ui->vp_w_4->setWaterDirection(2);
-		d->ui->vp_w_5->setWaterDirection(2);
-		d->ui->vp_w_6->setWaterDirection(2);
-		d->ui->vp_w_7->setWaterDirection(2);
-		d->ui->vp_w_8->setWaterDirection(2);
-	}
-
-	//分子泵开启状态
-	if (d->pump->getMolecularPumpOpenedLLA()){
-		d->ui->widget_lla_tmp->open();
-		d->widget_lla_tmp_ckb->setChecked(true);
-		d->ui->tmp_lla_w_1->setWaterDirection(1);
-	}
-	else{
-		d->ui->widget_lla_tmp->close();
-		d->widget_lla_tmp_ckb->setChecked(false);
-		d->ui->tmp_lla_w_1->setWaterDirection(2);
-	}
-
-	if (d->pump->getMolecularPumpOpenedLLB()){
-		d->ui->widget_llb_tmp->open();
-		d->widget_llb_tmp_ckb->setChecked(true);
-		d->ui->tmp_llb_w_1->setWaterDirection(1);
-	}
-	else{
-		d->ui->widget_llb_tmp->close();
-		d->widget_llb_tmp_ckb->setChecked(false);
-		d->ui->tmp_llb_w_1->setWaterDirection(2);
-	}
-
-
-	if (d->pump->getMolecularPumpOpenedTM()){
-		d->ui->widget_tm_tmp->open();
-		d->widget_tm_tmp_ckb->setChecked(true);
-		d->ui->tmp_tm_w_1->setWaterDirection(1);
-	}
-	else{
-		d->ui->widget_tm_tmp->close();
-		d->widget_tm_tmp_ckb->setChecked(false);
-		d->ui->tmp_tm_w_1->setWaterDirection(2);
-	}
 
 
 
+	if (d->lk1->getAngleValveOpend()) {
+		d->ui->widget_pav_lla->open();
+		d->widget_pav_lla_ckb->setChecked(true);
+		d->ui->pav_lla_w_1->setWaterDirection(1);//lla 角阀
+	}
+	else {
+		d->ui->widget_pav_lla->close();
+		d->widget_pav_lla_ckb->setChecked(false);
+		d->ui->pav_lla_w_1->setWaterDirection(2);
+	}
 
-	if (d->tm->getHeightVacuumBaffleValveOpend()){
-		d->ui->pbv_tm_w_1->setWaterDirection(1);//挡板阀
-		d->ui->widget_pbv_tm->open();
-		d->widget_pbv_tm_ckb->setChecked(true);
+	if (d->lk2->getAngleValveOpend()) {
+		d->ui->widget_pav_llb->open();
+		d->widget_pav_llb_ckb->setChecked(true);
+		d->ui->pav_llb_w_1->setWaterDirection(1);//llb 角阀
 	}
-	else{
-		d->ui->pbv_tm_w_1->setWaterDirection(2);//挡板阀
-		d->ui->widget_pbv_tm->close();
-		d->widget_pbv_tm_ckb->setChecked(false);
-	}
-
-	if (d->tm->getInsertingPlateValveOpend()){
-		d->ui->widget_ppv_tm->open();
-		d->widget_ppv_tm_ckb->setChecked(true);
-		d->ui->ppv_tm_w_1->setWaterDirection(1);//插板阀
-	}
-	else{
-		d->ui->widget_ppv_tm->close();
-		d->widget_ppv_tm_ckb->setChecked(false);
-		d->ui->ppv_tm_w_1->setWaterDirection(2);//插板阀
+	else {
+		d->ui->widget_pav_llb->close();
+		d->widget_pav_llb_ckb->setChecked(false);
+		d->ui->pav_llb_w_1->setWaterDirection(2);
 	}
 
 	if (d->tm->getAngleValveOpend()){
@@ -525,101 +463,32 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 		d->ui->pav_tm_w_1->setWaterDirection(2);//角阀
 	}
 
-
-	if (d->lk1->getHeightVacuumBaffleValveOpend()){
-		//d->ui->widget_ppv_lla->open();
-		d->ui->pbv_lla_w_1->setWaterDirection(1);//挡板阀
-		d->ui->widget_pbv_lla->open();
-		d->widget_pbv_lla_ckb->setChecked(true);
-	}
-	else{
-		d->ui->widget_pbv_lla->close();
-		d->widget_pbv_lla_ckb->setChecked(false);
-		d->ui->pbv_lla_w_1->setWaterDirection(2);
-	}
-
-	if (d->lk1->getInsertingPlateValveOpend()){
-		d->ui->widget_ppv_lla->open();
-		d->widget_ppv_lla_ckb->setChecked(true);
-		d->ui->ppv_lla_w_1->setWaterDirection(1);//插板阀
-	}
-	else{
-		d->ui->widget_ppv_lla->close();
-		d->widget_ppv_lla_ckb->setChecked(false);
-		d->ui->ppv_lla_w_1->setWaterDirection(2);
-	}
-
-	if (d->lk1->getAngleValveOpend()){
-		d->ui->widget_pav_lla->open();
-		d->widget_pav_lla_ckb->setChecked(true);
-		d->ui->pav_lla_w_1->setWaterDirection(1);//角阀
-	}
-	else{
-		d->ui->widget_pav_lla->close();
-		d->widget_pav_lla_ckb->setChecked(false);
-		d->ui->pav_lla_w_1->setWaterDirection(2);
-	}
-
-	if (d->lk2->getHeightVacuumBaffleValveOpend()){
-		d->ui->widget_pbv_llb->open();
-		d->widget_pbv_llb_ckb->setChecked(true);
-		d->ui->pbv_llb_w_1->setWaterDirection(0);//挡板阀
-		d->ui->pbv_llb_h_1->setWaterDirection(0);
-	}
-	else{
-		d->ui->widget_pbv_llb->close();
-		d->widget_pbv_llb_ckb->setChecked(false);
-		d->ui->pbv_llb_w_1->setWaterDirection(2);
-		d->ui->pbv_llb_h_1->setWaterDirection(2);
-	}
-
-	if (d->lk2->getInsertingPlateValveOpend()){
-		d->ui->widget_ppv_llb->open();
-		d->widget_ppv_llb_ckb->setChecked(true);
-		d->ui->ppv_llb_w_1->setWaterDirection(1);//插板阀
-		d->ui->ppv_llb_h_1->setWaterDirection(0);
-	}
-	else{
-		d->ui->widget_ppv_llb->close();
-		d->widget_ppv_llb_ckb->setChecked(false);
-		d->ui->ppv_llb_w_1->setWaterDirection(2);
-		d->ui->ppv_llb_h_1->setWaterDirection(2);
-	}
-
-	if (d->lk2->getAngleValveOpend()){
-		d->ui->widget_pav_llb->open();
-		d->widget_pav_llb_ckb->setChecked(true);
-		d->ui->pav_llb_w_1->setWaterDirection(1);//角阀
-	}
-	else{
-		d->ui->widget_pav_llb->close();
-		d->widget_pav_llb_ckb->setChecked(false);
-		d->ui->pav_llb_w_1->setWaterDirection(2);
-	}
-
-	if (d->lk1->getTMCavityDoorOpend()){
+	if (d->lk1->getTMCavityDoorOpend()) {
 		d->ui->tm__lla_door->setWaterDirection(1);
 	}
-	else{
+	else {
 		d->ui->tm__lla_door->setWaterDirection(2);
 	}
 
-	if (d->lk2->getTMCavityDoorOpend()){
+	if (d->lk2->getTMCavityDoorOpend()) {
 		d->ui->tm__llb_door->setWaterDirection(1);
 	}
-	else{
+	else {
 		d->ui->tm__llb_door->setWaterDirection(2);
 	}
-	
 
-	d->ui->widget_10->setWaterDirection(2);
-	d->ui->widget_13->setWaterDirection(2);
-	d->ui->widget_53->setWaterDirection(2);
+	//初始化管道的流动状态
+	if (d->pump->getMechanicalPumpOpened()){
+		//干泵开启状态
+		d->ui->widget_vp->open();
+	}
+	else{
+		d->ui->widget_vp->close();
 
-
-
-
-
+	}
+	if (d->ui->widget_10) d->ui->widget_10->setWaterDirection(2);
+	if (d->ui->widget_13) d->ui->widget_13->setWaterDirection(2);
+	if (d->ui->widget_53) d->ui->widget_53->setWaterDirection(2);
 }
 
 void QVacuumizeSubsystemWidget::onGetStatus(){
@@ -643,16 +512,16 @@ void QVacuumizeSubsystemWidget::onTMPTMClicked(bool status){
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			d->ui->tmp_tm_w_1->setWaterDirection(1);//分子泵
-			d->ui->widget_tm_tmp->open();
+			//d->ui->tmp_tm_w_1->setWaterDirection(1);//分子泵
+			//d->ui->widget_tm_tmp->open();
 		}
 		else{
 			KernelSubsystemCommand::Ptr cmd = d->pump->createMolecularCloseCommand("TM");
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			d->ui->tmp_tm_w_1->setWaterDirection(2);//关闭分子泵
-			d->ui->widget_tm_tmp->close();
+			//d->ui->tmp_tm_w_1->setWaterDirection(2);//关闭分子泵
+			//d->ui->widget_tm_tmp->close();
 		}
 }
 void QVacuumizeSubsystemWidget::onTMPLLAClicked(bool status){
@@ -666,16 +535,16 @@ void QVacuumizeSubsystemWidget::onTMPLLAClicked(bool status){
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			d->ui->tmp_lla_w_1->setWaterDirection(1);
-			d->ui->widget_lla_tmp->open();
+			//d->ui->tmp_lla_w_1->setWaterDirection(1);
+			//d->ui->widget_lla_tmp->open();
 		}
 		else{
 			KernelSubsystemCommand::Ptr cmd = d->pump->createMolecularCloseCommand("LLA");
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			d->ui->tmp_lla_w_1->setWaterDirection(2);
-			d->ui->widget_lla_tmp->close();
+			//d->ui->tmp_lla_w_1->setWaterDirection(2);
+			//d->ui->widget_lla_tmp->close();
 		}
 }
 void QVacuumizeSubsystemWidget::onTMPLLBClicked(bool status){
@@ -689,16 +558,16 @@ void QVacuumizeSubsystemWidget::onTMPLLBClicked(bool status){
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			d->ui->tmp_llb_w_1->setWaterDirection(1);
-			d->ui->widget_llb_tmp->open();
+			//d->ui->tmp_llb_w_1->setWaterDirection(1);
+			//d->ui->widget_llb_tmp->open();
 		}
 		else{
 			KernelSubsystemCommand::Ptr cmd = d->pump->createMolecularCloseCommand("LLB");
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			d->ui->tmp_llb_w_1->setWaterDirection(2);
-			d->ui->widget_llb_tmp->close();
+			//d->ui->tmp_llb_w_1->setWaterDirection(2);
+			//d->ui->widget_llb_tmp->close();
 		}
 }
 void QVacuumizeSubsystemWidget::onVPClicked(bool status){

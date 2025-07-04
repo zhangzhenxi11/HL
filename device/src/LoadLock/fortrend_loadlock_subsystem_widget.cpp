@@ -87,7 +87,7 @@ namespace FC{
 		connect(d->ui->clear_error_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onClearError);
 		connect(d->ui->open_cassette_door_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onOpenCassetteDoor);
 		connect(d->ui->close_cassette_door_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onCloseCassetteDoor);
-		//connect(d->ui->mapping_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onMapping);
+		connect(d->ui->mapping_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onMapping);
 		//connect(d->ui->movetoslot_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onMoveToSlot);
 
 		connect(d->ui->open_tm_cavity_door_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onOpenTMCavityDoor);
@@ -163,8 +163,8 @@ namespace FC{
 		d->ui->inputs_layout->addWidget(d->protruding_sensor_ckb, 0, 2, 1, 1);
 		d->input_checkboxs.push_back(d->protruding_sensor_ckb);*/
 
-		d->ultrahigh_vacuum_baffle_valve_ckb = new QCheckBox("高真空挡板阀");
-		d->inserting_plate_value_ckb = new QCheckBox("插板阀");
+		//d->ultrahigh_vacuum_baffle_valve_ckb = new QCheckBox("高真空挡板阀");
+		//d->inserting_plate_value_ckb = new QCheckBox("插板阀");
 
 		d->cassette_door_ckb = new QCheckBox("晶圆盒门阀");
 		d->tm_cavity_door_ckb = new QCheckBox("传输腔门阀");
@@ -396,6 +396,9 @@ namespace FC{
 	void QLoadLockSubsystemWidget::onAttributeUpdate() throw(KernelException){
 		Q_D(QLoadLockSubsystemWidget);
 		
+		auto cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+		auto cass = cassManager->getCassette(getSubsystem().get());
+
 		//update object state
 		/*for (int i = 0; i < d->arm_stat.size(); i++){
 			d->arm_stat.at(i)->setChecked(getSubsystem()->hasObject(i));
@@ -405,6 +408,7 @@ namespace FC{
 	/*	d->present_sensor_left_ckb->setChecked(getSubsystem()->getPresentSensorState(0));
 		d->present_sensor_right_ckb->setChecked(getSubsystem()->getPresentSensorState(1));
 		d->protruding_sensor_ckb->setChecked(getSubsystem()->getProtrudingSensorState());*/
+
 		d->cassette_door_ckb->setChecked(getSubsystem()->getCassetteDoorOpend());
 		d->tm_cavity_door_ckb->setChecked(getSubsystem()->getTMCavityDoorOpend());
 		d->ui->current_vacuum_value_let->setText(QString::number(getSubsystem()->getVacuumValue(), 'e', 3).append("Pa"));
@@ -412,9 +416,19 @@ namespace FC{
 
 		d->slow_diaphragm_valve_ckb->setChecked(getSubsystem()->getSlowDiaphragmValveOpend());
 		d->fast_diaphragm_valve_ckb->setChecked(getSubsystem()->getFastDiaphragmValveOpend());
+
 		//d->ultrahigh_vacuum_baffle_valve_ckb->setChecked(getSubsystem()->getHeightVacuumBaffleValveOpend());
 		//d->inserting_plate_value_ckb->setChecked(getSubsystem()->getInsertingPlateValveOpend());
 		d->angle_valve_ckb->setChecked(getSubsystem()->getAngleValveOpend());
+
+		//update cassete status
+		Cassette::Mapping mappingData = Cassette::Mapping::Unknown;
+
+		getSubsystem()->getFirstLayerMapping(mappingData);
+		cass->setMapping(1, mappingData);
+
+		getSubsystem()->getSecondLayerMapping(mappingData);
+		cass->setMapping(2, mappingData);
 	}
 
 }

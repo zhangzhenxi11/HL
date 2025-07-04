@@ -143,7 +143,7 @@ void LoadLockA::paintEvent(QPaintEvent *event){
     int w=width();
     int h=height();
 
-    QPixmap originalPixmap("image/LLA.png");
+    QPixmap originalPixmap("image/image/LLA.png");
     //QImage mirroredImage = originalPixmap.toImage().mirrored(!IsLeft, false); // 先转换为 QImage，然后进行镜像,第二个参数设置为true（进行水平翻转
     //QPixmap mirroredPixmap = QPixmap::fromImage(mirroredImage); // 再将 QImage 转换回 QPixmap
     // 现在使用镜像后的 QPixmap 绘制图片

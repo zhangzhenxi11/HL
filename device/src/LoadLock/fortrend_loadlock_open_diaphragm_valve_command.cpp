@@ -68,10 +68,10 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 传输腔门阀已打开（逻辑错误）", sub->getName()), this);
 		}
-		/*if (sub->getAngleValveOpend())
+		if (sub->getAngleValveOpend())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
-		}*/
+		}
 		if (d->opening == LoadLockValveOpening::LoadLock_Fast || d->opening == LoadLockValveOpening::LoadLock_Both)
 		{
 			if (sub->getQuickInflationValueReachesTheSetValue() == false)
@@ -88,6 +88,12 @@ namespace FC{
 		if (address1 == "" || address2 == "")
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开隔膜阀地址未定义", getName()), this);
+		}
+		if (SIMULATION_TEST == 1)
+		{
+			Sleep(200);
+			logInform(sub->getName().c_str(), "模拟打开隔膜阀命令执行完成...");
+			return RunResult::RUN_OK;
 		}
 		logInform(sub->getName().c_str(), "打开隔膜阀命令开始");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;

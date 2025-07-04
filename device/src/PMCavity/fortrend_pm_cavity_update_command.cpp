@@ -87,7 +87,8 @@ namespace FC{
 			std::vector<Cassette::Mapping> all_mapping;
 			all_slot.push_back(1);
 			all_mapping.push_back(Cassette::Mapping::Present);
-			station_cass->setMapping(all_slot, all_mapping);
+
+			//station_cass->setMapping(all_slot, all_mapping);
 		}
 		return ret;
 

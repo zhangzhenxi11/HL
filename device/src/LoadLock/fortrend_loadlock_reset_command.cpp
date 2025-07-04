@@ -53,10 +53,10 @@ namespace FC{
 	LoadLockResetCommand::RunResult LoadLockResetCommand::onRun() throw(KernelException){
 		FortrendLoadLockSubsystem* sub = dynamic_cast<FortrendLoadLockSubsystem*>(getSubsystem());
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
-		if (!sub->getProtrudingSensorState())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
-		}
+		//if (!sub->getProtrudingSensorState())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
+		//}
 		for (auto robot : sub->getRobots()){
 			if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("机械手: %s 状态不在正常状态", robot->getName()), this);

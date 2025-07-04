@@ -21,6 +21,12 @@
 #include "PMCavity/fortrend_pm_cavity_open_tm_cavity_door_command.h"
 #include "PMCavity/fortrend_pm_cavity_subsystem.h"
 
+#include <QDir>
+#include <QSettings>
+#include <QMessageBox>
+#include <qstring.h>
+#include <qdebug.h>
+
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
 #endif
@@ -43,12 +49,47 @@ namespace FC{
 	* return true if success else false.
 	*/
 	PMCavityOpenTMCavityDoorCommand::RunResult PMCavityOpenTMCavityDoorCommand::onRun() throw(KernelException){
-		return IKernelCommand::RunResult::RUN_OK;
+
 		FortrendPMCavitySubsystem* sub = dynamic_cast<FortrendPMCavitySubsystem*>(getSubsystem());
 		//
 		if (!sub){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
+
+		//TODO:要是区分不同的pm是否启用， 可读配置文件config.ini
+#if 0
+		QString fileName = QDir::currentPath() + "/config/" + "config.ini";
+		if (fileName.isEmpty())
+			return RunResult::RUN_FAILD;
+		QSettings settings(fileName, QSettings::IniFormat);
+		std::string pmName = sub->getName();
+		//qDebug() << "PM NAME:" << pmName.c_str() << endl; //PM NAME: PM2
+		bool pmEnable = false;
+		if (pmName == "PM1")
+		{
+			pmEnable = settings.value("PM1Enable", true).toBool();
+		}
+		else if (pmName == "PM2")
+		{
+			pmEnable = settings.value("PM2Enable", true).toBool();
+		}
+		else if (pmName == "PM3")
+		{
+			pmEnable = settings.value("PM3Enable", true).toBool();
+		}
+		if (!pmEnable)
+		{
+			logInform(sub->getName().c_str(), "%s 模块设置不启用,打开PM腔指令不去执行...", pmName);
+			return RunResult::RUN_OK;
+		}
+#endif
+		if (!sub->getPMCavityEnable()) {
+		
+			logInform(sub->getName().c_str(), "PM模块设置不启用,打开PM腔指令不去执行...");
+			return RunResult::RUN_OK;
+		};
+
+
 		FortrendTMCavitySubsystem * tm = dynamic_cast<FortrendTMCavitySubsystem*>((sub->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM")).get());
 		//
 		if (!tm){
@@ -135,6 +176,7 @@ namespace FC{
 		std::string open_address = command_config->getString("open_address", "");
 		std::string close_address = command_config->getString("close_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
+		std::string failed_address = command_config->getString("failed_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开传输腔插板门阀超时参数设置异常", sub->getName()), this);
@@ -158,12 +200,15 @@ namespace FC{
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;
+		bool failedRes = false;
 		bool readState = false;
+		bool readFailedState = false;
 		while (count <= loopCount)
 		{
 			Sleep(20);
 			readState = KeyencePlcCommandExecuter::readBit(finish_address, readRes);
-			if (readRes)
+			readFailedState = KeyencePlcCommandExecuter::readBit(failed_address, failedRes);
+			if (readRes || failedRes)
 			{
 				break;
 			}
@@ -177,7 +222,7 @@ namespace FC{
 			logInform(sub->getName().c_str(), "打开传输腔插板门阀命令完成");
 
 		}
-		else if (readState)
+		else if (readFailedState && failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开传输腔门阀命令执行失败，打开传输腔门阀到位信号异常"));
 			setAlarm(alarm);

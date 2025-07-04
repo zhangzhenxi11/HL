@@ -164,6 +164,7 @@ namespace FC{
 		if (!pm)
 		{
 			//QMessageBox::information(this, "警告", "子系统未找到");
+			logInform("ControlMode","子系统未找到");
 			return;
 		}
 		pm->setPMCavityEnable(value);
@@ -462,6 +463,7 @@ namespace FC{
 		d->rough_vacuum_value->setSingleStep(0.1);
 		d->rough_vacuum_value->setValue(6);
 		d->ui->gridLayout_2->addWidget(d->rough_vacuum_value, 3, 8, 1, 1);
+
 		//d->tm_cavity_vacuum_pid_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
 		//d->tm_cavity_vacuum_pid_dsb->setObjectName(QStringLiteral("tm_cavity_vacuum_pid_dsb"));
 		//d->tm_cavity_vacuum_pid_dsb->setDecimals(5);
@@ -525,20 +527,21 @@ namespace FC{
 		//connect(d->ui->pm2_cavity_vacuum_set_pbt, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM2CavityVacuumParameters);
 		//connect(d->ui->pm3_cavity_vacuum_set_pbt, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3CavityVacuumParameters);
 
-		d->ui->vacuum_label->hide();
-		d->ui->enable_vacuum_btn->hide();
-		d->ui->disable_vacuum_btn->hide();
-		d->ui->label_2->hide();
+		//调试模式注释，出场前放开
+		//d->ui->vacuum_label->hide();
+		//d->ui->enable_vacuum_btn->hide();
+		//d->ui->disable_vacuum_btn->hide();
+		//d->ui->label_2->hide();
 
-		d->ui->pm2_enable_label->hide();
-		d->ui->enable_pm2_btn->hide();
-		d->ui->disable_pm2_btn->hide();
-		d->ui->label_5->hide();
+		//d->ui->pm2_enable_label->hide();
+		//d->ui->enable_pm2_btn->hide();
+		//d->ui->disable_pm2_btn->hide();
+		//d->ui->label_5->hide();
 
-		d->ui->with_wafer_label->hide();
-		d->ui->enable_with_wafer_btn->hide();
-		d->ui->disable_with_wafer_btn->hide();
-		d->ui->label_4->hide();
+		//d->ui->with_wafer_label->hide();
+		//d->ui->enable_with_wafer_btn->hide();
+		//d->ui->disable_with_wafer_btn->hide();
+		//d->ui->label_4->hide();
 	}
 
 	QControlModeVTMWidget::~QControlModeVTMWidget(){

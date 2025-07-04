@@ -64,9 +64,9 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位超时参数错误", robot->getName()), this);
 	}
 
-	//测试
-	logInform(getName().c_str(), "模拟复位命令执行");
-	return RunResult::RUN_OK;
+	////测试
+	//logInform(getName().c_str(), "模拟复位命令执行");
+	//return RunResult::RUN_OK;
 
 	//ALG
 	std::string error_message = "";
@@ -78,14 +78,41 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	//send
 	if (!sendRequest("ACT:RESET;"))
 	{
-		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("%s 机械手通讯错误", robot->getName())));
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, 
+			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+			Poco::format("%s 机械手通讯错误", robot->getName())));
 		setAlarm(alarm);
 		return RunResult::RUN_FAILD;
 	};
-	//sendRequest("HOME ALL");
+
+	auto startTime = std::chrono::high_resolution_clock::now();
+	auto timeout2 = std::chrono::seconds(60);
 	res = recvResponse(timeout);
-	if (res != std::string("ACK"))
+	Sleep(200);
+	while (true)
 	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+
+		if (res != std::string(""))
+		{
+			break;
+		}
+		if (elapsed >= timeout2)
+		{
+			error_message = "机械手复位超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponse(timeout);
+		Sleep(200);
+	}
+
+	if (res != std::string("RPS:RESET;"))
+	{
+
 		if (res == std::string("NAK"))
 		{
 			error_code = 0x0A;
@@ -98,84 +125,58 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		}
 
 		std::string error_str = "ERR";
-		if (!handleErrorCode(res, error_str, error_type, error_code)) {
-			error_type = 5;
-			error_code = 1;
-			error_message = ("复位命令执行失败，机械手返回的指令未定义：%s.", res);
-			logError(robot->getName().c_str(), "复位命令执行失败，机械手返回的指令未定义：%s", res);
+		int error_type = 1;
+		int error_code = 0;
+		try {
+			if (!handleErrorCode(res, error_str, error_type, error_code)) {
+
+				error_type = 5;
+				error_code = 1;
+				error_message = ("复位命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "复位命令执行失败，机械手返回的指令未定义：%s", res);
+			}
+			else
+			{
+				auto error_strucct = getErrorCode(error_type, error_code);
+				error_type = error_strucct->type;
+				error_code = error_strucct->code;
+				error_message = error_strucct->message;
+			}
 		}
-		else
-		{
-			logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
-			auto error_strucct = getErrorCode(error_type, error_code);
-			error_type = error_strucct->type;
-			error_code = error_strucct->code;
-			error_message = error_strucct->message;
+		catch (const std::invalid_argument& e) {
+			error_message = "处理字符串失败";
+			logError(getName().c_str(), "处理字符串失败");
 		}
+
 		//set alarm data
 		AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
 		setAlarm(alarm);
+		logError(robot->getName().c_str(), "复位机械手失败,机械手返回：【%s】", res);
 		return RunResult::RUN_FAILD;
+
 	}
 	else
 	{
-		Sleep(200);
-		if (res != std::string("RPS:RESET;"))
+		if (!sendRequest("ACK;"))
 		{
-			std::string error_str = "ERR";
-			int error_type = 1;
-			int error_code = 0;
-			try {
-				if (!handleErrorCode(res, error_str, error_type, error_code)) {
-
-					error_type = 5;
-					error_code = 1;
-					error_message = ("复位命令执行失败，机械手返回的指令未定义：%s.", res);
-					logError(robot->getName().c_str(), "复位命令执行失败，机械手返回的指令未定义：%s", res);
-				}
-				else
-				{
-					auto error_strucct = getErrorCode(error_type, error_code);
-					error_type = error_strucct->type;
-					error_code = error_strucct->code;
-					error_message = error_strucct->message;
-				}
-			}
-			catch (const std::invalid_argument& e) {
-				error_message = "处理字符串失败";
-				logError(getName().c_str(), "处理字符串失败");
-			}
-
-			//set alarm data
-			AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
-			setAlarm(alarm);
-			logError(robot->getName().c_str(), "复位机械手失败,机械手返回：【%s】", res);
-			return RunResult::RUN_FAILD;
-
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+				Poco::format("%s 机械手通讯错误", robot->getName()), this);
 		}
-		else
-		{
-			if (!sendRequest("ACK;"))
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-					Poco::format("%s 机械手通讯错误", robot->getName()), this);
-			}
-		}
-
-		
-		auto cmd_update = robot->createUpdateCommand();
-		robot->startCommand(cmd_update);
-		cmd_update->wait();
-		if (cmd_update->hasError())
-		{
-			//set alarm data
-			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "更新手臂状态命令执行失败！"));
-			setAlarm(alarm);
-			return RunResult::RUN_FAILD;
-		}
-		robot->setHasResetFlag(true);
-		logInform(getName().c_str(), "复位命令执行结束");
 	}
+
+	//auto cmd_update = robot->createUpdateCommand();
+	//robot->startCommand(cmd_update);
+	//cmd_update->wait();
+	//if (cmd_update->hasError())
+	//{
+	//	//set alarm data
+	//	AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "更新手臂状态命令执行失败！"));
+	//	setAlarm(alarm);
+	//	return RunResult::RUN_FAILD;
+	//}
+	robot->setHasResetFlag(true);
+	logInform(getName().c_str(), "复位命令执行结束");
+	
 	return RunResult::RUN_OK;
 
 }

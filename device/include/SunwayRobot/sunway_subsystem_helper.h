@@ -65,6 +65,8 @@ public:
 
 	bool getBusyState();
 
+	bool getIsConnected();
+
 protected:
 	/**
 	*@brief  config protocol

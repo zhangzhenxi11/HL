@@ -172,6 +172,11 @@ namespace FC{
 
 	}
 
+	bool FortrendPMCavitySubsystem::getPMCavityDoorrOpend() const
+	{
+		return false;
+	}
+
 	bool FortrendPMCavitySubsystem::getIsRunning(){
 		return d->isRunning;
 	}
@@ -539,6 +544,7 @@ namespace FC{
 
 	//获取是否启用PM腔
 	bool FortrendPMCavitySubsystem::getPMCavityEnable()const{
+
 		return d->pm_cavity_enable;
 	}
 

@@ -100,6 +100,14 @@ namespace FC{
 		bool getPIDOpend() const;
 		void setPIDOpend(const bool value);
 
+		//前级泵管路压力表信号
+
+		bool getAxialPressureGageState()const;
+
+		//常务CDA信号
+
+		bool getCDAPressureState() const;
+
 		/*
 		*传输腔腔盖门锁信号
 		*/

@@ -21,6 +21,7 @@
 #include "LoadLock/fortrend_loadlock_subsystem.h"
 #include "TMCavity/fortrend_tm_cavity_subsystem.h"
 #include "Pump/fortrend_pump_subsystem.h"
+#include <chrono>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -73,23 +74,24 @@ namespace FC{
 		}
 
 		// TODO:2025-5-26 如果只开角阀，那条件变化是什么？
-		if (sub->getName() == "LLA"){
-			if (tm->getMoleculePipelineVacuumValue() > 30 && pump->getMolecularPumpOpenedLLA()){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 分子泵阀已打开，%s 前级管道当前压力未小于30Pa（逻辑错误）", sub->getName(), sub->getName()), this);
-			}
-		}
-		else{
-			if (tm->getMoleculePipelineVacuumValue() > 30 && pump->getMolecularPumpOpenedLLB()){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 分子泵阀已打开，%s 前级管道当前压力未小于30Pa（逻辑错误）", sub->getName(), sub->getName()), this);
-			}
-		}
-
+		//if (sub->getName() == "LLA"){
+		//	if (tm->getMoleculePipelineVacuumValue() > 30 ){
+		//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
+		//      Poco::format("%s 前级管道当前压力未小于30Pa（逻辑错误）",  sub->getName()), this);
+		//	}
+		//}
+		//else{
+		//	if (tm->getMoleculePipelineVacuumValue() > 30 ){
+		//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
+		//      Poco::format("%s 前级管道当前压力未小于30Pa（逻辑错误）",sub->getName()), this);
+		//	}
+		//}
 
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
 		//fill params
-		std::string address_1 = command_config->getString("address_1", "");
+		std::string address_1 = command_config->getString("address_1", "");//慢抽到60000PA,打开快抽
 		std::string address_2 = command_config->getString("address_2", "");
 		std::string finish_address = command_config->getString("finish_address", "");
 		int timeout = command_config->getInt("timeout", -1);
@@ -106,10 +108,45 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址1错误", sub->getName()), this);
 		}
-		if (!writeBit(address_2, true))
+		auto start = std::chrono::steady_clock::now();
+		const auto angle_timeout = std::chrono::hours(1); //1h
+		logInform(sub->getName().c_str(), "角阀慢抽计时开始，超时时间60分钟");
+		bool meet_condition = false;
+		while (true)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址2错误", sub->getName()), this);
+			Sleep(20);
+			auto now = std::chrono::steady_clock::now();
+			auto elapsed = now - start;
+			if (sub->getFastAngleValveReachesTheSetValue())
+			{
+				//达到快抽条件
+				if(!meet_condition)
+				{
+					meet_condition = true;
+				}
+				break;
+			}
+			if (elapsed >= angle_timeout)
+			{
+				break;
+			}
 		}
+		
+		if (meet_condition)
+		{
+			if (!writeBit(address_2, true))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址2错误", sub->getName()), this);
+			}
+		}
+		else
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, 6, "打开角阀慢抽未到达设定值，超时报警"));
+			setAlarm(alarm);
+			logError(sub->getName().c_str(), "打开角阀慢抽未到达设定值，超时报警");
+			return IKernelCommand::RunResult::RUN_FAILD;
+		}
+
 		Sleep(500);
 		int loopCount = timeout / 20;
 		int count = 0;
@@ -119,7 +156,6 @@ namespace FC{
 		{
 			Sleep(20);
 			readState = readBit(finish_address, readRes);
-
 			if (readRes)
 			{
 				break;
@@ -132,11 +168,9 @@ namespace FC{
 			sub->setAngleValveOpend(true);
 			ret = IKernelCommand::RunResult::RUN_OK;
 			logInform(sub->getName().c_str(), "打开角阀命令执行结束");
-
 		}
 		else if (readState)
 		{
-
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开角阀命令执行失败，打开角阀到位信号异常"));
 			setAlarm(alarm);
 			logError(sub->getName().c_str(), "打开角阀命令执行失败，打开角阀到位信号异常");

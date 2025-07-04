@@ -74,6 +74,9 @@ void PMGDTWidget::mousePressEvent(QMouseEvent *event){
 	QWidget::mousePressEvent(event);
 }
 
+
+
+
 void PMGDTWidget::setRotationAngle(int angle){
     rotationAngle=angle;
 	update();
@@ -106,6 +109,8 @@ void PMGDTWidget::setYOffset(int offset) {
 }
 
 // 外部调用此方法来设置新Y位置，并启动动画
+
+//实现平滑移动效果
 void PMGDTWidget::animateToYOffset(int newYOffset,int speed) {
 	printf("newYOffset %d \r\n", newYOffset);
 	QPropertyAnimation* extendAnimation = new QPropertyAnimation(this, "yOffset");
@@ -119,10 +124,17 @@ void PMGDTWidget::animateToYOffset(int newYOffset,int speed) {
 
 void PMGDTWidget::paintEvent(QPaintEvent *){
     QPainter painter(this);
-    QPixmap pixmap("image/PMGDT.png");
+    QPixmap pixmap("image/image/PM1.png");
 
-    int centerX = pixmap.width() / 2;
-    int centerY = pixmap.height() / 2;
+	// 创建一个QTransform对象
+	QTransform transform;
+	// 旋转图像
+	transform.rotate(rotationAngle);
+	// 应用变换到原始图像，创建旋转后的图像
+	QPixmap rotatedPixmap = pixmap.transformed(transform);
+
+    int centerX = rotatedPixmap.width() / 2;
+    int centerY = rotatedPixmap.height() / 2;
 	int RectX = centerX*0.87;
 	//int RectY = centerY*0.8;
 	//double RectY = 20;
@@ -135,12 +147,13 @@ void PMGDTWidget::paintEvent(QPaintEvent *){
 	int TextY = centerY*0.18;
 	int statusX = centerX*0.31;
 	int statusY = centerY*1.62;
-	int lineLength = pixmap.width()*0.7;
+	int lineLength = rotatedPixmap.width()*0.7;
 	int lineSpacing = 50;
     painter.save();
 
+
     // 设置画刷颜色
-    painter.drawPixmap(0,0,pixmap);
+    painter.drawPixmap(0,0, rotatedPixmap);
     // 恢复到保存的画家状态，这时候的状态是未旋转的
     painter.restore();
 
@@ -165,15 +178,15 @@ void PMGDTWidget::paintEvent(QPaintEvent *){
 	int x1 = (widgetWidth - lineLength) / 2;  // 计算线段的起点X坐标
 	int x2 = x1 + lineLength;                // 计算线段的终点X坐标
 
-	painter.drawLine(x1, y1, x2, y1);  // 绘制第一条线
-	painter.drawLine(x1, y2, x2, y2);  // 绘制第二条线
+	//painter.drawLine(x1, y1, x2, y1);  // 绘制第一条线
+	//painter.drawLine(x1, y2, x2, y2);  // 绘制第二条线
 
 
 	painter.setPen(QPen(Qt::red, 8));
 	painter.setBrush(Qt::red);
 
 	int y3 = 140;
-	painter.drawLine(x1, y3, x2, y3);  // 绘制第一条线
+	//painter.drawLine(x1, y3, x2, y3);  // 绘制第一条线
 
 
     // 设置字体大小

@@ -55,12 +55,13 @@ namespace FC{
 		std::string open_address = command_config->getString("open_address", "");
 		std::string close_address = command_config->getString("close_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
+		std::string failed_address = command_config->getString("failed_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 关闭传输腔门阀超时参数设置失败", sub->getName()), this);
 		}
 
-		if ((open_address == "") || (close_address == "") || (finish_address == ""))
+		if ((open_address == "") || (close_address == "") || (finish_address == "")||(failed_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭传输腔门阀地址未定义", getName()), this);
 		}
@@ -84,12 +85,14 @@ namespace FC{
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;
+		bool failedRes = false;
 		bool readState = false;
+		bool readFailedState = false;
 		while (count <= loopCount)
 		{
 			Sleep(20);
-			readState = readBit(finish_address, readRes);
-			if (readRes)
+			readFailedState = readBit(failed_address, failedRes);
+			if (readRes || failedRes)
 			{
 				break;
 			}
@@ -101,11 +104,10 @@ namespace FC{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setTMCavityDoorOpend(false);
 			logInform(sub->getName().c_str(), "关闭传输门阀命令执行完成");
-			
 		}
-		else if (readState)
+		else if (readFailedState && failedRes)
 		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常"));
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, 3, "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常"));
 			setAlarm(alarm);
 			logError(sub->getName().c_str(), "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常");
 		}

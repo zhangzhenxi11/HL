@@ -25,6 +25,8 @@
 #include <QSpacerItem>
 #include <QMessageBox>
 #include <QCheckBox>
+
+#include <qdebug>
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
@@ -50,6 +52,11 @@ namespace FC{
 		QCheckBox* molecular_pump_reach_speed_ckb_lla = 0;
 		QCheckBox* molecular_pump_ckb_llb = 0;
 		QCheckBox* molecular_pump_reach_speed_ckb_llb = 0;
+		QCheckBox* mechanical_pump_alarm_ckb = 0;
+		QCheckBox* mechanical_pump_warn_ckb = 0;
+		QCheckBox* mechanical_pump_Acc_ckb = 0;
+		QCheckBox* mechanical_pump_running_ckb = 0;
+
 	};
 
 	QPumpSubsystemWidgetPrivate::QPumpSubsystemWidgetPrivate(
@@ -93,9 +100,10 @@ namespace FC{
 		d->ui->molecular_close_llb_btn->setVisible(false);
 		d->ui->molecular_open_tm_btn->setVisible(false);
 		d->ui->molecular_close_tm_btn->setVisible(false);
+		d->ui->generate_btn->setVisible(false);
 
 		onAttributeUpdate();
-		connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onGetStatus);
+		//connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onGetStatus);
 		connect(d->ui->mechanical_open_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMechanicalOpen);
 		connect(d->ui->mechanical_close_btn, &QAbstractButton::clicked, this, &QPumpSubsystemWidget::onMechanicalClose);
 
@@ -139,8 +147,6 @@ namespace FC{
 			d->ui->center_layout->addWidget(cassette_Widget);
 
 		}
-
-
 		//add virtual input
 		for (int i = 0; i < getSubsystem()->inputCount(); i++){
 			QCheckBox* button = new QCheckBox(QString::fromStdString(getSubsystem()->getInputName(i)));
@@ -158,32 +164,54 @@ namespace FC{
 		d->molecular_pump_ckb_tm = new QCheckBox(QString("TM分子泵打开"));
 		d->molecular_pump_ckb_tm->setObjectName("io_object");
 		d->molecular_pump_ckb_tm->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_ckb_tm, 0, 1);
+		//d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_ckb_tm, 0, 1);
 
 		d->molecular_pump_reach_speed_ckb_tm = new QCheckBox(QString("TM分子泵达到转速"));
 		d->molecular_pump_reach_speed_ckb_tm->setObjectName("io_object");
 		d->molecular_pump_reach_speed_ckb_tm->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_reach_speed_ckb_tm, 0, 2);
+		//d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_reach_speed_ckb_tm, 0, 2);
 
 		d->molecular_pump_ckb_lla = new QCheckBox(QString("LLA分子泵打开"));
 		d->molecular_pump_ckb_lla->setObjectName("io_object");
 		d->molecular_pump_ckb_lla->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_ckb_lla, 1, 0);
+		//d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_ckb_lla, 1, 0);
 
 		d->molecular_pump_reach_speed_ckb_lla = new QCheckBox(QString("LLA分子泵达到转速"));
 		d->molecular_pump_reach_speed_ckb_lla->setObjectName("io_object");
 		d->molecular_pump_reach_speed_ckb_lla->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_reach_speed_ckb_lla, 1, 1);
+		//d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_reach_speed_ckb_lla, 1, 1);
 
 		d->molecular_pump_ckb_llb = new QCheckBox(QString("LLB分子泵打开"));
 		d->molecular_pump_ckb_llb->setObjectName("io_object");
 		d->molecular_pump_ckb_llb->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_ckb_llb, 1, 2);
+		//d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_ckb_llb, 1, 2);
 
 		d->molecular_pump_reach_speed_ckb_llb = new QCheckBox(QString("LLB分子泵达到转速"));
 		d->molecular_pump_reach_speed_ckb_llb->setObjectName("io_object");
 		d->molecular_pump_reach_speed_ckb_llb->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_reach_speed_ckb_llb, 2, 0);
+		//d->ui->operation_state_gridLayout->addWidget(d->molecular_pump_reach_speed_ckb_llb, 2, 0);
+		
+		d->mechanical_pump_alarm_ckb = new QCheckBox(QString("干泵报警"));
+		d->mechanical_pump_alarm_ckb->setObjectName("io_object");
+		d->mechanical_pump_alarm_ckb->setEnabled(false);
+		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_alarm_ckb,0,1);
+
+
+		d->mechanical_pump_warn_ckb = new QCheckBox(QString("干泵警告"));
+		d->mechanical_pump_warn_ckb->setObjectName("io_object");
+		d->mechanical_pump_warn_ckb->setEnabled(false);
+		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_warn_ckb, 0, 2);
+
+		d->mechanical_pump_Acc_ckb = new QCheckBox(QString("ACC信号"));
+		d->mechanical_pump_Acc_ckb->setObjectName("io_object");
+		d->mechanical_pump_Acc_ckb->setEnabled(false);
+		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_Acc_ckb, 1, 0);
+
+		d->mechanical_pump_running_ckb = new QCheckBox(QString("干泵运行中"));
+		d->mechanical_pump_running_ckb->setObjectName("io_object");
+		d->mechanical_pump_running_ckb->setEnabled(false);
+		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_running_ckb,1,1);
+
 	}
 
 	void QPumpSubsystemWidget::onReset(){
@@ -297,12 +325,16 @@ namespace FC{
 
 			d->mechanical_pump_ckb->setChecked(getSubsystem()->getMechanicalPumpOpened());
 			//d->ui->molecular_speed_let->setText(QString::fromStdString(std::to_string(getSubsystem()->getMolecularPumpRev())));
-			d->molecular_pump_ckb_lla->setChecked(getSubsystem()->getMolecularPumpOpenedLLA());
-			d->molecular_pump_reach_speed_ckb_lla->setChecked(getSubsystem()->getMolecularPumpReachSpeedLLA());
-			d->molecular_pump_ckb_llb->setChecked(getSubsystem()->getMolecularPumpOpenedLLB());
-			d->molecular_pump_reach_speed_ckb_llb->setChecked(getSubsystem()->getMolecularPumpReachSpeedLLB());
-			d->molecular_pump_ckb_tm->setChecked(getSubsystem()->getMolecularPumpOpenedTM());
-			d->molecular_pump_reach_speed_ckb_tm->setChecked(getSubsystem()->getMolecularPumpReachSpeedTM());
+			//d->molecular_pump_ckb_lla->setChecked(getSubsystem()->getMolecularPumpOpenedLLA());
+			//d->molecular_pump_reach_speed_ckb_lla->setChecked(getSubsystem()->getMolecularPumpReachSpeedLLA());
+			//d->molecular_pump_ckb_llb->setChecked(getSubsystem()->getMolecularPumpOpenedLLB());
+			//d->molecular_pump_reach_speed_ckb_llb->setChecked(getSubsystem()->getMolecularPumpReachSpeedLLB());
+			//d->molecular_pump_ckb_tm->setChecked(getSubsystem()->getMolecularPumpOpenedTM());
+			//d->molecular_pump_reach_speed_ckb_tm->setChecked(getSubsystem()->getMolecularPumpReachSpeedTM());
+			d->mechanical_pump_Acc_ckb->setChecked(getSubsystem()->getMechanicalPumpAcc());
+			d->mechanical_pump_alarm_ckb->setChecked(getSubsystem()->getMechanicalPumpHasAlarm());
+			d->mechanical_pump_running_ckb->setChecked(getSubsystem()->getMechanicalPumpRunningState());
+			d->mechanical_pump_warn_ckb->setChecked(getSubsystem()->getMechanicalPumpHasWarn());
 
 		}
 		catch (KernelException& e){

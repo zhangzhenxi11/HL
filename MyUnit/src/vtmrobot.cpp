@@ -568,11 +568,16 @@ void vtmrobot::paintEvent(QPaintEvent *event){
 
 void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm){
 
-    int armAngle=getArmAngle();
-    int isWafer=getIsWaferArm1();
-    if(arm==2){
-     armAngle=getArm2Angle();
-     isWafer=getIsWaferArm2();
+    int armAngle = getArmAngle();
+
+    int isWafer = getIsWaferArm1();
+
+	//qDebug() << "isWafer:"<< isWafer? "present": "absence";
+
+    if(arm==2)
+	{
+		armAngle = getArm2Angle();
+		isWafer = getIsWaferArm2();
     }
     // 中心点坐标
     int centerX = width() / 2;

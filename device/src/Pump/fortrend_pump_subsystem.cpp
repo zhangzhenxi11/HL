@@ -84,7 +84,14 @@ public:
 	bool angle_valve_close_time_update_tm = true;							 //TM角阀关闭更新计时
 
 	std::string mechanical_pump_alarm_address = "";						 //机械报警地址
-	std::string mechanical_pump_running_address = "";
+	std::string mechanical_pump_running_address = "";                    //机械运行地址
+	std::string mechanical_pump_warn_address = "";                      //机械警告地址
+	std::string mechanical_pump_acc_address = "";                      //acc信号
+
+	bool mechanical_pump_isAlarm = false;
+	bool mechanical_pump_isRunning = false;
+	bool mechanical_pump_isWarn = false;
+	bool mechanical_pump_isAccPresence = false;
 	
 	bool isVacuum = false;                                               //是否屏蔽真空模式,true真空模式，false屏蔽真空模式
 
@@ -180,13 +187,69 @@ void FortrendPumpSubsystem::onProcess(){
 	}
 
 	//软件刚打开后会立即关闭分子泵
-	if (d->wait_count < 20)
+	//if (d->wait_count < 20)
+	//{
+	//	Sleep(100);
+	//	++d->wait_count;
+	//	return;
+	//}
+
+	if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 	{
-		Sleep(100);
-		++d->wait_count;
-		return;
+		bool io_changed = false;
+
+		bool isAlarm = false;
+		if (d->mechanical_pump_alarm_address != "" && readBit(d->mechanical_pump_alarm_address, isAlarm))
+		{
+
+				if (d->mechanical_pump_isAlarm != isAlarm)
+				{
+					d->mechanical_pump_isAlarm = isAlarm;
+					io_changed = true;
+				}
+			
+		}
+		bool isWarn = false;
+		if (d->mechanical_pump_warn_address != "" && readBit(d->mechanical_pump_warn_address, isWarn))
+		{
+			if (d->mechanical_pump_isWarn != isWarn)
+			{
+				d->mechanical_pump_isWarn = isWarn;
+				io_changed = true;
+			}	
+		}
+
+		bool isAcc = false;
+		if (d->mechanical_pump_acc_address != "" && readBit(d->mechanical_pump_acc_address, isAcc))
+		{
+			if (d->mechanical_pump_isAccPresence != isAcc)
+			{
+				d->mechanical_pump_isAccPresence = isAcc;
+				io_changed = true;
+			}
+		}
+
+		bool isRunning = false;
+		if (d->mechanical_pump_running_address != "" && readBit(d->mechanical_pump_running_address, isRunning))
+		{
+			if (d->mechanical_pump_isRunning != isRunning)
+			{
+				d->mechanical_pump_isRunning = isRunning;
+				io_changed = true;
+			}
+		}
+
+		if (io_changed)
+		{
+			AbstractIOSubsystem::emitAttributeChanged(this);
+		}
+		Sleep(50);
 	}
 
+
+
+
+#if 0
 #pragma region TM分子泵逻辑
 	if (d->molecular_pump_opened_tm)//TM分子泵打开
 	{
@@ -411,8 +474,10 @@ void FortrendPumpSubsystem::onProcess(){
 		}
 	}
 #pragma endregion
-	
+
 	updateMolecularPumpState();
+#endif	
+	
 }
 
 void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){
@@ -421,8 +486,9 @@ void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguratio
 	configKeyencePlc(config);
 	if (config->has("Update"))
 	{
-		d->mechanical_pump_alarm_address = config->getString("Update.MechanicalPumpAlarmAddress", "MR8000");
-		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR8000");
+		d->mechanical_pump_alarm_address = config->getString("Update.MechanicalPumpAlarmAddress", "MR30403");
+		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR30401");
+		d->mechanical_pump_warn_address = config->getString("Update.MechanicalPumpWarnAddress","");
 	}
 	if (config->has("IsVacuum")){
 		d->isVacuum = config->getBool("IsVacuum", false);
@@ -607,13 +673,25 @@ void FortrendPumpSubsystem::setMechanicalPumpOpened(const bool value){
 /*
 *获取机械泵报警
 */
-bool FortrendPumpSubsystem::getMechanicalPumpHasAlarm(){
-	bool result = false;
-	if (d->mechanical_pump_alarm_address != "")
-	{
-		KeyencePlcSubSystemHelper::readBit(d->mechanical_pump_alarm_address, result);
-	}
-	return result;
+bool FortrendPumpSubsystem::getMechanicalPumpHasAlarm()const {
+
+	return d->mechanical_pump_isAlarm;
+}
+
+bool FortrendPumpSubsystem::getMechanicalPumpHasWarn()const
+{
+	return d->mechanical_pump_isWarn;
+}
+
+bool FortrendPumpSubsystem::getMechanicalPumpRunningState() const
+{
+	return d->mechanical_pump_isRunning;
+	
+}
+
+bool FortrendPumpSubsystem::getMechanicalPumpAcc() const
+{
+	return d->mechanical_pump_isAccPresence;
 }
 
 bool FortrendPumpSubsystem::getMolecularPumpOpenedLLA()const{

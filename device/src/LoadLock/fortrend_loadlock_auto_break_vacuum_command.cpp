@@ -55,340 +55,344 @@
 
 namespace FC{
 
+	class LoadLockAutoBreakVacuumCommandPrivate {
+	
+	public:
+		LoadLockAutoBreakVacuumCommandPrivate(LoadLockAutoBreakVacuumCommand* p);
+
+		LoadLockAutoBreakVacuumCommandPrivate* p;
+		int loop_count = 0; //循环次数
+		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
+		FortrendLoadLockSubsystem* sub;
+		//std::shared_ptr<FortrendLoadLockSubsystem> sub;
+		bool loop = true;
+	};
 
 
 	/**
 	* LoadLockAutoBreakVacuumCommand
 	*/
 	LoadLockAutoBreakVacuumCommand::LoadLockAutoBreakVacuumCommand(KeyencePlcSubSystemHelper* helper)
-		:KeyencePlcCommandExecuter(helper){
-		//setMessageName("OpenLoadLock2AutoBreakVacuum");
-		//setDescription("open loadlock2 auto cauum for pump");
+		:KeyencePlcCommandExecuter(helper),d(new LoadLockAutoBreakVacuumCommandPrivate(this)){
 
+		initializeHLStateHandlers();
 	};
 
+	LoadLockAutoBreakVacuumCommandPrivate::LoadLockAutoBreakVacuumCommandPrivate(LoadLockAutoBreakVacuumCommand* p)
+	{
+
+	}
 
 	void LoadLockAutoBreakVacuumCommand::initializeHLStateHandlers()
 	{
+
+		/*
+			1.排气压力达到设定值
+			2.判断LL-TMCavityDoor在关闭状态，cassete门也要关闭
+			3.关闭loadlock角阀,防止气体进入干泵内
+			4.打开隔膜阀慢充
+			5.达到快充条件 (5000pa)
+			6.打开隔膜阀快充
+			 add 再次检测是否达到大气压
+			7.关闭隔膜阀
+			8.结束
+		*/
+		stateHandlers = std::unordered_map<SystemState, StateHandler>{
+			{SystemState::EXHAUST_VACUUM_VALUE_REACHES_SETVALUE,[this]() {return handleStepReachesSetValue(); }},
+			{SystemState::CLOSE_TMCAVITY_DOOR,[this]() {return handleStepCloseTmCavityDoor(); }},
+			{SystemState::CLOSE_ANGLE_VALVE,[this]() {return handleStepAngleValve(); }},
+			{SystemState::OPEN_DIAPHRAGM_VALVE_SLOW,[this]() {return handleStepDiaphragmValveSlow(); }},
+			{SystemState::OPEN_DIAPHRAGM_VALVE_FAST,[this]() {return handleStepDiaphragmValveFast(); }},
+			{SystemState::JUDGE_FAST_CHARGING_CONDITION,[this]() {return handleStepFastChargingCondition(); }},
+			{SystemState::CLOSE_DIAPHRAGM_VALVE,[this]() {return handleStepCloseDiaphragmValve(); }},
+			{SystemState::CREATE_END,[this]() {return handleStepEnd(); }}
+		};
 	}
 
 	/**
 	* return true if success else false.
 	*/
-	LoadLockAutoBreakVacuumCommand::RunResult LoadLockAutoBreakVacuumCommand::onRun() throw(KernelException){
-		
-		 FortrendLoadLockSubsystem* sub = dynamic_cast<FortrendLoadLockSubsystem*>(getSubsystem());
-
-		if (!sub)
+	LoadLockAutoBreakVacuumCommand::RunResult LoadLockAutoBreakVacuumCommand::onRun() throw(KernelException)
+	{
+		//d->lk1 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		d->sub = dynamic_cast<FortrendLoadLockSubsystem*>(getSubsystem());
+		if (!d->sub)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "LoadLock子系统类型错误", this);
 		}
-		if (sub->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		if (d->sub->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->sub->getName()), this);
 		}
 
-		if (sub->getCassetteDoorOpend())
+		if (d->sub->getCassetteDoorOpend())
 		{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 放晶圆盒的门已打开（逻辑错误）", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 放晶圆盒的门已打开（逻辑错误）", d->sub->getName()), this);
 		}
-		if (sub->getTMCavityDoorOpend())
+		if (d->sub->getTMCavityDoorOpend())
 		{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 传输腔门阀已打开（逻辑错误）", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 传输腔门阀已打开（逻辑错误）", d->sub->getName()), this);
 		}
 
 		//get command configure
-		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
+		std::shared_ptr<KernelConfiguration> command_config = d->sub->getConfigure()->createView(getName());
 		//fill params
 		int timeout = command_config->getInt("timeout", 50 * 60 * 1000);
-		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 破%s 真空命令超时参数错误", sub->getName()), this);
+		if (timeout < 10) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 破%s 真空命令超时参数错误", d->sub->getName()), this);
 		}
 
-		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
-		logInform(sub->getName().c_str(), Poco::format("破%s真空命令开始", sub->getName()).c_str());
-		bool loop = true;
-		int llb_loop_count = 0;
-		int step = 10;
+		//IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
+		logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令开始", d->sub->getName()).c_str());
+
+		SystemState currentState = SystemState::EXHAUST_VACUUM_VALUE_REACHES_SETVALUE;
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
-		while (loop)
+		while (d->loop)
 		{
-			switch (step)
+			auto it = stateHandlers.find(currentState);
+			if (it == stateHandlers.end()) {
+				d->ret = IKernelCommand::RunResult::RUN_FAILD;
+				logError(d->sub->getName().c_str(), Poco::format("未知的状态码：%d", int(currentState)).c_str());
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行失败", d->sub->getName())));
+				setAlarm(alarm);
+				break;
+			}
+			auto nextState = it->second();//执行回调函数
+			if (nextState == SystemState::CREATE_END)
 			{
-#pragma region 破真空流程
-			case 10://没有晶圆盒
+				//结束
+				logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成", d->sub->getName()).c_str());
+				break;
+			}
+			currentState = nextState;
+			Sleep(100);
+
+
+			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
+			if (pass >= timeout && d->loop)
 			{
-				//排气压力达到设定值9W9
-				if (!sub->getExhaustVacuumValueReachesTheSetValue())
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName())));
+				setAlarm(alarm);
+				currentState = SystemState::CREATE_END;
+				d->loop = false;
+				break;
+			}
+		}
+
+		if (d->ret == IKernelCommand::RunResult::RUN_OK)
+		{
+			logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成", d->sub->getName()).c_str());
+		}
+
+		//NOTE:返回d->ret ,且一定要报警，否则virtual void onAttributeChange(const IKernelCommand* cmd)虚函数，找不到报警信息报错！！
+
+		if (d->ret != IKernelCommand::RunResult::RUN_OK)
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName())));
+			setAlarm(alarm);
+		}
+		return d->ret;
+	}
+	
+	void LoadLockAutoBreakVacuumCommand::addCommandExecutionAlarmMessage(const std::string subsytem_name, const std::string message, const int code_id){
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败", subsytem_name, message)));
+		setAlarm(alarm);
+	}
+	void LoadLockAutoBreakVacuumCommand::addSubsystemNotNormalAlarmMessage(const int code_id, const std::string subsytem_name)
+	{
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s 状态异常", subsytem_name)));
+		setAlarm(alarm);
+	}
+
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepReachesSetValue()
+	{
+		//int step = 10;
+		SystemState step = SystemState::CREATE_END;
+		//排气压力达到设定值
+		if (!d->sub->getExhaustVacuumValueReachesTheSetValue())
+		{
+			step = SystemState::CLOSE_TMCAVITY_DOOR;
+			
+		}
+		else
+		{
+			step = SystemState::CREATE_END;
+		}
+		return step;
+	}
+
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepCloseTmCavityDoor()
+	{
+		int step = 20;
+		std::string errorMessage = "关闭LL_TM传输腔门阀";
+		if (d->sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->sub->getTMCavityDoorOpend())
+			{
+				//关闭传输腔门
+				auto cmd = d->sub->createCloseTMCavityDoorCommand();
+				d->sub->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
 				{
-					step = 100;
+					addCommandExecutionAlarmMessage(d->sub->getName(), errorMessage ,step);
+					step = 10000;
 				}
 				else
 				{
-					step = 5210;
-				}
-
-			}
-			break;
-			case 100:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (sub->getHeightVacuumBaffleValveOpend()){
-						auto cmd = sub->createCloseHeightVacuumBaffleValveCommand();
-						sub->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(sub->getName(), "关闭挡板阀", step);
-						}
-						else{
-							step = 105;
-						}
-					}
-					else{
-						step = 105;
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
+					step = 30;
 				}
 			}
-			break;
-			case 105:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (sub->getInsertingPlateValveOpend()){
-						auto cmd = sub->createCloseInsertingPlateValveCommand();
-						sub->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							addCommandExecutionAlarmMessage(sub->getName(), "关闭插板阀", step);
-						}
-						else{
-							step = 110;
-						}
-					}
-					else{
-						step = 110;
-					}
-
-
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
+			else {
+				step = 30;
 			}
-			break;
-			//打开隔膜阀2 慢充
-			case 110:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					auto cmd = sub->createOpenDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Slow);
-					sub->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(sub->getName(), "打开隔膜阀慢充", step);
-					}
-					else{
-						step = 120;
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 120:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					step = 130;
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 130:
-			{
-				if (sub->getQuickInflationValueReachesTheSetValue())//真空值大于5000pa
-				{
-
-					step = 140;
-				}
-				else{
-					Sleep(100);
-				}
-			}
-			break;
-			case 140:
-			{
-				/*if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					auto cmd = sub->createCloseDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Slow);
-					sub->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(sub->getName(), "关闭隔膜阀慢充", step);
-					}
-					else{
-						step = 150;
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}*/
-				step = 150;
-			}
-			break;
-			//打开隔膜阀1 快充
-			case 150:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					auto cmd = sub->createOpenDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Fast);
-					sub->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(sub->getName(), "打开隔膜阀快充", step);
-					}
-					else{
-						step = 160;
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 160:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (sub->getExhaustVacuumValueReachesTheSetValue())//真空值达到大气值9W9
-					{
-						step = 161;
-					}
-					else{
-						Sleep(20);
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 161:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					if (sub->getExhaustVacuumValueReachesTheSetValue())//真空值达到大气值9W9
-					{
-						step = 170;
-					}
-					else{
-						Sleep(20);
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 170:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					auto cmd = sub->createCloseDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Both);
-					sub->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(sub->getName(), "关闭隔膜阀", step);
-					}
-					else{
-						step = 180;
-					}
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 180:
-			{
-				if (sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					step = 190;
-				}
-				else{
-					addSubsystemNotNormalAlarmMessage(step, sub->getName());
-				}
-			}
-			break;
-			case 190:
-			{
-				if (sub->getExhaustVacuumValueReachesTheSetValue()-500)
-				{
-					step = 5210;
-				}
-				else{
-					step = 150;
-				}
-			}
-			break;
-#pragma endregion
-			case 5210:
-			{
-				ret = IKernelCommand::RunResult::RUN_OK;
-				step = 10000;
-
-			}
-			break;
-			case 10000:
-			{
-				loop = false;
-			}
-			break;
-			default:
-				break;
-			}
-			Sleep(10);
-			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
-			if (pass >= timeout && loop)
-			{
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", sub->getName())));
-				setAlarm(alarm);
-				step = 10000;
-				loop = false;
-				break;
-			}
-			}
-			if (ret == IKernelCommand::RunResult::RUN_OK)
-			{
-				logInform(sub->getName().c_str(), Poco::format("破%s真空命令执行完成", sub->getName()).c_str());
-			}
-			return ret;
 		}
-
-		void LoadLockAutoBreakVacuumCommand::addCommandExecutionAlarmMessage(const std::string subsytem_name, const std::string message, const int code_id){
-			AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败", subsytem_name, message)));
-			setAlarm(alarm);
-		}
-		void LoadLockAutoBreakVacuumCommand::addSubsystemNotNormalAlarmMessage(const int code_id, const std::string subsytem_name)
+		else
 		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s 状态异常", subsytem_name)));
-			setAlarm(alarm);
+			addSubsystemNotNormalAlarmMessage(step, d->sub->getName());
+			step = 10000;
 		}
+		return SystemState(step);
+	}
 
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepAngleValve()
+	{
+		int step = 30;
+		std::string errorMessage = "关闭LL腔的角阀";
+		if (d->sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->sub->getAngleValveOpend())
+			{
+				auto cmd = d->sub->createCloseAngleValveCommand();
+				d->sub->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(d->sub->getName(), errorMessage, step);
+					step = 10000;
+				}
+				else {
+				
+					step = 40;
+				}
+			}
+			else {
+				step = 40;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->sub->getName());
+			step = 10000;
+		}
+		return SystemState(step);
+	}
 
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepDiaphragmValveSlow()
+	{
+		int step = 40;
+		if (d->sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			auto cmd = d->sub->createOpenDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Slow);
+			d->sub->startCommand(cmd);
+			cmd->wait();
+			if (cmd->hasError())
+			{
+				addCommandExecutionAlarmMessage(d->sub->getName(), "打开隔膜阀慢充", step);
+				step = 10000;
+			}
+			else {
+				step = 50;
+			}
+		}
+		else {
+			addSubsystemNotNormalAlarmMessage(step, d->sub->getName());
+			step = 10000;
+		}
+		return SystemState(step);
+	}
 
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepDiaphragmValveFast()
+	{
+		int step = 60;
+		if (d->sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			auto cmd = d->sub->createOpenDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Fast);
+			d->sub->startCommand(cmd);
+			cmd->wait();
+			if (cmd->hasError())
+			{
+				addCommandExecutionAlarmMessage(d->sub->getName(), "打开隔膜阀快充", step);
+				step = 10000;
+			}
+			else 
+			{
+				step = 70;
+			}
+		}
+		else {
+			addSubsystemNotNormalAlarmMessage(step, d->sub->getName());
+			step = 10000;
+		}
+		return SystemState(step);
+	}
 
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepFastChargingCondition()
+	{
+		int step = 50;
+		//加上计数条件，否则会死循环
+		if (d->sub->getQuickInflationValueReachesTheSetValue())//真空值大于5000pa
+		{
+			d->loop_count = 0;
+			step = 60;
+		}
+		else {
+			Sleep(100);
+			++d->loop_count;
+			if (d->loop_count > 30)
+			{
+				d->loop_count = 0;
+				addCommandExecutionAlarmMessage(d->sub->getName(), "检测是否达到真空值超时", step);
+				step = 10000;
+			}
+			else
+			{
+				step = 60;//继续当前函数
+			}
+
+		}
+		return SystemState(step);
+	}
+
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepCloseDiaphragmValve()
+	{
+		int step = 70;
+		if (d->sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			auto cmd = d->sub->createCloseDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Both);
+			d->sub->startCommand(cmd);
+			cmd->wait();
+			if (cmd->hasError())
+			{
+				addCommandExecutionAlarmMessage(d->sub->getName(), "关闭隔膜阀", step);
+				step = 10000;
+			}
+			else {
+				step = 180;
+			}
+		}
+		else {
+			addSubsystemNotNormalAlarmMessage(step, d->sub->getName());
+			step = 10000;
+		}
+		return SystemState(step);
+	}
+
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepEnd()
+	{
+		d->ret = IKernelCommand::RunResult::RUN_OK;
+		d->loop = false;
+		//int step = 10000;
+		return SystemState::CREATE_END;
+	}
 }

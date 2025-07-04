@@ -81,8 +81,8 @@ private:
     int armAngle; // 手臂1和手臂2与垂直线的夹角
     int arm2Angle; // 手臂1和手臂2与垂直线的夹角
     int baseRotationAngle; //旋转角度
-    int isWaferarm1; //手爪是否有晶圆
-    int isWaferarm2; //手爪是否有晶圆
+    int isWaferarm1 = 0; //手爪是否有晶圆
+    int isWaferarm2 = 0; //手爪是否有晶圆
 	int currentRotationAngle;//实时记录当前角度
 	int currentStation;//记录当前取放的station工位
 	int currentArm;//记录当前取放手爪

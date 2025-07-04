@@ -160,7 +160,6 @@ namespace FC{
 		if (cass){
 			QWidget* cassette_Widget = new QFortrendCassetteWidget(cass, cassManager, true, true, 2, this); //max row count = 25
 			d->ui->center_layout->addWidget(cassette_Widget);
-
 		}
 
 	}

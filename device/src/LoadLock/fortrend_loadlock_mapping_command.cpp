@@ -99,6 +99,15 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 扫描地址未定义", getName()), this);
 		}
+
+		Cassette::Mapping mappingData1 = Cassette::Mapping::Unknown;
+
+		
+		sub->setFirstLayerMapping(true);
+		sub->getFirstLayerMapping(mappingData1);
+		subsystem_cass->setMapping(1, mappingData1);
+		return IKernelCommand::RunResult::RUN_OK;
+
 		sub->setBoxPlacement(false);
 		logInform(sub->getName().c_str(), "检测槽是否有wafer命令开始");
 

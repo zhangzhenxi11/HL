@@ -68,6 +68,8 @@ namespace FC{
 		std::string open_address = command_config->getString("open_address", "");
 		std::string close_address = command_config->getString("close_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
+		std::string failed_address = command_config->getString("failed_address","");
+
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 关闭放晶圆盒门阀超时参数设置错误", sub->getName()), this);
@@ -98,12 +100,15 @@ namespace FC{
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;
+		bool failedRes = false;
 		bool readState = false;
+		bool readFailedState = false;
 		while (count <= loopCount)
 		{
 			Sleep(20);
 			readState = readBit(finish_address, readRes);
-			if (readRes)
+			readFailedState = readBit(failed_address, failedRes);
+			if (readRes || failedRes)
 			{
 				break;
 			}
@@ -117,7 +122,7 @@ namespace FC{
 			logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令执行完成");
 			
 		}
-		else if (readState)
+		else if (readFailedState && failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(0, 2, "关闭放晶圆盒门阀执行失败，关闭晶圆盒门阀到位信号异常"));
 			setAlarm(alarm);
