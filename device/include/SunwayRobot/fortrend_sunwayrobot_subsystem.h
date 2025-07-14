@@ -94,8 +94,6 @@ namespace FC{
 		bool getHasResetFlag()const;
 		void setHasResetFlag(const bool value);
 
-
-
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

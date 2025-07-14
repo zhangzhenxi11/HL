@@ -159,6 +159,28 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		}
 		
 	}
+	else
+	{
+		if (auto sub = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation()))
+		{
+			if (!sub)
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "Loadlock子系统类型错误", this);
+			}
+			if (!sub->getLoadLockCavitySafeSignal())
+			{
+				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
+				Sleep(50);
+				if (!sub->getLoadLockCavitySafeSignal())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+				}
+			}
+			
+		}
+	}
+
 	if (robot->getWithWaferModeEnable() && station_cass->getMapping(mapping_slot) != Cassette::Mapping::Present)
 	{
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, 

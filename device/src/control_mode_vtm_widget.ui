@@ -32,76 +32,6 @@
       <string>模式设定</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="0">
-       <layout class="QHBoxLayout" name="vacuum_hlyt">
-        <item>
-         <widget class="QLabel" name="label_2">
-          <property name="minimumSize">
-           <size>
-            <width>80</width>
-            <height>40</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>真空
-当前模式</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="vacuum_label">
-          <property name="minimumSize">
-           <size>
-            <width>50</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>真空</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="enable_vacuum_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_vacuum_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
       <item row="0" column="0">
        <layout class="QHBoxLayout" name="buzzer_hlyt">
         <item>
@@ -172,10 +102,10 @@
         </item>
        </layout>
       </item>
-      <item row="3" column="0">
-       <layout class="QHBoxLayout" name="wafer_hlyt">
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="vacuum_hlyt">
         <item>
-         <widget class="QLabel" name="label_4">
+         <widget class="QLabel" name="label_2">
           <property name="minimumSize">
            <size>
             <width>80</width>
@@ -183,13 +113,13 @@
            </size>
           </property>
           <property name="text">
-           <string>晶圆
+           <string>真空
 当前模式</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="with_wafer_label">
+         <widget class="QLabel" name="vacuum_label">
           <property name="minimumSize">
            <size>
             <width>50</width>
@@ -197,12 +127,12 @@
            </size>
           </property>
           <property name="text">
-           <string>晶圆</string>
+           <string>真空</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_with_wafer_btn">
+         <widget class="QPushButton" name="enable_vacuum_btn">
           <property name="minimumSize">
            <size>
             <width>70</width>
@@ -215,7 +145,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="disable_with_wafer_btn">
+         <widget class="QPushButton" name="disable_vacuum_btn">
           <property name="minimumSize">
            <size>
             <width>70</width>
@@ -228,7 +158,7 @@
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_5">
+         <spacer name="horizontalSpacer_4">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -299,6 +229,76 @@
         </item>
         <item>
          <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="3" column="0">
+       <layout class="QHBoxLayout" name="wafer_hlyt">
+        <item>
+         <widget class="QLabel" name="label_4">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>晶圆
+当前模式</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="with_wafer_label">
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>晶圆</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="enable_with_wafer_btn">
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>启用</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="disable_with_wafer_btn">
+          <property name="minimumSize">
+           <size>
+            <width>70</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>不启用</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_5">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -901,6 +901,13 @@
     </spacer>
    </item>
   </layout>
+  <zorder>mode_setting_gbx</zorder>
+  <zorder>vacuum_setting_gbx</zorder>
+  <zorder>layoutWidget</zorder>
+  <zorder></zorder>
+  <zorder></zorder>
+  <zorder></zorder>
+  <zorder></zorder>
  </widget>
  <resources/>
  <connections/>

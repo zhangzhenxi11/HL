@@ -61,6 +61,9 @@ namespace FC{
 		std::string io_second_layer_detection_sensor_address = "";
 		bool io_second_layer_wafer_presence_value = false;
 
+		std::string io_safeSignal_address = "";
+		bool  io_safeSignal_value = false;
+
 		
 		bool box_placement = false;
 		bool cassette_door_opend = false;
@@ -104,6 +107,8 @@ namespace FC{
 		std::string open_tm_cavity_door_address = "";
 
 		bool has_reset_flag = false;	//已复位标志
+
+		
 
 		bool recard_enabled = false;
 		std::thread thd_recard_vacuum;
@@ -440,34 +445,25 @@ namespace FC{
 	}
 
 	void FortrendLoadLockSubsystem::onProcess(){
-		//pollProtocol();
 
-
-		//auto cassManager = this->getKernel()->getKernelModule<FortrendCassetteManager>();
-		//auto subsystem_cass = cassManager->getCassette(this);
-
+#if 0
 		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 		{
 			bool io_changed = false;
-			//if (readBits(d->io_present_sensor_address, d->io_present_sensor_names.size(), d->ptr_io_present_sensor_state))
-			//{
-			//	
-			//	for (size_t i = 0; i < d->io_present_sensor_names.size(); i++)
-			//	{
-			//		if (d->ptr_io_present_sensor_state[i] != d->io_present_sensor_last_value[i])
-			//		{
-			//			d->io_present_sensor_last_value[i] = d->ptr_io_present_sensor_state[i];
-			//			io_changed = true;
-			//		}
-			//	}
-			//}
 
 
-			bool wafer_prsence = false;
-			
-			//d->io_first_layer_wafer_presence_value = true;
-			//io_changed = true;
+			bool signal_value = false;
+			if (d->io_safeSignal_address != "" && readBit(d->io_safeSignal_address, signal_value))
+			{
+				if (signal_value != d->io_safeSignal_value)
+				{
+					d->io_safeSignal_value = signal_value;
+					io_changed = true;
+				}
 
+			}
+
+			bool wafer_prsence = false;		
 			if (d->io_first_layer_detection_sensor_address != "" && readBit(d->io_first_layer_detection_sensor_address, wafer_prsence))
 			{
 				if (wafer_prsence != d->io_first_layer_wafer_presence_value)
@@ -476,9 +472,6 @@ namespace FC{
 					d->io_first_layer_wafer_presence_value = wafer_prsence;
 				}
 			}
-
-			//d->io_second_layer_wafer_presence_value = true;
-			//io_changed = true;
 
 			if (d->io_second_layer_detection_sensor_address != "" && readBit(d->io_second_layer_detection_sensor_address, wafer_prsence))
 			{
@@ -504,43 +497,12 @@ namespace FC{
 				if (flag != d->fast_diaphragm_valve_opend)
 					io_changed = true;
 			}
-
-			//flag = d->ultrahigh_vacuum_baffle_valve_opend;
-			//if (d->high_vacuum_baffle_value_address != ""&&readBit(d->high_vacuum_baffle_value_address, d->ultrahigh_vacuum_baffle_valve_opend))
-			//{
-			//	if (flag != d->ultrahigh_vacuum_baffle_valve_opend)
-			//		io_changed = true;
-			//}
-
-			//bool open_angle_valve_value = false;
-			//bool close_angle_valve_value = false;
-
 			flag = d->angle_valve_opend;
 			if (d->open_angle_valve_address != ""&&readBit(d->open_angle_valve_address, d->angle_valve_opend))
 			{
 				if (flag != d->angle_valve_opend)
 					io_changed = true;
 			}
-
-			/*bool close_angle_valve_value = false; 冗余代码
-			if (d->close_angle_valve_address != ""&&readBit(d->close_angle_valve_address, close_angle_valve_value))
-			{
-			if ((!d->angle_valve_opend && close_angle_valve_value))
-			{
-			setAngleValveOpend(false);
-			}
-			}*/
-
-			//bool open_inserting_plate_valve_value = false;
-			//bool close_inserting_plate_valve_value = false;
-
-			//flag = d->inserting_plate_valve_opend;
-			//if (d->open_inserting_plate_valve_address != ""&&readBit(d->open_inserting_plate_valve_address, d->inserting_plate_valve_opend))
-			//{
-			//	if (flag != d->angle_valve_opend)
-			//		io_changed = true;
-			//}
-
 			flag = d->cassette_door_opend;
 			if (d->open_cassette_door_address != ""&&readBit(d->open_cassette_door_address, d->cassette_door_opend))
 			{
@@ -556,17 +518,6 @@ namespace FC{
 			}
 
 #pragma endregion
-
-			//if (d->io_protruding_sensor_address != "")
-			//{
-			//	bool buff_protruding = false;
-			//	if (readBit(d->io_protruding_sensor_address, buff_protruding) && d->io_protruding_sensor_last_value != buff_protruding)
-			//	{
-			//		//printf("%s buff_protruding=%d io_protruding_sensor_address=%s\n", getName(), buff_protruding, d->io_protruding_sensor_address);
-			//		d->io_protruding_sensor_last_value = buff_protruding;
-			//		io_changed = true;
-			//	}
-			//}
 
 			if (d->vacuum_read_value_address != "")
 			{
@@ -605,7 +556,10 @@ namespace FC{
 			Sleep(50);
 			
 		}
-	}
+	
+#endif
+
+}
 
 	void FortrendLoadLockSubsystem::recardVacuum()const{
 
@@ -675,6 +629,17 @@ namespace FC{
 		return slotState;
 	}
 
+	bool FortrendLoadLockSubsystem::getLoadLockCavitySafeSignal()
+	{
+
+		return d->io_safeSignal_value;
+	}
+
+	void FortrendLoadLockSubsystem::setLoadLockCavitySafeSignal(const bool value)
+	{
+		d->io_safeSignal_value = value;
+	}
+
 	void FortrendLoadLockSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){
 		KernelAbstractSubSystem::onConfigure(config);
 		FortrendAbstractStation::configure(config);
@@ -734,6 +699,8 @@ namespace FC{
 
 			d->io_first_layer_detection_sensor_address = config->getString("Update.first_layer_detection_sensor","");
 			d->io_second_layer_detection_sensor_address = config->getString("Update.second_layer_detection_sensor", "");
+
+			d->io_safeSignal_address = config->getString("Update.LLCavitySafetySignal","");
 		}
 	}
 

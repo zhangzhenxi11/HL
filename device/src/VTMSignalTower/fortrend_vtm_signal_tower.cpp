@@ -51,6 +51,8 @@ public:
 	bool isBuzzerEnabled();
 	bool writeSignal(std::string address, bool value);
 	void controlTowerSignal(FortrendVTMSignalTower::Output type, bool value);
+	bool EfemResetAll();
+	
 public:
 	IKernel*kernel = 0;
 	std::map<FortrendVTMSignalTower::Output, std::shared_ptr<struct VTMSignalTowerIOBind >> output_bind;
@@ -178,6 +180,17 @@ void FortrendVTMSignalTowerPrivate::controlTowerSignal(FortrendVTMSignalTower::O
 		}
 		break;
 	}
+}
+
+bool FortrendVTMSignalTowerPrivate::EfemResetAll()
+{
+	std::string str = "MOV:INIT/ALL;";
+	bool result = api->sendMessage(str.data(), str.size());
+	int len = 10;
+
+	//api->onDataRecv(str.c_str(), len);
+
+	return result;
 }
 
 /**
@@ -424,6 +437,11 @@ void FortrendVTMSignalTower::setRedState(bool enabled){
 }
 void FortrendVTMSignalTower::setYellowState(bool enabled){
 	d->yellow_state = enabled;
+}
+
+bool FortrendVTMSignalTower::EfemResetAll()
+{
+	return d->EfemResetAll();
 }
 
 /**

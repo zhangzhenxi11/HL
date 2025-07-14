@@ -90,6 +90,7 @@ namespace FC{
 		std::string  pm4_cavity_door_opend_address = "";
 		
 		std::map<int, bool> pm_cavity_door_Opend; //PM腔门开关
+		std::map<int, bool> awc_present_siganlMap; //AWC(在位)感应器
 
 		unsigned short io_input_count = 0;
 		std::vector<bool> io_input_last_value;
@@ -363,25 +364,16 @@ namespace FC{
 
 
 	void FortrendTMCavitySubsystem::onInitialize()throw(KernelException){
-
-		if (TEST_STATUS == 1)
-		{
-			setState(IKernelSubSystem::State::SUB_NORMAL);
+		try {
+			if (enableProtocol())
+				setState(IKernelSubSystem::State::SUB_NORMAL);
+			else
+				setState(IKernelSubSystem::State::SUB_UNKNOWN);
 		}
-		else
-		{
-			try {
-				if (enableProtocol())
-					setState(IKernelSubSystem::State::SUB_NORMAL);
-				else
-					setState(IKernelSubSystem::State::SUB_UNKNOWN);
-			}
-			catch (KernelException& e) {
-				logError(getName().c_str(), e.what());
-				//throw e;
-			}
+		catch (KernelException& e) {
+			logError(getName().c_str(), e.what());
+			//throw e;
 		}
-
 	}
 
 	void FortrendTMCavitySubsystem::onUnInitialize()throw(KernelException){
@@ -397,6 +389,9 @@ namespace FC{
 		//pollProtocol();
 		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN )
 		{
+
+
+#if 0
 			bool io_changed = false;
 			if ((d->io_input_count > 0) && readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state.get()))
 			{
@@ -602,7 +597,7 @@ namespace FC{
 				AbstractIOSubsystem::emitAttributeChanged(this);
 			}
 			Sleep(50);
-			
+#endif		
 		}
 	}
 
@@ -652,6 +647,23 @@ namespace FC{
 			
 			
 		}
+	}
+
+	bool FortrendTMCavitySubsystem::getAwcPresentSensor(int index) const
+	{
+		bool value = false;
+		auto select = d->awc_present_siganlMap.find(index);
+		if (select != d->awc_present_siganlMap.end())
+		{
+			value = select->second;
+		}
+		return value;
+	}
+
+	void FortrendTMCavitySubsystem::setAwcPresentSensor(int index, bool state)
+	{
+		d->awc_present_siganlMap[index] = state;
+
 	}
 
 	void FortrendTMCavitySubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){

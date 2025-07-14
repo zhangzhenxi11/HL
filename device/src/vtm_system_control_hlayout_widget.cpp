@@ -154,7 +154,7 @@ void QVTMSystemControlHLayoutWidget::btnIco(std::shared_ptr<IKernel> kernel){
 		}
 		btnUpdatePath();
 	});
-	btn_reset_time->start(400);
+	//btn_reset_time->start(400);
 
 
 

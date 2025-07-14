@@ -56,8 +56,12 @@ IKernelCommand::RunResult EFEMAlignerResetCommand::onRun() throw(KernelException
 	std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 	logInform(sub->getName().c_str(), "复位命令开始执行");
 
+    /*ALIGN参数说明\n注意：参数可为空。若参数为空，
+    边缘查找器将在完成边缘搜索后自动调用默认角度。
+    */
     std::string stationName = sub->getName();
-    std::string sendStr = Poco::format("MOV:INIT/%s", stationName);
+    stationName.erase(0,1);
+    std::string sendStr = Poco::format("MOV:INIT/%s", stationName); //MOV:INIT/ALIGNER;
     sendStr.push_back(';');
 
     //std::string sendStr = "INIT/ALL;";

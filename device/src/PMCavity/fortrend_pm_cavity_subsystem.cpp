@@ -70,14 +70,14 @@ namespace FC{
 		std::vector<PMCavityMoniterStateShort> pm_cavity_motiner_dc_power_state;	//直流电源
 		std::vector<PMCavityMoniterStateInt> pm_cavity_film_state;					//膜厚仪状态
 
-		std::string get_request_address = "";			 //PM腔取片请求地址
-		std::string upload_request_address = "";		 //PM腔上片请求地址
-		std::string pm_cavity_general_alarm_address = "";//PM腔总报警地址
-		std::string pm_cavity_alarm_start_address = "";  //PM腔报警起始地址
-		int pm_cavity_read_alarm_length = 65;			 //PM腔报警读取长度
-		std::string pm_cavity_has_object_address = "";   //PM腔是否有晶圆地址
-		std::string pm_cavity_safe_address = "";         //PM腔安全信号地址
-		std::string pm_cavity_motor_home_address = "MR35105";   //PM腔电机后退完成信号地址
+		std::string get_request_address = "";			           //PM腔取片请求地址
+		std::string upload_request_address = "";		           //PM腔上片请求地址
+		std::string pm_cavity_general_alarm_address = "";          //PM腔总报警地址
+		std::string pm_cavity_alarm_start_address = "";            //PM腔报警起始地址
+		int pm_cavity_read_alarm_length = 65;			           //PM腔报警读取长度
+		std::string pm_cavity_has_object_address = "";             //PM腔是否有晶圆地址
+		std::string pm_cavity_safe_address = "";                   //PM腔安全信号地址
+		std::string pm_cavity_motor_home_address = "MR35105";      //PM腔电机后退完成信号地址
 		std::string pm_cavity_motor_forward_address = "MR35104";   //PM腔电机前进完成信号地址
 
 		bool pm_cavity_safe = false;         //PM腔安全信号
@@ -636,7 +636,7 @@ namespace FC{
 		try{
 			if (SIMULATION_TEST == 1)
 			{
-				setState(IKernelSubSystem::State::SUB_NORMAL);
+				//setState(IKernelSubSystem::State::SUB_NORMAL);
 			}
 			else
 			{
@@ -671,6 +671,7 @@ namespace FC{
 		//short * dc_power_current_value = new short[d->dc_power_address_length];
 		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 		{
+#if 0
 			bool io_changed = false;
 			bool result = d->pm_cavity_safe;
 			if (d->pm_cavity_safe_address != "" &&KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, d->pm_cavity_safe))
@@ -726,7 +727,7 @@ namespace FC{
 					io_changed = true;
 				}
 			}
-			
+#endif		
 			/*if (d->io_input_count > 0)
 			{
 				if (KeyencePlcSubSystemHelper::readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state))
@@ -779,11 +780,11 @@ namespace FC{
 					io_changed = true;
 				}
 			}*/
-			if (io_changed)
-			{
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
-			Sleep(100);
+			//if (io_changed)
+			//{
+			//	AbstractIOSubsystem::emitAttributeChanged(this);
+			//}
+			//Sleep(100);
 
 		}
 	}
@@ -887,7 +888,7 @@ namespace FC{
 		if (config->has("PMCavityRecardAddress"))
 		{
 			d->pm_cavity_has_object_address = config->getString("PMCavityRecardAddress.HasObjectAddress", "M1004");
-			d->pm_cavity_safe_address = config->getString("PMCavityRecardAddress.SafeAddress", "M1005");
+			d->pm_cavity_safe_address = config->getString("PMCavityRecardAddress.SafeAddress", "MR30602");
 			d->pm_remote_mode_address = config->getString("PMCavityRecardAddress.RemoteModeAddress", "M33");
 			d->pm_cavity_general_alarm_address = config->getString("PMCavityRecardAddress.GeneralAlarmAddress", "");
 			d->pm_cavity_alarm_start_address = config->getString("PMCavityRecardAddress.AlarmStartAddress", "");
@@ -921,7 +922,7 @@ namespace FC{
 
 	std::shared_ptr<PMCavityOpenTMCavityDoorCommand>  FortrendPMCavitySubsystem::createOpenTMCavityDoorCommand()const{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
-		PMCavityOpenTMCavityDoorCommand::Ptr ret(new PMCavityOpenTMCavityDoorCommand(self, self));
+		PMCavityOpenTMCavityDoorCommand::Ptr ret(new PMCavityOpenTMCavityDoorCommand(self));
 		return ret;
 	}
 

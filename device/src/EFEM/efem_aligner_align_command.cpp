@@ -66,9 +66,12 @@ IKernelCommand::RunResult EFEMAlignerAlignCommand::onRun() throw(KernelException
 	}
 
 	logInform(sub->getName().c_str(), "Ñ°±ßÃüÁî¿ªÊ¼Ö´ĞĞ");
-	// MOV:ALIGNER;
+	// MOV:ALIGN;
 	std::string command = "MOV:";
-	command.append(sub->getName()).append(";");
+	//EALIGNER
+	std::string str = sub->getName().erase(0,1);
+	str.erase(5,3);
+	command.append(str).append(";");
 	
 	bool result = sendRequest(command);
 

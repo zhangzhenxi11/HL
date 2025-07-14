@@ -160,6 +160,7 @@ namespace FC{
 
 	void  QControlModeVTMWidgetPrivate::setPMCavity(const int index,const bool value){
 		std::string pm_name = "PM" + std::to_string(index);
+
 		auto pm = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
 		if (!pm)
 		{
@@ -168,6 +169,7 @@ namespace FC{
 			return;
 		}
 		pm->setPMCavityEnable(value);
+
 		if (index == 1)
 		{
 			pm1_enable = value;

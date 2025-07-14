@@ -51,7 +51,10 @@ public:
 	void setBlueState(bool enabled);
 	void setRedState(bool enabled);
 	void setYellowState(bool enabled);
-
+	/**
+	*@brief  set Efem ResetAll
+	*/
+	bool EfemResetAll();
 	/**
 	*@brief  set enabled
 	*/

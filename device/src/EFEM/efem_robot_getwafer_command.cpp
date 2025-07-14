@@ -200,19 +200,21 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	//	this->setReplyTimeout(timeout);
 	//}
 	if (stationName == "ELP1" || stationName == "ELP2"){
-		if (!getStation()->hasBoxPresent()){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
-		}
 
-		////box placement 
-		if (!getStation()->hasBoxPlacement()){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not placement now(sensor).", getStation()->getName()), this);
-		}
+		//²âÊÔ×¢ÊÍ
+		//if (!getStation()->hasBoxPresent()){
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
+		//}
 
-		////box door
-		if (!station_cass->isBoxOpened()){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s box is closed now.", getStation()->getName()), this);
-		}
+		//////box placement 
+		//if (!getStation()->hasBoxPlacement()){
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not placement now(sensor).", getStation()->getName()), this);
+		//}
+
+		//////box door
+		//if (!station_cass->isBoxOpened()){
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s box is closed now.", getStation()->getName()), this);
+		//}
 
 		stationName = stationName == "ELP1" ? "LP1" : "LP2";
 	}
@@ -284,6 +286,7 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 		logError(robot->getName().c_str(), "%s·ÅÁÏÃüÁî·¢ËÍÊ§°Ü£¬Çë¼ì²éÍ¨Ñ¶£¡", robot->getName());
 		return ret;
 	}
+
 
 
 	robot->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);

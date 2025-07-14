@@ -193,7 +193,7 @@ void FortrendPumpSubsystem::onProcess(){
 	//	++d->wait_count;
 	//	return;
 	//}
-
+#if 0
 	if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 	{
 		bool io_changed = false;
@@ -201,13 +201,11 @@ void FortrendPumpSubsystem::onProcess(){
 		bool isAlarm = false;
 		if (d->mechanical_pump_alarm_address != "" && readBit(d->mechanical_pump_alarm_address, isAlarm))
 		{
-
-				if (d->mechanical_pump_isAlarm != isAlarm)
-				{
-					d->mechanical_pump_isAlarm = isAlarm;
-					io_changed = true;
-				}
-			
+			if (d->mechanical_pump_isAlarm != isAlarm)
+			{
+				d->mechanical_pump_isAlarm = isAlarm;
+				io_changed = true;
+			}	
 		}
 		bool isWarn = false;
 		if (d->mechanical_pump_warn_address != "" && readBit(d->mechanical_pump_warn_address, isWarn))
@@ -247,7 +245,7 @@ void FortrendPumpSubsystem::onProcess(){
 	}
 
 
-
+#endif
 
 #if 0
 #pragma region TM分子泵逻辑
@@ -477,7 +475,8 @@ void FortrendPumpSubsystem::onProcess(){
 
 	updateMolecularPumpState();
 #endif	
-	
+
+
 }
 
 void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){

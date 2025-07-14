@@ -16,6 +16,7 @@
 #include  <vector>
 #include  <memory>
 
+#define SIM_CYCLE_MODE 1
 class QTableWidget;
 
 namespace  FC {
@@ -80,7 +81,7 @@ namespace  FC {
 
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)
-			QSlotTransferCycleVTMWidgetPrivate *d_ptr;
+		QSlotTransferCycleVTMWidgetPrivate *d_ptr;
 		QFortrendStationStatusVTMWidget* s_ptr;
 
 	};

@@ -129,17 +129,17 @@ namespace FC{
 		auto cass = cassManager->getCassette(getSubsystem().get());
 
 		//create slot select
-		for (int i = 0; i < cass->slotCount(); i++)
-		{
-			QRadioButton* radioButton = new QRadioButton;
-			radioButton->setText(QString::fromStdString(std::to_string(i + 1)));
-			radioButton->setProperty("index", i + 1); //index
-			d->ui->slots_gridLayout->addWidget(radioButton, i % 10, i / 10);
-			if (i == 0)
-			{
-				radioButton->setChecked(true);
-			}
-		}
+		//for (int i = 0; i < cass->slotCount(); i++)
+		//{
+		//	QRadioButton* radioButton = new QRadioButton;
+		//	radioButton->setText(QString::fromStdString(std::to_string(i + 1)));
+		//	radioButton->setProperty("index", i + 1); //index
+		//	d->ui->slots_gridLayout->addWidget(radioButton, i % 10, i / 10);
+		//	if (i == 0)
+		//	{
+		//		radioButton->setChecked(true);
+		//	}
+		//}
 
 		
 
@@ -210,15 +210,15 @@ namespace FC{
 	int QLoadLockSubsystemWidget::getSelectedSlot()const{
 
 		int index = -1;
-		for (int i = 0; i < d_ptr->ui->slots_gridLayout->count(); i++){
-			QLayoutItem *child = d_ptr->ui->slots_gridLayout->itemAt(i);
-			QRadioButton* radio_child = qobject_cast<QRadioButton*>(child->widget());
-			if (radio_child && radio_child->isChecked()){
-				index = radio_child->property("index").toInt();
-				//
-				return index;
-			}
-		}
+		//for (int i = 0; i < d_ptr->ui->slots_gridLayout->count(); i++){
+		//	QLayoutItem *child = d_ptr->ui->slots_gridLayout->itemAt(i);
+		//	QRadioButton* radio_child = qobject_cast<QRadioButton*>(child->widget());
+		//	if (radio_child && radio_child->isChecked()){
+		//		index = radio_child->property("index").toInt();
+		//		//
+		//		return index;
+		//	}
+		//}
 		return 0;
 	}
 

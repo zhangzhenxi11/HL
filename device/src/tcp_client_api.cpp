@@ -420,8 +420,8 @@ void TcpClientApi::process(){
 * configure the subsystem
 */
 void TcpClientApi::configure(const std::shared_ptr<KernelConfiguration> & config) throw(KernelException){
-	d->setPort(config->getUInt("port", 10001));
-	d->setIp(config->getString("ip", "127.0.0.1"));
+	d->setPort(config->getUInt("port", 8000));
+	d->setIp(config->getString("ip", "192.168.127.253"));
 
 	//auto enabled
 	d->setAutoEnabled(config->getBool("auto_enable", true));

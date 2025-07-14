@@ -100,6 +100,9 @@ private:
 
 	void onDataRecv(const char* data, unsigned int len);
 	void processSingleMessage(const std::string& message);
+
+	void processEFEMessage(std::string& message);
+
 private:
 	DECLARE_PRIVATE(EFEMAsciiApi)
 };

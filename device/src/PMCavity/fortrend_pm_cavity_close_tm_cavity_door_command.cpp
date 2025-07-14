@@ -50,11 +50,12 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
 
-		if (!sub->getPMCavityEnable()) {
+		//if (!sub->getPMCavityEnable()) {
 
-			logInform(sub->getName().c_str(), "PM模块设置不启用,关闭PM腔指令不去执行...");
-			return RunResult::RUN_OK;
-		};
+		//	logInform(sub->getName().c_str(), "PM模块设置不启用,关闭PM腔指令不去执行...");
+		//	return RunResult::RUN_OK;
+		//};
+
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
@@ -109,7 +110,7 @@ namespace FC{
 			logInform(sub->getName().c_str(), "关闭传输腔门阀命令执行结束");
 			
 		}
-		else if (readFailedState && failedRes)
+		else if (failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常"));
 			setAlarm(alarm);

@@ -187,6 +187,32 @@
     </rect>
    </property>
   </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>190</y>
+     <width>151</width>
+     <height>121</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>EFEM初始化</string>
+   </property>
+   <widget class="QPushButton" name="reset_all_btn">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>40</y>
+      <width>93</width>
+      <height>28</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>EFEM复位</string>
+    </property>
+   </widget>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>

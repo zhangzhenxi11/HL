@@ -109,22 +109,23 @@
 #endif
 
 namespace FC{
-
+	//LK 内部传输任务 (机械手搬运)
 	struct LoadLockTransferWafer{
 		int slot = 0;
 		std::string transfer = "lk1_to_lk2";
 		bool is_finish = false;
 		int selected_arm = 0;
 	};
-
+	//LP -> LK 传输任务 (EFEM 搬运)
 	struct LPTransferWafer{
 		int slot_lp = 0;
 		int slot_lk = 0;
 		std::string transfer = "lk1_to_lk2";
 		std::string source_lp = "ELP1";
-		bool is_finish_putlk = false;
+		bool is_finish_putlk = false; //是否完成放入Load Lock
 		int selected_arm = 0;
 	};
+	//机械手跨腔传输任务 (TM 机械手)
 	struct RobotTransferWafer{
 		std::string source_loadlock = "";
 		std::string target_loadlock = "";
@@ -174,15 +175,16 @@ namespace FC{
 		void setRunning(const bool value);
 		void setLoadLock1PutCassetteFinished();
 		void setLoadLock2PutCassetteFinished();
-
+		
+		//获取UI流程队列
 		bool setTransferSequence();
+
 		bool setPMCavityParameter();
+
 		void onUpdateCycleInfo();
 		void onUpdateProcessControlEnabled(const bool value);
 		void onUpdateControlEnabled(const QString control, const bool enabled);
 		virtual void onAttributeChange(const IKernelCommand* cmd);
-
-
 
 	private:
 		QSlotTransferCycleVTMWidget * q_ptr;
@@ -192,38 +194,44 @@ namespace FC{
 		std::shared_ptr<FortrendTMCavitySubsystem> tmplc;
 		bool plcauto = false;
 
+		// 1.LP->LK 任务池（按 LK 分类）
 		std::vector<LPTransferWafer> sequence_tolk1_wafer;//cycle配置数组
 		std::vector<LPTransferWafer> sequence_tolk2_wafer;//cycle配置数组
 		std::vector<LPTransferWafer> sequence_tolk1_wafer_copy;//cycle配置数组
 		std::vector<LPTransferWafer> sequence_tolk2_wafer_copy;//cycle配置数组
 
 		std::vector<LPTransferWafer> sequence_lp1_transfer_wafer;//cycle配置数组
-		std::vector<LPTransferWafer> sequence_lp1_put_wafer;//LP1工艺完后待放料数组
-		std::vector<LPTransferWafer> sequence_lp1_get_wafer;//LP1待上料数组
+		std::vector<LPTransferWafer> sequence_lp1_put_wafer;//工艺完后 LP1待放料数组
+		std::vector<LPTransferWafer> sequence_lp1_get_wafer;//工艺完前 LP1待上料数组
+		
+		//LLA的复制任务队列，做完一次循环后重新添加到sequence_loadlock1_transfer_wafer数组
+		
+		std::vector<LPTransferWafer> sequence_lp1_transfer_wafer_copy;
 
 		std::vector<LPTransferWafer> sequence_lp2_transfer_wafer;
 		std::vector<LPTransferWafer> sequence_lp2_put_wafer;//LP2工艺完后待放料数组
 		std::vector<LPTransferWafer> sequence_lp2_get_wafer;//LP2待上料数组
+
+		//LLB的复制任务队列  做完一次循环后重新添加到sequence_loadlock2_transfer_wafer数组
+		std::vector<LPTransferWafer> sequence_lp2_transfer_wafer_copy;
+
+
+		//2. 机械手任务池
 		/*
-		机械手任务队列里面的LP1部分。LLA全部做完工艺需再循环时重新添加到sequence_robot_transfer_wafer的末尾
+		机械手任务队列里面的LP1部分。LLA全部做完工艺 需再循环时 重新添加到sequence_robot_transfer_wafer的末尾
 		*/
 		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer_lp1;
+
 		/*
 		机械手任务队列里面的LP2部分，每一次读取cycle配置时添加
 		*/
 		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer_lp2;
-		/*
-		LLA的复制任务队列，做完一次循环后重新添加到sequence_loadlock1_transfer_wafer数组
-		*/
-		std::vector<LPTransferWafer> sequence_lp1_transfer_wafer_copy;
-		/*
-		机械手放PM上的晶圆数组,从PM上取走后删除
-		*/
-		std::vector<LPTransferWafer> sequence_lp2_transfer_wafer_copy;
+
 		/*
 		cycle上面配置的所有LLA和LLB晶圆集合,做完工艺放回对应LL腔后从集合删除
 		*/
-		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer;
+		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer;  // 总任务队列
+
 		/*
 		机械手放PM上的晶圆数组,从PM上取走后删除
 		*/
@@ -233,15 +241,19 @@ namespace FC{
 		sequence_robot_transfer_wafer数组的互斥锁，数组在多个线程里面操作的情况下必须添加
 		*/
 		std::mutex vec_mutex_robot;
+
 		/*
 		sequence_loadlock1_transfer_wafer数组的互斥锁，数组在多个线程里面操作的情况下必须添加
 		*/
 		std::mutex vec_mutex_lla;
+
 		/*
 		sequence_loadlock2_transfer_wafer数组的互斥锁，数组在多个线程里面操作的情况下必须添加
 		*/
 		std::mutex vec_mutex_llb;
 
+
+		// 3.LK 内部任务池
 		/*
 		  Cycle配置LLA腔上待做工艺的晶圆数组，从LLA取料完成后删除
 		*/
@@ -258,6 +270,8 @@ namespace FC{
 		从LLB取走后的晶圆数组。放回LLB后从数组删除
 		*/
 		std::vector<LoadLockTransferWafer> sequence_loadlock2_put_wafer;
+
+
 
 		PMCavityProcessParameters pm_process_param[3];
 		std::string armWferTarget = "";
@@ -339,10 +353,10 @@ namespace FC{
 		bool loadlock1_allow_put_wafer = false;
 		bool loadlock2_allow_put_wafer = false;
 
-		bool tool1_allow_get_wafer = false;//true呼叫LP1上料，false LP1上料完成
-		bool tool2_allow_get_wafer = false;//true呼叫LP2上料，false LP2上料完成
-		bool tool1_allow_put_wafer = false;//true呼叫下料到LP1，false 下料到LP1完成
-		bool tool2_allow_put_wafer = false;//true呼叫下料到LP2，false 下料到LP2完成
+		bool tool1_allow_get_wafer = false;// true呼叫LP1上料，  false LP1上料完成
+		bool tool2_allow_get_wafer = false;// true呼叫LP2上料，  false LP2上料完成
+		bool tool1_allow_put_wafer = false;// true呼叫下料到LP1，false 下料到LP1完成
+		bool tool2_allow_put_wafer = false;// true呼叫下料到LP2，false 下料到LP2完成
 
 		/**
 		true：LP1的当前晶圆已做完工艺
@@ -449,7 +463,8 @@ namespace FC{
 			case 0:
 			{
 				if (wtr->getState() != IKernelSubSystem::State::SUB_UNKNOWN&&
-					(ewtr->getState() != IKernelSubSystem::State::SUB_UNKNOWN || ui->disabledefem->checkState() == Qt::CheckState::Checked)
+					(ewtr->getState() != IKernelSubSystem::State::SUB_UNKNOWN ||
+					 ui->disabledefem->checkState() == Qt::CheckState::Checked)
 					)
 				{
 					logInform(reset_process_name.c_str(), "整机复位开始");
@@ -796,7 +811,6 @@ namespace FC{
 			vacumm_step_once_finished = false;
 			if (tm->getVacuumEnable())
 			{
-
 				switch (vacuum_auto_step)
 				{
 					case 10:
@@ -952,7 +966,7 @@ namespace FC{
 					if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
 						efem_auto_step = 5000;
 				}
-				else if (tool2_allow_put_wafer)//给tool1下料
+				else if (tool2_allow_put_wafer)//给tool2下料
 				{
 					efem_auto_step = 2000;
 					if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
@@ -968,7 +982,8 @@ namespace FC{
 			case 100:
 			{
 				if (sequence_tolk1_wafer.size()>0){
-					if (sequence_tolk1_wafer[0].source_lp=="ELP1"){
+					if (sequence_tolk1_wafer[0].source_lp=="ELP1")
+					{
 						if (elp1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							if (!elp1->hasDoorOpend()){
@@ -1051,8 +1066,10 @@ namespace FC{
 				auto lkmaps = station_cass_lk->getAllMapping();//查看
 				for (int i = 0; i < lkmaps.size(); i++)
 				{
-					if (lkmaps[i] == Cassette::Empty){
-						if (sequence_tolk1_wafer.size()>0){
+					if (lkmaps[i] == Cassette::Empty)
+					{
+						if (sequence_tolk1_wafer.size()>0)
+						{
 							LPTransferWafer getlp;
 							getlp.is_finish_putlk = false;
 							getlp.slot_lk = sequence_tolk1_wafer[0].slot_lk;
@@ -1060,7 +1077,9 @@ namespace FC{
 							getlp.transfer = sequence_tolk1_wafer[0].transfer;
 							getlp.selected_arm = sequence_tolk1_wafer[0].selected_arm;
 							getlp.source_lp = sequence_tolk1_wafer[0].source_lp;
-							sequence_lp1_get_wafer.push_back(getlp);
+
+							sequence_lp1_get_wafer.push_back(getlp); //LP1待上料数组  配置数组数据复制给这个数组
+
 							sequence_tolk1_wafer.erase(sequence_tolk1_wafer.begin());
 						}
 					}
@@ -1127,8 +1146,8 @@ namespace FC{
 					}
 
 					if (!elp2->hasDoorOpend() && !elp1->hasDoorOpend()){
-						tool1_allow_get_wafer = false;
-						efem_auto_step = 10;
+						tool1_allow_get_wafer = false; //LP1上料完成
+						efem_auto_step = 10; //跳转到开始步骤
 					}
 				}
 			}
@@ -1248,9 +1267,11 @@ namespace FC{
 						lktw.slot = sequence_lp1_get_wafer[0].slot_lk;
 						lktw.transfer = sequence_lp1_get_wafer[0].transfer;
 						lktw.selected_arm = sequence_lp1_get_wafer[0].selected_arm;
-						sequence_loadlock1_transfer_wafer.push_back(lktw);
-						sequence_lp1_put_wafer.push_back(sequence_lp1_get_wafer.front());//提前存入放料集合
-						sequence_lp1_get_wafer.erase(sequence_lp1_get_wafer.begin());
+						sequence_loadlock1_transfer_wafer.push_back(lktw);				  //LLA腔上等待做工艺的晶圆数组
+
+						sequence_lp1_put_wafer.push_back(sequence_lp1_get_wafer.front()); //提前存入放料集合
+						sequence_lp1_get_wafer.erase(sequence_lp1_get_wafer.begin());     //LP1待上料数组已经用了，就删除数据 --zzx
+
 						efem_auto_step = 110;
 					}
 				}
@@ -1537,12 +1558,14 @@ namespace FC{
 						logFailedExcuteCommandHasError(ewtr->getName(), "B手臂放LLA晶圆", efem_process_name, efem_auto_step);
 					}
 					else{//放料完成
+
 						LoadLockTransferWafer lktw2;
 						lktw2.is_finish = false;
 						lktw2.slot = sequence_lp1_get_wafer[1].slot_lk;
 						lktw2.transfer = sequence_lp1_get_wafer[1].transfer;
 						lktw2.selected_arm = sequence_lp1_get_wafer[1].selected_arm;
 						sequence_loadlock1_transfer_wafer.push_back(lktw2);
+
 						sequence_lp1_put_wafer.push_back(sequence_lp1_get_wafer.front());//提前存入放料集合
 						sequence_lp1_get_wafer.erase(sequence_lp1_get_wafer.begin());
 						sequence_lp1_put_wafer.push_back(sequence_lp1_get_wafer.front());//提前存入放料集合
@@ -1686,7 +1709,7 @@ namespace FC{
 			case 200:
 			{
 				std::shared_ptr<EFEMLPSubsystem> elp = kernel->getKernelModule<EFEMLPSubsystem>(sequence_lp1_put_wafer[0].source_lp);
-				if (elp&&elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 				{
 					if (!elp->hasDoorOpend()){
 						auto cmd = elp->createOpenBoxCommand();
@@ -1875,29 +1898,53 @@ namespace FC{
 						logFailedExcuteCommandHasError(ewtr->getName(), "放LP1晶圆", efem_process_name, efem_auto_step);
 					}
 					else{
-						if (sequence_lp1_put_wafer[0].source_lp == "ELP1"){
-							if (sequence_lp1_transfer_wafer.size() >= 1){
+						if (sequence_lp1_put_wafer[0].source_lp == "ELP1")
+						{
+							if (sequence_lp1_transfer_wafer.size() >= 1)
+							{
 								sequence_lp1_transfer_wafer.erase(sequence_lp1_transfer_wafer.begin());
 							}
-							else{
-								logError(ewtr->getName().c_str(), "ELP1 sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", sequence_lp1_put_wafer.size(), sequence_lp1_transfer_wafer.size());
+							else
+							{
+								logError(ewtr->getName().c_str(), "ELP1 sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d",
+									sequence_lp1_put_wafer.size(), sequence_lp1_transfer_wafer.size());
 							}
-
 						}
-						else if (sequence_lp1_put_wafer[0].source_lp == "ELP2"){
-							if (sequence_lp2_transfer_wafer.size() >= 1){
+						
+						else if (sequence_lp1_put_wafer[0].source_lp == "ELP2")
+						{
+							if (sequence_lp2_transfer_wafer.size() >= 1)
+							{
 								sequence_lp2_transfer_wafer.erase(sequence_lp2_transfer_wafer.begin());
 							}
-							else{
-								logError(ewtr->getName().c_str(), "ELP2 sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", sequence_lp1_put_wafer.size(), sequence_lp2_transfer_wafer.size());
+							else
+							{
+								logError(ewtr->getName().c_str(), "ELP2 sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d",
+									sequence_lp1_put_wafer.size(), sequence_lp2_transfer_wafer.size());
 							}
 						}
-						if (sequence_lp1_put_wafer.size() == 1 && sequence_lp1_put_wafer[0].source_lp == "ELP2"&&sequence_lp2_transfer_wafer.size() == 0){
-							logInform(ewtr->getName().c_str(), "cycle end sequence_lp2_put_wafer=%d sequence_lp2_transfer_wafer=%d", sequence_lp2_put_wafer.size(), sequence_lp2_transfer_wafer.size());
+						/*
+						sequence_lp1_put_wafer.size() == 1 :表示当前只剩最后一片待放回的晶圆
+						ELP2传输序列已清空
+							sequence_lp2_transfer_wafer.size() == 0 表示所有从ELP2取出的晶圆都已处理完毕
+						*/
+						if (sequence_lp1_put_wafer.size() == 1 && 
+							sequence_lp1_put_wafer[0].source_lp == "ELP2"
+							&& sequence_lp2_transfer_wafer.size() == 0)
+						{
+
+							// ELP2的完整传输循环结束
+							logInform(ewtr->getName().c_str(), "cycle end sequence_lp2_put_wafer=%d sequence_lp2_transfer_wafer=%d", 
+								sequence_lp2_put_wafer.size(), sequence_lp2_transfer_wafer.size());
 							is_lp2_cycle = true;
 						}
-						if (sequence_lp1_put_wafer.size() == 1 && sequence_lp1_put_wafer[0].source_lp == "ELP1"&&sequence_lp1_transfer_wafer.size() == 0){
-							logInform(ewtr->getName().c_str(), "cycle end sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", sequence_lp1_put_wafer.size(), sequence_lp1_transfer_wafer.size());
+						if (sequence_lp1_put_wafer.size() == 1 &&
+							sequence_lp1_put_wafer[0].source_lp == "ELP1"&&
+							sequence_lp1_transfer_wafer.size() == 0)
+						{
+							// ELP1的完整传输循环结束
+							logInform(ewtr->getName().c_str(), "cycle end sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", 
+								sequence_lp1_put_wafer.size(), sequence_lp1_transfer_wafer.size());
 							is_lp1_cycle = true;
 						}
 						sequence_lp1_put_wafer.erase(sequence_lp1_put_wafer.begin());
@@ -2152,23 +2199,27 @@ namespace FC{
 									logError(ewtr->getName().c_str(), "ELP2 sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", sequence_lp1_put_wafer.size(), sequence_lp2_transfer_wafer.size());
 								}
 							}
-						
+
+					    //双LoadPort混合传输结束
+
+					   //情景1：先操作晶圆来自ELP1且ELP1完成
 						if (sequence_lp1_put_wafer.size() == 2 && sequence_lp1_put_wafer[0].source_lp != sequence_lp1_put_wafer[1].source_lp
-							&&sequence_lp1_put_wafer[0].source_lp == "ELP1"&&sequence_lp1_transfer_wafer.size() == 0){
+							&&sequence_lp1_put_wafer[0].source_lp == "ELP1" && sequence_lp1_transfer_wafer.size() == 0){
 							logInform(ewtr->getName().c_str(), "cycle end2 sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", sequence_lp1_put_wafer.size(), sequence_lp1_transfer_wafer.size());
 							is_lp1_cycle = true;
 						}
-
+						// 情景2：先操作晶圆来自ELP2且ELP2完成
 						if (sequence_lp1_put_wafer.size() == 2 && sequence_lp1_put_wafer[0].source_lp != sequence_lp1_put_wafer[1].source_lp
 							&&sequence_lp1_put_wafer[0].source_lp == "ELP2"&&sequence_lp2_transfer_wafer.size() == 0){
 							logInform(ewtr->getName().c_str(), "cycle end2 sequence_lp2_put_wafer=%d sequence_lp2_transfer_wafer=%d", sequence_lp2_put_wafer.size(), sequence_lp2_transfer_wafer.size());
 							is_lp2_cycle = true;
 						}
-						
+						// 情景3：后操作晶圆来自ELP2且ELP2完成
 						if (sequence_lp1_put_wafer.size() == 2 && sequence_lp1_put_wafer[1].source_lp == "ELP2"&&sequence_lp2_transfer_wafer.size() == 0){
 							logInform(ewtr->getName().c_str(), "cycle end sequence_lp2_put_wafer=%d sequence_lp2_transfer_wafer=%d", sequence_lp2_put_wafer.size(), sequence_lp2_transfer_wafer.size());
 							is_lp2_cycle = true;
 						}
+						// 情景4：后操作晶圆来自ELP1且ELP1完成
 						if (sequence_lp1_put_wafer.size() == 2 && sequence_lp1_put_wafer[1].source_lp == "ELP1"&&sequence_lp1_transfer_wafer.size() == 0){
 							logInform(ewtr->getName().c_str(), "cycle end sequence_lp1_put_wafer=%d sequence_lp1_transfer_wafer=%d", sequence_lp1_put_wafer.size(), sequence_lp1_transfer_wafer.size());
 							is_lp1_cycle = true;
@@ -3152,7 +3203,7 @@ namespace FC{
 			}
 			break;
 #pragma endregion
-#pragma region 双取lk2双放LP1
+#pragma region 双取lk2双放LP2
 			case 2500://双取lk2双放LP1
 			{
 				std::shared_ptr<EFEMLPSubsystem> elp = kernel->getKernelModule<EFEMLPSubsystem>(sequence_lp2_put_wafer[0].source_lp);
@@ -3575,7 +3626,7 @@ namespace FC{
 			{
 			case 10:
 			{
-				if (lp1_cycle_one_time_finished &&!cycleFinished_lla){//LLA的Cycle已做完
+				if (lp1_cycle_one_time_finished && !cycleFinished_lla){//LLA的Cycle已做完
 					update_auto_step = 1030;
 				}
 				else if (lp2_cycle_one_time_finished &&!cycleFinished_llb){
@@ -3591,7 +3642,7 @@ namespace FC{
 			break;
 			case 1030:
 			{
-				finished_time_lla++;
+				finished_time_lla ++;
 				if (is_lp1_cycle){
 					is_lp1_cycle = false;
 				}
@@ -3611,18 +3662,24 @@ namespace FC{
 				{
 					logInform("Cycle", "LP1第%d次Cycle完成 copysize=%d size=%d robot_lla=%d robot=%d", finished_time_lla, sequence_lp1_transfer_wafer_copy.size(), sequence_lp1_transfer_wafer.size(), sequence_robot_transfer_wafer_lp1.size(), sequence_robot_transfer_wafer.size());
 					// 将sequence_robot_transfer_wafer_lp1中的所有元素添加到sequence_robot_transfer_wafer的末尾
-					if (sequence_robot_transfer_wafer_lp1.size()>0){
+					if (sequence_robot_transfer_wafer_lp1.size()>0)
+					{
 						std::lock_guard<std::mutex> lock1(vec_mutex_robot);
 						sequence_robot_transfer_wafer.insert(sequence_robot_transfer_wafer.end(), sequence_robot_transfer_wafer_lp1.begin(), sequence_robot_transfer_wafer_lp1.end());
 					}
+
 					if (sequence_lp1_transfer_wafer_copy.size() > 0){
 						std::lock_guard<std::mutex> lock(vec_mutex_lla);
 						std::copy(sequence_lp1_transfer_wafer_copy.begin(), sequence_lp1_transfer_wafer_copy.end(), std::back_inserter(sequence_lp1_transfer_wafer));
 					}
-					if (sequence_tolk1_wafer_copy.size()>0 && sequence_tolk1_wafer.size()==0){
+
+					if (sequence_tolk1_wafer_copy.size()>0 && sequence_tolk1_wafer.size()==0)
+					{
 						std::copy(sequence_tolk1_wafer_copy.begin(), sequence_tolk1_wafer_copy.end(), std::back_inserter(sequence_tolk1_wafer));
 					}
-					if (sequence_tolk2_wafer_copy.size()>0 && sequence_tolk2_wafer.size() == 0){
+
+					if (sequence_tolk2_wafer_copy.size()>0 && sequence_tolk2_wafer.size() == 0)
+					{
 						std::copy(sequence_tolk2_wafer_copy.begin(), sequence_tolk2_wafer_copy.end(), std::back_inserter(sequence_tolk2_wafer));
 					}
 				}
@@ -3653,21 +3710,27 @@ namespace FC{
 				{
 					logInform("Cycle", "LP2第%d次Cycle完成 copysize=%d size=%d robot_llb=%d robot=%d", finished_time_llb, sequence_lp2_transfer_wafer_copy.size(), sequence_lp2_transfer_wafer.size(), sequence_robot_transfer_wafer_lp2.size(), sequence_robot_transfer_wafer.size());
 					//setTransferSequence(); 只初始化时使用，单独更新cycle流程
+					
 					// 将sequence_robot_transfer_wafer_lp2中的所有元素添加到sequence_robot_transfer_wafer的末尾
-					if (sequence_robot_transfer_wafer_lp2.size()>0){
+
+					if (sequence_robot_transfer_wafer_lp2.size()>0)
+					{
 						std::lock_guard<std::mutex> lock1(vec_mutex_robot);
 						sequence_robot_transfer_wafer.insert(sequence_robot_transfer_wafer.end(), sequence_robot_transfer_wafer_lp2.begin(), sequence_robot_transfer_wafer_lp2.end());
 					}
 
-					if (sequence_lp2_transfer_wafer_copy.size() > 0){
+					if (sequence_lp2_transfer_wafer_copy.size() > 0)
+					{
 						std::lock_guard<std::mutex> lock(vec_mutex_llb);
 						std::copy(sequence_lp2_transfer_wafer_copy.begin(), sequence_lp2_transfer_wafer_copy.end(), std::back_inserter(sequence_lp2_transfer_wafer));
 					}
 
-					if (sequence_tolk1_wafer_copy.size()>0 && sequence_tolk1_wafer.size() == 0){
+					if (sequence_tolk1_wafer_copy.size()>0 && sequence_tolk1_wafer.size() == 0)
+					{
 						std::copy(sequence_tolk1_wafer_copy.begin(), sequence_tolk1_wafer_copy.end(), std::back_inserter(sequence_tolk1_wafer));
 					}
-					if (sequence_tolk2_wafer_copy.size()>0 && sequence_tolk2_wafer.size() == 0){
+					if (sequence_tolk2_wafer_copy.size()>0 && sequence_tolk2_wafer.size() == 0)
+					{
 						std::copy(sequence_tolk2_wafer_copy.begin(), sequence_tolk2_wafer_copy.end(), std::back_inserter(sequence_tolk2_wafer));
 					}
 
@@ -3715,8 +3778,10 @@ namespace FC{
 			{
 			case 10:
 			{
-				if (sequence_robot_transfer_wafer.size() > 0 || sequence_robot_get_wafer.size() > 0){
-					if (tm->getVacuumEnable() && (!tm->getTMCavityVacuumValueReachesTheSetValue() || !tm->getInsertingPlateValveOpend()))
+				if (sequence_robot_transfer_wafer.size() > 0 || sequence_robot_get_wafer.size() > 0)
+				{
+					if (tm->getVacuumEnable() && (!tm->getTMCavityVacuumValueReachesTheSetValue() ||
+						!tm->getInsertingPlateValveOpend()))
 					{
 						robot_auto_step = 100;
 					}
@@ -3792,6 +3857,7 @@ namespace FC{
 				//}
 				if (sequence_robot_transfer_wafer.size() > 0 || sequence_robot_get_wafer.size()>0)
 				{
+					//有传输任务
 					robot_auto_step = 1010;
 				}
 				else{
@@ -3801,34 +3867,46 @@ namespace FC{
 			break;
 			case 1010:
 			{
-				if (sequence_loadlock1_transfer_wafer.size() == 0 && sequence_loadlock1_put_wafer.size()>0
-					&&sequence_robot_get_wafer.size() == 1 && sequence_robot_get_wafer[0].source_loadlock == lk1->getName()
-					&& sequence_robot_get_wafer[0].target_loadlock == lk1->getName()){//最后一片料
+				if (sequence_loadlock1_transfer_wafer.size() == 0                    // LL1传输序列已空
+					&& sequence_loadlock1_put_wafer.size()>0                         // LL1有待放置晶圆
+					&&sequence_robot_get_wafer.size() == 1                           // 机器人取片序列只剩1片
+					&& sequence_robot_get_wafer[0].source_loadlock == lk1->getName() // 该晶圆来自LL1
+					&& sequence_robot_get_wafer[0].target_loadlock == lk1->getName())// 目标也是LL1
+				{//最后一片料
 					robot_selected_arm = sequence_robot_get_wafer[0].selected_arm;
 					robot_auto_step = 4000;
 				}
 				else if (sequence_loadlock2_transfer_wafer.size() == 0 && sequence_loadlock2_put_wafer.size()>0
-					&& sequence_robot_get_wafer.size() == 1 && sequence_robot_get_wafer[0].source_loadlock == lk2->getName()
+					&& sequence_robot_get_wafer.size() == 1 
+					&& sequence_robot_get_wafer[0].source_loadlock == lk2->getName()
 					&& sequence_robot_get_wafer[0].target_loadlock == lk2->getName()){//最后一片料
 					robot_selected_arm = sequence_robot_get_wafer[0].selected_arm;
 					robot_auto_step = 4000;
 				}
-                else if (sequence_robot_transfer_wafer.size() > 0 && sequence_robot_transfer_wafer[0].source_loadlock == lk1->getName() && sequence_robot_transfer_wafer[0].target_loadlock == lk1->getName())
+                else if (sequence_robot_transfer_wafer.size() > 0 
+					&& sequence_robot_transfer_wafer[0].source_loadlock == lk1->getName()
+					&& sequence_robot_transfer_wafer[0].target_loadlock == lk1->getName())
 				{
 					robot_selected_arm = sequence_robot_transfer_wafer[0].selected_arm;
 					robot_auto_step = 2000;
 				}
-				else if (sequence_robot_get_wafer.size() > 0 && sequence_robot_get_wafer[0].source_loadlock == lk1->getName() && sequence_robot_get_wafer[0].target_loadlock == lk1->getName()){
+				else if (sequence_robot_get_wafer.size() > 0 
+					&& sequence_robot_get_wafer[0].source_loadlock == lk1->getName()
+					&& sequence_robot_get_wafer[0].target_loadlock == lk1->getName()){
 					robot_selected_arm = sequence_robot_get_wafer[0].selected_arm;
 					//logInform(wtr->getName().c_str(), "%s robot_auto_step = 4000 2= %d", wtr->getName(), robot_auto_step);
 					robot_auto_step = 4000;
 				}
-				else if (sequence_robot_transfer_wafer.size() > 0 && sequence_robot_transfer_wafer[0].source_loadlock == lk2->getName() && sequence_robot_transfer_wafer[0].target_loadlock == lk2->getName())
+				else if (sequence_robot_transfer_wafer.size() > 0 
+					&& sequence_robot_transfer_wafer[0].source_loadlock == lk2->getName() 
+					&& sequence_robot_transfer_wafer[0].target_loadlock == lk2->getName())
 				{
 					robot_selected_arm = sequence_robot_transfer_wafer[0].selected_arm;
 					robot_auto_step = 10000;
 				}
-				else if (sequence_robot_get_wafer.size() > 0 && sequence_robot_get_wafer[0].source_loadlock == lk2->getName() && sequence_robot_get_wafer[0].target_loadlock == lk2->getName()){
+				else if (sequence_robot_get_wafer.size() > 0 
+					&& sequence_robot_get_wafer[0].source_loadlock == lk2->getName()
+					&& sequence_robot_get_wafer[0].target_loadlock == lk2->getName()){
 					robot_selected_arm = sequence_robot_get_wafer[0].selected_arm;
 					//logInform(wtr->getName().c_str(), "%s robot_auto_step = 4000 3= %d", wtr->getName(), robot_auto_step);
 					robot_auto_step = 4000;
@@ -3840,7 +3918,9 @@ namespace FC{
 			break;
 			case 1020:
 			{
-				if ((cycleFinished_lla || sequence_robot_transfer_wafer_lp1.size() == 0) && (cycleFinished_llb || sequence_robot_transfer_wafer_lp2.size() == 0)){
+				if ((cycleFinished_lla || sequence_robot_transfer_wafer_lp1.size() == 0) 
+					&& (cycleFinished_llb || sequence_robot_transfer_wafer_lp2.size() == 0))
+				{
 					logInform("Cycle", "WTR Cycle已完成");
 					robot_auto_step = 10;
 					onUpdateProcessControlEnabled(true);
@@ -5390,7 +5470,7 @@ namespace FC{
 			case 10:
 			{
 				loadlock1_process_finished = false;
-				if (sequence_lp1_transfer_wafer.size() == 0 && !is_lp2_cycle&&is_lp1_cycle){
+				if (sequence_lp1_transfer_wafer.size() == 0 && !is_lp2_cycle && is_lp1_cycle){
 					loadlock1_auto_step = 6000;
 				}
 				if (sequence_robot_transfer_wafer.size()>0 && sequence_tolk1_wafer.size()>0
@@ -7165,20 +7245,24 @@ namespace FC{
 		sequence_tolk1_wafer_copy.clear();
 		sequence_tolk2_wafer_copy.clear();
 
+		//计算LoadLock的理论槽位（未直接使用）
 		int lk1slot = 1;
 		int lk2slot = 1;
+
+		//lpnum跟踪每个LoadPort（LP）的晶圆传输顺序编号
 		int lp1num = 1;
 		int lp2num = 1;
+
 		int lp1num2 = 1;
 		int lp2num2 = 1;
+
 		std::string lastlp = "";
 		std::string lasttransfer = "";
 		bool lk1_goto_lk2 = false;
 		bool lk2_goto_lk1 = false;
 		//新增不规则晶圆数计算LL腔槽号
-		int currentSlotNumber = 1;
-		bool isRobotLLA = true;
-
+		int currentSlotNumber = 1; //每4片晶圆切换LoadLock
+		bool isRobotLLA = true;//机器人当前服务的LoadLock（True=LLA, False=LLB）
 
 		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i) {
 			QWidget *widget_direction = ui->sequence_edit_tbw->cellWidget(i, 1);
@@ -7201,20 +7285,24 @@ namespace FC{
 			/*QWidget *widget_pm3 = ui->sequence_edit_tbw->cellWidget(i, 6);
 			QCheckBox *pm3 = (QCheckBox*)widget_pm3;*/
 
-			int lp1slot = loadlock1_slot->currentText().toInt();
-			int lp2slot = loadlock2_slot->currentText().toInt();
-			if (ui->disabledefem->checkState() == Qt::CheckState::Checked){
-				lk1slot = lp1slot % 4 == 0 ? 4 : lp1slot % 4;
-				lk2slot = lp2slot % 4 == 0 ? 4 : lp2slot % 4;
+			int lp1slot = loadlock1_slot->currentText().toInt();//1
+			int lp2slot = loadlock2_slot->currentText().toInt();//1
+
+			if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
+			{//禁用efem
+				lk1slot = lp1slot % 4 == 0 ? 4 : lp1slot % 4;//1  1，2，3，4层 ，loadlock共4层的晶圆盒，所以取4的余数
+				lk2slot = lp2slot % 4 == 0 ? 4 : lp2slot % 4;//1
 			}
 			else{
 				lk1slot = lk1slot > 4 ? 1 : lk1slot;
 				lk2slot = lk2slot > 4 ? 1 : lk2slot;
 			}
 			
-			
+			//1-8循环
 			lp1num = lp1num > 8 ? 1 : lp1num;
 			lp2num = lp2num > 8 ? 1 : lp2num;
+
+			//logInform("Cycle", "i=%d lk1slot=%d lk2slot=%d lp1num1=%d lp1num2=%d", i, lk1slot, lk2slot, lp1num, lp2num);
 
 			LPTransferWafer lp1;
 			lp1.slot_lp = lp1slot;
@@ -7228,29 +7316,33 @@ namespace FC{
 
 			RobotTransferWafer robot;
 			robot.is_finish = false;
-           if (direction->currentText() == "LP1<----->LP1"){
-
-			   if (lastlp != "ELP1"&&i != 0){
+           if (direction->currentText() == "LP1<----->LP1")
+		   {
+			   if (lastlp != "ELP1" && i != 0)
+			   {
 				   if (lp2num2 >= 1 && lp2num2 < 4){//lk2_to_lk2
 					   lp1num = lp2num2 + 5;
 					   lk2slot = lk1slot + 1;
 					   lk1_goto_lk2 = true;
 					   logInform("Cycle", "i=%d lp1num=%d lk2slot=%d lp2num=%d", i, lp1num, lk2slot, lp2num2);
 				   }
-				   else if (lp2num2 >= 5 && lp2num2 < 8){
+				   else if (lp2num2 >= 5 && lp2num2 < 8)
+				   {
 					   lp1num = lp2num2 - 3;
 					   lk2slot = lk1slot + 1;
 					   lk1_goto_lk2 = true;
 					   logInform("Cycle", "i=%d lp1num=%d lk2slot=%d lp2num2=%d ", i, lp1num, lk2slot, lp2num2);
 				   }
-				   else if (lp2num2 == 8){
+				   else if (lp2num2 == 8)
+				   {
 					   lp1num = 5;
 				   }
 			   }
 			   lastlp = "ELP1";
 			   lp1.source_lp = "ELP1";
 			  
-				if (isRobotLLA){//lp1num <= 4
+				if (isRobotLLA)
+				{//lp1num <= 4
 					robot.source_loadlock = "LLA";
 					robot.target_loadlock = "LLA";
 					robot.transfer = "lk1_to_lk1";
@@ -7258,21 +7350,27 @@ namespace FC{
 					//lp1.slot_lk = lk1slot;
 
 					robot.slot_lk = currentSlotNumber;
+
 					lp1.slot_lk = currentSlotNumber;
 					lp1.transfer = "lk1_to_lk1";
+
 					sequence_lp1_transfer_wafer.push_back(lp1);
 					sequence_lp1_transfer_wafer_copy.push_back(lp1);
+
 					sequence_tolk1_wafer.push_back(lp1);
 					sequence_tolk1_wafer_copy.push_back(lp1);
+
 					lasttransfer = "lk1_to_lk1";
 					lk1slot++;
-					if (lk1_goto_lk2&&lp1num==4){
+					if (lk1_goto_lk2 && lp1num == 4 )
+					{
 						lk1_goto_lk2 = false;
 						lk2slot = 1;
 						logInform("Cycle", "i=%d updatelk2slot=%d", i, lk2slot);
 					}
 				}
-				else{
+				else
+				{
 					robot.source_loadlock = "LLB";
 					robot.target_loadlock = "LLB";
 					robot.transfer = "lk2_to_lk2";
@@ -7291,13 +7389,15 @@ namespace FC{
 				}
 				robot.source_lp = "ELP1";
 				robot.slot_lp = lp1slot;
-			
-				logInform("Cycle", "i=%d lp1=%s %d %d %s %d %s", i, lp1.transfer, lp1.slot_lk, robot.slot_lp, lastlp, lp1num, robot.source_loadlock);
+				logInform("Cycle", "i=%d lp2=%s lk=%d lpnum=%d lastlp=%s lp1num=%d robotsource_loadlock=%s",
+					i, lp1.transfer, lp1.slot_lk, robot.slot_lp, lastlp, lp1num, robot.source_loadlock);
 				lp1num2 = lp1num;
 				lp1num++;
 			}
-			else if (direction->currentText() == "LP2<----->LP2"){
-				if (lastlp != "ELP2"&&i!=0){
+			else if (direction->currentText() == "LP2<----->LP2")
+		    {
+				if (lastlp != "ELP2"&&i!=0)
+				{
 					if (lp1num2 >= 1 && lp1num2 < 4){
 						lp2num = lp1num2 + 5;
 						lk1slot = lk2slot + 1;
@@ -7317,7 +7417,8 @@ namespace FC{
 				}
 				lastlp = "ELP2";
 				lp2.source_lp = "ELP2";
-				if (!isRobotLLA){//lp2num <= 4
+				if (!isRobotLLA)
+				{//lp2num <= 4
 					robot.source_loadlock = "LLB";
 					robot.target_loadlock = "LLB";
 					robot.transfer = "lk2_to_lk2";
@@ -7369,7 +7470,8 @@ namespace FC{
 			}
 
 			++currentSlotNumber;
-			if (currentSlotNumber > 4) {
+			if (currentSlotNumber > 4)
+			{
 				currentSlotNumber = 1;
 				isRobotLLA = !isRobotLLA;
 			}
@@ -7633,9 +7735,11 @@ namespace FC{
 		connect(s_ptr, &QFortrendStationStatusVTMWidget::signalUpdateRecipe, this, &QSlotTransferCycleVTMWidget::onUpdateRecipe);
 
 
-		d->ui->execute_pbt->setEnabled(false);
+		d->ui->execute_pbt->setEnabled(true);
 		initPMCavityParamEdieTableWidget();
+
 		d->ui->gbx_pm_parameter->hide();
+
 		d->ui->loadlock1_put_cassette_finished_pbt->hide();
 		d->ui->loadlock2_put_cassette_finished_pbt->hide();
 
@@ -8052,13 +8156,18 @@ namespace FC{
 
 		//start action & store param
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-		if (!pm2->getPMCavityMotorHomeSignal()){
-			QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
-			return;
+
+		//调试注释
+		if (SIM_CYCLE_MODE == 0)
+		{
+			if (!pm2->getPMCavityMotorHomeSignal()){
+				QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
+				return;
+			}
 		}
 
-		d->cycle_times_lla = d->ui->cycle_setting_times_sbx->value();
-		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();
+		d->cycle_times_lla = d->ui->cycle_setting_times_sbx->value(); //LP1循环次数
+		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();//LP2循环次数
 		//show parameter d->sequence_loadlock1_transfer_wafer.size() == 0 && d->sequence_loadlock2_transfer_wafer.size() == 0 &&
 		if (d->sequence_lp1_transfer_wafer.size() == 0 && d->sequence_lp2_transfer_wafer.size() == 0 &&
 			d->sequence_robot_transfer_wafer.size() == 0 && !d->ispause)//暂停重新启动的情况不需要重新配置
@@ -8075,26 +8184,36 @@ namespace FC{
 				return;
 			}
 		}
-		if (!isEnabledplcAuto()){
-			QMessageBox::warning(this, "警告", "PLC不在自动模式.");
-			return;
+		if (SIM_CYCLE_MODE == 0)
+		{
+			if (!isEnabledplcAuto()) {
+				QMessageBox::warning(this, "警告", "PLC不在自动模式.");
+				return;
+			}
 		}
 
 		d->running = true;
 		pm2->setIsRunning(d->running);
 		d->ispause = false;
+
 		std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::startVacuumAction, this);
 		thd_vacuum.detach();
+
 		std::thread thd_robot(&QSlotTransferCycleVTMWidget::startRobotAction, this);
 		thd_robot.detach();
+
 		std::thread thd_loadlock1(&QSlotTransferCycleVTMWidget::startLoadLock1Action, this);
 		thd_loadlock1.detach();
+
 		std::thread thd_loadlock2(&QSlotTransferCycleVTMWidget::startLoadLock2Action, this);
 		thd_loadlock2.detach();
+
 		std::thread thd_pm(&QSlotTransferCycleVTMWidget::startPMAction, this);
 		thd_pm.detach();
+
 		std::thread thd_update(&QSlotTransferCycleVTMWidget::startUpdateStatusAction, this);
 		thd_update.detach();
+
 		std::thread thd_efem(&QSlotTransferCycleVTMWidget::startEFEMAction, this);
 		thd_efem.detach();
 
@@ -8172,6 +8291,7 @@ namespace FC{
 		bool isCloseAngleValveTM = false;
 		bool isCloseAngleValveLLA = false;
 		bool isCloseAngleValveLLB = false;
+#if 0
 		while (true)
 		{
 			pm2->setIsRunning(d->running);
@@ -8361,6 +8481,8 @@ namespace FC{
 			}
 			Sleep(50);
 		}
+
+#endif
 	}
 
 	void QSlotTransferCycleVTMWidget::resetAction(){

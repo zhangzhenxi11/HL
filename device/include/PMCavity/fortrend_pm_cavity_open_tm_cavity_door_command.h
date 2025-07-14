@@ -22,11 +22,11 @@ namespace FC{
 	/**
 	* @brief  open tm cavity door command for pm_cavity
 	*/
-	class  PMCavityOpenTMCavityDoorCommand : public  KernelSubsystemCommand, public KeyencePlcCommandExecuter, public InovancePlcCommandExecuter {
+	class  PMCavityOpenTMCavityDoorCommand : public  KernelSubsystemCommand, public KeyencePlcCommandExecuter{
 
 	public:
 		DECLARE_PTR(PMCavityOpenTMCavityDoorCommand)
-		PMCavityOpenTMCavityDoorCommand(KeyencePlcSubSystemHelper* keyence_helper, InovancePlcSubSystemHelper* inovance_helper);
+		PMCavityOpenTMCavityDoorCommand(KeyencePlcSubSystemHelper* keyence_helper);
 		virtual std::string getName()const override { return "OpenTMCavityDoor"; }
 
 	protected:

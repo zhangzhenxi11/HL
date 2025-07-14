@@ -43,8 +43,7 @@ void EFEMAlignerSubsystem::onInitialize()throw(KernelException){
 	
 	try{
 		enableProtocol();
-		//setState(IKernelSubSystem::State::SUB_IDEL);
-		setState(IKernelSubSystem::State::SUB_NORMAL);
+		setState(IKernelSubSystem::State::SUB_IDEL);
 	}
 	catch (KernelException& e){
 		setState(IKernelSubSystem::State::SUB_NORMAL);

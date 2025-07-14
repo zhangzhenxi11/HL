@@ -337,14 +337,11 @@ bool EFEMWaferRobotSubsystem::hasFinishedCommandState()const{
 
 
 void EFEMWaferRobotSubsystem::onInitialize()throw(KernelException){
-	try{
-		//enableProtocol();
-		setState(IKernelSubSystem::State::SUB_NORMAL);
-		//setState(IKernelSubSystem::State::SUB_IDEL);
+	try {
+		setState(IKernelSubSystem::State::SUB_IDEL);
 	}
-	catch (KernelException& e){
+	catch (KernelException& e) {
 		logError(getName().c_str(), e.what());
-		//throw e;
 	}
 }
 

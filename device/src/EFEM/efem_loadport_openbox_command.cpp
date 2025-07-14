@@ -64,10 +64,10 @@ EFEMLoadPortOpenBoxCommand::RunResult EFEMLoadPortOpenBoxCommand::onRun() throw(
 		lp->timeout = timeout;
 	}
 	lp->primaryMessageName = this->getName();
-	//std::string str = Poco::format("ACK:%s", );
 	int lpn = lp->getName() == "ELP1" ? 1 : 2;
 	std::string str = Poco::format("MOV:OPEN/LP%d/%d", lpn, 0);
 	str.push_back(';');
+
 	bool result = lp->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;
 	if (!result){

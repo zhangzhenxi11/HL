@@ -230,6 +230,24 @@ void QEFEMRobotWaferAbstractSubsystemWidget::init(){
 	}
 	d->ui->arm_layout->addStretch();
 
+	auto cass = cassManager->getCassette(getSubsystem().get());
+	//create slot select
+	//for (int i = 0; i < cass->slotCount(); i++)
+	//{
+	//	QRadioButton* radioButton = new QRadioButton;
+	//	radioButton->setText(QString::fromStdString(std::to_string(i + 1)));
+	//	radioButton->setProperty("index", i + 1); //index
+
+	//	//d->ui->slots_layout->addWidget(radioButton, i % 10, i / 10);
+	//	if (i == 0)
+	//	{
+	//		radioButton->setChecked(true);
+	//	}
+	//}
+
+
+
+
 	//add status widget
 	d->ui->horizontalLayout_2->addWidget(new QFortrendMapperStatusWidget);
 	d->ui->horizontalLayout_2->addStretch();

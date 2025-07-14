@@ -263,17 +263,14 @@ void EFEMAsciiApi::onDataRecv(const char* data, unsigned int len){
 	//find => :
 	std::string message(data, data + len);
 	Poco::StringTokenizer messages(message, ";\r", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
-
 	// Process each message separately
 	for (int i = 0; i < messages.count(); ++i) {
 		std::string singleMessage = messages[i];
-		//logInform(getName().c_str(), "onDataRecv singleMessage=%s", singleMessage.c_str());
+		logInform(getName().c_str(), "onDataRecv singleMessage=%s", singleMessage.c_str());
 		if (singleMessage.size()>3){
 			processSingleMessage(singleMessage);
 		}
-	}
-
-	
+	}	
 }
 
 void EFEMAsciiApi::processSingleMessage(const std::string& message) {
@@ -302,7 +299,7 @@ void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 	//body
 	//std::string body = message.substr(pos1 + 1, pos2 - pos1 - 1);
 	std::string body = message.substr(pos1 + 1);
-	//logInform(getName().c_str(), "onDataRecv body=%s", body.c_str());
+	logInform(getName().c_str(), "onDataRecv body=%s", body.c_str());
 	//get base & paramers
 	Poco::StringTokenizer tokenizer(body, "/", 2);
 	if (tokenizer.count() == 0){
@@ -344,5 +341,20 @@ void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 	/*if (COMMUNICATING == getCommunicationState()){*/
 		handle(command);
 	//}
+}
+void EFEMAsciiApi::processEFEMessage(std::string& message)
+{
+	int pos1 = message.find(':');
+	int pos2 = message.find(';');
+	if (pos1 < 0 || pos1 >= message.size()) {
+		return;
+	}
+	std::string body = message.substr(pos1 + 1);
+	logInform(getName().c_str(), "onDataRecv body=%s", body.c_str());
+
+	if (body == "INIT/ALL")
+	{
+		return;
+	}
 }
 }

@@ -34,7 +34,6 @@
 #include "KeyencePLC/keyence_plc_command_executer.h"
 #include "KeyencePLC/keyence_plc_subsystem_helper.h"
 
-#define TEST_STATUS 1
 
 namespace FC{
 
@@ -146,6 +145,10 @@ namespace FC{
 		void setTMCavityPIDValue(const double pid_value);
 		bool writeTMCavityPIDValue(const double pid_value);
 		void recardVacuum()const;
+
+		//AWC(在位)感应器
+		bool getAwcPresentSensor(int index) const;
+		void setAwcPresentSensor(int index,bool state);
 
 	protected:
 		virtual void onInitialize()throw(KernelException)override;

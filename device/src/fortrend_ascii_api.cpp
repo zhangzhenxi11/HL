@@ -333,7 +333,14 @@ void FortrendAsciiEFEMApi::handle_UNLOAD(const std::shared_ptr<Command>& command
 
 
 void FortrendAsciiEFEMApi::handle_ALIGN(const std::shared_ptr<Command>& command){//ALIGN
-	
+	auto& paramers = command->message->paramers;
+	if (paramers.size() == 0) {
+		logError(getName().c_str(), "handle_ALIGN not paramers");
+		sendNAK(command->message, KernelSysException::ErrCode::KR_COMMON_COMMAND_PARAMER_ERROR);
+		return;
+	}
+	auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+	//aligner->handle(command);
 }
 
 

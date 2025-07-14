@@ -44,6 +44,9 @@ public:
 	virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
 	std::shared_ptr<AlignerAbstractVaccOnCommand> createVaccOnCommand() const override;
 	std::shared_ptr<AlignerAbstractVaccOffCommand> createVaccOffCommand() const override;
+
+	//EFEM ÕûÌå¸´Î»
+
 protected:
 	virtual void onInitialize()throw(KernelException)override;
 	virtual void onUnInitialize()override;

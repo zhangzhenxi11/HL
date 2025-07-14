@@ -55,61 +55,67 @@ namespace FC{
 		}
 		//1.全部的PM门阀关闭，2.TM腔的隔膜阀关闭，3.LLK-TM侧门阀关闭 4.TM腔盖已关闭 5.确保干泵处于打开状态
 
-		for (auto& ll : getSubsystem()->getKernel()->getKernelModules<FortrendLoadLockSubsystem>()) {
-			if (ll->getTMCavityDoorOpend())
+		//真空模式
+		if (sub->getVacuumEnable())
+		{
+
+			for (auto& ll : getSubsystem()->getKernel()->getKernelModules<FortrendLoadLockSubsystem>()) {
+				if (ll->getTMCavityDoorOpend())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("子系统: %s TM腔门阀未关闭（逻辑错误）", ll->getName()), this);
+				}
+			}
+
+			for (int i = 0; i <= 3; i++)
+			{
+				if (sub->getPMCavityDoorOpend(i))
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("子系统: %s PM%d腔门阀未关闭（逻辑错误）", sub->getName(), i), this);
+				}
+			}
+			if (sub->getSlowDiaphragmValveOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-					Poco::format("子系统: %s TM腔门阀未关闭（逻辑错误）", ll->getName()), this);
+					Poco::format("子系统: %s TM腔慢充隔膜阀未关闭（逻辑错误）", sub->getName()), this);
 			}
-		}
-
-		for (int i = 0; i <= 3; i++)
-		{
-			if (sub->getPMCavityDoorOpend(i))
+			if (sub->getFastDiaphragmValveOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-					Poco::format("子系统: %s PM%d腔门阀未关闭（逻辑错误）", sub->getName(), i), this);
+					Poco::format("子系统: %s TM腔快充隔膜阀未关闭（逻辑错误）", sub->getName()), this);
 			}
-		}
-		if (sub->getSlowDiaphragmValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-				Poco::format("子系统: %s TM腔慢充隔膜阀未关闭（逻辑错误）", sub->getName()), this);
-		}
-		if (sub->getFastDiaphragmValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-				Poco::format("子系统: %s TM腔快充隔膜阀未关闭（逻辑错误）", sub->getName()), this);
-		}
 
-		//if (sub->getHeightVacuumBaffleValveOpend())
-		//{
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
-		//		Poco::format("%s高真空挡板阀未关闭(逻辑错误)", sub->getName()), this);
-		//}
+			//if (sub->getHeightVacuumBaffleValveOpend())
+			//{
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
+			//		Poco::format("%s高真空挡板阀未关闭(逻辑错误)", sub->getName()), this);
+			//}
 
-		/*if (lk2->getAngleValveOpend() && pump->getMolecularPumpOpenedLLB() && sub->getTMCavityVacuumValue() > 15.0)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
-			Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk2->getName(), sub->getName()), this);
-		}
+			/*if (lk2->getAngleValveOpend() && pump->getMolecularPumpOpenedLLB() && sub->getTMCavityVacuumValue() > 15.0)
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
+				Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk2->getName(), sub->getName()), this);
+			}
 
-		if (lk1->getAngleValveOpend() && pump->getMolecularPumpOpenedLLA() && sub->getTMCavityVacuumValue() > 15.0)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
-			Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk1->getName(), sub->getName()), this);
-		}*/
+			if (lk1->getAngleValveOpend() && pump->getMolecularPumpOpenedLLA() && sub->getTMCavityVacuumValue() > 15.0)
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
+				Poco::format("工位: %s 角阀和分子泵阀已打开，%s 腔室当前压力未小于15Pa（逻辑错误）", lk1->getName(), sub->getName()), this);
+			}*/
 
-		if (!pump->getMechanicalPumpOpened())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
-				Poco::format("前级泵未打开（逻辑错误）", sub->getName()), this);
+			if (!pump->getMechanicalPumpOpened())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
+					Poco::format("前级泵未打开（逻辑错误）", sub->getName()), this);
+			}
+			if (sub->getMoleculePipelineVacuumValue() > 30) {
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
+					Poco::format("前级管道当前压力未小于30Pa（逻辑错误）", sub->getName()), this);
+			}
 
 		}
-		if (sub->getMoleculePipelineVacuumValue() > 30){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, 
-				Poco::format("前级管道当前压力未小于30Pa（逻辑错误）",sub->getName()), this);
-		}
+		
 		
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());

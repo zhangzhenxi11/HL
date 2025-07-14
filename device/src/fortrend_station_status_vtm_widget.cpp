@@ -65,6 +65,8 @@
 
 #include "Aligner/fortrend_aligner_align_command.h"
 
+#include "VTMSignalTower/fortrend_vtm_signal_tower.h"
+
 #include  "PMCavity/fortrend_pm_cavity_to_get_station_command.h"
 #include  "PMCavity/fortrend_pm_cavity_to_put_station_command.h"
 
@@ -109,6 +111,7 @@ namespace FC{
 		void onAttributeChange(const FC::FortrendCassetteManager *arg) override;
 		void onAttributeChange(const FC::Cassette *arg) override;
 		void onRecipe();
+		void onEfemReset();
 
 
 	private:
@@ -147,6 +150,9 @@ namespace FC{
 		std::shared_ptr<FortrendTMCavitySubsystem> tm;
 		std::shared_ptr<FortrendAlignerSubsystem> aligner;
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr;
+		//25-7-9 新增
+		std::shared_ptr<FortrendVTMSignalTower> tower;
+
 		std::shared_ptr<FortrendCassetteManager> cassManager;
 
 		//执行指令的widget，继承了QKernelModuleWidget
@@ -186,6 +192,8 @@ namespace FC{
 		tm  = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		aligner = kernel->getKernelModule<FortrendAlignerSubsystem>("Aligner");
+		tower = kernel->getKernelModule<FortrendVTMSignalTower>("Tower");
+
 		cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 		robotdialog = new RobotDialog(p);
 		robotdialog->setWindowFlags(robotdialog->windowFlags() | Qt::WindowStaysOnTopHint);
@@ -196,7 +204,7 @@ namespace FC{
 		stationidpm2 = pm2->getStationId(wtr->getName());
 		//stationidaligner = aligner->getStationId(wtr->getName());
 		
-		//添加到订阅者中，， event发生，lk1模组接收到信息
+		//  订阅者是this：当前界面,界面触发信号，模组就执行指令
 		lk1->addEventListener(this);
 		lk2->addEventListener(this);
 		pm1->addEventListener(this);
@@ -534,6 +542,11 @@ namespace FC{
 		emit q_ptr->signalUpdateRecipe(ui->recipe_box->currentIndex());
 	}
 
+	void QFortrendStationStatusVTMWidgetPrivate::onEfemReset()
+	{
+		tower->EfemResetAll();
+	}
+
 	
 
 	//QFortrendStationStatusVTMWidget
@@ -695,6 +708,9 @@ namespace FC{
 		connect(d->ui->robot_widget, &vtmrobot::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(9); d->ui->center_layout->setCurrentIndex(9);});
 		
 		connect(d->ui->recipe_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onRecipe);
+
+		connect(d->ui->reset_all_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onEfemReset);
+		
 
 		d->ui->recipe_box->addItem("单A模式");
 		d->ui->recipe_box->addItem("单B模式");
@@ -1566,6 +1582,13 @@ namespace FC{
 	void QFortrendStationStatusVTMWidget::onRecipe(){
 		Q_D(QFortrendStationStatusVTMWidget);
 		d->onRecipe();
+	}
+
+	void QFortrendStationStatusVTMWidget::onEfemReset()
+	{
+		Q_D(QFortrendStationStatusVTMWidget);
+
+		d->onEfemReset();
 	}
 
 	void QFortrendStationStatusVTMWidget::setAxislocation(double location){

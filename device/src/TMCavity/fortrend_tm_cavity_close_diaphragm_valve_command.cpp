@@ -68,15 +68,15 @@ namespace FC{
 		bool write_resuslt = false;
 		if (d->opening == TMCavityValveOpening::TMCavity_Slow)
 		{
-			write_resuslt = writeBit(address1, false);
+			write_resuslt = writeBit(address1, true);
 		}
 		else if (d->opening == TMCavityValveOpening::TMCavity_Fast)
 		{
-			write_resuslt = writeBit(address2, false);
+			write_resuslt = writeBit(address2, true);
 		}
 		else
 		{
-			write_resuslt = (writeBit(address1, false) && writeBit(address2, false));//都关
+			write_resuslt = (writeBit(address1, true) && writeBit(address2, true));//都关
 		}
 		if (write_resuslt)
 		{

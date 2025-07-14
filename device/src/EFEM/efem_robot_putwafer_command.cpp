@@ -9,6 +9,7 @@
 #include "EFEM/efem_robot_putwafer_command.h"
 #include "Kernel/Fortrend/fortrend_station.h"
 #include "EFEM/efem_wafer_robot_subsystem.h"
+#include "EFEM/efem_aligner_subsystem.h"
 #include "Kernel/Fortrend/fortrend_cassette_manager.h"
 #include "Kernel/Fortrend/robot_command_helper.h"
 #include "Kernel/kernel.h"
@@ -220,7 +221,19 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 
 		stationName = stationName == "ELP1" ? "LP1" : "LP2";
 	}
-	else{
+	else if (stationName == "EALIGNER")
+	{
+		std::shared_ptr<EFEMAlignerSubsystem> aligner = std::dynamic_pointer_cast<EFEMAlignerSubsystem>(getStation());
+		if (!aligner) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s is NULL ", getStation()->getName()), this);
+		}
+		if (aligner->getState() != IKernelSubSystem::State::SUB_NORMAL) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
+		}
+		stationName =  "ALIGNER"; 
+	}
+	else
+	{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
 		if (!lk){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s is NULL ", getStation()->getName()), this);
@@ -243,13 +256,10 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, "EFEM机械手的手爪二不能放LL腔最下面一层", this);
 		}
 		
-		stationName = stationName == "LLA" ? "TOOL1" : "TOOL2";
+		stationName = stationName == "LLA" ? "TOOLA1" : "TOOLA2"; //修改
 		slotnum = 1;
 	}
 	
-
-
-
 	if (mapStat != Cassette::Mapping::Empty){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_STATE_EXCEPTION, Poco::format("Station %s slot %d  not empty.", getStation()->getName(), (int)getSlot()), this);
 	}

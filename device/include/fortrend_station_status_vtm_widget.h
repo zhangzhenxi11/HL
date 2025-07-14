@@ -117,7 +117,7 @@ namespace FC {
 		void _onSelectBSlot(int solt);
 		void onRecipe();
 
-
+		void onEfemReset();
 
 	private:
 		virtual std::string getName()const { return "station_Status"; }

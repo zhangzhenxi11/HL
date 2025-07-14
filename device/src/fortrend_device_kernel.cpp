@@ -190,18 +190,18 @@ namespace FC{
 		}
 
 		//set elp virtual cassette
-		//for (auto& ewtr : getKernelModules<EFEMLPSubsystem>()){
-		//	//virtual cassette
-		//	Cassette::Ptr cass(new Cassette(ewtr.get(), 25, true));
-		//	cass->setBoxId(Poco::format("%s", ewtr->getName()));
-		//	cass->setBoxOpened(true);
-		//	for (size_t i = 0; i < 25; i++){
-		//		cass->setMapping(i + 1, Cassette::Empty);
-		//	}
-		//	cassManager->loadCassette(ewtr.get(), cass);
-		//}
+		for (auto& ewtr : getKernelModules<EFEMLPSubsystem>()){
+			//virtual cassette
+			Cassette::Ptr cass(new Cassette(ewtr.get(), 25, true));
+			cass->setBoxId(Poco::format("%s", ewtr->getName()));
+			cass->setBoxOpened(true);
+			for (size_t i = 0; i < 25; i++){
+				cass->setMapping(i + 1, Cassette::Empty);
+			}
+			cassManager->loadCassette(ewtr.get(), cass);
+		}
 
-		//set aligner virtual cassette
+		//set efem aligner virtual cassette
 		for (auto& ewtr : getKernelModules<EFEMAlignerSubsystem>()){
 			//virtual cassette
 			Cassette::Ptr cass(new Cassette(ewtr.get(), 1, true));

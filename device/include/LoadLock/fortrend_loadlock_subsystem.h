@@ -173,6 +173,9 @@ namespace FC{
 		Cassette::Mapping handleSingleSlotMapping(short mapRes);
 
 
+		bool getLoadLockCavitySafeSignal();
+		void setLoadLockCavitySafeSignal(const bool value);
+
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

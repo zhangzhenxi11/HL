@@ -550,20 +550,15 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 }
 
 void EFEMLPSubsystem::onInitialize()throw(KernelException){
-	try{
-
-		//if (api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING){
-		//	setState(IKernelSubSystem::State::SUB_IDEL);
-		//}
-		//else{
-		//	setState(IKernelSubSystem::State::SUB_UNKNOWN);
-		//}
-		//²âÊÔ
-		setState(IKernelSubSystem::State::SUB_NORMAL);
-		//enableProtocol();
-
+	try {
+		if (api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING) {
+			setState(IKernelSubSystem::State::SUB_IDEL);
+		}
+		else {
+			setState(IKernelSubSystem::State::SUB_UNKNOWN);
+		}
 	}
-	catch (KernelException& e){
+	catch (KernelException& e) {
 		logError(IKernelSubSystem::getName().c_str(), e.what());;
 		//throw e;
 	}

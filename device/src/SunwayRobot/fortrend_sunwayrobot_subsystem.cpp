@@ -47,6 +47,20 @@ namespace FC{
 		std::vector<int> arm_wafer_slot;
 		FortrendSunwayRobotSubsystem::AWCRecordData awc_record_data[3];
 
+		std::string LLACavitySafetySignalAddress = "";
+		std::string LLBCavitySafetySignalAddress = "";
+		std::string PM1CavitySafetySignalAddress = "";
+		std::string PM2CavitySafetySignalAddress = "";
+		std::string PM3CavitySafetySignalAddress = "";
+		std::string PM4CavitySafetySignalAddress = "";
+
+		bool LLASafetySignal = false;
+		bool LLBSafetySignal = false;
+		bool PM1SafetySignal = false;
+		bool PM2SafetySignal = false;
+		bool PM3SafetySignal = false;
+		bool PM4SafetySignal = false;
+
 		bool vacuum_enable = false;
 		bool with_wafer_mode = false;
 		bool has_reset_flag = false; //是否复位过的标记
@@ -191,8 +205,8 @@ namespace FC{
 
 	void FortrendSunwayRobotSubsystem::onInitialize()throw(KernelException){
 		try{
-			enableProtocol();
-			setState(IKernelSubSystem::State::SUB_NORMAL);
+			//enableProtocol();
+			//setState(IKernelSubSystem::State::SUB_NORMAL);
 		}
 		catch (KernelException& e){
 			setState(IKernelSubSystem::State::SUB_NORMAL);
@@ -244,6 +258,16 @@ namespace FC{
 						d->arm_wafer_slot.push_back(0);
 					}
 				} while (false);
+			}
+
+			if (config->has("Update"))
+			{
+				d->LLACavitySafetySignalAddress = config->getString("Update.LLACavitySafetySignal","");
+				d->LLBCavitySafetySignalAddress = config->getString("Update.LLBCavitySafetySignal","");
+				d->PM1CavitySafetySignalAddress = config->getString("Update.PM1CavitySafetySignal","");
+				d->PM2CavitySafetySignalAddress = config->getString("Update.PM2CavitySafetySignal", "");
+				d->PM3CavitySafetySignalAddress = config->getString("Update.PM3CavitySafetySignal", "");
+				d->PM4CavitySafetySignalAddress = config->getString("Update.PM4CavitySafetySignal", "");
 			}
 
 

@@ -55,6 +55,8 @@ namespace FC{
 		KernelCommandParameter parameter(shared_from_this());
 
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
+		
+		return IKernelCommand::RunResult::RUN_OK;
 		for (auto robot : sub->getRobots()){
 			if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("机械手: %s 状态未处于正常状态.", robot->getName()), this);

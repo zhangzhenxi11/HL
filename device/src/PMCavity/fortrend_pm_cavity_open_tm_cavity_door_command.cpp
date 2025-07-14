@@ -39,8 +39,8 @@ namespace FC{
 	/**
 	* PMCavityOpenTMCavityDoorCommand
 	*/
-	PMCavityOpenTMCavityDoorCommand::PMCavityOpenTMCavityDoorCommand(KeyencePlcSubSystemHelper* keyence_helper, InovancePlcSubSystemHelper* inovance_helper)
-		:KeyencePlcCommandExecuter(keyence_helper) , InovancePlcCommandExecuter(inovance_helper){
+	PMCavityOpenTMCavityDoorCommand::PMCavityOpenTMCavityDoorCommand(KeyencePlcSubSystemHelper* keyence_helper)
+		:KeyencePlcCommandExecuter(keyence_helper) {
 		//setMessageName("OpenTMCavityDoor");
 		//setDescription("open tm cavity door the pm cavity");
 	};
@@ -83,11 +83,11 @@ namespace FC{
 			return RunResult::RUN_OK;
 		}
 #endif
-		if (!sub->getPMCavityEnable()) {
-		
-			logInform(sub->getName().c_str(), "PM模块设置不启用,打开PM腔指令不去执行...");
-			return RunResult::RUN_OK;
-		};
+		//if (!sub->getPMCavityEnable()) {
+		//
+		//	logInform(sub->getName().c_str(), "PM模块设置不启用,打开PM腔指令不去执行...");
+		//	return RunResult::RUN_OK;
+		//};
 
 
 		FortrendTMCavitySubsystem * tm = dynamic_cast<FortrendTMCavitySubsystem*>((sub->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM")).get());
@@ -95,6 +95,8 @@ namespace FC{
 		if (!tm){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "传输腔类型错误", this);
 		}
+		//调试注释
+#if 0
 		if (!tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "TM传输腔当前的的真空值未达到上限设定值", this);
@@ -137,7 +139,7 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误），请检查压力是否正常", tm->getName()), this);
 			}*/
 		}
-		
+#endif	
 		//check modules
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass
@@ -145,6 +147,8 @@ namespace FC{
 		if (!station_cass){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
 		}
+		//调试注释
+#if 0
 		if (station_cass->getMapping(1) == Cassette::Mapping::Present)
 		{
 			if (sub->getPMCavityGetRequest() == false)
@@ -162,13 +166,14 @@ namespace FC{
 		else{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔晶圆状态异常！", this);
 		}
+
 		//读取PM腔的PLC报警
 		if (sub->getPMCavityHasAlarm())
 		{
 			std::string message = sub->getPMCavityAlarmMessage();
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, message, this);
 		}
-
+#endif
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
@@ -222,7 +227,7 @@ namespace FC{
 			logInform(sub->getName().c_str(), "打开传输腔插板门阀命令完成");
 
 		}
-		else if (readFailedState && failedRes)
+		else if (failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开传输腔门阀命令执行失败，打开传输腔门阀到位信号异常"));
 			setAlarm(alarm);
