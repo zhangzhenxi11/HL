@@ -131,7 +131,43 @@
           </column>
           <column>
            <property name="text">
-            <string>PM
+            <string>PM1
+是否启用</string>
+           </property>
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>PM2
+是否启用</string>
+           </property>
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>PM3
+是否启用</string>
+           </property>
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>PM4
 是否启用</string>
            </property>
            <property name="font">
@@ -194,8 +230,7 @@
           </column>
           <column>
            <property name="text">
-            <string>温度设定
-(℃)</string>
+            <string>电机升降开始位置/mm</string>
            </property>
            <property name="font">
             <font>
@@ -206,8 +241,7 @@
           </column>
           <column>
            <property name="text">
-            <string>粗抽压力
-(Pa)</string>
+            <string>电机旋转角度/°</string>
            </property>
            <property name="font">
             <font>
@@ -218,8 +252,7 @@
           </column>
           <column>
            <property name="text">
-            <string>精抽压力
-(Pa)</string>
+            <string>旋转次数</string>
            </property>
            <property name="font">
             <font>
@@ -230,8 +263,7 @@
           </column>
           <column>
            <property name="text">
-            <string>溅射压力
-(Pa)</string>
+            <string>电机旋转位置/mm</string>
            </property>
            <property name="font">
             <font>
@@ -242,8 +274,7 @@
           </column>
           <column>
            <property name="text">
-            <string>溅射流量1
-(sccm)</string>
+            <string>电机升降结束位置/mm</string>
            </property>
            <property name="font">
             <font>
@@ -254,164 +285,7 @@
           </column>
           <column>
            <property name="text">
-            <string>溅射流量2
-(sccm)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射流量3
-(sccm)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射功率1
-(W)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射功率
-增速1(W/S)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射功率2
-(W)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射功率
-增速2(W/S)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射功率3
-(W)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>溅射功率
-增速3(W/S)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>预溅射
-时间(min)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>工艺溅射
-旋转速度(°/S)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>工艺溅射
-时间(min)</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>1#阴极
-电源选择</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>2#阴极
-电源选择</string>
-           </property>
-           <property name="font">
-            <font>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>3#阴极
-电源选择</string>
+            <string>工艺时间/min</string>
            </property>
            <property name="font">
             <font>

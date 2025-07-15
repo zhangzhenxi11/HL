@@ -100,15 +100,15 @@
 #include  <QCheckBox>
 #include  <QCoreApplication>
 #include  <QDir>
-#include <QtWidgets/QCheckBox>
-#include <QMessageBox>
-
+#include "./device/UnifiedWaferTask.h"
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
 
 namespace FC{
+
+
 	//LK 内部传输任务 (机械手搬运)
 	struct LoadLockTransferWafer{
 		int slot = 0;
@@ -137,9 +137,27 @@ namespace FC{
 		bool pm1_is_enable = true;
 		bool pm2_is_enable = true;
 		bool pm3_is_enable = true;
+		bool pm4_is_enable = true;//add
 		bool is_finish = false;
 	};
 
+	// 定义传输任务结构体
+	struct TransferTask {
+		enum PortType { LP1, LP2 };
+		enum LockType { LLA, LLB };
+
+		PortType sourcePort;
+		LockType targetLock;
+		int sourceSlot;   // LoadPort中的槽位
+		int targetSlot;   // LoadLock中的槽位
+		int arm;          // 机械臂选择 (0=A, 1=B)
+		bool pm1Enabled;  // 处理模块1使能
+		bool pm2Enabled;  // 处理模块2使能
+		bool pm3Enabled;  // 处理模块3使能
+		bool pm4Enabled;  // 处理模块4使能
+	};
+
+	UnifiedWaferTask UnifiedTask; //统一结构体
 
 	/**
 	* QSlotTransforEditor
@@ -163,6 +181,9 @@ namespace FC{
 	public:
 		Q_DECLARE_PUBLIC(QSlotTransferCycleVTMWidget)
 			QSlotTransferCycleVTMWidgetPrivate(QSlotTransferCycleVTMWidget*p);
+	public:
+		//// 声明友元类
+		//friend class TaskManager;
 
 		void startLoadLock1Action();
 		void startLoadLock2Action();
@@ -178,6 +199,9 @@ namespace FC{
 		
 		//获取UI流程队列
 		bool setTransferSequence();
+
+		//衡流获取UI流程队列
+		bool setHLTransferSequence();
 
 		bool setPMCavityParameter();
 
@@ -5470,16 +5494,23 @@ namespace FC{
 			case 10:
 			{
 				loadlock1_process_finished = false;
-				if (sequence_lp1_transfer_wafer.size() == 0 && !is_lp2_cycle && is_lp1_cycle){
+
+				if (sequence_lp1_transfer_wafer.size() == 0 && !is_lp2_cycle && is_lp1_cycle)
+				{
 					loadlock1_auto_step = 6000;
 				}
-				if (sequence_robot_transfer_wafer.size()>0 && sequence_tolk1_wafer.size()>0
-					&& sequence_robot_transfer_wafer[0].transfer != sequence_tolk1_wafer[0].transfer){
+				if (sequence_robot_transfer_wafer.size()>0 
+					&& sequence_tolk1_wafer.size()>0
+					&& sequence_robot_transfer_wafer[0].transfer != sequence_tolk1_wafer[0].transfer)
+				{
 					Sleep(20000);
 				}
-				if (sequence_loadlock1_transfer_wafer.size() == 0 && sequence_tolk1_wafer.size()>0
-					&& !tool1_allow_get_wafer&& !tool1_allow_put_wafer&&!is_lp1_cycle)//需要上料
-				{
+				if (sequence_loadlock1_transfer_wafer.size() == 0 
+					&& sequence_tolk1_wafer.size()>0
+					&& !tool1_allow_get_wafer
+					&& !tool1_allow_put_wafer
+					&& !is_lp1_cycle)
+				{//需要上料
 					
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -7249,10 +7280,12 @@ namespace FC{
 		int lk1slot = 1;
 		int lk2slot = 1;
 
-		//lpnum跟踪每个LoadPort（LP）的晶圆传输顺序编号
+		//lpnum跟踪每个LoadPort（LP）的晶圆传输顺序编号,1-8循环
+		//LL总共能放8片
 		int lp1num = 1;
 		int lp2num = 1;
 
+		//记录上一次传输的序号，用于方向切换时的槽位计算
 		int lp1num2 = 1;
 		int lp2num2 = 1;
 
@@ -7276,22 +7309,25 @@ namespace FC{
 			QWidget *widget_loadlock2 = ui->sequence_edit_tbw->cellWidget(i, 2);
 			QComboBox *loadlock2_slot = (QComboBox*)widget_loadlock2;
 
-			/*QWidget *widget_pm1 = ui->sequence_edit_tbw->cellWidget(i, 4);
-			QCheckBox *pm1 = (QCheckBox*)widget_pm1;*/
+			QWidget *widget_pm1 = ui->sequence_edit_tbw->cellWidget(i, 4);
+			QCheckBox *pm1 = (QCheckBox*)widget_pm1;
 
-			QWidget *widget_pm2 = ui->sequence_edit_tbw->cellWidget(i, 4);
+			QWidget *widget_pm2 = ui->sequence_edit_tbw->cellWidget(i, 5);
 			QCheckBox *pm2 = (QCheckBox*)widget_pm2;
 
-			/*QWidget *widget_pm3 = ui->sequence_edit_tbw->cellWidget(i, 6);
-			QCheckBox *pm3 = (QCheckBox*)widget_pm3;*/
+			QWidget *widget_pm3 = ui->sequence_edit_tbw->cellWidget(i, 6);
+			QCheckBox *pm3 = (QCheckBox*)widget_pm3;
+
+			QWidget* widget_pm4 = ui->sequence_edit_tbw->cellWidget(i, 7);
+			QCheckBox* pm4 = (QCheckBox*)widget_pm4;
 
 			int lp1slot = loadlock1_slot->currentText().toInt();//1
 			int lp2slot = loadlock2_slot->currentText().toInt();//1
 
 			if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
 			{//禁用efem
-				lk1slot = lp1slot % 4 == 0 ? 4 : lp1slot % 4;//1  1，2，3，4层 ，loadlock共4层的晶圆盒，所以取4的余数
-				lk2slot = lp2slot % 4 == 0 ? 4 : lp2slot % 4;//1
+				lk1slot = lp1slot % 4 == 0 ? 4 : lp1slot % 4;// 1，2，3，4层 ，loadlock共4层的晶圆盒，所以取4的余数
+				lk2slot = lp2slot % 4 == 0 ? 4 : lp2slot % 4;//
 			}
 			else{
 				lk1slot = lk1slot > 4 ? 1 : lk1slot;
@@ -7389,7 +7425,7 @@ namespace FC{
 				}
 				robot.source_lp = "ELP1";
 				robot.slot_lp = lp1slot;
-				logInform("Cycle", "i=%d lp2=%s lk=%d lpnum=%d lastlp=%s lp1num=%d robotsource_loadlock=%s",
+				logInform("Cycle", "i=%d lp2=%s lk=%d robot.slot_lp=%d lastlp=%s lp1num=%d robotsource_loadlock=%s",
 					i, lp1.transfer, lp1.slot_lk, robot.slot_lp, lastlp, lp1num, robot.source_loadlock);
 				lp1num2 = lp1num;
 				lp1num++;
@@ -7460,7 +7496,7 @@ namespace FC{
 			
 				robot.source_lp = "ELP2";
 				robot.slot_lp = lp2slot;
-				logInform("Cycle", "i=%d lp2=%s lk=%d lpnum=%d lastlp=%s lp2num=%d robotsource_loadlock=%s", i, lp2.transfer, lp2.slot_lk, robot.slot_lp, lastlp, lp2num, robot.source_loadlock);
+				logInform("Cycle", "i=%d lp2=%s lk=%d robot.slot_lp=%d lastlp=%s lp2num=%d robotsource_loadlock=%s", i, lp2.transfer, lp2.slot_lk, robot.slot_lp, lastlp, lp2num, robot.source_loadlock);
 				lp2num2 = lp2num;
 				lp2num++;
 			}
@@ -7504,13 +7540,182 @@ namespace FC{
 				sequence_robot_transfer_wafer_lp1.push_back(robot);
 			}
 			sequence_robot_transfer_wafer.push_back(robot);
-
 		}
 
 		if (ui->sequence_edit_tbw->rowCount() > 0)
 		{
 			onUpdateProcessControlEnabled(false);
 			logInform("Cycle", "Cycle开始");
+			return true;
+		}
+		return false;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::setHLTransferSequence()
+	{// 清空所有序列
+		sequence_robot_transfer_wafer.clear();
+		sequence_loadlock1_transfer_wafer.clear();
+		sequence_loadlock2_transfer_wafer.clear();
+		sequence_loadlock1_put_wafer.clear();
+		sequence_loadlock2_put_wafer.clear();
+		sequence_lp1_transfer_wafer.clear();
+		sequence_lp2_transfer_wafer.clear();
+		sequence_lp1_transfer_wafer_copy.clear();
+		sequence_lp2_transfer_wafer_copy.clear();
+		sequence_tolk1_wafer.clear();
+		sequence_tolk2_wafer.clear();
+		sequence_tolk1_wafer_copy.clear();
+		sequence_tolk2_wafer_copy.clear();
+
+		// 创建任务队列
+		std::vector<TransferTask> tasks;
+		int llaSlot = 1;  // LLA当前槽位
+		int llbSlot = 1;  // LLB当前槽位
+
+		// 处理UI中的每一行
+		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i) {
+			// 解析UI数据
+			QComboBox* direction = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 1));
+			QComboBox* arm = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 3));
+			QComboBox* loadlock1_slot = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 0));
+			QComboBox* loadlock2_slot = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 2));
+
+			QCheckBox* pm1 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 4));
+			QCheckBox* pm2 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 5));
+			QCheckBox* pm3 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 6));
+			QCheckBox* pm4 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 7));
+			// 确定源端口和槽位
+			TransferTask task;
+
+			if (direction->currentText() == "LP1<----->LP1") {
+				task.sourcePort = TransferTask::LP1;
+				task.sourceSlot = loadlock1_slot->currentText().toInt();
+			}
+			else if (direction->currentText() == "LP2<----->LP2") {
+				task.sourcePort = TransferTask::LP2;
+				task.sourceSlot = loadlock2_slot->currentText().toInt();
+			}
+			else {
+				// 无效方向
+				return false;
+			}
+
+			// 确定机械臂
+			if (arm->currentText() == "A") {
+				task.arm = 0;
+			}
+			else if (arm->currentText() == "B") {
+				task.arm = 1;
+			}
+			else {
+				// 无效手臂选择
+				return false;
+			}
+
+			// 处理模块状态
+			task.pm1Enabled = pm1->isChecked();
+			task.pm2Enabled = pm2->isChecked();
+			task.pm3Enabled = pm3->isChecked();
+			task.pm4Enabled = pm4->isChecked();
+
+
+			// 4. 轮换式LoadLock分配
+			const int GROUP_SIZE = 2;
+			int groupIndex = i / GROUP_SIZE;
+
+			//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB
+			if (groupIndex % 2 == 0)
+			{//偶数
+				task.targetLock = TransferTask::LLA;
+				task.targetSlot = llaSlot++;
+				if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
+			}
+			else 
+			{//奇数
+				task.targetLock = TransferTask::LLB;
+				task.targetSlot = llbSlot++;
+				if (llbSlot > GROUP_SIZE) llbSlot = 1;// 组内循环
+			}
+			tasks.push_back(task);
+
+			// 调试日志
+			logInform("TransferSetup", "Row %d: Group %d -> %s Slot %d",
+				i, groupIndex,
+				(task.targetLock == TransferTask::LLA) ? "LLA" : "LLB",
+				task.targetSlot);
+		}
+
+		// 生成传输序列
+		for (const auto& task : tasks) {
+			// 创建晶圆传输记录
+			LPTransferWafer lpWafer;
+			lpWafer.slot_lp = task.sourceSlot;
+			lpWafer.slot_lk = task.targetSlot;
+			lpWafer.is_finish_putlk = false;
+
+			// 根据源端口添加到不同序列
+			if (task.sourcePort == TransferTask::LP1) {
+				lpWafer.transfer = (task.targetLock == TransferTask::LLA) ?
+					"lk1_to_lk1" : "lk2_to_lk2";
+				sequence_lp1_transfer_wafer.push_back(lpWafer);
+				sequence_lp1_transfer_wafer_copy.push_back(lpWafer);
+			}
+			else {
+				lpWafer.transfer = (task.targetLock == TransferTask::LLA) ?
+					"lk1_to_lk1" : "lk2_to_lk2";
+				sequence_lp2_transfer_wafer.push_back(lpWafer);
+				sequence_lp2_transfer_wafer_copy.push_back(lpWafer);
+			}
+
+			// 添加到目标LoadLock序列
+			if (task.targetLock == TransferTask::LLA) {
+				sequence_tolk1_wafer.push_back(lpWafer);
+				sequence_tolk1_wafer_copy.push_back(lpWafer);
+			}
+			else {
+				sequence_tolk2_wafer.push_back(lpWafer);
+				sequence_tolk2_wafer_copy.push_back(lpWafer);
+			}
+
+			// 创建机器人传输记录
+			RobotTransferWafer robot;
+			robot.is_finish = false;
+			robot.selected_arm = task.arm;
+			robot.source_lp = (task.sourcePort == TransferTask::LP1) ? "ELP1" : "ELP2";
+			robot.slot_lp = task.sourceSlot;
+			robot.source_loadlock = (task.targetLock == TransferTask::LLA) ? "LLA" : "LLB";
+			robot.target_loadlock = robot.source_loadlock;  // 同LoadLock传输
+			robot.transfer = (task.targetLock == TransferTask::LLA) ?
+				"lk1_to_lk1" : "lk2_to_lk2";
+			robot.pm1_is_enable = task.pm1Enabled;
+			robot.pm2_is_enable = task.pm2Enabled;
+			robot.pm3_is_enable = task.pm3Enabled;
+			robot.pm4_is_enable = task.pm4Enabled;
+
+			if (robot.source_lp == "ELP1")
+			{
+				sequence_robot_transfer_wafer_lp1.push_back(robot);
+			}
+			else
+			{
+				sequence_robot_transfer_wafer_lp2.push_back(robot);
+			}
+
+			sequence_robot_transfer_wafer.push_back(robot);
+
+			// 日志记录
+			logInform("Cycle", "i=%d source=%s slot_lp=%d target=%s slot_lk=%d arm=%d",
+				&task - &tasks[0],
+				robot.source_lp.c_str(),
+				robot.slot_lp,
+				robot.target_loadlock.c_str(),
+				lpWafer.slot_lk,
+				robot.selected_arm);
+		}
+
+		if (ui->sequence_edit_tbw->rowCount() > 0) {
+			onUpdateProcessControlEnabled(false);
+			logInform("Cycle", "传输序列生成完成");
 			return true;
 		}
 		return false;
@@ -7738,7 +7943,7 @@ namespace FC{
 		d->ui->execute_pbt->setEnabled(true);
 		initPMCavityParamEdieTableWidget();
 
-		d->ui->gbx_pm_parameter->hide();
+		//d->ui->gbx_pm_parameter->hide();
 
 		d->ui->loadlock1_put_cassette_finished_pbt->hide();
 		d->ui->loadlock2_put_cassette_finished_pbt->hide();
@@ -7800,17 +8005,21 @@ namespace FC{
 		transfer_robot_arm_selected_cbx->addItem("B");
 		d->ui->sequence_edit_tbw->setCellWidget(row_count, 3, transfer_robot_arm_selected_cbx);
 
-		/*QCheckBox *pm1_ckb = new QCheckBox();
+		QCheckBox *pm1_ckb = new QCheckBox();
 		pm1_ckb->setText("启用");
-		d->ui->sequence_edit_tbw->setCellWidget(row_count, 4, pm1_ckb);*/
+		d->ui->sequence_edit_tbw->setCellWidget(row_count, 4, pm1_ckb);
 
 		QCheckBox *pm2_ckb = new QCheckBox();
 		pm2_ckb->setText("启用");
-		d->ui->sequence_edit_tbw->setCellWidget(row_count, 4, pm2_ckb);
+		d->ui->sequence_edit_tbw->setCellWidget(row_count, 5, pm2_ckb);
 
-		/*QCheckBox *pm3_ckb = new QCheckBox();
+		QCheckBox *pm3_ckb = new QCheckBox();
 		pm3_ckb->setText("启用");
-		d->ui->sequence_edit_tbw->setCellWidget(row_count, 6, pm3_ckb);*/
+		d->ui->sequence_edit_tbw->setCellWidget(row_count, 6, pm3_ckb);
+
+		QCheckBox* pm4_ckb = new QCheckBox();
+		pm4_ckb->setText("启用");
+		d->ui->sequence_edit_tbw->setCellWidget(row_count, 7, pm4_ckb);
 
 	}
 
@@ -7957,13 +8166,29 @@ namespace FC{
 				QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
 				QString value = settings.value(key, "").toString();
 				QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-				if (j > 16)
-				{
-					QComboBox *combox = (QComboBox*)widget;
-					combox->setCurrentText(value);
 
+				//if (j > 16)
+				//{
+				//	QComboBox *combox = (QComboBox*)widget;
+				//	combox->setCurrentText(value);
+
+				//}
+				//else{
+				//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
+				//	dsb->setValue(value.toDouble());
+				//}
+				if (j == 2)
+				{
+					QComboBox* combox = (QComboBox*)widget;
+					combox->setCurrentText(value);
 				}
-				else{
+				else if (j == 3)
+				{
+					QSpinBox* spb = (QSpinBox*)widget;
+					spb->setValue(value.toDouble());
+				}
+				else 
+				{
 					QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
 					dsb->setValue(value.toDouble());
 				}
@@ -8002,7 +8227,7 @@ namespace FC{
 		QSettings settings(fileName, QSettings::IniFormat);
 
 		int rowCount = d->ui->sequence_edit_tbw->rowCount();
-		int columnCount = d->ui->sequence_edit_tbw->columnCount();
+		int columnCount = d->ui->sequence_edit_tbw->columnCount();//8
 		settings.setValue("rowCount", rowCount);
 		settings.setValue("columnCount", columnCount);
 
@@ -8019,10 +8244,8 @@ namespace FC{
 				QWidget *widget = d->ui->sequence_edit_tbw->cellWidget(i, j);
 				QCheckBox *combox = (QCheckBox*)widget;
 				settings.setValue(key, combox->isChecked());
-
 			}
 		}
-
 
 		int pm_rowCount = d->ui->pm_cavity_param_edit_tbw->rowCount();
 		int pm_columnCount = d->ui->pm_cavity_param_edit_tbw->columnCount();
@@ -8033,15 +8256,35 @@ namespace FC{
 			for (int j = 1; j < pm_columnCount; ++j) {
 				QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
 				QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-				if (j > 16)
+
+				//auto className = widget->metaObject()->className();
+				//qDebug() << "className:" << className << endl;
+
+				if (j == 2)
 				{
-					QComboBox *combox = (QComboBox*)widget;
+					QComboBox* combox = (QComboBox*)widget;
 					settings.setValue(key, combox->currentText());
 				}
-				else{
+				else if (j == 3)
+				{
+					QSpinBox* spb = (QSpinBox*)widget;
+					settings.setValue(key, spb->value());
+				}
+				else
+				{
 					QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
 					settings.setValue(key, dsb->value());
 				}
+
+				//if (j > 16)
+				//{
+				//	QComboBox *combox = (QComboBox*)widget;
+				//	settings.setValue(key, combox->currentText());
+				//}
+				//else{
+				//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
+				//	settings.setValue(key, dsb->value());
+				//}
 
 			}
 
@@ -8170,8 +8413,20 @@ namespace FC{
 		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();//LP2循环次数
 		//show parameter d->sequence_loadlock1_transfer_wafer.size() == 0 && d->sequence_loadlock2_transfer_wafer.size() == 0 &&
 		if (d->sequence_lp1_transfer_wafer.size() == 0 && d->sequence_lp2_transfer_wafer.size() == 0 &&
-			d->sequence_robot_transfer_wafer.size() == 0 && !d->ispause)//暂停重新启动的情况不需要重新配置
+			d->sequence_robot_transfer_wafer.size() == 0 )// && !d->ispause暂停重新启动的情况不需要重新配置
 		{
+
+
+			//测试
+			if (d->setHLTransferSequence())
+			{
+				d->ui->cycle_finished_times_spx->setValue(0);
+				d->ui->cycle_finished_times_spx_2->setValue(0);
+				logInform("Cycle", "传送HL流程配置成功。");
+
+				return;
+			}
+
 			if (d->setTransferSequence())
 			{
 				d->ui->cycle_finished_times_spx->setValue(0);
@@ -8493,15 +8748,16 @@ namespace FC{
 	void QSlotTransferCycleVTMWidget::initPMCavityParamEdieTableWidget(){
 		Q_D(QSlotTransferCycleVTMWidget);
 
-		
-		//addAnPMItem("PM1");
-		addAnPMItem("PM");
-		//addAnPMItem("PM3");
 
+		addAnPMItem("PM1");
+		addAnPMItem("PM2");
+		addAnPMItem("PM3");
+		addAnPMItem("PM4");
 	}
 
 	void QSlotTransferCycleVTMWidget::addAnPMItem(const QString name){
 		Q_D(QSlotTransferCycleVTMWidget);
+		
 		int row_count = d->ui->pm_cavity_param_edit_tbw->rowCount();
 		d->ui->pm_cavity_param_edit_tbw->insertRow(row_count);
 
@@ -8510,40 +8766,57 @@ namespace FC{
 		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
 
-		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 20.0, 650.0, 50, 100);    //温度设定
-		addEditTableWidgetItemDoubleSpinBox(row_count, 2, 1.0, 20.0, 1, 10);		 //粗抽压力
-		addEditTableWidgetItemDoubleSpinBox(row_count, 3, 0.00008, 0.1, 0.005, 0.02, 5); //精抽压力
-		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 0.0008, 1, 0.05, 0.02, 4); //溅射压力
-		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 0.0, 200.0, 10, 50);		 //溅射流量1
-		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0.0, 200.0, 10, 50);		 //溅射流量2
-		addEditTableWidgetItemDoubleSpinBox(row_count, 7, 0.0, 200.0, 10, 50);		 //溅射流量3
-		addEditTableWidgetItemDoubleSpinBox(row_count, 8, 0.0, 1000.0, 50, 500);   //溅射功率1
-		addEditTableWidgetItemDoubleSpinBox(row_count, 9, 1.0, 100.0, 10, 50);	 //溅射功率增速1
-		addEditTableWidgetItemDoubleSpinBox(row_count, 10, 0.0, 1000.0, 50, 500);  //溅射功率2
-		addEditTableWidgetItemDoubleSpinBox(row_count, 11, 1.0, 100.0, 10, 50);	 //溅射功率增速2
-		addEditTableWidgetItemDoubleSpinBox(row_count, 12, 0.0, 1000.0, 50, 500);  //溅射功率3
-		addEditTableWidgetItemDoubleSpinBox(row_count, 13, 1.0, 100.0, 10, 50);	 //溅射功率增速3
-		addEditTableWidgetItemDoubleSpinBox(row_count, 14, 0.0, 60.0, 5.0, 10.0);		 //预溅射事件
-		addEditTableWidgetItemDoubleSpinBox(row_count, 15, 0.0, 180.0, 10, 45.0);	 //工艺溅射旋转速度
-		addEditTableWidgetItemDoubleSpinBox(row_count, 16, 0.0, 120.0, 10, 30);    //工艺溅射时间
+		//int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value
+		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机升降开始位置
+		addEditTableWidgetItemComboBox(row_count, 2,1);//电机旋转角度/°
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 3,0,6,1,1);
+		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机升降结束位置/mm
 
-		QComboBox *cathode_power_selection_1_cbx = new QComboBox();
-		cathode_power_selection_1_cbx->addItem("无");
-		cathode_power_selection_1_cbx->addItem("DC");
-		cathode_power_selection_1_cbx->addItem("RF");
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 17, cathode_power_selection_1_cbx);
+		//旋转次数
+		QSpinBox* Rotation_count_spx = new QSpinBox();
+		Rotation_count_spx->setMinimum(0);
+		Rotation_count_spx->setMaximum(6);
+		Rotation_count_spx->setSingleStep(1);
+		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);
 
-		QComboBox *cathode_power_selection_2_cbx = new QComboBox();
-		cathode_power_selection_2_cbx->addItem("无");
-		cathode_power_selection_2_cbx->addItem("DC");
-		cathode_power_selection_2_cbx->addItem("RF");
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 18, cathode_power_selection_2_cbx);
+		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 1, 20.0, 650.0, 50, 100);    //温度设定
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 2, 1.0, 20.0, 1, 10);		 //粗抽压力
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 3, 0.00008, 0.1, 0.005, 0.02, 5); //精抽压力
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 4, 0.0008, 1, 0.05, 0.02, 4); //溅射压力
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 5, 0.0, 200.0, 10, 50);		 //溅射流量1
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0.0, 200.0, 10, 50);		 //溅射流量2
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 7, 0.0, 200.0, 10, 50);		 //溅射流量3
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 8, 0.0, 1000.0, 50, 500);   //溅射功率1
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 9, 1.0, 100.0, 10, 50);	 //溅射功率增速1
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 10, 0.0, 1000.0, 50, 500);  //溅射功率2
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 11, 1.0, 100.0, 10, 50);	 //溅射功率增速2
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 12, 0.0, 1000.0, 50, 500);  //溅射功率3
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 13, 1.0, 100.0, 10, 50);	 //溅射功率增速3
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 14, 0.0, 60.0, 5.0, 10.0);		 //预溅射事件
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 15, 0.0, 180.0, 10, 45.0);	 //工艺溅射旋转速度
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 16, 0.0, 120.0, 10, 30);    //工艺溅射时间
 
-		QComboBox *cathode_power_selection_3_cbx = new QComboBox();
-		cathode_power_selection_3_cbx->addItem("无");
-		cathode_power_selection_3_cbx->addItem("DC");
-		cathode_power_selection_3_cbx->addItem("RF");
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 19, cathode_power_selection_3_cbx);
+		//QComboBox *cathode_power_selection_1_cbx = new QComboBox();
+		//cathode_power_selection_1_cbx->addItem("无");
+		//cathode_power_selection_1_cbx->addItem("DC");
+		//cathode_power_selection_1_cbx->addItem("RF");
+		//d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 17, cathode_power_selection_1_cbx);
+
+		//QComboBox *cathode_power_selection_2_cbx = new QComboBox();
+		//cathode_power_selection_2_cbx->addItem("无");
+		//cathode_power_selection_2_cbx->addItem("DC");
+		//cathode_power_selection_2_cbx->addItem("RF");
+		//d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 18, cathode_power_selection_2_cbx);
+
+		//QComboBox *cathode_power_selection_3_cbx = new QComboBox();
+		//cathode_power_selection_3_cbx->addItem("无");
+		//cathode_power_selection_3_cbx->addItem("DC");
+		//cathode_power_selection_3_cbx->addItem("RF");
+		//d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 19, cathode_power_selection_3_cbx);
+
+
 	}
 
 
@@ -8616,6 +8889,25 @@ namespace FC{
 		dsb->setSingleStep(single_step);
 		dsb->setValue(value);
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row, column, dsb);
+	}
+	void QSlotTransferCycleVTMWidget::addEditTableWidgetItemComboBox(int row, int column, int value)
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		QComboBox* dcb = new QComboBox();
+		QMap<QString, int> AngleMap;
+		AngleMap.insert("0",0);
+		AngleMap.insert("60", 60);
+		AngleMap.insert("120", 120);
+		AngleMap.insert("180", 180);
+		AngleMap.insert("240", 240);
+		AngleMap.insert("300", 300);
+		AngleMap.insert("360", 360);
+		foreach(const QString & str, AngleMap.keys())
+			dcb->addItem(str, AngleMap.value(str));
+
+		dcb->setCurrentIndex(value);
+
+		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row,column,dcb);
 	}
 }
 

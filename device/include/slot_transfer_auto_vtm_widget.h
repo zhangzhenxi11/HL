@@ -64,7 +64,6 @@ namespace  FC {
 		void startLoadLock1Action();
 		void startLoadLock2Action();
 		void resetAction();
-
 		void threadShowAlarmMessage();
 		void threadGetPMCavityProcessData();
 

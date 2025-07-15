@@ -63,8 +63,13 @@ namespace  FC {
 		void update_cycle_data();
 		void updateProcessControlEnabled(const bool enabled);
 		void updateControlEnabled(const QString control,const bool enabled);
+
 		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 
 			double max_value, double single_step, double value, int decimals_value = 3);
+
+		void addEditTableWidgetItemComboBox(int row, int column,int value);
+
+
 	private:
 		void startVacuumAction();
 		void startVacuumMoniterAction();
@@ -78,6 +83,7 @@ namespace  FC {
 		void onProcess();
 		void initPMCavityParamEdieTableWidget();
 		void addAnPMItem(const QString name);
+
 
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)
