@@ -64,7 +64,7 @@ namespace FC{
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-		//return IKernelCommand::RunResult::RUN_OK;
+		return IKernelCommand::RunResult::RUN_OK;
 
 		//fill params
 		std::string start_address = command_config->getString("start_address", "");

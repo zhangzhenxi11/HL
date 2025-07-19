@@ -68,7 +68,8 @@ namespace  FC {
 			double max_value, double single_step, double value, int decimals_value = 3);
 
 		void addEditTableWidgetItemComboBox(int row, int column,int value);
-
+		//新增 流程启动
+		void startProcessingThreads();
 
 	private:
 		void startVacuumAction();

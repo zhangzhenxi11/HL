@@ -247,11 +247,10 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 	else {
 		station_cass->setMapping(1, Cassette::Present);
 	}
-
-
 	robot->setObject(getArm(), false);
-
-	//AWC 
+//AWC 
+# if 0
+	
 	if (d->station_name.find("PM") != std::string::npos)
 	{
 		auto pm = std::dynamic_pointer_cast<FortrendPMCavitySubsystem>(getStation());
@@ -268,7 +267,7 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 
 		sendRequest(command);
 		std::string rps = recvResponse(2000);
-# if 0
+
 		std::smatch match;
 		std::regex regexPattern("OFFSET\\s*(-?\\d{1,4})\\s*(-?\\d{1,4})\\s*(-?\\d{1,4})\\s*(-?\\d{1,4})");
 		try {
@@ -308,9 +307,9 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 			return false;
 		}
 
-#endif
-	}
 
+	}
+#endif
 	//对机械手的虚拟cassette，放晶圆完成后，更新状态
 	auto robot_mapping_res = robot_cass->getAllMapping();
 	robot_mapping_res[getArm()] = Cassette::Empty;
@@ -398,17 +397,20 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统类型错误", this);
 			}
-			if (!sub->getPMCavitySafeSignal())
+			if (WTR_SIM_MODE == 0)
 			{
-				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
-				Sleep(50);
 				if (!sub->getPMCavitySafeSignal())
 				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-						Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+					logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
+					Sleep(50);
+					if (!sub->getPMCavitySafeSignal())
+					{
+						throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+							Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+					}
 				}
-
 			}
+
 		}
 	}
 	else
@@ -419,20 +421,23 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "Loadlock子系统类型错误", this);
 			}
-			if (!sub->getLoadLockCavitySafeSignal())
+			if (WTR_SIM_MODE == 0)
 			{
-				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
-				Sleep(50);
 				if (!sub->getLoadLockCavitySafeSignal())
 				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-						Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+					logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
+					Sleep(50);
+					if (!sub->getLoadLockCavitySafeSignal())
+					{
+						throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+							Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+					}
 				}
 			}
-
 		}
 	}
-	if (station_cass->getMapping(mapping_slot) != Cassette::Mapping::Empty)
+
+	if (robot->getWithWaferModeEnable() && (station_cass->getMapping(mapping_slot) != Cassette::Mapping::Empty))
 	{
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, 
 			Poco::format("工位： %s 槽 %d 当前不为空.", getStation()->getName(), mapping_slot), this);
@@ -465,14 +470,12 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		);
 	}
 	// PM 工位处理
-	else if (getStation()->getName() == "PM")
+	else if (getStation()->getName().find("PM") != std::string::npos)
 	{
 		return performRobotOperation(
 			//指令回调函数
 			[this, robot, str_arm]() -> std::string {
 			int stationId = getStation()->getStationId(robot->getName());
-
-			stationId = (getStation()->getName() == "PM") ? 15 : stationId;
 
 			std::string command = "MOV:PUT/";
 

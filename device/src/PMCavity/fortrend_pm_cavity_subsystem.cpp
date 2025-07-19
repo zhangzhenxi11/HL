@@ -634,21 +634,20 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::onInitialize()throw(KernelException){
 		try{
-			if (SIMULATION_TEST == 1)
-			{
-				//setState(IKernelSubSystem::State::SUB_NORMAL);
-			}
-			else
-			{
-				if (KeyencePlcSubSystemHelper::enableProtocol()) 
-				{
-					setState(IKernelSubSystem::State::SUB_IDEL);
-					logInform(getName().c_str(), "设置模组状态 SUB_IDEL");
-				}
-				else {
-					setState(IKernelSubSystem::State::SUB_UNKNOWN);
-				}
-			}
+
+			setState(IKernelSubSystem::State::SUB_NORMAL);
+			//if (KeyencePlcSubSystemHelper::enableProtocol()) 
+			//{
+			//	setState(IKernelSubSystem::State::SUB_NORMAL);
+			//	//setState(IKernelSubSystem::State::SUB_IDEL);
+			//	//logInform(getName().c_str(), "设置模组状态 SUB_IDEL");
+			//}
+			//else {
+			//	setState(IKernelSubSystem::State::SUB_NORMAL);
+		
+			//	//setState(IKernelSubSystem::State::SUB_ERROR);
+			//}
+			
 		}
 		catch (KernelException& e){
 			logError(getName().c_str(), e.what());
@@ -811,7 +810,6 @@ namespace FC{
 		KernelAbstractSubSystem::onConfigure(config);
 		FortrendAbstractStation::configure(config);
 		configKeyencePlc(config);
-		//configInovancePlc(config);
 		d->io_input_count = inputCount();
 		for (size_t i = 0; i < d->io_input_count; i++)
 		{

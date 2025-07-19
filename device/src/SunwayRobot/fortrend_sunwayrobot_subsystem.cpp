@@ -61,8 +61,8 @@ namespace FC{
 		bool PM3SafetySignal = false;
 		bool PM4SafetySignal = false;
 
-		bool vacuum_enable = false;
-		bool with_wafer_mode = false;
+		bool vacuum_enable = false;  //真空模式
+		bool with_wafer_mode = false;//晶圆模式
 		bool has_reset_flag = false; //是否复位过的标记
 		std::string status;
 	};
@@ -205,11 +205,11 @@ namespace FC{
 
 	void FortrendSunwayRobotSubsystem::onInitialize()throw(KernelException){
 		try{
-			//enableProtocol();
-			//setState(IKernelSubSystem::State::SUB_NORMAL);
+			enableProtocol();
+			setState(IKernelSubSystem::State::SUB_IDEL);
 		}
 		catch (KernelException& e){
-			setState(IKernelSubSystem::State::SUB_NORMAL);
+			
 			logError(getName().c_str(), e.what());;
 			//throw e;
 		}

@@ -415,24 +415,19 @@ namespace FC{
 	}
 
 	void FortrendLoadLockSubsystem::onInitialize()throw(KernelException){
-
-		if (SIMULATION_TEST == 1)
-		{
-			setState(IKernelSubSystem::State::SUB_NORMAL);
-		}
-		else
-		{
-			try {
-				if (enableProtocol())
-					setState(IKernelSubSystem::State::SUB_IDEL);
-				else
-					setState(IKernelSubSystem::State::SUB_UNKNOWN);
-			}
-			catch (KernelException& e) {
-				logError(getName().c_str(), e.what());
-				//throw e;
-			}
-		}
+		
+		setState(IKernelSubSystem::State::SUB_NORMAL);
+		//try {
+		//	if (enableProtocol())
+		//		setState(IKernelSubSystem::State::SUB_IDEL);
+		//	else
+		//		setState(IKernelSubSystem::State::SUB_UNKNOWN);
+		//}
+		//catch (KernelException& e) {
+		//	logError(getName().c_str(), e.what());
+		//	//throw e;
+		//}
+		
 	}
 
 	void FortrendLoadLockSubsystem::onUnInitialize()throw(KernelException){

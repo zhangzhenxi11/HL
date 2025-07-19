@@ -183,7 +183,7 @@ bool SunwaySubSystemHelperPrivate::initialize()
 	if (!isReconnect)
 	{
 		//未重连，第一次连接
-		if (!sendRequest("HELLO"))
+		if (!sendRequest("QRY:VER;"))
 		{
 			logError(name.c_str(), "机械手查找失败！.");
 			closesocket(*client);

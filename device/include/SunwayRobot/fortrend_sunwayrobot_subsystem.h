@@ -74,9 +74,13 @@ namespace FC{
 		virtual std::shared_ptr<RobotAbstractSetSpeedCommand> createSetSpeedCommand(uint8_t percentage) const override;
 		
 		std::shared_ptr<SunwayRobotCheckLoadCommand> createCheckLoadCommand(int arm,int station_id)const;
+
 		std::shared_ptr<SunwayRobotRQLoadCommand> createRQLoadCommand(int arm)const;
+
 		std::shared_ptr<SunwayRobotClearErrorCommand> createClearErrorCommand()const;
+
 		std::shared_ptr<SunwayRobotSetAxisZSpeedCommand> createSetAxisZSpeedCommand(uint8_t percentage)const;
+		//移动至机械手的原点位置
 
 	public:
 		virtual void setObject(unsigned int arm_id, bool has);
