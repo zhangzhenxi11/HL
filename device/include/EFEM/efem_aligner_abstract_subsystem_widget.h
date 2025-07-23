@@ -17,8 +17,6 @@
 #include  <QWidget>
 #include  <vector>
 #include  <memory>
-
-
 namespace  KERNEL_NS {
 class QEFEMAlignerAbstractSubsystemWidgetPrivate;
 
@@ -37,7 +35,10 @@ private slots:
 	void moveStartPos();
 	void vaccum_on();
 	void vaccum_off();
-	void rotate(); 
+	void rotate();
+	void readOcr(int index);
+	void updateOcrInfo();
+
 private:
 	Q_DECLARE_PRIVATE(QEFEMAlignerAbstractSubsystemWidget)
 	QEFEMAlignerAbstractSubsystemWidgetPrivate *d_ptr;

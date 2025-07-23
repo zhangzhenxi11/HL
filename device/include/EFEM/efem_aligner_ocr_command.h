@@ -14,28 +14,27 @@
 #include "Kernel/Fortrend/aligner_abstract_command.h"
 #include "Kernel/kernel_exception.h" 
 
-
-KERNEL_NS_BEGIN
 class HexSubSystemHelper;
+namespace FC {
+
+	/**
+	*@brief   Ocr command for rnd  aligner subsystem
+	*/
+	class  EFEMAlignerOcrCommand : public KernelSubsystemCommand, public HexCommandExecuter
+	{
+	public:
+		DECLARE_PTR(EFEMAlignerOcrCommand)
+		EFEMAlignerOcrCommand(HexSubSystemHelper* hexHelper, int dirct); //1:正向 2：反向
+
+		virtual std::string getName() const override { return "OCR"; }
+
+	protected:
+		virtual RunResult onRun() throw(KernelException)override;
+	private:
+		DECLARE_PRIVATE(EFEMAlignerOcrCommand)
+	};
 
 
-/**
-*@brief   Ocr command for rnd  aligner subsystem
-*/
-class  EFEMAlignerOcrCommand : public  KernelSubsystemCommand, public HexCommandExecuter
-{
-public:
-	DECLARE_PTR(EFEMAlignerOcrCommand)
-	EFEMAlignerOcrCommand(HexSubSystemHelper* hexHelper,int dirct); //1:正向 2：反向
-
-	virtual std::string getName() const override { return "OCR"; }
-
-protected:
-	virtual RunResult onRun() throw(KernelException)override;
-private:
-	DECLARE_PRIVATE(EFEMAlignerOcrCommand)
-};
-
-KERNEL_NS_END
+}
 
 #endif

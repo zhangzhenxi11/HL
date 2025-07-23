@@ -29,8 +29,9 @@ namespace  FC {
 	class  QSlotTransferCycleVTMWidget : public QKernelModuleWidget{
 		Q_OBJECT
 	public:
-		QSlotTransferCycleVTMWidget(const std::shared_ptr<IKernel>& kernel, 
-			QFortrendStationStatusVTMWidget* ptr, QWidget* parent = NULL);
+		QSlotTransferCycleVTMWidget(const std::shared_ptr<IKernel>& kernel,
+			QFortrendStationStatusVTMWidget* ptr,
+			QWidget* parent = NULL);
 		~QSlotTransferCycleVTMWidget();
 		void onUpdateRecipe(int model);
 		void clickStart();

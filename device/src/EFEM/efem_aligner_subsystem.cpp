@@ -90,9 +90,17 @@ void EFEMAlignerSubsystem::onUnInitialize()throw(KernelException){
 }
 
 void EFEMAlignerSubsystem::onProcess(){
-	if (d->comm != api->getCommunicationState()) {
-		d->comm = api->getCommunicationState();
-		/*EFEMAlignerSubsystem::emitAttributeChanged(this);*/
+
+	//if (d->comm != api->getCommunicationState())
+	//{
+	//	d->comm = api->getCommunicationState();
+	//	/*EFEMAlignerSubsystem::emitAttributeChanged(this);*/
+	//}
+
+	std::string ocr = getWaferID();
+	if (ocr != "")
+	{
+		FortrendAbstractAligner::emitAttributeChanged(this);
 	}
 	if (getCommandState() == EFEMAsciiApi::State::TRANS_WAIT_REPLY) {
 		auto now = std::chrono::system_clock::now();
@@ -110,6 +118,8 @@ void EFEMAlignerSubsystem::onProcess(){
 
 void EFEMAlignerSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & conf){
 	AlignerAbstractSubsystem::onConfigure(conf);
+	KernelAbstractSubSystem::onConfigure(conf);//add
+	FortrendAbstractStation::configure(conf);//add
 	configHex(conf);
 
 }
@@ -149,7 +159,6 @@ std::shared_ptr<EFEMAlignerOcrCommand> EFEMAlignerSubsystem::createOcrCommand(in
 	EFEMAlignerSubsystem* self = const_cast<EFEMAlignerSubsystem*>(this);
 	EFEMAlignerOcrCommand::Ptr ret(new EFEMAlignerOcrCommand(self, dirct));//默认正面
 	return ret;
-	//return nullptr;
 }
 
 std::shared_ptr<AbstractOutPutCommand> EFEMAlignerSubsystem::createOutputCommand(int channel, bool stat)const{
@@ -165,7 +174,18 @@ std::shared_ptr<AlignerAbstractVaccOffCommand> EFEMAlignerSubsystem::createVaccO
 	throw std::exception("not impl");
 }
 
+void EFEMAlignerSubsystem::GetOCRCommand(int dirct) {
 
+	std::string command = "MOV:TRIGGER/OCR";
+	std::string ocr_str = std::to_string(dirct);
+	command.append(ocr_str);
+	command.append(";");
+	bool result = api->sendMessage(command.data(), command.size());
+	Sleep(500);
+	std::string waferId = api->getData();
+	d->OcrCode = waferId;
+
+}
 
 std::string EFEMAlignerSubsystem::getWaferID()
 {
@@ -211,7 +231,7 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 		{
 			if (command->message->paramers.size() == 3)
 			{
-				std::string  status = command->message->paramers.at(1); //Data1
+				std::string  status = command->message->paramers.at(1); //Data1    NORMAL
 				std::string  busystatus = command->message->paramers.at(2);//Data2  BUSY or IDLE
 
 				FortrendCassetteManager::Ptr cassManager = IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
@@ -221,8 +241,6 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 				if (status == "NORMAL") setState(State::SUB_NORMAL);
 				if (status == "ERROR") setState(State::SUB_ERROR);
 			}
-
-
 		}
 		//ALIGN
 		if (command->message->base == EFEMAsciiApi::Base::ALIGN)
@@ -235,14 +253,12 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 		#pragma region MAPDT
 		if (command->message->base == EFEMAsciiApi::Base::MAPDT)
 		{//获得寻边chuck 是否有晶圆
-			if (command->message->paramers.size() == 1)
+			if (command->message->paramers.size() == 2)
 			{
 				FortrendCassetteManager::Ptr cassManager = IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
-	
 				std::string mapdt = command->message->paramers.at(1);
 				char* modifiable_ptr = &mapdt[0];
 				char newStr = modifiable_ptr[0]; //  'P'  'E'
-
 				auto cass = cassManager->getCassette(this);
 				if (!cass) return;
 				if (cass->slotCount() != mapdt.size()) {
@@ -260,12 +276,12 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 		#pragma region TRIGGER
 		if (command->message->base == EFEMAsciiApi::Base::TRIGGER)
 		{
-
-			if (command->message->paramers.size() == 1)
+			if (command->message->paramers.size() == 2)
 			{
 				FortrendCassetteManager::Ptr cassManager = IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
 				auto cass = cassManager->getCassette(this);
-				d->OcrCode = command->message->paramers.at(1);
+				std::string waferInfo = command->message->paramers.at(1);
+				d->OcrCode = waferInfo;
 				//cass->setWaferId();
 				d->OcrCodeList.push_back(d->OcrCode);
 			}
@@ -307,6 +323,14 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 #pragma region EVT
 	else if (command->type == EFEMAsciiApi::Type::EVT)
 	{
+
+		auto message_list = command->message->paramers;
+
+		for (auto& mess : message_list)
+		{
+			logInform(getName().c_str(), "mess=%s", mess.c_str());
+		}
+
 		if (command->message->base == EFEMAsciiApi::Base::ALARM)
 		{
 			if (command->message->paramers.size() == 3)
@@ -315,7 +339,8 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 				std::string  ERROR_TYPE = command->message->paramers.at(1); //Data1  
 				std::string  ERROR_CODE = command->message->paramers.at(2);//Data2
 
-
+				logError(getName().c_str(), "ERROR_SUB=%s, ERROR_TYPE=%s,ERROR_CODE=%s ",
+					ERROR_SUB.c_str(), ERROR_TYPE.c_str(), ERROR_CODE.c_str());
 			}
 		}
 

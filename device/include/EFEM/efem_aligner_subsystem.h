@@ -18,7 +18,6 @@
 #include "fortrend_ascii_api.h"
 #include <mutex>
 #include <condition_variable>
-
 #include "EFEM/efem_aligner_ocr_command.h"
 KERNEL_NS_BEGIN
 
@@ -42,6 +41,7 @@ public:
 	virtual int outputCount()const override  { return 0; }
 
 public:
+
 	virtual std::shared_ptr<KernelSubsystemResetCommand> createResetCommand()const override;
 	virtual std::shared_ptr<AlignerAbstractRotateCommand> createRotateCommand(float angle)const override;
 	virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
@@ -49,15 +49,14 @@ public:
 	virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
 	std::shared_ptr<AlignerAbstractVaccOnCommand> createVaccOnCommand() const override;
 	std::shared_ptr<AlignerAbstractVaccOffCommand> createVaccOffCommand() const override;
-	//OCR
-	std::shared_ptr<EFEMAlignerOcrCommand> createOcrCommand(int dirct) const;
+	std::shared_ptr<EFEMAlignerOcrCommand> createOcrCommand(int dirct) const;//OCR
 
+public:
+	void GetOCRCommand(int dirct);
 	std::string getWaferID();
-
 	void setCommandState(EFEMAsciiApi::State newState);
 	bool hasFinishedCommandState()const;
 	void wait();
-
 public:
 	void handle(const std::shared_ptr<EFEMAsciiApi::Command>& command);
 	EFEMAsciiApi::State getCommandState();

@@ -262,16 +262,28 @@ void EFEMAsciiApi::onDisConnect(){
 void EFEMAsciiApi::onDataRecv(const char* data, unsigned int len){
 	//find => :
 	std::string message(data, data + len);
+	
 	Poco::StringTokenizer messages(message, ";\r", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
 	// Process each message separately
 	for (int i = 0; i < messages.count(); ++i) {
 		std::string singleMessage = messages[i];
+		message_data = singleMessage;
 		logInform(getName().c_str(), "onDataRecv singleMessage=%s", singleMessage.c_str());
 		if (singleMessage.size()>3){
 			processSingleMessage(singleMessage);
 		}
 	}	
+	
 }
+
+
+std::string EFEMAsciiApi::getData()
+{
+	logInform(getName().c_str(), "onDataRecv message_data=%s", message_data.c_str());
+
+	return message_data;
+}
+
 
 void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 	//logInform(getName().c_str(), "1 processSingleMessage=%s", message.c_str());

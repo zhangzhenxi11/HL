@@ -29,7 +29,7 @@ public:
 	float target_angle = 0.0f;
 };
 
-EFEMAlignerRotateCommand::EFEMAlignerRotateCommand(HexSubSystemHelper* hexHelper, unsigned int angle)
+EFEMAlignerRotateCommand::EFEMAlignerRotateCommand(HexSubSystemHelper* hexHelper, float angle)
 	:HexCommandExecuter(hexHelper)
 	, d(new EFEMAlignerRotateCommandPrivate)
 {

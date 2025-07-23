@@ -25,7 +25,7 @@ class  EFEMAlignerRotateCommand : public AlignerAbstractRotateCommand, public  H
 {
 public:
 	DECLARE_PTR(EFEMAlignerRotateCommand) 
-	EFEMAlignerRotateCommand(HexSubSystemHelper* hexHelper, unsigned int angle);
+	EFEMAlignerRotateCommand(HexSubSystemHelper* hexHelper, float angle);
 
 	virtual std::string getName() const override { return "Rotate"; }
 protected:

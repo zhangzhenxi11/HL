@@ -62,51 +62,50 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 			Poco::format("超时: 获取状态超时参数设置失败", aligner->getName()), this);
 	}
 
-	////GET:MAPDT/ALIGNER;
-	//aligner->primaryMessageName = this->getName();
+	//GET:MAPDT/ALIGNER;
+	aligner->primaryMessageName = this->getName();
 
-	//std::string stationName = aligner->getName().erase(0,1); //ALIGNER
-	//std::string str = Poco::format("GET:STATE/%s", stationName);
-	//str.push_back(';');
+	std::string stationName = aligner->getName().erase(0,1); //ALIGNER
+	std::string str = Poco::format("GET:STATE/%s", stationName);
+	str.push_back(';');
+	//GET:STATE/ALIGNER;  --->INF:STATE/ALIGNER/NORMAL/BUSY;    INF:STATE/ALIGNER/NORMAL/IDLE;
+	bool result = aligner->api->sendMessage(str.data(), str.size());
+	RunResult ret = RunResult::RUN_OK;
 
-	//bool result = aligner->api->sendMessage(str.data(), str.size());
-	//RunResult ret = RunResult::RUN_OK;
+	if (!result) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s update command failed to send, please check the communication!", aligner->getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+		logError(aligner->getName().c_str(), "%s获取状态命令发送失败，请检查通讯！", aligner->getName());
+		return ret;
+	}
+	aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
+	aligner->timestamp = std::chrono::system_clock::now();
+	aligner->wait();
+	if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", aligner->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+	}
+	else if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", aligner->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+	}
 
-	//if (!result) {
-	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s update command failed to send, please check the communication!", aligner->getName())));
-	//	setAlarm(alarm);
-	//	ret = RunResult::RUN_FAILD;
-	//	logError(aligner->getName().c_str(), "%s获取状态命令发送失败，请检查通讯！", aligner->getName());
-	//	return ret;
-	//}
-	//aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
-	//aligner->timestamp = std::chrono::system_clock::now();
-	//aligner->wait();
-	//if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
-	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", aligner->getName(), getName())));
-	//	setAlarm(alarm);
-	//	ret = RunResult::RUN_FAILD;
-	//}
-	//else if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
-	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", aligner->getName(), getName())));
-	//	setAlarm(alarm);
-	//	ret = RunResult::RUN_FAILD;
-	//}
+	std::string str2 = Poco::format("GET:MAPDT/%s", stationName);
+	str2.push_back(';');
 
-	//std::string str2 = Poco::format("GET:MAPDT/%s", stationName);
-	//str2.push_back(',');
-
-	//bool result2 = aligner->api->sendMessage(str2.data(), str2.size());
-	//if (!result2) {
-	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s mapdt command failed to send, please check the communication!", aligner->getName())));
-	//	setAlarm(alarm);
-	//	ret = RunResult::RUN_FAILD;
-	//	logError(aligner->getName().c_str(), "%s获取MAP命令发送失败，请检查通讯！", aligner->getName());
-	//	return ret;
-	//}
+	bool result2 = aligner->api->sendMessage(str2.data(), str2.size());
+	if (!result2) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s mapdt command failed to send, please check the communication!", aligner->getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+		logError(aligner->getName().c_str(), "%s获取MAP命令发送失败，请检查通讯！", aligner->getName());
+		return ret;
+	}
 
 	//std::string strifInf = "GET";
-
 	////INF:MAPDT/EALIGNER/E;
 	////INF:MAPDT/EALIGNER/P;
 	//char mapdt;
@@ -124,8 +123,6 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 	//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
 	//		"处理字符串错误", this);
 	//}
-
-
 	////Cassette::Mapping map = TcpEfemCommandExecuter::getMappingChar(mapdt);
 	////cass->setMapping(1, map);
 

@@ -98,6 +98,10 @@ public:
 
 	virtual bool sendMessage(const char* data, unsigned int len)override;
 
+	std::string getData();
+
+	std::string message_data;
+
 protected:
 	virtual void handle(const std::shared_ptr<Command>& command) = 0;
 	virtual void update() = 0;

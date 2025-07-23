@@ -5,22 +5,26 @@
 //
 // author xielonghua
 //
-
+#include  "EFEM/efem_aligner_subsystem.h"
 #include  "EFEM/efem_aligner_abstract_subsystem_widget.h" 
-#include  "Kernel/FortrendUI/aligner_status_widget.h"
-#include  "Kernel/FortrendUI/mapper_status_widget.h"
-
-#include  "Kernel/CoreUI/kernel_subsystem_status_widget.h"  
-#include  "device/ui_efem_aligner_abstract_subsystem_widget.h"
-
-#include  "Kernel/Fortrend/aligner_abstract_command.h"
+#include "Kernel/kernel_api.h"
+#include  "Kernel/kernel.h"
 #include  "Kernel/kernel_listener.h"
 #include  "Kernel/kernel_subsystem_reset_command.h"
 #include  "Kernel/kernel_subsystem_update_command.h"
-
-
+#include  "Kernel/FortrendUI/aligner_status_widget.h"
+#include  "Kernel/FortrendUI/mapper_status_widget.h"
+#include  "Kernel/CoreUI/kernel_subsystem_status_widget.h"  
+#include  "device/ui_efem_aligner_abstract_subsystem_widget.h"
+#include  "Kernel/Fortrend/aligner_abstract_command.h"
+#include <QComboBox>
 #include <QMessageBox>
- 
+
+//#include <QOverload>
+#if _MSC_VER >1600
+#pragma execution_character_set("utf-8")
+#endif
+
 KERNEL_NS_BEGIN
 /**
 * QEFEMAlignerAbstractSubsystemWidgetPrivate
@@ -29,10 +33,13 @@ class QEFEMAlignerAbstractSubsystemWidgetPrivate {
 	Q_DECLARE_PUBLIC(QEFEMAlignerAbstractSubsystemWidget)
 public:
 	QEFEMAlignerAbstractSubsystemWidgetPrivate(QEFEMAlignerAbstractSubsystemWidget* p);
+	virtual void onAttributeChange(const FortrendStation* arg);
 
 private:
 	Ui::EFEMAlignerAbstractSubsystemWidget* ui;
 	QEFEMAlignerAbstractSubsystemWidget* q_ptr;
+	std::shared_ptr<EFEMAlignerSubsystem> aligner; //模组指针，要是基类指针还是找不到成员函数
+	
 
 };
 
@@ -43,17 +50,27 @@ QEFEMAlignerAbstractSubsystemWidgetPrivate::QEFEMAlignerAbstractSubsystemWidgetP
 
 }
 
+void QEFEMAlignerAbstractSubsystemWidgetPrivate::onAttributeChange(const FortrendStation* arg)
+{
+	QMetaObject::invokeMethod(q_ptr, "updateOcrInfo", Qt::AutoConnection);
+}
+
 
 
 /**
 * QEFEMAlignerAbstractSubsystemWidget
 */
-QEFEMAlignerAbstractSubsystemWidget::QEFEMAlignerAbstractSubsystemWidget(const std::shared_ptr<AlignerAbstractSubsystem>& aligner, QWidget* parent)
-:d_ptr(new QEFEMAlignerAbstractSubsystemWidgetPrivate(this))
-,QAbstractSubsystemWidget<AlignerAbstractSubsystem>(aligner,parent){
+QEFEMAlignerAbstractSubsystemWidget::QEFEMAlignerAbstractSubsystemWidget(
+	const std::shared_ptr<AlignerAbstractSubsystem>& aligner,
+	QWidget* parent)
+	:d_ptr(new QEFEMAlignerAbstractSubsystemWidgetPrivate(this))
+	,QAbstractSubsystemWidget<AlignerAbstractSubsystem>(aligner,parent)
+{
 	Q_D(QEFEMAlignerAbstractSubsystemWidget);
 	d->ui = new Ui::EFEMAlignerAbstractSubsystemWidget;
 	d->ui->setupUi(this);
+
+	d->aligner = std::dynamic_pointer_cast<EFEMAlignerSubsystem>(aligner);//模组指针 ，下行转换
 
 	//subsystem status
 	d->ui->right_verticalLayout->insertWidget(0, new QKernelSubsystemStatusWidget(aligner));
@@ -92,7 +109,19 @@ QEFEMAlignerAbstractSubsystemWidget::QEFEMAlignerAbstractSubsystemWidget(const s
 	connect(d->ui->vaccum_on_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::vaccum_on);
 	connect(d->ui->vaccum_off_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::vaccum_off);
 	connect(d->ui->rotate_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::rotate);
-	 
+
+	//connect(d->ui->dirct_cbx, QOverload<int>::of(&QComboBox::currentIndexChanged), this,&QEFEMAlignerAbstractSubsystemWidget::readOcr);
+
+	connect(d->ui->dirct_cbx,
+		static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+		this,
+		&QEFEMAlignerAbstractSubsystemWidget::readOcr);
+
+
+	//connect(d->ui->read_ocr_btn, &QAbstractButton::clicked, this, [=]()
+	//{
+	//	d->aligner->GetOCRCommand(1);
+	//});
 	//config ui
 	configUI(getSubsystem()->getConfigure());
 }
@@ -145,5 +174,20 @@ void QEFEMAlignerAbstractSubsystemWidget::rotate(){
 	executeCommand(getSubsystem(), cmd);
 
 }
+
+void QEFEMAlignerAbstractSubsystemWidget::readOcr(int index)
+{
+	Q_D(QEFEMAlignerAbstractSubsystemWidget);
+	KernelSubsystemCommand::Ptr cmd = d->aligner->createOcrCommand(index);
+	executeCommand(getSubsystem(), cmd);
+}
+
+void KERNEL_NS::QEFEMAlignerAbstractSubsystemWidget::updateOcrInfo()
+{
+	Q_D(QEFEMAlignerAbstractSubsystemWidget);
+
+	d->ui->ocr_lineEdit->setText(QString(d->aligner->getWaferID().c_str()));
+}
+
 
 KERNEL_NS_END
