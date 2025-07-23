@@ -176,6 +176,9 @@ namespace FC{
 		bool getLoadLockCavitySafeSignal();
 		void setLoadLockCavitySafeSignal(const bool value);
 
+		bool getLoadLockCassetteCloseSafeSignal();
+		void setLoadLockCassetteCloseSafeSignal(const bool value);
+
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

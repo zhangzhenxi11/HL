@@ -65,8 +65,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	}
 
 	////测试
-	//logInform(getName().c_str(), "模拟复位命令执行");
-	//return RunResult::RUN_OK;
+	logInform(getName().c_str(), "模拟复位命令执行");
+	return RunResult::RUN_OK;
 
 	//ALG
 	std::string error_message = "";

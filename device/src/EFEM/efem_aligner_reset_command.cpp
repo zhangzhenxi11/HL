@@ -12,11 +12,11 @@
 #include "Kernel/kernel_command_reject_exception.h"
 #include "Kernel/kernel_command_runner.h"
 #include "Kernel/kernel_subsystem_update_command.h"
-
 #include "Kernel/Fortrend/fortrend_cassette_manager.h"
-#include "Kernel/Fortrend/robot_abstract_subsystem.h"
-#include <thread>
 
+#include "Kernel/kernel_block.h"
+#include "Kernel/kernel_block_manager.h"
+#include <thread>
 #include "Poco/Format.h"
 
 #if _MSC_VER >1600
@@ -25,16 +25,8 @@
 
 KERNEL_NS_BEGIN
 
-
-class EFEMAlignerResetCommandPrivate{
-public:
-};
-
-
-EFEMAlignerResetCommand::EFEMAlignerResetCommand(TcpEfemSubSystemHelper* hexHelper)
-    :TcpEfemCommandExecuter(hexHelper)
-, d(new EFEMAlignerResetCommandPrivate){
-
+EFEMAlignerResetCommand::EFEMAlignerResetCommand(HexSubSystemHelper* hexHelper):HexResetCommand(hexHelper)
+{
 }
 
 
@@ -65,28 +57,33 @@ IKernelCommand::RunResult EFEMAlignerResetCommand::onRun() throw(KernelException
     sendStr.push_back(';');
 
     //std::string sendStr = "INIT/ALL;";
-    if (!sendRequest(sendStr))
-    {
-        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
-            Poco::format("指令发送失败:", sendStr).c_str(), this);
-    }
-
-    int time_mapping = 0;
-    std::string strifInf = "MOV";
-    while (strifInf.find("INF:INIT") == std::string::npos)
-    {
-        strifInf = recvResponse(0);
-        Sleep(1);
-        if (time_mapping >= 120 * 1000)
-        {
-            throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, "复位命令执行超时", this);
-        }
-        time_mapping++;
-    }
-
+    bool result = sub->api->sendMessage(sendStr.data(), sendStr.size());
+    RunResult ret = RunResult::RUN_OK;
+	if (!result) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s Reset command failed to send, please check the communication!", sub->getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+		logError(sub->getName().c_str(), "%s复位命令发送失败，请检查通讯！", sub->getName());
+		return ret;
+	}
+	sub->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
+	sub->timestamp = std::chrono::system_clock::now();
+	sub->wait();
+	if (sub->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", sub->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+	}
+	else if (sub->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", sub->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+	}
+	
+	sub->getKernel()->getKernelBlockManager()->releaseBlock(sub);
     logInform(sub->getName().c_str(), "复位命令执行结束");
 
-    return IKernelCommand::RunResult::RUN_OK;
+    return ret;
 
 }
 

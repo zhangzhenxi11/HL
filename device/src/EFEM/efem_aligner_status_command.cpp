@@ -12,6 +12,8 @@
 #include "Kernel/Fortrend/fortrend_cassette_manager.h"
 #include "Kernel/kernel.h"
 #include "Kernel/kernel_command_reject_exception.h"
+#include "Kernel/kernel_block.h"
+#include "Kernel/kernel_block_manager.h"
 #include <thread>
 
 #include "Poco/Format.h"
@@ -28,13 +30,12 @@ public:
 };
 
 
-EFEMAlignerStatusCommand::EFEMAlignerStatusCommand(TcpEfemSubSystemHelper* hexHelper)
-	:TcpEfemCommandExecuter(hexHelper), d(new EFEMAlignerStatusCommandPrivate)
+EFEMAlignerStatusCommand::EFEMAlignerStatusCommand():
+	 d(new EFEMAlignerStatusCommandPrivate)
 {
  
 }
  
-
 /**
 * return true if success else false.
 */
@@ -61,54 +62,75 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 			Poco::format("³¬Ê±: »ñÈ¡×´Ì¬³¬Ê±²ÎÊýÉèÖÃÊ§°Ü", aligner->getName()), this);
 	}
 
-	//GET:MAPDT/ALIGNER;
-	std::string stationName = aligner->getName(); //EALIGNER
-	std::string command = Poco::format("GET:MAPDT/%s", stationName);
-	command.push_back(';');
-	if (!sendRequest(command))
-	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
-			Poco::format("»ñÈ¡Ñ°±ßÆ÷×´Ì¬Ö¸Áî·¢ËÍÊ§°Ü:", command).c_str(), this);
-	}
-	auto startTime = std::chrono::high_resolution_clock::now();
-	std::string strifInf = "GET";
-	while (true)
-	{
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+	////GET:MAPDT/ALIGNER;
+	//aligner->primaryMessageName = this->getName();
 
-		strifInf = recvResponse(timeout);
+	//std::string stationName = aligner->getName().erase(0,1); //ALIGNER
+	//std::string str = Poco::format("GET:STATE/%s", stationName);
+	//str.push_back(';');
 
-		if (strifInf.find("INF:MAPDT") != std::string::npos)
-		{
-			break;
-		}
-		if (elapsed.count() >= timeout / 1000)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
-				"»ñÈ¡Ñ°±ßÆ÷×´Ì¬ÃüÁîÖ´ÐÐ³¬Ê±", this);
-		}
-	}
-	//INF:MAPDT/EALIGNER/E;
-	//INF:MAPDT/EALIGNER/P;
-	char mapdt;
-	size_t lastSlash = strifInf.rfind('/');
-	size_t semicolon = strifInf.rfind(';');
+	//bool result = aligner->api->sendMessage(str.data(), str.size());
+	//RunResult ret = RunResult::RUN_OK;
 
-	if (lastSlash != std::string::npos &&
-		semicolon != std::string::npos &&
-		lastSlash < semicolon - 1)
-	{
-		mapdt = strifInf[lastSlash + 1];
-	}
-	else
-	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
-			"´¦Àí×Ö·û´®´íÎó", this);
-	}
-	Cassette::Mapping map = getMappingChar(mapdt);
-	cass->setMapping(1, map);
-	logInform(aligner->getName().c_str(), Poco::format("»ñÈ¡Ñ°±ßÆ÷¾§Ô²×´Ì¬ %s ÃüÁîÖ´ÐÐ½áÊø", aligner).c_str());
+	//if (!result) {
+	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s update command failed to send, please check the communication!", aligner->getName())));
+	//	setAlarm(alarm);
+	//	ret = RunResult::RUN_FAILD;
+	//	logError(aligner->getName().c_str(), "%s»ñÈ¡×´Ì¬ÃüÁî·¢ËÍÊ§°Ü£¬Çë¼ì²éÍ¨Ñ¶£¡", aligner->getName());
+	//	return ret;
+	//}
+	//aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
+	//aligner->timestamp = std::chrono::system_clock::now();
+	//aligner->wait();
+	//if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
+	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", aligner->getName(), getName())));
+	//	setAlarm(alarm);
+	//	ret = RunResult::RUN_FAILD;
+	//}
+	//else if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
+	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", aligner->getName(), getName())));
+	//	setAlarm(alarm);
+	//	ret = RunResult::RUN_FAILD;
+	//}
+
+	//std::string str2 = Poco::format("GET:MAPDT/%s", stationName);
+	//str2.push_back(',');
+
+	//bool result2 = aligner->api->sendMessage(str2.data(), str2.size());
+	//if (!result2) {
+	//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s mapdt command failed to send, please check the communication!", aligner->getName())));
+	//	setAlarm(alarm);
+	//	ret = RunResult::RUN_FAILD;
+	//	logError(aligner->getName().c_str(), "%s»ñÈ¡MAPÃüÁî·¢ËÍÊ§°Ü£¬Çë¼ì²éÍ¨Ñ¶£¡", aligner->getName());
+	//	return ret;
+	//}
+
+	//std::string strifInf = "GET";
+
+	////INF:MAPDT/EALIGNER/E;
+	////INF:MAPDT/EALIGNER/P;
+	//char mapdt;
+	//size_t lastSlash = strifInf.rfind('/');
+	//size_t semicolon = strifInf.rfind(';');
+
+	//if (lastSlash != std::string::npos &&
+	//	semicolon != std::string::npos &&
+	//	lastSlash < semicolon - 1)
+	//{
+	//	mapdt = strifInf[lastSlash + 1];
+	//}
+	//else
+	//{
+	//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
+	//		"´¦Àí×Ö·û´®´íÎó", this);
+	//}
+
+
+	////Cassette::Mapping map = TcpEfemCommandExecuter::getMappingChar(mapdt);
+	////cass->setMapping(1, map);
+
+	aligner->getKernel()->getKernelBlockManager()->releaseBlock(aligner);
+	logInform(aligner->getName().c_str(), Poco::format("»ñÈ¡Ñ°±ßÆ÷¾§Ô²×´Ì¬ %s ÃüÁîÖ´ÐÐ½áÊø", aligner->getName()).c_str());
 
 	return RunResult::RUN_OK;
 }

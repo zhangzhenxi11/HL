@@ -365,17 +365,23 @@ namespace FC{
 
 	void FortrendTMCavitySubsystem::onInitialize()throw(KernelException){
 		
-		setState(IKernelSubSystem::State::SUB_NORMAL);
-		//try {
-		//	if (enableProtocol())
-		//		setState(IKernelSubSystem::State::SUB_NORMAL);
-		//	else
-		//		setState(IKernelSubSystem::State::SUB_UNKNOWN);
-		//}
-		//catch (KernelException& e) {
-		//	logError(getName().c_str(), e.what());
-		//	//throw e;
-		//}
+		if (SIM_MODE == 1)
+		{
+			setState(IKernelSubSystem::State::SUB_NORMAL);
+		}
+		else
+		{
+			try {
+				if (enableProtocol())
+					setState(IKernelSubSystem::State::SUB_IDEL);
+				else
+					setState(IKernelSubSystem::State::SUB_UNKNOWN);
+			}
+			catch (KernelException& e) {
+				logError(getName().c_str(), e.what());
+				//throw e;
+			}
+		}
 	}
 
 	void FortrendTMCavitySubsystem::onUnInitialize()throw(KernelException){

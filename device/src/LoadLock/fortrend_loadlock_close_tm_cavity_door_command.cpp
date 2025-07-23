@@ -91,6 +91,7 @@ namespace FC{
 		while (count <= loopCount)
 		{
 			Sleep(20);
+			readState = readBit(finish_address, readRes);
 			readFailedState = readBit(failed_address, failedRes);
 			if (readRes || failedRes)
 			{

@@ -64,6 +64,9 @@ namespace FC{
 		std::string io_safeSignal_address = "";
 		bool  io_safeSignal_value = false;
 
+		std::string io_allowd_close_casstedoor_signal_address = "";
+		bool io_closeCassteDoor_value = false;
+
 		
 		bool box_placement = false;
 		bool cassette_door_opend = false;
@@ -416,17 +419,24 @@ namespace FC{
 
 	void FortrendLoadLockSubsystem::onInitialize()throw(KernelException){
 		
-		setState(IKernelSubSystem::State::SUB_NORMAL);
-		//try {
-		//	if (enableProtocol())
-		//		setState(IKernelSubSystem::State::SUB_IDEL);
-		//	else
-		//		setState(IKernelSubSystem::State::SUB_UNKNOWN);
-		//}
-		//catch (KernelException& e) {
-		//	logError(getName().c_str(), e.what());
-		//	//throw e;
-		//}
+		if (SIM_MODE == 1)
+		{
+			setState(IKernelSubSystem::State::SUB_NORMAL);
+		}
+		else
+		{
+			try {
+				if (enableProtocol())
+					setState(IKernelSubSystem::State::SUB_IDEL);
+				else
+					setState(IKernelSubSystem::State::SUB_UNKNOWN);
+			}
+			catch (KernelException& e) {
+				logError(getName().c_str(), e.what());
+				//throw e;
+			}
+		}
+
 		
 	}
 
@@ -441,7 +451,7 @@ namespace FC{
 
 	void FortrendLoadLockSubsystem::onProcess(){
 
-#if 0
+
 		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 		{
 			bool io_changed = false;
@@ -458,6 +468,17 @@ namespace FC{
 
 			}
 
+			bool close_door_value = false;
+
+			if (d->io_allowd_close_casstedoor_signal_address != "" && readBit(d->io_allowd_close_casstedoor_signal_address, close_door_value))
+			{
+				if (close_door_value != d->io_closeCassteDoor_value)
+				{
+					d->io_closeCassteDoor_value = close_door_value;
+					io_changed = true;
+				}
+				
+			}
 			bool wafer_prsence = false;		
 			if (d->io_first_layer_detection_sensor_address != "" && readBit(d->io_first_layer_detection_sensor_address, wafer_prsence))
 			{
@@ -479,19 +500,21 @@ namespace FC{
 			
 #pragma region 自动更新门阀状态 
 			bool flag = false;
-			flag = d->slow_diaphragm_valve_opend;
-			if (d->diaphragm_valve_address1 != ""&&readBit(d->diaphragm_valve_address1, d->slow_diaphragm_valve_opend))
-			{
-				if (flag != d->slow_diaphragm_valve_opend)
-					io_changed = true;
-			}
 
-			flag = d->fast_diaphragm_valve_opend;
-			if (d->diaphragm_valve_address2 != ""&&readBit(d->diaphragm_valve_address2, d->fast_diaphragm_valve_opend))
-			{
-				if (flag != d->fast_diaphragm_valve_opend)
-					io_changed = true;
-			}
+			//flag = d->slow_diaphragm_valve_opend;
+			//if (d->diaphragm_valve_address1 != ""&&readBit(d->diaphragm_valve_address1, d->slow_diaphragm_valve_opend))
+			//{
+			//	if (flag != d->slow_diaphragm_valve_opend)
+			//		io_changed = true;
+			//}
+
+			//flag = d->fast_diaphragm_valve_opend;
+			//if (d->diaphragm_valve_address2 != ""&&readBit(d->diaphragm_valve_address2, d->fast_diaphragm_valve_opend))
+			//{
+			//	if (flag != d->fast_diaphragm_valve_opend)
+			//		io_changed = true;
+			//}
+
 			flag = d->angle_valve_opend;
 			if (d->open_angle_valve_address != ""&&readBit(d->open_angle_valve_address, d->angle_valve_opend))
 			{
@@ -551,9 +574,6 @@ namespace FC{
 			Sleep(50);
 			
 		}
-	
-#endif
-
 }
 
 	void FortrendLoadLockSubsystem::recardVacuum()const{
@@ -635,6 +655,17 @@ namespace FC{
 		d->io_safeSignal_value = value;
 	}
 
+	bool FortrendLoadLockSubsystem::getLoadLockCassetteCloseSafeSignal()
+	{
+
+		return d->io_closeCassteDoor_value; //true 可以关门
+	}
+
+	void FortrendLoadLockSubsystem::setLoadLockCassetteCloseSafeSignal(const bool value)
+	{
+		d->io_closeCassteDoor_value = value;
+	}
+
 	void FortrendLoadLockSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){
 		KernelAbstractSubSystem::onConfigure(config);
 		FortrendAbstractStation::configure(config);
@@ -696,6 +727,8 @@ namespace FC{
 			d->io_second_layer_detection_sensor_address = config->getString("Update.second_layer_detection_sensor", "");
 
 			d->io_safeSignal_address = config->getString("Update.LLCavitySafetySignal","");
+
+			d->io_allowd_close_casstedoor_signal_address = config->getString("Update.EFEMAlloweCloseCassteDoorSignal","");
 		}
 	}
 

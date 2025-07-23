@@ -633,25 +633,27 @@ namespace FC{
 	}
 
 	void FortrendPMCavitySubsystem::onInitialize()throw(KernelException){
-		try{
 
+		if (SIM_MODE == 1)
+		{
 			setState(IKernelSubSystem::State::SUB_NORMAL);
-			//if (KeyencePlcSubSystemHelper::enableProtocol()) 
-			//{
-			//	setState(IKernelSubSystem::State::SUB_NORMAL);
-			//	//setState(IKernelSubSystem::State::SUB_IDEL);
-			//	//logInform(getName().c_str(), "设置模组状态 SUB_IDEL");
-			//}
-			//else {
-			//	setState(IKernelSubSystem::State::SUB_NORMAL);
-		
-			//	//setState(IKernelSubSystem::State::SUB_ERROR);
-			//}
-			
 		}
-		catch (KernelException& e){
-			logError(getName().c_str(), e.what());
-			//throw e;
+		else
+		{
+			try {
+				if (KeyencePlcSubSystemHelper::enableProtocol())
+				{
+					setState(IKernelSubSystem::State::SUB_IDEL);
+				}
+				else {
+					setState(IKernelSubSystem::State::SUB_ERROR);
+				}
+
+			}
+			catch (KernelException& e) {
+				logError(getName().c_str(), e.what());
+				//throw e;
+			}
 		}
 	}
 

@@ -223,8 +223,8 @@ void EFEMWaferRobotSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command
 #pragma region STATE
 		if (command->message->base == EFEMAsciiApi::Base::STATE){
 			if (command->message->paramers.size() == 3){
-				std::string  status = command->message->paramers.at(1);
-				std::string  busystatus = command->message->paramers.at(2);//BUSY or IDLE
+				std::string  status = command->message->paramers.at(1); //Data1
+				std::string  busystatus = command->message->paramers.at(2);//Data2  BUSY or IDLE
 			
 				FortrendCassetteManager::Ptr cassManager = IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
 				auto cass1 = cassManager->getCassette(this);
@@ -338,10 +338,16 @@ bool EFEMWaferRobotSubsystem::hasFinishedCommandState()const{
 
 void EFEMWaferRobotSubsystem::onInitialize()throw(KernelException){
 	try {
-		setState(IKernelSubSystem::State::SUB_IDEL);
+		if (api->getCommunicationState() == KernelApi::CommunicationState::COMMUNICATING) {
+			setState(IKernelSubSystem::State::SUB_IDEL);
+		}
+		else {
+			setState(IKernelSubSystem::State::SUB_UNKNOWN);
+		}
 	}
 	catch (KernelException& e) {
-		logError(getName().c_str(), e.what());
+		logError(IKernelSubSystem::getName().c_str(), e.what());;
+		//throw e;
 	}
 }
 

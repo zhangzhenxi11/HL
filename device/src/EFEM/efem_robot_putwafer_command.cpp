@@ -187,9 +187,6 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 	if (!getStation()){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("No Station %s", robot->getName()), this);
 	}
-
-	
-
 	int stationid = getStation()->getStationId(robot->getName());
 
 	////get cass
@@ -208,7 +205,14 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 		if (!getStation()->hasBoxPresent()){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
 		}
-
+		std::shared_ptr<EFEMAlignerSubsystem> aligner = std::dynamic_pointer_cast<EFEMAlignerSubsystem>(getStation());
+		if (!aligner) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s is NULL ", getStation()->getName()), this);
+		}
+		if (aligner->getState() != IKernelSubSystem::State::SUB_NORMAL) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
+		}
+		
 		////box placement 
 		if (!getStation()->hasBoxPlacement()){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not placement now(sensor).", getStation()->getName()), this);
@@ -230,7 +234,7 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 		if (aligner->getState() != IKernelSubSystem::State::SUB_NORMAL) {
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
 		}
-		stationName =  "ALIGNER"; 
+		stationName = "ALIGNER";
 	}
 	else
 	{
@@ -284,6 +288,7 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 	}
 	robot->primaryMessageName = getName();
 	std::string robotName = robot->getName();//Ä£×éÃû
+	robotName = robotName.erase(0, 1);
 	std::string str = Poco::format("MOV:UNLOAD/%s/%s/%d/0/%d", robotName,stationName, slotnum,getArm());
 	str.push_back(';');
 	bool result = robot->api->sendMessage(str.data(), str.size());

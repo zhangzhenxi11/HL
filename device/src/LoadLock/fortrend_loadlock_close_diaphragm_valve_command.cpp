@@ -76,10 +76,12 @@ namespace FC{
 		if (d->opening == LoadLockValveOpening::LoadLock_Slow)
 		{
 			write_result = writeBit(address1, true);
+			write_result = writeBit(address1, false);
 		}
 		else if (d->opening == LoadLockValveOpening::LoadLock_Fast)
 		{
 			write_result = writeBit(address2, true);
+			write_result = writeBit(address1, false);
 		}
 		else{
 			write_result = (writeBit(address1, true) && writeBit(address2, true));

@@ -116,6 +116,7 @@ d(new FortrendAsciiEFEMApiPrivate(this)){
 		{ Base::ALARM, std::bind(&FortrendAsciiEFEMApi::handle_TOWER, this, std::placeholders::_1) },//EVT
 		{ Base::POD, std::bind(&FortrendAsciiEFEMApi::handle_TOWER, this, std::placeholders::_1) },//EVT
 		{ Base::DOORSTAT, std::bind(&FortrendAsciiEFEMApi::handle_TOWER, this, std::placeholders::_1) },//EVT
+		{Base::TRANSF,std::bind(&FortrendAsciiEFEMApi::handle_TRANSF,this,std::placeholders::_1)}
 
 	});
 	stateMap = std::map<Base, std::map<std::string, CmdState>>({
@@ -139,6 +140,7 @@ d(new FortrendAsciiEFEMApiPrivate(this)){
 		{ Base::HOLD,std::map<std::string, CmdState>() },
 		{ Base::RESTR,std::map<std::string, CmdState>() },
 		{ Base::ABORT,std::map<std::string, CmdState>() },
+		{Base::TRANSF,std::map<std::string,CmdState>()}
 	});
 }
 
@@ -193,6 +195,11 @@ void FortrendAsciiEFEMApi::handle_INIT(const std::shared_ptr<Command>& command){
 	else if (paramer1=="WTR"){
 		auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 		wtr->handle(command);
+	}
+	else if (paramer1 == "ALIGNER") //2025-7-21 add
+	{
+		auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+		aligner->handle(command);
 	}
 }
 
@@ -286,6 +293,11 @@ void FortrendAsciiEFEMApi::handle_MAPDT(const std::shared_ptr<Command>& command)
 		auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 		wtr->handle(command);
 	}
+	else if (paramer1 == "ALIGNER") //2025-7-21 add
+	{
+		auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+		aligner->handle(command);
+	}
 }
 
 void FortrendAsciiEFEMApi::handle_GOTO(const std::shared_ptr<Command>& command){
@@ -334,17 +346,15 @@ void FortrendAsciiEFEMApi::handle_UNLOAD(const std::shared_ptr<Command>& command
 
 void FortrendAsciiEFEMApi::handle_ALIGN(const std::shared_ptr<Command>& command){//ALIGN
 	auto& paramers = command->message->paramers;
-	if (paramers.size() == 0) {
-		logError(getName().c_str(), "handle_ALIGN not paramers");
-		sendNAK(command->message, KernelSysException::ErrCode::KR_COMMON_COMMAND_PARAMER_ERROR);
-		return;
-	}
+	
+	//if (paramers.size() == 0) {
+	//	logError(getName().c_str(), "handle_ALIGN not paramers");
+	//	sendNAK(command->message, KernelSysException::ErrCode::KR_COMMON_COMMAND_PARAMER_ERROR);
+	//	return;
+	//}
 	auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
-	//aligner->handle(command);
+	aligner->handle(command);
 }
-
-
-
 
 void  FortrendAsciiEFEMApi::handle_HOLD(const std::shared_ptr<Command>& command){
 	//logError(getName().c_str(), "handle_HOLD");
@@ -370,6 +380,19 @@ void  FortrendAsciiEFEMApi::handle_RESTR(const std::shared_ptr<Command>& command
 
 void FortrendAsciiEFEMApi::handle_ABORT(const std::shared_ptr<Command>& command){
 	//logError(getName().c_str(), "handle_ABORT");
+}
+
+void FortrendAsciiEFEMApi::handle_TRANSF(const std::shared_ptr<Command>& command)
+{
+	//2025-7-22 新加TRANSF指令
+	auto& paramers = command->message->paramers;
+	if (paramers.size() == 0) {
+		logError(getName().c_str(), "handle_TRANSF not paramers");
+		sendNAK(command->message, KernelSysException::ErrCode::KR_COMMON_COMMAND_PARAMER_ERROR);
+		return;
+	}
+	auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+	wtr->handle(command);
 }
 
 void FortrendAsciiEFEMApi::handle_MODE(const std::shared_ptr<Command>& command){
@@ -410,6 +433,11 @@ void FortrendAsciiEFEMApi::handle_STATE(const std::shared_ptr<Command> &command)
 		auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 		wtr->handle(command);
 	}
+	else if (paramer1 == "ALIGNER") //2025-7-21 add
+	{
+		auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+		aligner->handle(command);
+	}
 }
 
 void FortrendAsciiEFEMApi::handle_SIGSTAT(const std::shared_ptr<Command>& command){//SIGSTAT
@@ -437,6 +465,11 @@ void FortrendAsciiEFEMApi::handle_SIGSTAT(const std::shared_ptr<Command>& comman
 	else if (paramer1 == "WTR"){
 		auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 		wtr->handle(command);
+	}
+	else if (paramer1 == "ALIGNER") //2025-7-21 add
+	{
+		auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+		aligner->handle(command);
 	}
 }
 
@@ -626,6 +659,12 @@ void FortrendAsciiEFEMApi::handle_TRIGGER(const std::shared_ptr<Command>& comman
 		auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 		wtr->handle(command);
 	}
+	else if (paramer1 == "ALIGNER") //2025-7-21 add
+	{
+		auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+		aligner->handle(command);
+	}
+
 }//TRIGGER
 void FortrendAsciiEFEMApi::handle_ALARM(const std::shared_ptr<Command>& command){
 	//logError(getName().c_str(), "handle_ALARM");
@@ -904,6 +943,7 @@ void FortrendAsciiEFEMApi::update(){
 		auto lp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
 		auto lp2 = kernel->getKernelModule<EFEMLPSubsystem>("ELP2");
 		auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+		auto aligner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
 
 		if (lp1){
 			auto cmd = lp1->createUpdateCommand();
@@ -924,6 +964,15 @@ void FortrendAsciiEFEMApi::update(){
 			wtr->startCommand(cmd);
 			cmd->wait();
 			if (!cmd->hasError()){
+			}
+		}
+		//2025-7-21 add
+		if (aligner)
+		{
+			auto cmd = aligner->createUpdateCommand();
+			aligner->startCommand(cmd);
+			cmd->wait();
+			if (!cmd->hasError()) {
 			}
 		}
 	

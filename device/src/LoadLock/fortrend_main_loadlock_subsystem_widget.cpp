@@ -323,6 +323,7 @@ namespace FC{
 
 		d->slow_diaphragm_valve_ckb->setChecked(getSubsystem()->getSlowDiaphragmValveOpend());
 		d->fast_diaphragm_valve_ckb->setChecked(getSubsystem()->getFastDiaphragmValveOpend());
+
 		//d->ultrahigh_vacuum_baffle_valve_ckb->setChecked(getSubsystem()->getHeightVacuumBaffleValveOpend());
 		//d->inserting_plate_value_ckb->setChecked(getSubsystem()->getInsertingPlateValveOpend());
 		d->angle_valve_ckb->setChecked(getSubsystem()->getAngleValveOpend());

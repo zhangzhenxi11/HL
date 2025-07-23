@@ -12,7 +12,8 @@
 #include "Kernel/Fortrend/fortrend_cassette_manager.h"
 #include "Kernel/kernel.h"
 #include "Kernel/kernel_command_reject_exception.h"
-
+#include "Kernel/kernel_block.h"
+#include "Kernel/kernel_block_manager.h"
 #include "Poco/Format.h"
 
 #include <thread>
@@ -28,13 +29,12 @@ public:
 	float target_angle = 0.0f;
 };
 
-
-EFEMAlignerRotateCommand::EFEMAlignerRotateCommand(TcpEfemSubSystemHelper* hexHelper, unsigned int angle)
-:TcpEfemCommandExecuter(hexHelper)
-, d(new EFEMAlignerRotateCommandPrivate){
+EFEMAlignerRotateCommand::EFEMAlignerRotateCommand(HexSubSystemHelper* hexHelper, unsigned int angle)
+	:HexCommandExecuter(hexHelper)
+	, d(new EFEMAlignerRotateCommandPrivate)
+{
 	d->target_angle = angle;
 }
-
 
 /**
 * return true if success else false.
@@ -54,8 +54,6 @@ IKernelCommand::RunResult EFEMAlignerRotateCommand::onRun() throw(KernelExceptio
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
 			Poco::format("Aliger %s must has logic cassette.", aligner->getName()), this);
 	}
-
-	
 	std::shared_ptr<KernelConfiguration> command_config = aligner->getConfigure()->createView(getName());
 
 	//fill params
@@ -69,13 +67,13 @@ IKernelCommand::RunResult EFEMAlignerRotateCommand::onRun() throw(KernelExceptio
 	logInform(aligner->getName().c_str(), "aligner Rotate angle£∫%lf", d->target_angle);
 
 	std::string command = "MOV:";
-	command.append(aligner->getName()).append("/A");
+
+	command.append(aligner->getName().erase(0,1)).append("/A");
 	command.append(std::to_string(d->target_angle));
 	command.push_back(';');
 	logInform(aligner->getName().c_str(), "aligner Rotate command£∫%s", command.c_str());
 
-	bool result = sendRequest(command);
-
+	bool result = aligner->api->sendMessage(command.data(), command.size());
 	RunResult ret = RunResult::RUN_OK;
 	if (!result) {
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION,
@@ -85,27 +83,24 @@ IKernelCommand::RunResult EFEMAlignerRotateCommand::onRun() throw(KernelExceptio
 		logError(aligner->getName().c_str(), "%s Aligner command failed to send, please check the communication!", aligner->getName());
 		return ret;
 	}
-	auto startTime = std::chrono::high_resolution_clock::now();
-	std::string strifInf = "MOV";
-	while (true)
-	{
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
 
-		strifInf = recvResponse(timeout);
-
-		if (strifInf.find("INF:") != std::string::npos)
-		{
-			//’“µΩ¡À
-			break;
-		}
-		if (elapsed.count() >= timeout / 1000)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, "—∞±ﬂ√¸¡Ó÷¥––≥¨ ±", this);
-		}
+	aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
+	aligner->timestamp = std::chrono::system_clock::now();
+	aligner->wait();
+	if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", aligner->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
 	}
+	else if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", aligner->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+
+	}
+	aligner->getKernel()->getKernelBlockManager()->releaseBlock(aligner);
 	logInform(aligner->getName().c_str(), "—∞±ﬂ√¸¡Ó÷¥––Ω· ¯");
-	return RunResult::RUN_OK;
+	return ret;
 }
 
 KERNEL_NS_END

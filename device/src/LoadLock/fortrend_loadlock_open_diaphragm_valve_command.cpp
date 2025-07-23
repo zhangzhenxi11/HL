@@ -101,13 +101,15 @@ namespace FC{
 		
 		if (d->opening == LoadLockValveOpening::LoadLock_Slow)
 		{
-			//logInform(sub->getName().c_str(), "打开隔膜阀慢充 %s", address1);
+			logInform(sub->getName().c_str(), "打开隔膜阀慢充 %s", address1);
 			write_result = writeBit(address1, true);
+			write_result = writeBit(address2, false);
 		}
 		else if (d->opening == LoadLockValveOpening::LoadLock_Fast)
 		{
-			//logInform(sub->getName().c_str(), "打开隔膜阀快充 %s", address1);
+			logInform(sub->getName().c_str(), "打开隔膜阀快充 %s", address1);
 			write_result = writeBit(address2, true);
+			write_result = writeBit(address1, false);
 		}
 		else
 		{

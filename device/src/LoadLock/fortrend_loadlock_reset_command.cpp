@@ -64,13 +64,13 @@ namespace FC{
 		}
 		/*if (getSubsystem()->getName()=="LLA"){
 			auto smif = getSubsystem()->getKernel()->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
-			if (smif&&smif->getState() != IKernelSubSystem::State::SUB_NORMAL){
+			if (smif && smif->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 状态不在正常状态", smif->getName()), this);
 			}
 		}
 		else{
 			auto smif = getSubsystem()->getKernel()->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
-			if (smif&&smif->getState() != IKernelSubSystem::State::SUB_NORMAL){
+			if (smif && smif->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 状态不在正常状态", smif->getName()), this);
 			}
 		}*/
@@ -98,50 +98,52 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到复位命令地址错误", sub->getName()), this);
 		}
-		Sleep(100);
-		int loopCount = timeout / 20;
-		int count = 0;
-		bool readRes[2];
-		while (count <= loopCount)
-		{
-			Sleep(20);
-			readBits(finish_address, 2, readRes);
-			if (readRes[0] || readRes[1])
-			{
-				break;
-			}
-			count++;
-		}
+		//Sleep(100);
+		//int loopCount = timeout / 20;
+		//int count = 0;
+		//bool readRes = false;
+		//bool readFailedRes = false;
+		//while (count <= loopCount)
+		//{
+		//	Sleep(20);
+		//	readBit(finish_address, readRes);
+		//	readBit(failed_address, readFailedRes);
+		//	if (readRes || readFailedRes)
+		//	{
+		//		break;
+		//	}
+		//	count++;
+		//}
 		if (!writeBit(start_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到复位命令地址错误", sub->getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
-		if (readRes[0])
-		{
-			//sub->setCassetteDoorOpend(false);
-			//sub->setTMCavityDoorOpend(false);
-			sub->setHasResetFlag(true);
-			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "复位命令执行结束");
+		//if (readRes)
+		//{
+		//	//sub->setCassetteDoorOpend(false);
+		//	//sub->setTMCavityDoorOpend(false);
+		//	sub->setHasResetFlag(true);
+		//	ret = IKernelCommand::RunResult::RUN_OK;
+		//	logInform(sub->getName().c_str(), "复位命令执行结束");
 
-		}
-		else if (readRes[1])
-		{
-			short code = 0;
-			readShort(error_code_address, code);
-			auto code_message = getErrorCode(LoadLockErrorCommand::Reset, code);
-			AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
-			setAlarm(alarm);
-			logError(sub->getName().c_str(), "复位命令执行错误");
-		}
-		else
-		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "复位命令通讯超时"));
-			setAlarm(alarm);
-			logError(sub->getName().c_str(), "复位命令通讯超时");
-		}
-
+		//}
+		//else if(readFailedRes)
+		//{
+		//	short code = 0;
+		//	readShort(error_code_address, code);
+		//	auto code_message = getErrorCode(LoadLockErrorCommand::Reset, code);
+		//	AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
+		//	setAlarm(alarm);
+		//	logError(sub->getName().c_str(), "复位命令执行错误");
+		//}
+		//else
+		//{
+		//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "复位命令通讯超时"));
+		//	setAlarm(alarm);
+		//	logError(sub->getName().c_str(), "复位命令通讯超时");
+		//}
+		ret = IKernelCommand::RunResult::RUN_OK;
 		return ret;
 
 	}

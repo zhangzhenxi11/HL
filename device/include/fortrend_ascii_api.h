@@ -90,6 +90,9 @@ private:
 	void handle_HOLD(const std::shared_ptr<Command>& command);//HOLD
 	void handle_RESTR(const std::shared_ptr<Command>& command);//RESTR
 	void handle_ABORT(const std::shared_ptr<Command>& command);//ABORT
+
+	void handle_TRANSF(const std::shared_ptr<Command>& command);//TRANSF
+
 protected:
 	virtual void initialize() throw(KernelException)override;
 	virtual void unInitialize()override;

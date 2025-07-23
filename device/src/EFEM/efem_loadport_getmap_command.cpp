@@ -58,7 +58,6 @@ HexLoadPorGetMapCommand::RunResult HexLoadPorGetMapCommand::onRun() throw(Kernel
 	}
 
 	lp->primaryMessageName = this->getName();
-	//std::string str = Poco::format("ACK:%s", );
 	std::string lpn = lp->getName() == "ELP1" ? "LP1" : "LP2";
 	std::string str = Poco::format("GET:MAPDT/%s", lpn);
 	str.push_back(';');

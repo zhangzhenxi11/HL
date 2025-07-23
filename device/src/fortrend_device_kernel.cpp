@@ -134,7 +134,7 @@ namespace FC{
 		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr(new EFEMWaferRobotSubsystem(this, "EWTR",api));
 		std::shared_ptr<EFEMLPSubsystem> elp1(new EFEMLPSubsystem(this, "ELP1", api));
 		std::shared_ptr<EFEMLPSubsystem> elp2(new EFEMLPSubsystem(this, "ELP2", api));
-		std::shared_ptr<EFEMAlignerSubsystem> ealigner(new EFEMAlignerSubsystem(this, "EALIGNER"));
+		std::shared_ptr<EFEMAlignerSubsystem> ealigner(new EFEMAlignerSubsystem(this, "EALIGNER",api));
 
 		this->addKernelModule(ewtr);
 		this->addKernelModule(elp1);

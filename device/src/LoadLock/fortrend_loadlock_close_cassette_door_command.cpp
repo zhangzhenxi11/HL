@@ -61,6 +61,7 @@ namespace FC{
 		if (!sub){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
+		
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
@@ -69,6 +70,12 @@ namespace FC{
 		std::string close_address = command_config->getString("close_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
 		std::string failed_address = command_config->getString("failed_address","");
+
+		//测试强制注释
+		//if (!sub->getLoadLockCassetteCloseSafeSignal())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("地址: %s EFEM允许关闭cassette门信号未到位", sub->getName()), this);
+		//}
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
@@ -81,11 +88,12 @@ namespace FC{
 		}
 		logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令开始");
 
-		if (SIMULATION_TEST == 1)
-		{
-			logInform(sub->getName().c_str(), "模拟关闭放晶圆盒门阀命令...");
-			return RunResult::RUN_OK;
-		}
+
+		//if (SIMULATION_TEST == 1)
+		//{
+		//	logInform(sub->getName().c_str(), "模拟关闭放晶圆盒门阀命令...");
+		//	return RunResult::RUN_OK;
+		//}
 
 		if (!writeBit(open_address, false))
 		{
@@ -132,7 +140,7 @@ namespace FC{
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "关闭放晶圆盒门阀命令通讯超时"));
 			setAlarm(alarm);
-			//logError(sub->getName().c_str(), "关闭放晶圆盒门阀命令通讯超时");
+			logError(sub->getName().c_str(), "关闭放晶圆盒门阀命令通讯超时");
 		}
 		
 		return ret;

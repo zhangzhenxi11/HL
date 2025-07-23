@@ -11,23 +11,24 @@
 
 #ifndef _XLH_EFEM_ALIGN_COMMAND_INCLUDE_
 #define _XLH_EFEM_ALIGN_COMMAND_INCLUDE_
-#include "Kernel/Fortrend/rnd_command_executer.h"
+//#include "Kernel/Fortrend/rnd_command_executer.h"
 #include "Kernel/Fortrend/aligner_abstract_command.h"
 #include "Kernel/kernel_exception.h" 
 #include "Kernel/Fortrend/hex_command_executer.h"
-#include "Efem/tcp_efem_command_executer.h"
-#include "Efem/tcp_efem_subsystem_helper.h"
+
+
 KERNEL_NS_BEGIN
+class HexSubSystemHelper;
 
 
 /**
 *@brief   align command for rnd  aligner subsystem
 */
-class  EFEMAlignerAlignCommand :  public AlignerAbstractAlignCommand,public TcpEfemCommandExecuter
+class  EFEMAlignerAlignCommand :  public AlignerAbstractAlignCommand, public HexCommandExecuter
 {
 public:
 	DECLARE_PTR(EFEMAlignerAlignCommand)
-	EFEMAlignerAlignCommand(TcpEfemSubSystemHelper* hexHelper);
+	EFEMAlignerAlignCommand(HexSubSystemHelper* hexHelper);
 
 	virtual std::string getName() const override { return "Align"; }
 

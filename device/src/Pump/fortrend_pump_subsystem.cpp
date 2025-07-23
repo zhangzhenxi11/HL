@@ -141,16 +141,16 @@ FortrendPumpSubsystem::FortrendPumpSubsystem(IKernel*  kernel, const std::string
 } 
 
 void FortrendPumpSubsystem::onInitialize()throw(KernelException){
-	
-	if (SIMULATION_TEST == 1)
+	if (SIM_MODE == 1)
 	{
 		setState(IKernelSubSystem::State::SUB_NORMAL);
 	}
 	else
 	{
+
 		try {
 			if (KeyencePlcSubSystemHelper::enableProtocol())
-				setState(IKernelSubSystem::State::SUB_NORMAL);
+				setState(IKernelSubSystem::State::SUB_IDEL);
 			else
 				setState(IKernelSubSystem::State::SUB_UNKNOWN);
 
@@ -160,9 +160,6 @@ void FortrendPumpSubsystem::onInitialize()throw(KernelException){
 			//throw e;
 		}
 	}
-
-	
-
 
 }
 

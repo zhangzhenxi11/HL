@@ -38,7 +38,7 @@
 #include "Poco/StringTokenizer.h"
 #include "Poco/NumberParser.h"
 #include "Kernel/kernel_event_paramters.h"
-#include "Kernel/Fortrend/fortrend_cassette_manager.h"
+
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
@@ -344,11 +344,13 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 	if (command->type == EFEMAsciiApi::Type::INF){
 		#pragma region STATE
 			if (command->message->base == EFEMAsciiApi::Base::STATE){
-				if (command->message->paramers.size() == 5){
+				if (command->message->paramers.size() == 5)
+				{
 					std::string  status = command->message->paramers.at(1);
 					std::string  busystatus = command->message->paramers.at(2);//BUSY or IDLE
 					std::string  boxstatus = command->message->paramers.at(3);//EMPTY or PRESENT
 					std::string  foupOpenStatus = command->message->paramers.at(4);//CLOSED or OPENED
+
 					//logError(getName().c_str(), "status=%s busystatus=%s boxstatus=%s foupOpenStatus=%s", status, busystatus, boxstatus, foupOpenStatus);
 					FortrendCassetteManager::Ptr cassManager =IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
 					auto cass1 = cassManager->getCassette(this);

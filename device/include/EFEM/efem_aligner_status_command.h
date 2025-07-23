@@ -14,8 +14,6 @@
 #include "Kernel/Fortrend/rnd_command_executer.h"
 #include  "Kernel/kernel_subsystem_update_command.h"
 #include "Kernel/kernel_exception.h" 
-#include "Efem/tcp_efem_command_executer.h"
-#include "Efem/tcp_efem_subsystem_helper.h"
 
 KERNEL_NS_BEGIN
 
@@ -24,11 +22,11 @@ class HexSubSystemHelper;
 /**
 * @brief   update status command for rnd  aligner subsystem
 */
-class  EFEMAlignerStatusCommand : public KernelSubsystemUpdateCommand, public TcpEfemCommandExecuter
+class  EFEMAlignerStatusCommand : public KernelSubsystemUpdateCommand
 {
 public:
 	DECLARE_PTR(EFEMAlignerStatusCommand) 
-	EFEMAlignerStatusCommand(TcpEfemSubSystemHelper* hexHelper);
+	EFEMAlignerStatusCommand();
 	virtual std::string getName() const override { return "Update"; }
 protected:
 	virtual bool isNeedResetwhenFaild()const override { return false; }

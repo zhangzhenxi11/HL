@@ -16,6 +16,7 @@
 #include "Poco/Format.h"
 #include "LoadLock/fortrend_loadlock_subsystem.h" 
 #include "Kernel/Fortrend/loadport_abstract_subsystem.h"
+#include "EFEM/efem_aligner_subsystem.h"
 #include <iostream>
 #include "Kernel/kernel_block.h"
 #include "Kernel/kernel_block_manager.h"
@@ -80,6 +81,7 @@ EFEMRobotReadyGetWaferCommand::RunResult EFEMRobotReadyGetWaferCommand::onRun() 
 	int slotn = getSlot();
 	int armn = getArm();
 	std::string robotName = robot->getName();//模组名
+	//MOV:GOTO/WTR/ALIGNER/1/2/DOWN;
 	std::string str = Poco::format("MOV:GOTO/%s/%s/%d/%d/%s", robotName,stationName, slotn, armn, std::string("DOWN"));//DOWN到取料位，UP到放料位
 	str.push_back(';');
 	bool result = robot->api->sendMessage(str.data(), str.size());
@@ -201,22 +203,32 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	//}
 	if (stationName == "ELP1" || stationName == "ELP2"){
 
-		//测试注释
-		//if (!getStation()->hasBoxPresent()){
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
-		//}
+		if (!getStation()->hasBoxPresent()){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
+		}
 
-		//////box placement 
-		//if (!getStation()->hasBoxPlacement()){
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not placement now(sensor).", getStation()->getName()), this);
-		//}
+		////box placement 
+		if (!getStation()->hasBoxPlacement()){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not placement now(sensor).", getStation()->getName()), this);
+		}
 
-		//////box door
-		//if (!station_cass->isBoxOpened()){
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s box is closed now.", getStation()->getName()), this);
-		//}
+		////box door
+		if (!station_cass->isBoxOpened()){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s box is closed now.", getStation()->getName()), this);
+		}
 
 		stationName = stationName == "ELP1" ? "LP1" : "LP2";
+	}
+	else if (stationName == "EALIGNER")
+	{
+		std::shared_ptr<EFEMAlignerSubsystem> aligner = std::dynamic_pointer_cast<EFEMAlignerSubsystem>(getStation());
+		if (!aligner) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s is NULL ", getStation()->getName()), this);
+		}
+		if (aligner->getState() != IKernelSubSystem::State::SUB_NORMAL) {
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
+		}
+		stationName = "ALIGNER";
 	}
 	else{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
@@ -245,9 +257,6 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 		slotnum = 1;
 	}
 
-
-
-
 	if (mapStat == Cassette::Mapping::Empty){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_STATE_EXCEPTION, Poco::format("Station %s slot %d  is empty.", getStation()->getName(), (int)getSlot()), this);
 	}
@@ -272,8 +281,9 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	robot->primaryMessageName = getName();//GetWafer
 
 	std::string robotName = robot->getName();//模组名
+	robotName = robotName.erase(0,1);
 
-	//MOV:LOAD/WTR/ALIGNER/1/0/1;
+	//MOV:LOAD/WTR/ALIGNER/1/0/1;    0:不寻边
 	std::string str = Poco::format("MOV:LOAD/%s/%s/%d/0/%d", robotName, stationName, slotnum,getArm());
 
 	str.push_back(';');
@@ -286,8 +296,6 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 		logError(robot->getName().c_str(), "%s放料命令发送失败，请检查通讯！", robot->getName());
 		return ret;
 	}
-
-
 
 	robot->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
 	robot->timestamp = std::chrono::system_clock::now();

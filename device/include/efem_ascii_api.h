@@ -26,7 +26,14 @@ class  EFEMAsciiApi : public TcpClientApi
 {
 public:
 	DECLARE_PTR(EFEMAsciiApi)
+
+	// 例如：GET:STATE/parameter1
+	//            
+	//Command 构成： Type + Message    Message构成: Base/parameter   
+	// 就是Type: Base/parameter 
+
 	typedef enum{ MOV, GET, SET, INF, ABS, EVT, ACK, NAK, TYPE_UNKNOWN } Type;
+
 	typedef enum{ 
 		READY, 
 		INIT, 
@@ -58,10 +65,12 @@ public:
 		ALARM,
 		POD, 
 		DOORSTAT,
+		TRANSF, //2025-7-22 新加
 		BASE_UNKNOWN
 	} Base;
 	//空闲，等待回复，请求失败，响应超时，完成 
 	typedef enum{ TRANS_IDEL, TRANS_WAIT_REPLY, TRANS_REQUEST_FAILD, TRANS_RESPONSE_TIMEOUT, TRANS_FINISHED }  State;
+	
 	typedef struct {
 		Base base;
 		std::vector<std::string> paramers;

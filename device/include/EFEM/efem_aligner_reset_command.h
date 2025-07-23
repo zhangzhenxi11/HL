@@ -16,19 +16,17 @@
 #include "Kernel/Fortrend/aligner_abstract_command.h"
 #include "Kernel/kernel_subsystem_reset_command.h"
 #include "Kernel/kernel_exception.h" 
-#include "Efem/tcp_efem_command_executer.h"
-#include "Efem/tcp_efem_subsystem_helper.h"
 
 KERNEL_NS_BEGIN
 
 /**
 * @brief   reset command for rnd  aligner subsystem
 */
-class  EFEMAlignerResetCommand : public  KernelSubsystemResetCommand, public TcpEfemCommandExecuter
+class  EFEMAlignerResetCommand : public HexResetCommand
 {
 public:
 	DECLARE_PTR(EFEMAlignerResetCommand)
-	EFEMAlignerResetCommand(TcpEfemSubSystemHelper* hexHelper);
+	EFEMAlignerResetCommand(HexSubSystemHelper* hexHelper);
 	virtual std::string getName() const override { return "Reset"; }
 
 protected:
