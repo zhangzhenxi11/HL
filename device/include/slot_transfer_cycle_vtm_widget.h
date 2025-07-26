@@ -85,6 +85,25 @@ namespace  FC {
 		void onProcess();
 		void initPMCavityParamEdieTableWidget();
 		void addAnPMItem(const QString name);
+		
+
+		//新增
+		void executeEFEMTransfer();
+
+		void executeLLATransfer();
+
+		void executeLLBTransfer();
+
+		void executePM1Transfer();
+
+		void executePM2Transfer();
+
+		void executePM3Transfer();
+
+		void executePM4Transfer();
+
+		void executeTMTransfer();
+		
 
 
 	protected:
