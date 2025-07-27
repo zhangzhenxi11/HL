@@ -297,6 +297,10 @@ namespace FC{
 
 		bool isDoubleAction = false;
 
+		bool tool_allow_get_wafer = false;// true呼叫LP上料，  false LP上料完成
+
+		bool tool_allow_put_wafer = false;// true呼叫LP上料，  false LP上料完成
+
 		/************************zzx  add*********************************/
 		//2025-7-16 新增
 		std::vector<UnifiedWaferTask> tasks; //总任务队列
@@ -315,21 +319,30 @@ namespace FC{
 
 		/************************loadLock*********************************/
 
-		std::vector<UnifiedWaferTask> loadLockAPendingTasks;
-									  
-		std::vector<UnifiedWaferTask> loadLockACompletedTasks;
+		std::vector<UnifiedWaferTask> loadLockPendingTasks;
 
-		std::vector<UnifiedWaferTask> loadLockAReturnPendingTasks;
+		std::vector<UnifiedWaferTask> loadLockCompletedTasks;
 
-		std::vector<UnifiedWaferTask> loadLockAReturnCompletedTasks;
-							  
-		std::vector<UnifiedWaferTask> loadLockBPendingTasks;
-									  
-		std::vector<UnifiedWaferTask> loadLockBCompletedTasks;
+		std::vector<UnifiedWaferTask> loadLockReturnPendingTasks;
 
-		std::vector<UnifiedWaferTask> loadLockBReturnPendingTasks;
+		std::vector<UnifiedWaferTask> loadLockReturnCompletedTasks;
 
-		std::vector<UnifiedWaferTask> loadLockBReturnCompletedTasks;
+
+		//std::vector<UnifiedWaferTask> loadLockAPendingTasks;
+		//							  
+		//std::vector<UnifiedWaferTask> loadLockACompletedTasks;
+
+		//std::vector<UnifiedWaferTask> loadLockAReturnPendingTasks;
+
+		//std::vector<UnifiedWaferTask> loadLockAReturnCompletedTasks;
+		//					  
+		//std::vector<UnifiedWaferTask> loadLockBPendingTasks;
+		//							  
+		//std::vector<UnifiedWaferTask> loadLockBCompletedTasks;
+
+		//std::vector<UnifiedWaferTask> loadLockBReturnPendingTasks;
+
+		//std::vector<UnifiedWaferTask> loadLockBReturnCompletedTasks;
 
 		/************************PM*********************************/
 		std::vector<UnifiedWaferTask> pmPendingTasks;
@@ -509,6 +522,8 @@ namespace FC{
 		bool loadlock1_allow_put_wafer = false;//true呼叫真空机械手放料
 		bool loadlock2_allow_put_wafer = false;
 
+
+
 		bool tool1_allow_get_wafer = false;// true呼叫LP1上料，  false LP1上料完成
 
 		bool tool2_allow_get_wafer = false;// true呼叫LP2上料，  false LP2上料完成
@@ -677,6 +692,7 @@ namespace FC{
 	* 
 	* 
 	*/
+
 	void QSlotTransferCycleVTMWidgetPrivate::executeEFEMTransfer()
 	{
 		std::shared_ptr<EFEMLPSubsystem> elp;
@@ -700,19 +716,18 @@ namespace FC{
 			{
 			case 10:
 			{
-				if (tool1_allow_get_wafer)//给tool上料
-				{
-					//worktasks = efemPendingTasks = taskManager.getEfemPendingTasks();
+				efemPendingTasks = taskManager.getEfemPendingTasks();
+				efemReturnPendingTasks = taskManager.getEfemRuturnPendingTasks();
 
+				if (efemPendingTasks.size() != 0)//给tool上料
+				{
 					efem_auto_step = 100;
 
 					if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
 						efem_auto_step = 3000;
 				}
-				else if (tool1_allow_put_wafer)//给tool下料
+				else if (efemReturnPendingTasks.size() != 0)//给tool下料
 				{
-					//worktasks = efemReturnPendingTasks = taskManager.getEfemRuturnPendingTasks();
-
 					efem_auto_step = 200;
 					if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
 						efem_auto_step = 4000;
@@ -726,10 +741,10 @@ namespace FC{
 #pragma region 给TOOL上料
 			case 100:
 			{
-				if (tasks.size() > 0)
+				if (efemPendingTasks.size() > 0)
 				{
-					elp = tasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//UI中确定的数据，elp就是确定的
-					lk = tasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+					elp = efemPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//UI中确定的数据，elp就是确定的
+					lk  =  efemPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -771,36 +786,31 @@ namespace FC{
 				auto cassManager = lk->getKernel()->getKernelModule<FortrendCassetteManager>();
 				auto station_cass_lk = cassManager->getCassette(lk.get());
 				auto lkmaps = station_cass_lk->getAllMapping();//查看
+
 				for (int i = 0; i < lkmaps.size(); i++)
 				{
 					if (lkmaps[i] == Cassette::Empty) //空片的槽号
 					{
 						if(tasks.size() > 0)
 						{
-							//更新成LL待上料任务类型
-							
-							taskManager.updateTaskMaps(tasks[0].taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
-
-							//taskManager.addWorkTask(tasks.at(0)); //工作队列加入一个
-							//tasks.erase(tasks.begin());
-
+							//更新为成LL待上料任务类型
+							taskManager.updateTaskMaps(tasks[0].taskId,
+								UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER,
+								UnifiedWaferTask::Status::QUEUED);
 						}
 					}
 				}
-				//taskManager.getAllWorksTasks();
-
-				efemPendingTasks = taskManager.getEfemPendingTasks(); //这里配置的都是要待搬运的
-
+				loadLockPendingTasks = taskManager.getLoadLockPendingTasks(lk.get()->getName());
 				efem_auto_step = 110;
 			}
 			break;
 			case 110:
 			{
-				if (efemPendingTasks.size() == 1)
+				if (loadLockPendingTasks.size() == 1)
 				{
-					efem_auto_step = 115;//单取单放LK
+					efem_auto_step = 115;//单取LP单放LK
 				}
-				else if (efemPendingTasks.size() >= 2)
+				else if (loadLockPendingTasks.size() >= 2)
 				{
 					efem_auto_step = 150;//双取LP双放LK
 				}
@@ -824,7 +834,7 @@ namespace FC{
 					}
 					if (!elp->hasDoorOpend())
 					{
-						tool1_allow_get_wafer = false; //LP1上料完成
+						tool_allow_get_wafer = false; //LP1上料完成
 						efem_auto_step = 10; //跳转到开始步骤
 					}
 				}
@@ -833,89 +843,736 @@ namespace FC{
 			case 115:
 			{
 				//打开晶圆盒
-
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp->hasDoorOpend()) {
+						auto cmd = elp->createOpenBoxCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 120;
+						}
+					}
+					else {
+						efem_auto_step = 120;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
 				logInform(elp->getName().c_str(), "打开晶圆盒,step:%d", efem_auto_step);
-				efem_auto_step = 120;
 			}
 			break;
 			case 120://LP1上料
 			{
 				logInform(elp->getName().c_str(), "取LP晶圆,step:%d", efem_auto_step);
-				efem_auto_step = 130;
-			
+
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd = ewtr->createGetCommand(elp, 1, efemPendingTasks[0].sourceSlot);
+					ewtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "取LP晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 130;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
+				
 			}
+			break;
 			case 130://LP1上料
 			{
 				logInform(elp->getName().c_str(), "LL打开晶圆盒门,step:%d", efem_auto_step);
-				efem_auto_step = 135;
 
+				if (lk && lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!lk->getCassetteDoorOpend()) 
+					{
+						auto cmdopendoor = lk->createOpenCassetteDoorCommand();
+
+						lk->startCommand(cmdopendoor);
+						cmdopendoor->wait();
+						if (cmdopendoor->hasError())
+						{
+							logFailedExcuteCommandHasError(lk->getName(), "LL打开晶圆盒门", efem_process_name, efem_auto_step);
+						}
+					}
+					else {
+						Sleep(2000);
+						efem_auto_step = 135;
+					}
+
+				}
+				else {
+					logFailedNotNormal(lk1->getName(), efem_process_name, efem_auto_step);
+				}
 			}
 			break;
 			case 135://LP1上料
 			{
 				logInform(elp->getName().c_str(), "放LL晶圆,step:%d", efem_auto_step);
-
-				auto cmd2 = ewtr->createPutCommand(lk, 1, efemPendingTasks[0].targetSlot);
-				ewtr->startCommand(cmd2);
-				cmd2->wait();
-				if (cmd2->hasError())
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 				{
-					logFailedExcuteCommandHasError(ewtr->getName(), "放LL晶圆", efem_process_name, efem_auto_step);
+					auto cmd2 = ewtr->createPutCommand(lk, 1, loadLockPendingTasks[0].targetSlot);
+					ewtr->startCommand(cmd2);
+					cmd2->wait();
+					if (cmd2->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "放LL晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						//更新指定ID task状态改变，转移到其他状态下的队列中
+						taskManager.updateTaskMaps(efemPendingTasks[0].taskId,
+							UnifiedWaferTask::TaskType::EFEM_TRANSFER,
+							UnifiedWaferTask::Status::COMPLETED);
+
+						efem_auto_step = 110; //跳转到110
+						//待LL函数检查 EfemCompletedTasks中tasks,手动更新为LockPendingTasks --> LL 抽真空，开门
+					}
+				}
+				else
+				{
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			#pragma region 双取LP双放LK
+			case 150:
+			{
+				elp = loadLockPendingTasks[0].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp->hasDoorOpend())
+					{
+						auto cmd = elp->createOpenBoxCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 151;
+						}
+					}
+					else {
+						efem_auto_step = 151;
+					}
 				}
 				else {
-					//void updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type, UnifiedWaferTask::Status status);
-					taskManager.updateTaskMaps(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
 				}
-
-
-
 
 			
 			}
 			break;
+			case 151:
+			{
+				elp = loadLockPendingTasks[1].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp->hasDoorOpend())
+					{
+						auto cmd = elp->createOpenBoxCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 152;
+						}
+					}
+					else {
+						efem_auto_step = 152;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 152:
+			{
+				elp = loadLockPendingTasks[0].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd = ewtr->createGetCommand(elp, 1, loadLockPendingTasks[0].sourceSlot);
+					ewtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "A手臂取LP晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 154;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 154:
+			{
+				elp = loadLockPendingTasks[1].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd = ewtr->createGetCommand(elp, 2, loadLockPendingTasks[1].sourceSlot);
+					ewtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "B手臂取LP晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 155;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
+			
+			}
+			break;
+			case 155:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem>get_lk = loadLockPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
+				if (get_lk && get_lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!get_lk->getCassetteDoorOpend())
+					{
+						auto cmdopendoor = get_lk->createOpenCassetteDoorCommand();
+						get_lk->startCommand(cmdopendoor);
+						cmdopendoor->wait();
+						if (cmdopendoor->hasError())
+						{
+							logFailedExcuteCommandHasError(get_lk->getName(), "LL打开晶圆盒门", efem_process_name, efem_auto_step);
+						}
+					}
+					else {
+						Sleep(2000);
+						efem_auto_step = 156;
+					}
+				}
+				else {
+					logFailedNotNormal(get_lk->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 156:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem>get_lk = loadLockPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+				if (get_lk && get_lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!get_lk->getCassetteDoorOpend())
+					{
+						auto cmdopendoor = get_lk->createOpenCassetteDoorCommand();
+						get_lk->startCommand(cmdopendoor);
+						cmdopendoor->wait();
+						if (cmdopendoor->hasError())
+						{
+							logFailedExcuteCommandHasError(get_lk->getName(), "LL打开晶圆盒门", efem_process_name, efem_auto_step);
+						}
+					}
+					else {
+						Sleep(2000);
+						efem_auto_step = 157;
+					}
+				}
+				else {
+					logFailedNotNormal(get_lk->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 157:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem>get_lk = loadLockPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd2 = ewtr->createPutCommand(get_lk, 1, loadLockPendingTasks.at(0).targetSlot);
+					ewtr->startCommand(cmd2);
+					cmd2->wait();
+					if (cmd2->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "A手臂放LL晶圆", efem_process_name, efem_auto_step);
+					}
+					else {//放料完成
+						efem_auto_step = 158;
+						taskManager.updateTaskMaps(loadLockPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					}
+				}
+				else {
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			
+			
+			}
+			break;
+			case 158:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem>get_lk = loadLockPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd2 = ewtr->createPutCommand(get_lk, 2, loadLockPendingTasks.at(1).targetSlot);
+					ewtr->startCommand(cmd2);
+					cmd2->wait();
+					if (cmd2->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "B手臂放LL晶圆", efem_process_name, efem_auto_step);
+					}
+					else {//放料完成
+						taskManager.updateTaskMaps(loadLockPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+						efem_auto_step = 110;
+					}
+				}
+				else {
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			#pragma endregion
 
 #pragma endregion
 
 #pragma region 给TOOL下料
 			case 200:
 			{
+				elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//下料，实际源头和目标互换
+				lk = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
-
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp->hasDoorOpend()) {
+						auto cmd = elp->createOpenBoxCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 201;
+						}
+					}
+					else {
+						auto cmd = elp->createGetMapCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "获取MAP", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 201;
+						}
+					}
+				}
 			}
 			break;
+
+			case 201:
+			{
+				if (efemReturnPendingTasks.size() == 1)
+				{
+					efem_auto_step = 240;
+				}
+				else if (efemReturnPendingTasks.size() >= 2)
+				{
+					efem_auto_step = 250;
+				}
+				else
+				{
+					//下料完成
+					if (elp1 && elp1->getState() == IKernelSubSystem::State::SUB_NORMAL) {
+						if (elp1->hasDoorOpend()) {
+							auto cmd = elp1->createCloseBoxCommand();
+							elp1->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(elp1->getName(), "关闭晶圆盒", efem_process_name, efem_auto_step);
+							}
+						}
+					}
+					else {
+						logFailedNotNormal(elp1->getName(), efem_process_name, efem_auto_step);
+					}
+
+					if (elp2 && elp2->getState() == IKernelSubSystem::State::SUB_NORMAL) {
+						if (elp2->hasDoorOpend()) {
+							auto cmd = elp2->createCloseBoxCommand();
+							elp2->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(elp2->getName(), "关闭晶圆盒", efem_process_name, efem_auto_step);
+							}
+						}
+					}
+					else {
+						logFailedNotNormal(elp1->getName(), efem_process_name, efem_auto_step);
+					}
+
+					if (!elp2->hasDoorOpend() && !elp1->hasDoorOpend())
+					{
+						tool_allow_put_wafer = false;//下料到LP完成
+
+						efem_auto_step = 10;
+					}
+				}
+			}
+			break;
+			#pragma region 单取LK单放LP
+			case 240:
+			{
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp->hasDoorOpend()) {
+						auto cmd = elp->createOpenBoxCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 241;
+						}
+					}
+					else {
+						efem_auto_step = 241;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 242:
+			{
+				if (lk && lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!lk->getCassetteDoorOpend()) {
+						auto cmdopendoor = lk->createOpenCassetteDoorCommand();
+						lk->startCommand(cmdopendoor);
+						cmdopendoor->wait();
+						if (cmdopendoor->hasError())
+						{
+							logFailedExcuteCommandHasError(lk->getName(), "LL打开晶圆盒门", efem_process_name, efem_auto_step);
+						}
+						else {
+							efem_auto_step = 243;
+							Sleep(2000);
+						}
+					}
+					else {
+						efem_auto_step = 243;
+						Sleep(2000);
+					}
+				}
+				else {
+					logFailedNotNormal(lk->getName(), efem_process_name, efem_auto_step);
+				}
+			
+			}
+			break;
+			case 243:
+			{
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd1 = ewtr->createGetCommand(lk, 1, efemReturnPendingTasks.at(0).targetSlot);
+					ewtr->startCommand(cmd1);
+					cmd1->wait();
+					if (cmd1->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "取LLA晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 244;
+					}
+				}
+				else {
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 244:
+			{
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd2 = ewtr->createPutCommand(elp, 1, efemReturnPendingTasks[0].sourceSlot);
+					ewtr->startCommand(cmd2);
+					cmd2->wait();
+					if (cmd2->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "放LP晶圆", efem_process_name, efem_auto_step);
+					}
+					taskManager.updateTaskMaps(efemReturnPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+
+
+					efem_auto_step = 201;
+				}
+				else
+				{
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+
+			#pragma endregion
+
+			#pragma region 双取LK双放LP
+			case 250:
+			{
+				std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+				std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingTasks.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+
+				bool elpopen = false;
+				bool elp2open = false;
+
+				if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp->hasDoorOpend()) {
+						auto cmd = elp->createOpenBoxCommand();
+						elp->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							elpopen = true;
+						}
+					}
+					else {
+						elpopen = true;
+					}
+				}
+				else {
+					logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+				}
+
+				if (elp2put && elp2put->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!elp2put->hasDoorOpend()) {
+						auto cmd = elp2put->createOpenBoxCommand();
+						elp2put->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(elp2put->getName(), "打开晶圆盒", efem_process_name, efem_auto_step);
+						}
+						else {
+							elp2open = true;
+						}
+					}
+					else {
+						elp2open = true;
+					}
+				}
+				else {
+					logFailedNotNormal(elp2put->getName(), efem_process_name, efem_auto_step);
+				}
+
+				if (elpopen && elp2open) {
+					efem_auto_step = 251;
+				}
+			}
+			break;
+			case 251:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+				std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+
+				bool lkopen = false;
+				bool lk2open = false;
+				if (lk1 && lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!lk1->getCassetteDoorOpend()) {
+						auto cmdopendoor = lk1->createOpenCassetteDoorCommand();
+						lk1->startCommand(cmdopendoor);
+						cmdopendoor->wait();
+						if (cmdopendoor->hasError())
+						{
+							logFailedExcuteCommandHasError(lk1->getName(), "LL打开晶圆盒门", efem_process_name, efem_auto_step);
+						}
+						else {
+							lkopen = true;
+							
+							Sleep(2000);
+						}
+					}
+					else {
+						lkopen = true;
+						
+						Sleep(2000);
+					}
+				}
+				else {
+					logFailedNotNormal(lk1->getName(), efem_process_name, efem_auto_step);
+				}
+
+				if (lk2 && lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					if (!lk2->getCassetteDoorOpend()) {
+						auto cmdopendoor = lk2->createOpenCassetteDoorCommand();
+						lk2->startCommand(cmdopendoor);
+						cmdopendoor->wait();
+						if (cmdopendoor->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "LL打开晶圆盒门", efem_process_name, efem_auto_step);
+						}
+						else {
+							lk2open = true;
+							Sleep(2000);
+						}
+					}
+					else {
+						lk2open = true;
+						Sleep(2000);
+					}
+				}
+				else {
+					logFailedNotNormal(lk2->getName(), efem_process_name, efem_auto_step);
+				}
+
+				if (lk2open && lkopen)
+				{
+					efem_auto_step = 253;
+				}
+			}
+			break;
+			case 253:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd1 = ewtr->createGetCommand(lk1, 1, efemReturnPendingTasks[0].targetSlot);
+					ewtr->startCommand(cmd1);
+					cmd1->wait();
+					if (cmd1->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "A手臂取LL晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 254;
+					}
+				}
+				else {
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 254:
+			{
+				std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+				
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					auto cmd1 = ewtr->createGetCommand(lk2, 2, efemReturnPendingTasks[1].targetSlot);
+					ewtr->startCommand(cmd1);
+					cmd1->wait();
+					if (cmd1->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "B手臂取LL晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 255;
+					}
+				}
+				else {
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			break;
+			case 256:
+			{
+			
+				if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+				{
+					std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+					std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingTasks.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+
+
+					auto cmd3 = ewtr->createPutCommand(elp, 1, efemReturnPendingTasks[0].sourceSlot);
+					ewtr->startCommand(cmd3);
+
+					auto cmd4 = ewtr->createPutCommand(elp2put, 2, efemReturnPendingTasks[1].sourceSlot);
+					ewtr->startCommand(cmd4);
+
+
+					cmd3->wait();
+					cmd4->wait();
+
+					if (cmd3->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "A手臂放LP晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 257;
+					}
+
+					if (cmd4->hasError())
+					{
+						logFailedExcuteCommandHasError(ewtr->getName(), "B手臂放LP晶圆", efem_process_name, efem_auto_step);
+					}
+					else
+					{
+						efem_auto_step = 257;
+					}
+				}
+				else {
+					logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+				}
+			}
+			case 257:
+			{
+				taskManager.updateTaskMaps(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+				taskManager.updateTaskMaps(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+				efem_auto_step = 201;
+			}
+			break;
+
+			#pragma endregion
 #pragma endregion
 
+#pragma region 模拟EFEM给TOOL上料
 
+#pragma endregion
+
+#pragma region 模拟EFEM给TOOL下料
+
+#pragma endregion
 			default:
 				break;
-
 			}
-
+			efem_step_once_finished = true;
+			Sleep(10);
 			
 		}
 	}
@@ -959,7 +1616,7 @@ namespace FC{
 			7.通知efem下料  -》跳转到efem第6步骤
 
 		*/
-		loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
+		//loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
 
 
 #if 0
@@ -1124,7 +1781,7 @@ namespace FC{
 	void QSlotTransferCycleVTMWidgetPrivate::executeLLBTransfer()
 	{
 
-		loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");
+		//loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::executePM1Transfer()
