@@ -73,22 +73,17 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
 		}*/
+
 		//check modules
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		auto subsystem_cass = cassManager->getCassette(sub);
+
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 		//fill params
 		std::string  first_layer_wafer_presence = command_config->getString("first_layer_detection_sensor","");
 		std::string  second_layer_wafer_presence = command_config->getString("second_layer_detection_sensor","");
 		std::string  bulge_wafer_presence = command_config->getString("bulge_detection_sensor","");
-
-		//std::string start_address = command_config->getString("start_address", "");
-		//std::string finish_address = command_config->getString("finish_address", "");
-		//std::string failed_address = command_config->getString("failed_address", "");
-		//std::string error_code_address = command_config->getString("error_code_address", "");
-		//std::string mapping_result_address = command_config->getString("mapping_result_address", "");
-
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 1){
