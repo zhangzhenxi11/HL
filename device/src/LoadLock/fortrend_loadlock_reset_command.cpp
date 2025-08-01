@@ -53,10 +53,7 @@ namespace FC{
 	LoadLockResetCommand::RunResult LoadLockResetCommand::onRun() throw(KernelException){
 		FortrendLoadLockSubsystem* sub = dynamic_cast<FortrendLoadLockSubsystem*>(getSubsystem());
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
-		//if (!sub->getProtrudingSensorState())
-		//{
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
-		//}
+
 		for (auto robot : sub->getRobots()){
 			if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("机械手: %s 状态不在正常状态", robot->getName()), this);
@@ -98,56 +95,13 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到复位命令地址错误", sub->getName()), this);
 		}
-		//Sleep(100);
-		//int loopCount = timeout / 20;
-		//int count = 0;
-		//bool readRes = false;
-		//bool readFailedRes = false;
-		//while (count <= loopCount)
-		//{
-		//	Sleep(20);
-		//	readBit(finish_address, readRes);
-		//	readBit(failed_address, readFailedRes);
-		//	if (readRes || readFailedRes)
-		//	{
-		//		break;
-		//	}
-		//	count++;
-		//}
+	
 		if (!writeBit(start_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到复位命令地址错误", sub->getName()), this);
 		}
-		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
-		//if (readRes)
-		//{
-		//	//sub->setCassetteDoorOpend(false);
-		//	//sub->setTMCavityDoorOpend(false);
-		//	sub->setHasResetFlag(true);
-		//	ret = IKernelCommand::RunResult::RUN_OK;
-		//	logInform(sub->getName().c_str(), "复位命令执行结束");
 
-		//}
-		//else if(readFailedRes)
-		//{
-		//	short code = 0;
-		//	readShort(error_code_address, code);
-		//	auto code_message = getErrorCode(LoadLockErrorCommand::Reset, code);
-		//	AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
-		//	setAlarm(alarm);
-		//	logError(sub->getName().c_str(), "复位命令执行错误");
-		//}
-		//else
-		//{
-		//	AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "复位命令通讯超时"));
-		//	setAlarm(alarm);
-		//	logError(sub->getName().c_str(), "复位命令通讯超时");
-		//}
-		ret = IKernelCommand::RunResult::RUN_OK;
-		return ret;
-
+		return IKernelCommand::RunResult::RUN_OK;
 	}
-
-
 
 }

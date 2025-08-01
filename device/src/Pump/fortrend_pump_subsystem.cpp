@@ -190,20 +190,20 @@ void FortrendPumpSubsystem::onProcess(){
 	//	++d->wait_count;
 	//	return;
 	//}
-#if 0
+
 	if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 	{
 		bool io_changed = false;
 
-		bool isAlarm = false;
-		if (d->mechanical_pump_alarm_address != "" && readBit(d->mechanical_pump_alarm_address, isAlarm))
-		{
-			if (d->mechanical_pump_isAlarm != isAlarm)
-			{
-				d->mechanical_pump_isAlarm = isAlarm;
-				io_changed = true;
-			}	
-		}
+		//bool isAlarm = false;
+		//if (d->mechanical_pump_alarm_address != "" && readBit(d->mechanical_pump_alarm_address, isAlarm))
+		//{
+		//	if (d->mechanical_pump_isAlarm != isAlarm)
+		//	{
+		//		d->mechanical_pump_isAlarm = isAlarm;
+		//		io_changed = true;
+		//	}	
+		//}
 		bool isWarn = false;
 		if (d->mechanical_pump_warn_address != "" && readBit(d->mechanical_pump_warn_address, isWarn))
 		{
@@ -214,15 +214,15 @@ void FortrendPumpSubsystem::onProcess(){
 			}	
 		}
 
-		bool isAcc = false;
-		if (d->mechanical_pump_acc_address != "" && readBit(d->mechanical_pump_acc_address, isAcc))
-		{
-			if (d->mechanical_pump_isAccPresence != isAcc)
-			{
-				d->mechanical_pump_isAccPresence = isAcc;
-				io_changed = true;
-			}
-		}
+		//bool isAcc = false;
+		//if (d->mechanical_pump_acc_address != "" && readBit(d->mechanical_pump_acc_address, isAcc))
+		//{
+		//	if (d->mechanical_pump_isAccPresence != isAcc)
+		//	{
+		//		d->mechanical_pump_isAccPresence = isAcc;
+		//		io_changed = true;
+		//	}
+		//}
 
 		bool isRunning = false;
 		if (d->mechanical_pump_running_address != "" && readBit(d->mechanical_pump_running_address, isRunning))
@@ -242,7 +242,6 @@ void FortrendPumpSubsystem::onProcess(){
 	}
 
 
-#endif
 
 #if 0
 #pragma region TM分子泵逻辑
@@ -482,7 +481,7 @@ void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguratio
 	configKeyencePlc(config);
 	if (config->has("Update"))
 	{
-		d->mechanical_pump_alarm_address = config->getString("Update.MechanicalPumpAlarmAddress", "MR30403");
+		//d->mechanical_pump_alarm_address = config->getString("Update.MechanicalPumpAlarmAddress", "MR30403");
 		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR30401");
 		d->mechanical_pump_warn_address = config->getString("Update.MechanicalPumpWarnAddress","");
 	}

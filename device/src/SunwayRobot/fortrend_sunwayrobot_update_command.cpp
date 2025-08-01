@@ -68,6 +68,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取状态超时参数设置错误", sub->getName()), this);
 	}
 
+# if 0
 	//HOME
 	std::string command = "MOV:HOME;";
 	std::string error_message = "";
@@ -207,7 +208,10 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		}
 
 		return RunResult::RUN_OK;
+
 	}
+#endif
+	return RunResult::RUN_OK;
 
 }
 

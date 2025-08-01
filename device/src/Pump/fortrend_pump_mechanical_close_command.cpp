@@ -50,18 +50,20 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
 
-		if (sub->getMechanicalPumpHasAlarm())
+		if (sub->getMechanicalPumpHasWarn())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("工位: %s 机械泵报警中！", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("工位: %s 机械泵警告中！", sub->getName()), this);
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
+		std::string motrol_control_address = command_config->getString("switch_control_mode", "");
 		std::string address = command_config->getString("start_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
 		std::string failed_address = command_config->getString("failed_address", "");
+
 	    int	timeout = command_config->getInt("timeout", 45000);
-		if (address == "" || finish_address == "" || failed_address=="")
+		if (address == "" || finish_address == "" || failed_address==""|| motrol_control_address=="")
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
 				Poco::format("地址: 关闭机械泵地址未定义", getName()), this);

@@ -24,6 +24,7 @@
 #include "SunwayRobot/fortrend_sunwayrobot_set_speed_command.h"
 #include "SunwayRobot/fortrend_sunwayrobot_set_axis_z_speed_command.h"
 
+#include "kernel/kernel_command_reject_exception.h"
 #include "Poco/String.h"
 #include "Poco/Format.h"
 #include "Poco/StringTokenizer.h"
@@ -44,6 +45,8 @@ namespace FC{
 		std::vector<std::shared_ptr<FortrendStation>>  stations;
 		std::map<unsigned int, std::string> armNames;
 		std::map<uint8_t, bool> armHasObjectMap;
+		std::map<std::string, std::string> armSafeMap;
+
 		std::vector<int> arm_wafer_slot;
 		FortrendSunwayRobotSubsystem::AWCRecordData awc_record_data[3];
 
@@ -90,6 +93,7 @@ namespace FC{
 	FortrendSunwayRobotSubsystem::FortrendSunwayRobotSubsystem(IKernel*  kernel, const std::string& name)
 		:WaferRobotAbstractSubsystem(kernel, name)
 		, SunwaySubSystemHelper(name)
+		, KeyencePlcSubSystemHelper(name)
 		, d(new FortrendSunwayRobotSubsystemPrivate(this)){
 		//init 
 		
@@ -195,6 +199,43 @@ namespace FC{
 		d->has_reset_flag = value;
 	}
 
+	bool FortrendSunwayRobotSubsystem::getSafeSignalInPlace(const std::string& subsystem)
+	{
+		bool is_safe_inplace = false;
+		int current_count = 0;
+		int try_count = 10;
+
+		auto it = d->armSafeMap.find(subsystem); //pair的迭代器
+		if (it != d->armSafeMap.end())
+		{
+			while (current_count < try_count)
+			{
+				if (!readBit(it->second, is_safe_inplace)) {
+
+					logError("WTR", "读:%s机械手安全地址失败", it->second);
+				}
+				current_count++;
+				
+				Sleep(500);
+			}
+			return is_safe_inplace;
+		}
+		logError("WTR", "找：%s机械手安全地址失败", it->second);
+		return false;
+	}
+
+	void FortrendSunwayRobotSubsystem::setSafeSignalInPlace(const std::string& subsystem, bool status)
+	{
+		auto it = d->armSafeMap.find(subsystem);
+		if (it != d->armSafeMap.end())
+		{
+			if (!writeBit(it->second, status))
+			{
+				logError("WTR", "写:%s机械手安全地址失败", it->second);
+			}		
+		}
+	}
+
 	void FortrendSunwayRobotSubsystem::emitStationAttributeChanged(){
 		FortrendAbstractStation::emitAttributeChanged(this);
 	}
@@ -205,7 +246,7 @@ namespace FC{
 
 	void FortrendSunwayRobotSubsystem::onInitialize()throw(KernelException){
 		try{
-			enableProtocol();
+			SunwaySubSystemHelper::enableProtocol();
 			setState(IKernelSubSystem::State::SUB_IDEL);
 		}
 		catch (KernelException& e){
@@ -216,7 +257,7 @@ namespace FC{
 	}
 
 	void FortrendSunwayRobotSubsystem::onUnInitialize()throw(KernelException){
-		disableProtocol();
+		SunwaySubSystemHelper::disableProtocol();
 	}
 
 	void FortrendSunwayRobotSubsystem::onProcess(){
@@ -229,6 +270,7 @@ namespace FC{
 		try{
 			WaferRobotAbstractSubsystem::onConfigure(config);
 			configSunway(config);
+			configKeyencePlc(config);
 			if (config->has("Stations"))
 			{
 				//load work stations
@@ -268,6 +310,20 @@ namespace FC{
 				d->PM2CavitySafetySignalAddress = config->getString("Update.PM2CavitySafetySignal", "");
 				d->PM3CavitySafetySignalAddress = config->getString("Update.PM3CavitySafetySignal", "");
 				d->PM4CavitySafetySignalAddress = config->getString("Update.PM4CavitySafetySignal", "");
+
+				std::pair<std::string, std::string> LLAvalue("LLA", d->LLACavitySafetySignalAddress);
+				std::pair<std::string, std::string> LLBvalue("LLB", d->LLBCavitySafetySignalAddress);
+				std::pair<std::string, std::string> PM1value("PM1", d->PM1CavitySafetySignalAddress);
+				std::pair<std::string, std::string> PM2value("PM2", d->PM2CavitySafetySignalAddress);
+				std::pair<std::string, std::string> PM3value("PM3", d->PM3CavitySafetySignalAddress);
+				std::pair<std::string, std::string> PM4value("PM4", d->PM4CavitySafetySignalAddress);
+
+				d->armSafeMap.insert(LLAvalue);
+				d->armSafeMap.insert(LLBvalue);
+				d->armSafeMap.insert(PM1value);
+				d->armSafeMap.insert(PM2value);
+				d->armSafeMap.insert(PM3value);
+				d->armSafeMap.insert(PM4value);
 			}
 
 

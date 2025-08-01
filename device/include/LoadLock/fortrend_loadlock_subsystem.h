@@ -129,7 +129,9 @@ namespace FC{
 		int getVacuumPressureGageState()const;
 
 		bool getVacuumValueReachesTheSetValue()const;
+
 		bool getVacuumValueUpperLimitReachesTheSetValue()const;
+
 
 		//排气泄压
 		bool getExhaustVacuumValueReachesTheSetValue()const;

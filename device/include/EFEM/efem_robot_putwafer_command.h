@@ -16,7 +16,7 @@
 KERNEL_NS_BEGIN
 class HexSubSystemHelper;
 class FortrendStation;
-
+void handleRobotPutStationName(std::string& stationName_, int& slotnum_);
 /**
  *@brief  ready to getObject command for fortrend robot
 */

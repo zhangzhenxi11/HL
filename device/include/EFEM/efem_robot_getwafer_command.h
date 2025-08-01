@@ -16,6 +16,8 @@ KERNEL_NS_BEGIN
 class HexSubSystemHelper;
 class FortrendStation;
 
+void handleStationName(std::string& stationName_, int& slotnum_);
+
 /**
  *@brief  ready to getObject command for fortrend robot
 */
@@ -49,6 +51,9 @@ public:
 	virtual std::string getName() const override;
 	virtual std::string getDescription() const override;
 	std::vector<IKernelResources* > resources() const override;
+
+	
+
 protected:
 	virtual RunResult onRun() throw(KernelException);
 

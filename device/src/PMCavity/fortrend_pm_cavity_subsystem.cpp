@@ -80,7 +80,7 @@ namespace FC{
 		std::string pm_cavity_motor_home_address = "MR35105";      //PM腔电机后退完成信号地址
 		std::string pm_cavity_motor_forward_address = "MR35104";   //PM腔电机前进完成信号地址
 
-		bool pm_cavity_safe = false;         //PM腔安全信号
+		bool pm_cavity_safe = false;				//PM腔安全信号
 		bool pm_cavity_motor_home = false;         //PM腔步进电机后退到位信号
 		bool pm_cavity_motor_forward = false;
 		bool pm_cavity_motor_run = false;
@@ -672,7 +672,7 @@ namespace FC{
 		//short * dc_power_current_value = new short[d->dc_power_address_length];
 		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 		{
-#if 0
+
 			bool io_changed = false;
 			bool result = d->pm_cavity_safe;
 			if (d->pm_cavity_safe_address != "" &&KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, d->pm_cavity_safe))
@@ -727,8 +727,7 @@ namespace FC{
 				if (resultlocation != d->axlelocation){
 					io_changed = true;
 				}
-			}
-#endif		
+			}		
 			/*if (d->io_input_count > 0)
 			{
 				if (KeyencePlcSubSystemHelper::readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state))

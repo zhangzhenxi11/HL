@@ -194,13 +194,13 @@ namespace FC{
 		d->mechanical_pump_alarm_ckb = new QCheckBox(QString("干泵报警"));
 		d->mechanical_pump_alarm_ckb->setObjectName("io_object");
 		d->mechanical_pump_alarm_ckb->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_alarm_ckb,0,1);
+		//d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_alarm_ckb,0,1);
 
 
 		d->mechanical_pump_warn_ckb = new QCheckBox(QString("干泵警告"));
 		d->mechanical_pump_warn_ckb->setObjectName("io_object");
 		d->mechanical_pump_warn_ckb->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_warn_ckb, 0, 2);
+		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_warn_ckb, 0, 1);
 
 		d->mechanical_pump_Acc_ckb = new QCheckBox(QString("ACC信号"));
 		d->mechanical_pump_Acc_ckb->setObjectName("io_object");
@@ -332,7 +332,7 @@ namespace FC{
 			//d->molecular_pump_ckb_tm->setChecked(getSubsystem()->getMolecularPumpOpenedTM());
 			//d->molecular_pump_reach_speed_ckb_tm->setChecked(getSubsystem()->getMolecularPumpReachSpeedTM());
 			d->mechanical_pump_Acc_ckb->setChecked(getSubsystem()->getMechanicalPumpAcc());
-			d->mechanical_pump_alarm_ckb->setChecked(getSubsystem()->getMechanicalPumpHasAlarm());
+			//d->mechanical_pump_alarm_ckb->setChecked(getSubsystem()->getMechanicalPumpHasAlarm());
 			d->mechanical_pump_running_ckb->setChecked(getSubsystem()->getMechanicalPumpRunningState());
 			d->mechanical_pump_warn_ckb->setChecked(getSubsystem()->getMechanicalPumpHasWarn());
 

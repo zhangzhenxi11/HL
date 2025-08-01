@@ -24,7 +24,8 @@
 #include "fortrend_sunwayrobot_check_load_command.h"
 #include "fortrend_sunwayrobot_rq_load_command.h"
 #include "fortrend_sunwayrobot_clear_error_command.h"
-
+#include "KeyencePLC/keyence_plc_command_executer.h"
+#include "KeyencePLC/keyence_plc_subsystem_helper.h"
 //调试宏
 #define WTR_SIM_MODE 1
 
@@ -34,7 +35,7 @@ namespace FC{
 	 * @brief fortrend SunwayRobot subsystem class
 	 *
 	 */
-	class  FortrendSunwayRobotSubsystem : public WaferRobotAbstractSubsystem, public SunwaySubSystemHelper{
+	class  FortrendSunwayRobotSubsystem : public WaferRobotAbstractSubsystem, public SunwaySubSystemHelper, public KeyencePlcSubSystemHelper {
 	public:
 		DECLARE_PTR(FortrendSunwayRobotSubsystem)
 		FortrendSunwayRobotSubsystem(IKernel*  kernel, const std::string& name);
@@ -60,7 +61,10 @@ namespace FC{
 		virtual void  resume() override;
 		virtual void  abort() override;
 		std::string getRunningStatus()const;
-
+		/*
+			复位：先检查状态，是否报警，是就返回false，否就返回OK,执行home动作
+			清楚错误：执行reset
+		*/
 		virtual std::shared_ptr<KernelSubsystemResetCommand> createResetCommand()const override;
 		virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
 		virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
@@ -80,7 +84,7 @@ namespace FC{
 		std::shared_ptr<SunwayRobotClearErrorCommand> createClearErrorCommand()const;
 
 		std::shared_ptr<SunwayRobotSetAxisZSpeedCommand> createSetAxisZSpeedCommand(uint8_t percentage)const;
-		//移动至机械手的原点位置
+	
 
 	public:
 		virtual void setObject(unsigned int arm_id, bool has);
@@ -97,6 +101,12 @@ namespace FC{
 
 		bool getHasResetFlag()const;
 		void setHasResetFlag(const bool value);
+
+		//获取安全信号到位
+		bool getSafeSignalInPlace(const std::string & subsystem);
+
+		void setSafeSignalInPlace(const std::string& subsystem,bool status);
+
 
 	protected:
 		virtual void onInitialize()throw(KernelException)override;

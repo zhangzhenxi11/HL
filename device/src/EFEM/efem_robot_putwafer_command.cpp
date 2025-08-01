@@ -27,10 +27,55 @@
 #endif
 KERNEL_NS_BEGIN
 
+
+
+void handleRobotPutStationName(std::string& stationName_, int& slotnum_)
+{
+	/*
+		TOOLA1点位id：5，(LLA上层的第二层）
+		TOOLA2点位id:6,（LLA最下面的第一层)
+		TOOLB1点位id：7，(LLB上层的第二层)
+		TOOLB2点位id：8,(LLB最下层的第一层)
+		*/
+	if (stationName_ == "ELP1" || stationName_ == "ELP2")
+	{
+		stationName_ == "ELP1" ? "LP1" : "LP2";
+		slotnum_ = slotnum_;
+	}
+	else if (stationName_ == "EALIGNER")
+	{
+		stationName_ = "ALIGNER";
+		slotnum_ = 1;
+	}
+	else {
+		if (stationName_ == "LLA" && slotnum_ == 1)
+		{
+			stationName_ = "TOOLA2";
+		}
+		else if (stationName_ == "LLA" && slotnum_ == 2)
+		{
+			stationName_ = "TOOLA1";
+		}
+		else if (stationName_ == "LLB" && slotnum_ == 1)
+		{
+			stationName_ = "TOOLB2";
+		}
+		else
+		{
+			stationName_ = "TOOLB1";
+		}
+		slotnum_ = 1;
+	}
+}
+
 class EFEMRobotReadyPutWaferCommandPrivate{
 public:
 	std::string name;
 	std::string description;
+	std::string TOOLA1 = "TOOLA1";
+	std::string TOOLA2 = "TOOLA2";
+	std::string TOOLB1 = "TOOLB1";
+	std::string TOOLB2 = "TOOLB2";
 };
 
 
@@ -78,10 +123,21 @@ EFEMRobotReadyPutWaferCommand::RunResult EFEMRobotReadyPutWaferCommand::onRun() 
 		robot->timeout = timeout;
 	}
 	robot->primaryMessageName = this->getName();
-	std::string stationName = getStation()->getName().erase(0, 1);
+	//std::string stationName = getStation()->getName().erase(0, 1);
 	int slotn = getSlot();
 	int armn = getArm();
 	std::string robotName = robot->getName();
+	/*
+		param1:WTR name
+		param2:station name
+		param3:槽号
+		param4:手指，1：上手指  2：下手指
+		param5: DOWN到取料位，UP到放料位
+		MOV:GOTO/WTR/TOOLA1/1/2/DOWN;  ---> robot2移动到TOOLA1待取片位置
+		MOV:GOTO/WTR/TOOLA1/1/2/UP;   --->  robot2移动到TOOLA1待放片位置
+	*/
+	std::string stationName = getStation()->getName();
+	handleRobotPutStationName(stationName, slotn);
 
 	std::string str = Poco::format("MOV:GOTO/%s/%s/%d/%d/%s", robotName, stationName, slotn, armn, std::string("UP"));//DOWN到取料位，UP到放料位
 	str.push_back(';');
@@ -205,14 +261,7 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 		if (!getStation()->hasBoxPresent()){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
 		}
-		std::shared_ptr<EFEMAlignerSubsystem> aligner = std::dynamic_pointer_cast<EFEMAlignerSubsystem>(getStation());
-		if (!aligner) {
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s is NULL ", getStation()->getName()), this);
-		}
-		if (aligner->getState() != IKernelSubSystem::State::SUB_NORMAL) {
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
-		}
-		
+
 		////box placement 
 		if (!getStation()->hasBoxPlacement()){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not placement now(sensor).", getStation()->getName()), this);
@@ -247,21 +296,32 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
 		}
 
-		if (!lk->getCassetteDoorOpend()){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s door is closed now.", getStation()->getName()), this);
-		}
+		//调试注释
+		//if (!lk->getCassetteDoorOpend()){
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s door is closed now.", getStation()->getName()), this);
+		//}
 
-		slotnum += 30;
-		if (lk->getLastMoveSlot() != slotnum){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("move slot %d Station %s current slot %d", getStation()->getName(), slotnum, lk->getLastMoveSlot()), this);
-		}
+		//stationName = stationName == "LLA" ? "TOOLA1" : "TOOLA2"; //修改
 
-		if (slotnum == 31 && getArm()==2){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, "EFEM机械手的手爪二不能放LL腔最下面一层", this);
+		if (stationName == "LLA" && slotnum == 1)
+		{
+			stationName = d->TOOLA2;
 		}
-		
-		stationName = stationName == "LLA" ? "TOOLA1" : "TOOLA2"; //修改
+		else if (stationName == "LLA" && slotnum == 2)
+		{
+			stationName = d->TOOLA1;
+
+		}
+		else if (stationName == "LLB" && slotnum == 1)
+		{
+			stationName = d->TOOLB2;
+		}
+		else
+		{
+			stationName = d->TOOLB1;
+		}
 		slotnum = 1;
+		std::cout << "stationName:"<< stationName << std::endl;
 	}
 	
 	if (mapStat != Cassette::Mapping::Empty){
@@ -325,3 +385,4 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 }
 
 KERNEL_NS_END
+

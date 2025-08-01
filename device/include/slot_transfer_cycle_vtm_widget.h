@@ -86,7 +86,6 @@ namespace  FC {
 		void initPMCavityParamEdieTableWidget();
 		void addAnPMItem(const QString name);
 		
-
 		//新增
 		void executeEFEMTransfer();
 
@@ -104,16 +103,12 @@ namespace  FC {
 
 		void executeTMTransfer();
 		
-
-
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)
 		QSlotTransferCycleVTMWidgetPrivate *d_ptr;
 		QFortrendStationStatusVTMWidget* s_ptr;
 
 	};
-
-
 
 }
 

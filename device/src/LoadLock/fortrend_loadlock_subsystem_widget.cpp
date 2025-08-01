@@ -425,10 +425,10 @@ namespace FC{
 		Cassette::Mapping mappingData = Cassette::Mapping::Unknown;
 
 		getSubsystem()->getFirstLayerMapping(mappingData);
-		cass->setMapping(1, mappingData);
+		cass->setMapping(2, mappingData);
 
 		getSubsystem()->getSecondLayerMapping(mappingData);
-		cass->setMapping(2, mappingData);
+		cass->setMapping(1, mappingData);
 	}
 
 }

@@ -61,14 +61,14 @@ namespace FC{
 		//{
 		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s当前没有晶圆盒", sub->getName()), this);
 		//}
-		if (sub->getCassetteDoorOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s放晶圆盒的门已打开", sub->getName()), this);
-		}
-		if (sub->getTMCavityDoorOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s传输腔门阀已打开", sub->getName()), this);
-		}
+		//if (sub->getCassetteDoorOpend())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s放晶圆盒的门已打开", sub->getName()), this);
+		//}
+		//if (sub->getTMCavityDoorOpend())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s传输腔门阀已打开", sub->getName()), this);
+		//}
 		/*if (!sub->getProtrudingSensorState())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
@@ -83,14 +83,14 @@ namespace FC{
 		//fill params
 		std::string  first_layer_wafer_presence = command_config->getString("first_layer_detection_sensor","");
 		std::string  second_layer_wafer_presence = command_config->getString("second_layer_detection_sensor","");
-		std::string  bulge_wafer_presence = command_config->getString("bulge_detection_sensor","");
+		//std::string  bulge_wafer_presence = command_config->getString("bulge_detection_sensor","");
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 1){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 扫描指令设置超时时间错误", sub->getName()), this);
 		}
 
-		if ((first_layer_wafer_presence == "") || (second_layer_wafer_presence == "") || (bulge_wafer_presence == ""))
+		if ((first_layer_wafer_presence == "") || (second_layer_wafer_presence == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 扫描地址未定义", getName()), this);
 		}
@@ -98,10 +98,10 @@ namespace FC{
 		Cassette::Mapping mappingData1 = Cassette::Mapping::Unknown;
 
 		
-		sub->setFirstLayerMapping(true);
-		sub->getFirstLayerMapping(mappingData1);
-		subsystem_cass->setMapping(1, mappingData1);
-		return IKernelCommand::RunResult::RUN_OK;
+		//sub->setFirstLayerMapping(true);
+		//sub->getFirstLayerMapping(mappingData1);
+		//subsystem_cass->setMapping(1, mappingData1);
+		//return IKernelCommand::RunResult::RUN_OK;
 
 		sub->setBoxPlacement(false);
 		logInform(sub->getName().c_str(), "检测槽是否有wafer命令开始");
@@ -111,11 +111,11 @@ namespace FC{
 		short first_wafer_res = 0;
 		short second_wafer_res = 0;
 
-		if (readBit(first_layer_wafer_presence, nfirst_res))
+		if (!readBit(first_layer_wafer_presence, nfirst_res))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LoadLock1第一层检测感应器地址错误", sub->getName()), this);
 		}
-		if (readBit(second_layer_wafer_presence, nSecond_res))
+		if (!readBit(second_layer_wafer_presence, nSecond_res))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LoadLock1第二层检测感应器地址错误", sub->getName()), this);
 		}
@@ -129,8 +129,8 @@ namespace FC{
 		}
 		std::unique_ptr<short[]> mapping_res(new short[slot_count]);
 		
-		first_wafer_res = (nfirst_res) ? 2 : 1;
-		second_wafer_res = (nSecond_res) ? 2 : 1;
+		first_wafer_res = (nfirst_res) ? 2: 1;
+		second_wafer_res = (nSecond_res) ? 2: 1;
 		
 		for (int i = 0; i < slot_count; i++)
 		{

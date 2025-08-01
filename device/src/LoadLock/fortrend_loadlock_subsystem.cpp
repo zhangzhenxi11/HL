@@ -64,7 +64,7 @@ namespace FC{
 		std::string io_safeSignal_address = "";
 		bool  io_safeSignal_value = false;
 
-		std::string io_allowd_close_casstedoor_signal_address = "";
+		std::string io_allowd_close_casstedoor_signal_address = ""; //EFEM 允许关_LLA上料门互锁
 		bool io_closeCassteDoor_value = false;
 
 		
@@ -488,13 +488,13 @@ namespace FC{
 					d->io_first_layer_wafer_presence_value = wafer_prsence;
 				}
 			}
-
-			if (d->io_second_layer_detection_sensor_address != "" && readBit(d->io_second_layer_detection_sensor_address, wafer_prsence))
+			bool second_wafer_prsence = false;
+			if (d->io_second_layer_detection_sensor_address != "" && readBit(d->io_second_layer_detection_sensor_address, second_wafer_prsence))
 			{
-				if (wafer_prsence != d->io_second_layer_wafer_presence_value)
+				if (second_wafer_prsence != d->io_second_layer_wafer_presence_value)
 				{
 					io_changed = true;
-					d->io_second_layer_wafer_presence_value = wafer_prsence;
+					d->io_second_layer_wafer_presence_value = second_wafer_prsence;
 				}
 			}
 			

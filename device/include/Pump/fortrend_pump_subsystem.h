@@ -56,7 +56,6 @@ public:
 
 
 public:
-	
 	std::shared_ptr<PumpMechanicalCloseCommand> createMechanicalCloseCommand()const;
 	std::shared_ptr<PumpMechanicalOpenCommand> createMechanicalOpenCommand()const;
 	std::shared_ptr<PumpMolecularCloseCommand> createMolecularCloseCommand(std::string name)const;

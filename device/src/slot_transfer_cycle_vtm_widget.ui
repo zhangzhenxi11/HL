@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1387</width>
+    <width>1332</width>
     <height>1116</height>
    </rect>
   </property>
@@ -302,210 +302,166 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="right_vlt">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="sizeConstraint">
-      <enum>QLayout::SetMinimumSize</enum>
-     </property>
+    <layout class="QVBoxLayout" name="verticalLayout_6">
      <item>
-      <widget class="QGroupBox" name="parameters_gbx">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
-       </property>
-       <property name="title">
-        <string>参数</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_4">
-        <item>
-         <widget class="QLabel" name="label">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>LP1循环次数</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="cycle_setting_times_sbx">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>999999</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_5">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>LP2循环次数</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="cycle_setting_times_sbx_2">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>999999</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="cycle_gbx">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>80</height>
-        </size>
-       </property>
-       <property name="title">
-        <string>当前次数</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
-        <item>
-         <widget class="QLabel" name="label_2">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>LP1完成次数</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="cycle_finished_times_spx">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="maximum">
-           <number>9999</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_6">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>LP2完成次数</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="cycle_finished_times_spx_2">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>20</height>
-           </size>
-          </property>
-          <property name="maximum">
-           <number>9999</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QGroupBox" name="parameters_gbx">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>80</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>参数</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>LP1循环次数</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="cycle_setting_times_sbx">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>999999</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_5">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>LP2循环次数</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="cycle_setting_times_sbx_2">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>999999</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="cycle_gbx">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>80</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>当前次数</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>LP1完成次数</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="cycle_finished_times_spx">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximum">
+             <number>9999</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_6">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>LP2完成次数</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="cycle_finished_times_spx_2">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximum">
+             <number>9999</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
         <string>操作</string>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <layout class="QGridLayout" name="gridLayout_3">
           <item row="9" column="0">
-           <widget class="QPushButton" name="loadlock1_put_cassette_finished_pbt">
-            <property name="text">
-             <string>LoadLock1放置
-晶圆盒完成</string>
-            </property>
-           </widget>
-          </item>
-          <item row="14" column="0">
-           <widget class="QPushButton" name="get_step_pbt">
-            <property name="text">
-             <string>获取步骤</string>
-            </property>
-           </widget>
-          </item>
-          <item row="16" column="0">
-           <widget class="QPushButton" name="smif_feed_btn">
-            <property name="text">
-             <string>smif上料流程</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QSpinBox" name="spb_min">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-           </widget>
-          </item>
-          <item row="13" column="0">
-           <widget class="QPushButton" name="reset_pbt">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>复位</string>
-            </property>
-           </widget>
-          </item>
-          <item row="11" column="0">
            <widget class="QPushButton" name="execute_pbt">
             <property name="maximumSize">
              <size>
@@ -518,6 +474,13 @@
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+           <widget class="QCheckBox" name="disabledefem">
+            <property name="text">
+             <string>禁用EFEM</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <widget class="QLabel" name="label_3">
             <property name="text">
@@ -525,10 +488,32 @@
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
-           <widget class="QCheckBox" name="enablesmif1">
+          <item row="8" column="0">
+           <widget class="QPushButton" name="loadlock2_put_cassette_finished_pbt">
             <property name="text">
-             <string>启用SMIFA</string>
+             <string>LoadLock2放置
+晶圆盒完成</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QPushButton" name="pause_pbt">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>暂停</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QPushButton" name="loadlock1_put_cassette_finished_pbt">
+            <property name="text">
+             <string>LoadLock1放置
+晶圆盒完成</string>
             </property>
            </widget>
           </item>
@@ -536,14 +521,6 @@
            <widget class="QLabel" name="label_4">
             <property name="text">
              <string>循环最小槽位</string>
-            </property>
-           </widget>
-          </item>
-          <item row="10" column="0">
-           <widget class="QPushButton" name="loadlock2_put_cassette_finished_pbt">
-            <property name="text">
-             <string>LoadLock2放置
-晶圆盒完成</string>
             </property>
            </widget>
           </item>
@@ -557,8 +534,8 @@
             </property>
            </widget>
           </item>
-          <item row="12" column="0">
-           <widget class="QPushButton" name="pause_pbt">
+          <item row="11" column="0">
+           <widget class="QPushButton" name="reset_pbt">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -566,25 +543,11 @@
              </size>
             </property>
             <property name="text">
-             <string>暂停</string>
+             <string>复位</string>
             </property>
            </widget>
           </item>
-          <item row="17" column="0">
-           <widget class="QPushButton" name="smif_blanking_btn">
-            <property name="text">
-             <string>smif下料流程</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="0">
-           <widget class="QCheckBox" name="enablesmif2">
-            <property name="text">
-             <string>启用SMIFB</string>
-            </property>
-           </widget>
-          </item>
-          <item row="15" column="0">
+          <item row="13" column="0">
            <widget class="QPushButton" name="abort_pbt">
             <property name="maximumSize">
              <size>
@@ -597,10 +560,24 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QCheckBox" name="disabledefem">
+          <item row="1" column="0">
+           <widget class="QSpinBox" name="spb_min">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="0">
+           <widget class="QPushButton" name="get_step_pbt">
             <property name="text">
-             <string>禁用EFEM</string>
+             <string>获取步骤</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QCheckBox" name="enableAtmosphere">
+            <property name="text">
+             <string>大气CYCLE</string>
             </property>
            </widget>
           </item>

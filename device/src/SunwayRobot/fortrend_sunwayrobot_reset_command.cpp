@@ -65,10 +65,16 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	}
 
 	////测试
-	logInform(getName().c_str(), "模拟复位命令执行");
-	return RunResult::RUN_OK;
+	//logInform(getName().c_str(), "模拟复位命令执行");
+	//return RunResult::RUN_OK;
 
-	//ALG
+	////先执行查询状态
+	//if (!sendRequest("QRY:STATE;"))
+	//{
+
+	//}
+
+
 	std::string error_message = "";
 	int error_type = 1;
 	int error_code = 0;
@@ -109,7 +115,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		res = recvResponse(timeout);
 		Sleep(200);
 	}
-	if (res != std::string("ACK;"))
+	if (res != "ACK;" && res != "RPS:RESET;")
 	{
 		logError(robot->getName().c_str(), "机械手复位命令发生错误");
 

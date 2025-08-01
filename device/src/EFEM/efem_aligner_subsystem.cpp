@@ -283,6 +283,7 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 				std::string waferInfo = command->message->paramers.at(1);
 				d->OcrCode = waferInfo;
 				//cass->setWaferId();
+
 				d->OcrCodeList.push_back(d->OcrCode);
 			}
 		}

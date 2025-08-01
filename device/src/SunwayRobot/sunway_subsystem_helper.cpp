@@ -245,7 +245,7 @@ bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw
 		}
 	};
 	Sleep(50);
-	//log
+
 	is_busy = false;
 	logInform1(name.c_str(), "Snd: %s ", command.c_str());
 	return true;
@@ -255,6 +255,8 @@ bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw
 * recv string command from sunway (auto remove  0x0D)
 */
 std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) throw(KernelException){
+
+	std::lock_guard<std::mutex> lock(mtx); //加锁
 	if (!isConnected) {
 		logInform1(name.c_str(), "检测到连接已断开，开始重连...");
 		if (!reconnect()) {
@@ -313,7 +315,9 @@ std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) 
 		}
 		
 	}
+	
 	is_busy = false;
+
 	logInform1(name.c_str(), "Rcv: %s", data.c_str());
 	return data;
 }
@@ -322,6 +326,7 @@ std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) 
 * recv string command from sunway (auto remove  0x0D)
 */
 std::string SunwaySubSystemHelperPrivate::recvResponseRDY(unsigned int timeout_ms) throw(KernelException){
+	std::lock_guard<std::mutex> lock(mtx); //加锁
 	Sleep(150);
 	setTimeout(timeout_ms);
 
