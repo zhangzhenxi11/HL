@@ -50,6 +50,12 @@ namespace FC{
 		std::vector<QCheckBox*> input_checkboxs;
 		std::vector<QCheckBox*> arm_stat;
 		std::vector<QRadioButton*> arm_select;
+		std::shared_ptr<IKernel> kernel = 0;
+		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = nullptr;
+		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = nullptr;
+
+		//ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+
 	};
 
 	QSunwayRobotSubsystemWidgetPrivate::QSunwayRobotSubsystemWidgetPrivate(
@@ -63,31 +69,38 @@ namespace FC{
 	/**
 	* QSunwayRobotSubsystemWidget
 	**/
-	QSunwayRobotSubsystemWidget::QSunwayRobotSubsystemWidget(
+	QSunwayRobotSubsystemWidget::QSunwayRobotSubsystemWidget(const std::shared_ptr<IKernel>& kernel,
 		const std::shared_ptr<FortrendSunwayRobotSubsystem>& robot,
 		QWidget*parent)
 		: QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem>(robot, parent)
-		, d_ptr(new QSunwayRobotSubsystemWidgetPrivate(this)){
-
+		, d_ptr(new QSunwayRobotSubsystemWidgetPrivate(this))
+	    {
 		Q_D(QSunwayRobotSubsystemWidget);
 		d->ui = new Ui::SunwayRobotSubsystemWidget;
 		d->ui->setupUi(this);
+		d->kernel = kernel;
+		d->lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		d->lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 
+		//d->robot_sub = std::dynamic_pointer_cast<FortrendSunwayRobotSubsystem>(robot);
 		//init samethong
 		init();
 
 		onAttributeUpdate();
+		//d->ui->check_load_btn->setEnabled(false);
 
 		connect(d->ui->reset_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReset);
 		connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onGetStatus);
 		connect(d->ui->put_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onPutWaferCommand);
 		connect(d->ui->get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onGetWaferCommand);
-		connect(d->ui->check_load_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onCheckLoadCommand);
+		//connect(d->ui->check_load_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onCheckLoadCommand);
 		connect(d->ui->clear_error_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onClearErrorCommand);
 		//connect(d->ui->ready_get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyGetWaferCommand);
 		//connect(d->ui->ready_put_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyPutWaferCommand);
 		connect(d->ui->set_speed_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onSetSpeedCommand);;
 		connect(d->ui->set_speed_btn_z, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onSetAxisZSpeedCommand);
+		connect(d->ui->home_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onHomeCommand);
+
 	}
 
 	QSunwayRobotSubsystemWidget::~QSunwayRobotSubsystemWidget(){
@@ -334,6 +347,13 @@ namespace FC{
 		executeCommand(getSubsystem(), cmd);
 	}
 
+	void QSunwayRobotSubsystemWidget::onHomeCommand()
+	{
+		Q_D(QSunwayRobotSubsystemWidget);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createHomeCommand();
+		executeCommand(getSubsystem(), cmd);
+	}
+
 	void QSunwayRobotSubsystemWidget::onAttributeUpdate()throw(KernelException){
 		Q_D(QSunwayRobotSubsystemWidget);
 		try{
@@ -366,6 +386,30 @@ namespace FC{
 			d->ui->pm3_awc_t_dsb->setValue(data.T);
 			d->ui->pm3_awc_x_dsb->setValue(data.X);
 			d->ui->pm3_awc_y_dsb->setValue(data.Y);*/
+
+			auto cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+			auto cass = cassManager->getCassette(getSubsystem().get());
+
+			//update cassete status
+			Cassette::Mapping mappingData = Cassette::Mapping::Unknown;
+
+			std::shared_ptr<FortrendStation> station = getSelectStation();
+			if (station->getName() == "LLA")
+			{
+				d->lk1->getFirstLayerMapping(mappingData);
+				cass->setMapping(2, mappingData);
+
+				d->lk1->getSecondLayerMapping(mappingData);
+				cass->setMapping(1, mappingData);
+			}
+			else
+			{
+				d->lk2->getFirstLayerMapping(mappingData);
+				cass->setMapping(2, mappingData);
+
+				d->lk2->getSecondLayerMapping(mappingData);
+				cass->setMapping(1, mappingData);
+			}
 
 		}
 		catch (KernelException& e){

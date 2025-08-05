@@ -41,7 +41,7 @@ namespace FC{
 	/**
 	* @brief fortrend pm_cavity
 	*/
-	class  FortrendPMCavitySubsystem :public AbstractIOSubsystem, public FortrendAbstractStation, public KeyencePlcSubSystemHelper, public InovancePlcSubSystemHelper{
+	class  FortrendPMCavitySubsystem :public AbstractIOSubsystem, public FortrendAbstractStation, public KeyencePlcSubSystemHelper{
 	public:
 		DECLARE_PTR(FortrendPMCavitySubsystem)
 		FortrendPMCavitySubsystem(IKernel*  kernel, const std::string& name);

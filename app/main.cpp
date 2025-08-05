@@ -3,7 +3,11 @@
 #include <QMessageBox>
 #ifdef _WIN32
 #include <Windows.h>
+#include <Dbghelp.h>
+#include <iostream>
+
 #endif
+
 
 
 int main(int argc, char *argv[])
@@ -12,7 +16,6 @@ int main(int argc, char *argv[])
 	SetConsoleOutputCP(CP_UTF8);
 #endif
 	
-
 	//高分辨率自动缩放
 	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	 FC::CoreRunner app(argc, argv); 

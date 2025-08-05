@@ -67,11 +67,21 @@ namespace FC{
 		}
 
 		logInform(getName().c_str(), "清除错误命令开始执行");
+
+		auto cmd_reset = robot->createResetCommand();
+		robot->startCommand(cmd_reset);
+		cmd_reset->wait();
+
+		if (cmd_reset->hasError())
+		{
+			//set alarm data
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "清除错误命令执行失败！"));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+
+#if 0
 		std::string res;
-
-		//MOV:HOME;
-
-		//RPS:HOME;
 		std::string error_message;
 		int error_code = 0;
 		int error_type = 1;
@@ -107,6 +117,7 @@ namespace FC{
 			Sleep(500);
 			logInform(getName().c_str(), "清除命令执行结束");
 		}
+#endif
 		return RunResult::RUN_OK;
 
 	}

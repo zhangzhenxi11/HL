@@ -39,8 +39,8 @@ namespace FC{
 	/**
 	* PMCavityInsertingPlateOpeningControllerCommand
 	*/
-	PMCavityInsertingPlateOpeningControllerCommand::PMCavityInsertingPlateOpeningControllerCommand(float percentage, InovancePlcSubSystemHelper* helper)
-		:InovancePlcCommandExecuter(helper)
+	PMCavityInsertingPlateOpeningControllerCommand::PMCavityInsertingPlateOpeningControllerCommand(float percentage, KeyencePlcSubSystemHelper* helper)
+		:KeyencePlcCommandExecuter(helper)
 		, d(new PMCavityInsertingPlateOpeningControllerCommandPrivate){
 		//setMessageName("InsertingPlateOpeningController");
 		//setDescription("get request the pm cavity");

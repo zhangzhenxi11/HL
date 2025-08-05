@@ -993,7 +993,7 @@ void FortrendAsciiEFEMApi::handle(const std::shared_ptr<Command>& command){
 		it->second(command);
 	}
 	catch (...){
-		logInform(getName().c_str(), "handle Unknow error %s", command->message->base);
+		//logInform(getName().c_str(), "handle Unknow error %s", command->message->base);
 		sendNAK(command->message, KernelSysException::ErrCode::KR_SYSTEM_UNKNOWN_ERROR);
 		return;
 	}

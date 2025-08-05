@@ -59,6 +59,11 @@ std::string SunwayCommandExecuter::recvResponse(unsigned int timeout_ms) throw(K
 
 }
 
+void SunwayCommandExecuter::recvResponse2(unsigned int timeout_ms) throw(KernelException)
+{
+	d->helper->recvResponse2(timeout_ms);
+}
+
 /**
 * recv string command from Sunway (auto add 0x0D)
 */
@@ -69,6 +74,21 @@ std::string SunwayCommandExecuter::recvResponseRDY(unsigned int timeout_ms) thro
 
 bool SunwayCommandExecuter::getBusyState(){
 	return d->helper->getBusyState();
+}
+
+std::string SunwayCommandExecuter::recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException)
+{
+	return d->helper->recvResponseRobotMessage(timeout_ms);
+}
+
+void SunwayCommandExecuter::clearRobotMessage() throw(KernelException)
+{
+	d->helper->clearRobotMessage();
+}
+
+std::string SunwayCommandExecuter::sendCommand(const std::string& command, unsigned int timeout_ms) throw(KernelException)
+{
+	return  d->helper->sendCommand(command, timeout_ms);
 }
 
 std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwayCommandExecuter::getErrorCode(const int code_id){

@@ -15,16 +15,18 @@
 #include "InovancePLC/inovance_plc_command_executer.h"
 #include "InovancePLC/inovance_plc_subsystem_helper.h"
 
+#include "KeyencePLC/keyence_plc_command_executer.h"
+#include "KeyencePLC/keyence_plc_subsystem_helper.h"
 namespace FC{
 
 	/**
 	* @brief  clear state command for pm_cavity
 	*/
-	class  PMCavityClearStateCommand : public  KernelSubsystemCommand, public InovancePlcCommandExecuter{
+	class  PMCavityClearStateCommand : public  KernelSubsystemCommand, public KeyencePlcCommandExecuter {
 
 	public:
 		DECLARE_PTR(PMCavityClearStateCommand)
-		PMCavityClearStateCommand(InovancePlcSubSystemHelper* hexHelper);
+		PMCavityClearStateCommand(KeyencePlcSubSystemHelper* hexHelper);
 		virtual std::string getName()const override { return "ClearState"; }
 
 	protected:

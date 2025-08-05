@@ -14,6 +14,7 @@
 #include <iostream>
 #include <Windows.h>
 
+#include <array>
 #include "Poco/Format.h"
 
 #include  "slot_transfer_cycle_vtm_widget.h" 
@@ -196,7 +197,6 @@ namespace FC{
 		void startRobotAction();    //pass
 		void startVacuumAction();   //pass
 		void resetAction();
-
 		void setRunning(const bool value);
 		void setLoadLock1PutCassetteFinished();
 		void setLoadLock2PutCassetteFinished();
@@ -207,7 +207,7 @@ namespace FC{
 		//衡流获取UI流程队列
 		/*bool setHLTransferSequence();*/
 
-		bool setHLTransferSequence_1();
+		bool setHLTransferSequence();
 
 		bool setPMCavityParameter();
 
@@ -219,6 +219,18 @@ namespace FC{
 
 		virtual void onAttributeChange(const IKernelCommand* cmd);
 
+		//找此片晶圆的pm工艺腔
+		std::string getSelectPmProcessName(UnifiedWaferTask task);
+
+		UnifiedWaferTask::Location getSelectPmLocation(UnifiedWaferTask task);
+
+		void UpdateLLASubTransferDatas();
+
+		void UpdateLLBSubTransferDatas();
+
+		void UpdateEfemSubTransferDatas();
+
+		void UpdatePmSubTransferDatas(std::string pmName);
 
 		/************************zzx  add*********************************/
 		//处理多任务
@@ -270,6 +282,23 @@ namespace FC{
 		bool task_right_exchange = false; //双片交换 
 		bool tool_allow_get_wafer = false;// true呼叫LP上料，  false LP上料完成
 		bool tool_allow_put_wafer = false;// true呼叫LP下料，  false LP下料完成
+
+
+		bool tool_allow_pm1_get_wafer = false;//true呼叫pm1上料，  false pm1上料完成
+		bool tool_allow_pm1_put_wafer = false; //true呼叫pm1下料，  false pm1下料完成
+
+		bool tool_allow_pm2_get_wafer = false;
+		bool tool_allow_pm2_put_wafer = false;
+
+		bool tool_allow_pm3_get_wafer = false;
+		bool tool_allow_pm3_put_wafer = false;
+
+		bool tool_allow_pm4_get_wafer = false;
+		bool tool_allow_pm4_put_wafer = false;
+
+
+		//int selectPmEnableList[4] = { 0, 0, 0, 0 }; // 工艺腔使能数组
+		std::array<int, 4> selectPmEnableList;
 
 		bool CheckTMVacuumMeetsStandard(int preStep);
 		//CSR 取放晶圆到LL时检测条件
@@ -324,7 +353,8 @@ namespace FC{
 		std::vector<UnifiedWaferTask> pmPendingTasks;
 
 		std::vector<UnifiedWaferTask> pmCompletedTasks;
-
+		// IN_PROGRESS
+		std::vector<UnifiedWaferTask> pmProgressingTasks;
 
 		/******************************************1.LP->LK 任务池（按 LK 分类）******************************************************/
 		// 1.LP->LK 任务池（按 LK 分类）
@@ -443,9 +473,9 @@ namespace FC{
 		int loadlock1_auto_step = 10;
 		int loadlock2_auto_step = 10;
 		int vacuum_auto_step = 0;
-		int pm_auto_step = 0;
+		int pm_auto_step = 10;
 		int efem_auto_step = 10;
-		int update_auto_step = 0;
+		int update_auto_step = 10;
 
 		/**
 		是否开始抽LoadLock1真空
@@ -547,6 +577,8 @@ namespace FC{
 
 	QSlotTransferCycleVTMWidgetPrivate::QSlotTransferCycleVTMWidgetPrivate(QSlotTransferCycleVTMWidget*p)
 		:q_ptr(p){
+
+		std::array<int, 4> selectPmEnableList = { 0, 0, 0, 0 }; // 合法
 		//tower = kernel->getKernelModule<FortrendVTMSignalTower>();
 	}
 
@@ -571,6 +603,85 @@ namespace FC{
 
 
 		QMetaObject::invokeMethod(q_ptr, "update_cycle_data", Qt::AutoConnection);
+	}
+
+	std::string QSlotTransferCycleVTMWidgetPrivate::getSelectPmProcessName(UnifiedWaferTask task)
+	{
+		//task.pm1Enabled;
+		int pmIndex = -1;
+		for (int i = 0; i < 4; i++)
+		{
+			if (selectPmEnableList[i] == 1)
+			{
+				pmIndex = i;
+				break;
+			}
+		}
+		if (pmIndex == 0)
+			return "PM1";
+		else if (pmIndex == 1)
+			return "PM2";
+		else if (pmIndex == 2)
+			return "PM3";
+		else
+			return "PM4";
+	}
+
+	UnifiedWaferTask::Location QSlotTransferCycleVTMWidgetPrivate::getSelectPmLocation(UnifiedWaferTask task)
+	{
+		int pmIndex = -1;
+		for (int i = 0; i < 4; i++)
+		{
+			if (selectPmEnableList[i] == 1)
+			{
+				pmIndex = i;
+				break;
+			}
+		}
+		if (pmIndex == 0)
+			return UnifiedWaferTask::Location::PM1;
+		else if (pmIndex == 1)
+			return UnifiedWaferTask::Location::PM2;
+		else if (pmIndex == 2)
+			return UnifiedWaferTask::Location::PM3;
+		else
+			return UnifiedWaferTask::Location::PM4;
+
+		return UnifiedWaferTask::Location();
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLASubTransferDatas()
+	{
+		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //LP中初始状态的晶圆
+		loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");     // 5上料 破过真空，但没抽真空的
+		loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA"); // 6 上料 抽完真空，并取走的
+		loadLockAReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLA");// 7下料 ，待放到LL的晶圆数量
+		loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");// 8下料 ，放到LL的晶圆数量
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLBSubTransferDatas()
+	{
+		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //LP中初始状态的晶圆
+		loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");     // 5上料 破过真空，但没抽真空的
+		loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB"); // 6 上料 抽完真空，并取走的
+		loadLockBReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLB");// 7下料 ，待放到LL的晶圆数量
+		loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB");// 8下料 ，放到LL的晶圆数量
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::UpdateEfemSubTransferDatas()
+	{
+		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //未知
+		efemPendingTasks = taskManager.getEfemPendingTasks(); //要上料的晶圆
+		efemReturnPendingTasks = taskManager.getEfemRuturnPendingTasks(); //已经到LL上的晶圆
+		efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks(); //EFEM下料完成的任务
+
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::UpdatePmSubTransferDatas(std::string pmName)
+	{
+		pmPendingTasks = taskManager.getPMPendingTasks(pmName);
+		pmCompletedTasks = taskManager.getPMPendingTasks(pmName);
+		pmProgressingTasks = taskManager.getPMPendingTasks(pmName);
 	}
 
 	/*
@@ -613,9 +724,10 @@ namespace FC{
 				{
 				case 10:
 				{
+					efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();
 					efemPendingTasks = taskManager.getEfemPendingTasks(); //要上料的晶圆
 					efemReturnPendingTasks = taskManager.getEfemRuturnPendingTasks(); //已经到LL上的晶圆
-					efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //LP中初始状态的晶圆
+					efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks(); //EFEM下料完成的任务
 
 					if (tool_allow_get_wafer || efemPendingTasks.size() >0 )//给tool上料
 					{
@@ -628,6 +740,18 @@ namespace FC{
 						efem_auto_step = 200;
 						if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
 							efem_auto_step = 4000;
+					}
+					else if (efemUnkownStatusTasks.size()>0 && (efemUnkownStatusTasks.size() == efemReturnCompletedTasks.size()))
+					{
+						if(efemUnkownStatusTasks.at(0).source == UnifiedWaferTask::Location::LP1)
+						{
+							lp1_cycle_one_time_finished = true;//一次lp1循环完成
+						}
+						else
+						{
+							lp2_cycle_one_time_finished = true;//一次lp2循环完成
+						}
+						Sleep(10);
 					}
 					else
 					{
@@ -699,17 +823,17 @@ namespace FC{
 							if (efemUnkownStatusTasks.size() > 0)
 							{
 								//更新为成LL待上料任务类型
-								taskManager.updateTaskMaps(efemUnkownStatusTasks[i].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(efemUnkownStatusTasks[i].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,UnifiedWaferTask::Status::QUEUED);
 							}
 						}
 					}
-					efemPendingTasks = taskManager.getEfemPendingTasks();
 					efem_auto_step = 110;
 				}
 				break;
 				
 				case 110:
 				{
+					efemPendingTasks = taskManager.getEfemPendingTasks();
 					if (efemPendingTasks.size() == 1)
 					{
 						efem_auto_step = 115;//单取LP单放LK
@@ -733,7 +857,6 @@ namespace FC{
 								}
 								else
 								{
-									logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
 									efem_auto_step = 10; //跳转到开始步骤
 								}
 							}
@@ -842,7 +965,8 @@ namespace FC{
 						else
 						{
 							//更新指定ID task状态改变，转移到其他状态下的队列中
-							taskManager.updateTaskMaps(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 							efem_auto_step = 110; //跳转到110
 						}
 					}
@@ -1022,7 +1146,7 @@ namespace FC{
 						}
 						else {//放料完成
 							efem_auto_step = 158;
-							taskManager.updateTaskMaps(efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						}
 					}
 					else {
@@ -1043,7 +1167,7 @@ namespace FC{
 							logFailedExcuteCommandHasError(ewtr->getName(), "B手臂放LL晶圆", efem_process_name, efem_auto_step);
 						}
 						else {//放料完成
-							taskManager.updateTaskMaps(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 							efem_auto_step = 110;
 						}
 					}
@@ -1061,13 +1185,23 @@ namespace FC{
 				{
 					//efemReturnPendingTasks 这个数组数据来源是 LL腔  8->3
 
-					/*	loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");
+					
+					loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");
+
 					loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB");
 
 					for (auto& task : loadLockAReturnCompletedTasks)
 					{
-						
-					}*/
+						taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
+					}
+
+					for (auto& task : loadLockBReturnCompletedTasks)
+					{
+						taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
+					}
+
+					UpdateEfemSubTransferDatas();
+
 					elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//下料，实际源头和目标互换
 					lk = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
@@ -1102,6 +1236,7 @@ namespace FC{
 				break;
 				case 201:
 				{
+					UpdateEfemSubTransferDatas();
 					if (efemReturnPendingTasks.size() == 1)
 					{
 						efem_auto_step = 240;
@@ -1142,11 +1277,9 @@ namespace FC{
 						else {
 							logFailedNotNormal(elp1->getName(), efem_process_name, efem_auto_step);
 						}
-
 						if (!elp2->hasDoorOpend() && !elp1->hasDoorOpend())
 						{
 							tool_allow_put_wafer = false;//下料到LP完成
-
 							efem_auto_step = 10;
 						}
 					}
@@ -1238,9 +1371,33 @@ namespace FC{
 						{
 							logFailedExcuteCommandHasError(ewtr->getName(), "放LP晶圆", efem_process_name, efem_auto_step);
 						}
-						taskManager.updateTaskMaps(efemReturnPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
 
-						efem_auto_step = 201;
+						else
+						{
+							taskManager.updateTaskStatus(efemReturnPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+							
+							UpdateEfemSubTransferDatas();
+							
+							if (efemUnkownStatusTasks.size() == 0
+								&& efemReturnPendingTasks.size() ==1)
+							{
+								if (efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1)
+								{
+									logInform(ewtr->getName().c_str(), "cycle end efemUnkownStatusTasks=%d efemReturnPendingTasks=%d",
+										efemUnkownStatusTasks.size(), efemReturnPendingTasks.size());
+									is_lp1_cycle = true;
+								}
+								else if (efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP2)
+								{
+									logInform(ewtr->getName().c_str(), "cycle end efemUnkownStatusTasks=%d efemReturnPendingTasks=%d",
+										efemUnkownStatusTasks.size(), efemReturnPendingTasks.size());
+									is_lp2_cycle = true;
+								}
+							}
+							
+							efem_auto_step = 201;
+						}
+
 					}
 					else
 					{
@@ -1254,6 +1411,7 @@ namespace FC{
 #pragma region 双取LK双放LP
 				case 250:
 				{
+					UpdateEfemSubTransferDatas();
 					std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 					std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingTasks.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
@@ -1459,8 +1617,38 @@ namespace FC{
 				}
 				case 257:
 				{
-					taskManager.updateTaskMaps(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
-					taskManager.updateTaskMaps(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					taskManager.updateTaskStatus(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					taskManager.updateTaskStatus(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+
+					UpdateEfemSubTransferDatas();
+
+					if (efemUnkownStatusTasks.size() == 0
+						&& efemReturnPendingTasks.size() == 2)
+					{
+						if (efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 && efemReturnPendingTasks.at(0).source == efemReturnPendingTasks.at(1).source)
+						{
+							logInform(ewtr->getName().c_str(), "cycle end efemUnkownStatusTasks=%d efemReturnPendingTasks=%d",
+								efemUnkownStatusTasks.size(), efemReturnPendingTasks.size());
+							is_lp1_cycle = true;
+						}
+						else if (efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP2 && efemReturnPendingTasks.at(0).source == efemReturnPendingTasks.at(1).source)
+						{
+							logInform(ewtr->getName().c_str(), "cycle end efemUnkownStatusTasks=%d efemReturnPendingTasks=%d",
+								efemUnkownStatusTasks.size(), efemReturnPendingTasks.size());
+							is_lp2_cycle = true;
+						}
+
+						else if (efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 && efemReturnPendingTasks.at(0).source != efemReturnPendingTasks.at(1).source)
+						{
+							is_lp1_cycle = true;
+						}
+
+						else if (efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP2 && efemReturnPendingTasks.at(0).source != efemReturnPendingTasks.at(1).source)
+						{
+							is_lp2_cycle = true;
+						}
+					}
+
 					efem_auto_step = 201;
 				}
 				break;
@@ -1470,8 +1658,8 @@ namespace FC{
 
 				#pragma region 模拟EFEM给TOOL上料
 
-				taskManager.updateTaskMaps(loadLockPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-				taskManager.updateTaskMaps(loadLockPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+				taskManager.updateTaskStatus(loadLockPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+				taskManager.updateTaskStatus(loadLockPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 
 				if (!lk1->getCassetteDoorOpend())
 				{
@@ -1505,8 +1693,8 @@ namespace FC{
 				#pragma endregion
 
 				#pragma region 模拟EFEM给TOOL下料
-				taskManager.updateTaskMaps(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
-				taskManager.updateTaskMaps(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+				taskManager.updateTaskStatus(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+				taskManager.updateTaskStatus(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
 
 				if (!lk1->getCassetteDoorOpend())
 				{
@@ -1543,24 +1731,6 @@ namespace FC{
 		}
 	
 	}
-
-	//void QSlotTransferCycleVTMWidgetPrivate::handleEFEMCompletion(UnifiedWaferTask& task)
-	//{ 
-	//	if(task.currentStep == EFEMSubState::EFEMSubStep::EFEM_STEP_END)
-	//	{
-	//		
-	//		task.status = UnifiedWaferTask::Status::COMPLETED;
-	//		task.taskType = UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER;
-	//		// 更新任务状态
-	//		taskManager.updateTaskStatus(task.taskId, task.status, task.taskType);
-	//		//记录成功日志
-	//		logInform("EFEMTransfer", "任务 %d 完成: %s -> %s",
-	//			task.taskId,
-	//			UnifiedWaferTask::locationToString(task.source),
-	//			UnifiedWaferTask::locationToString(task.target));
-	//	}
-	//}
-
 	/*
 	* 大气/真空流程，分为取晶圆，放晶圆，下料到EFEM, 破真空，抽真空
 	* 
@@ -1586,15 +1756,14 @@ namespace FC{
 				case 10:
 				{
 					int taskSize = taskManager.getAllTasksSize();
-					efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //LP中初始状态的晶圆
+					UpdateLLASubTransferDatas();
 
-					loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");     // 5上料 破过真空，但没抽真空的
-					loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA"); // 6 上料 抽完真空，并取走的
+					//LLA 服务于LP1
+					if (loadLockAPendingTasks.size() == 0 && !is_lp2_cycle && is_lp1_cycle)
+					{
+						loadlock1_auto_step = 6000;
+					}
 
-					loadLockAReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLA");// 7下料 ，待放到LL的晶圆数量
-					loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");// 8下料 ，放到LL的晶圆数量
-
-					//有无wafer
 					if (loadLockAPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0 )
 					{
 						//有wafer，直接抽真空，走取放晶圆流程，下料流程，
@@ -1602,19 +1771,11 @@ namespace FC{
 					}
 					else if (loadLockACompletedTasks.size() == 2 || loadLockAReturnPendingTasks.size() == 2 || efemUnkownStatusTasks.size() <= taskSize)
 					{
-						//无wafer,破真空，让efem上料,efem中的lp都是unkown
+						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 		
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							Sleep(2000);
-							//auto cmd = lk1->createMappingCommand();
-							//lk1->startCommand(cmd);
-							//cmd->wait();
-							//if (cmd->hasError())
-							//{
-							//	logFailedExcuteCommandHasError(lk1->getName(), "扫描晶圆盒", loadlock1_process_name, loadlock1_auto_step);
-							//}
-							
 							if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 							{ //大气
 								loadlock1_auto_step = 300;
@@ -1622,15 +1783,16 @@ namespace FC{
 							else {
 								loadlock1_auto_step = 20;
 							}
-								
-							
 						}
 						else
 						{
 							logFailedNotNormal(lk1->getName(), loadlock1_process_name, loadlock1_auto_step);
 						}
 					}
-
+					else
+					{
+						Sleep(500);
+					}
 				}
 				break;
 				case 20://需要上晶圆,先破真空
@@ -1682,7 +1844,7 @@ namespace FC{
 					loadlock1_put_cassette_finished = false;//放料到loadlock1未完成
 					loadlock1_auto_step = 301;
 				}
-				break;
+			break;
 				case 301:
 				{
 					tool_allow_get_wafer = true;//呼叫LP上料
@@ -1703,15 +1865,15 @@ namespace FC{
 				break;
 				case 350:
 				{
-					if (loadlock1_put_cassette_finished && !tool1_allow_get_wafer)//上料完成
+					if (loadlock1_put_cassette_finished && !tool_allow_get_wafer)//上料完成
 					{
 						loadlock1_auto_step = 400;
 
 						//此时task status 改成LockPendingTasks 
-						auto efemCompletedTasks = taskManager.getEfemCompletedTasks();
+						efemCompletedTasks = taskManager.getEfemCompletedTasks();
 						for (auto& task : efemCompletedTasks)
 						{
-							taskManager.updateTaskMaps(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 						}
 					}
 					else
@@ -1726,7 +1888,7 @@ namespace FC{
 				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = lk1->createCloseCassetteDoorCommand();
+					/*					auto cmd = lk1->createCloseCassetteDoorCommand();
 						lk1->startCommand(cmd);
 						cmd->wait();
 						if (cmd->hasError())
@@ -1736,7 +1898,7 @@ namespace FC{
 						else {
 							if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 							{
-								logInform("Cycle","大气cycle，跳过真空检测");
+								logInform("Cycle","step:400, 大气cycle，跳过真空检测");
 								loadlock1_auto_step = 800; 
 							}
 							else
@@ -1744,6 +1906,15 @@ namespace FC{
 								loadlock1_auto_step = 410;
 							}
 							
+						}*/
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						{
+							logInform("Cycle", "step:400, 大气cycle，跳过真空检测");
+							loadlock1_auto_step = 800;
+						}
+						else
+						{
+							loadlock1_auto_step = 410;
 						}
 					}
 					else
@@ -1793,7 +1964,7 @@ namespace FC{
 							auto loadlockPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
 							for (auto& task : loadlockPendingTasks)
 							{
-								taskManager.updateTaskMaps(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 							}
 							loadlock1_auto_step = 800;
 						}
@@ -1819,8 +1990,8 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle","大气cycle，跳过真空检测");
-
+							logInform("Cycle","step:800,大气cycle，跳过真空检测");
+							loadlock1_auto_step = 810;
 						}
 						else
 						{
@@ -1828,24 +1999,6 @@ namespace FC{
 							{
 								loadlock1_auto_step = 500;
 							}
-						}
-
-						if (lk1->hasBoxPresent())
-						{
-							//auto cmd = lk1->createMappingCommand();
-							//lk1->startCommand(cmd);
-							//cmd->wait();
-							//if (cmd->hasError())
-							//{
-							//	logFailedExcuteCommandHasError(lk1->getName(), "扫描晶圆盒", loadlock1_process_name, loadlock1_auto_step);
-							//}
-							//else {
-							//	loadlock1_auto_step = 810;
-							//}
-							loadlock1_auto_step = 810;
-						}
-						else {
-							Sleep(100);
 						}
 					}
 					else
@@ -1868,14 +2021,17 @@ namespace FC{
 				break;
 #pragma endregion
 
-#pragma region 判断是否取晶圆、放晶圆流程、下料的流程
+#pragma region 判断是否取晶圆、放晶圆流程、efem下料的流程
 				case 900:
 				{
+					logInform("Cycle", "step 900:判断是否取晶圆、放晶圆流程、efem下料的流程");
+					UpdateLLASubTransferDatas();
+
 					if (loadLockAPendingTasks.size() > 0 || loadLockAReturnPendingTasks.size() > 0)
 					{
 						loadlock1_auto_step = 901;//取晶圆、放晶圆流程
 					}
-					else if (loadLockAReturnCompletedTasks.size() > 0)
+					else if (loadLockAReturnCompletedTasks.size() > 0) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
 					{
 						loadlock1_auto_step = 5000;//出空casstte的流程
 					}
@@ -1886,7 +2042,7 @@ namespace FC{
 				{
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logInform("Cycle", "大气cycle，跳过真空检测");
+						logInform("Cycle", "step: 901,大气cycle，跳过真空检测");
 						loadlock1_auto_step = 950;
 					}
 					else
@@ -1932,6 +2088,7 @@ namespace FC{
 				break;
 				case 950:
 				{
+					UpdateLLASubTransferDatas();
 					if (loadLockAPendingTasks.size() > 0 && !abortCycle)
 					{
 						//取晶圆
@@ -1946,16 +2103,17 @@ namespace FC{
 					{
 						loadlock1_auto_step = 5000;//出空Cassette流程
 					}
+					Sleep(500);
 				}
 				break;
 
 #pragma region 允许取晶圆流程
 				case 1000:
 				{
-					//取片原则，1.是上进下出， 只能取上层的， 2.是上下两层都可取，原则从下到上取，默认第2种
+					//取片原则，1.是上进下出， 只能取上层的， 2.是上下两层都可取，原则从下到上取，下层：1，上层：2 ，默认第2种
 					loadlock1_move_slot_index = loadLockAPendingTasks.at(0).targetSlot; //拿第一个task
-					//当取完结束，更新状态
 
+					//当取完结束，更新状态
 					logInform("Test", "loadlock1_move_slot_index %d loadLockACompletedTasks=%d", loadlock1_move_slot_index, loadLockACompletedTasks.size());
 					loadlock1_auto_step = 1010;
 				}
@@ -2013,17 +2171,17 @@ namespace FC{
 						cmd->wait();
 						if (cmd->hasError())
 						{
-							logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", robot_process_name, robot_auto_step);
+							logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
 						}
 						else
 						{
-							robot_auto_step = 1051;
+							loadlock1_auto_step = 1051;
 						}
 
 					}
 					else
 					{
-						logFailedNotNormal(lk1->getName(), robot_process_name, robot_auto_step);
+						logFailedNotNormal(lk1->getName(), loadlock1_process_name, loadlock1_auto_step);
 					}
 
 				}
@@ -2038,22 +2196,25 @@ namespace FC{
 						cmd->wait();
 						if (cmd->hasError())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", robot_process_name, robot_auto_step);
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
 						}
 						else
 						{
-							robot_auto_step = 1052;
+							loadlock1_auto_step = 1052;
 						}
 					}
 					else
 					{
-						logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
 					}
 				}
 				case 1052:
 				{
 					//真空机械手取料完成
-					taskManager.updateTaskMaps(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+					taskManager.updateTaskStatus(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+
+					//这里要呼叫PM来取片吗？，等待Pm取片成功？
+					pm_allow_get_put_wafer = true;
 
 					auto cmd = lk1->createCloseTMCavityDoorCommand();
 					lk1->startCommand(cmd);
@@ -2137,16 +2298,16 @@ namespace FC{
 						cmd->wait();
 						if (cmd->hasError())
 						{
-							logFailedExcuteCommandHasError(tm->getName(), "关闭隔膜阀失败！", robot_process_name, robot_auto_step);
+							logFailedExcuteCommandHasError(tm->getName(), "关闭隔膜阀失败！", loadlock1_process_name, loadlock1_auto_step);
 						}
 						else
 						{
-							robot_auto_step = 2050;
+							loadlock1_auto_step = 2050;
 						}
 					}
 					else
 					{
-						logFailedNotNormal(tm->getName(), robot_process_name, robot_auto_step);
+						logFailedNotNormal(tm->getName(), loadlock1_process_name, loadlock1_auto_step);
 					}
 				}
 				break;
@@ -2159,17 +2320,17 @@ namespace FC{
 						cmd->wait();
 						if (cmd->hasError())
 						{
-							logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", robot_process_name, robot_auto_step);
+							logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
 						}
 						else
 						{
-							robot_auto_step = 2060;
+							loadlock1_auto_step = 2060;
 						}
 
 					}
 					else
 					{
-						logFailedNotNormal(lk1->getName(), robot_process_name, robot_auto_step);
+						logFailedNotNormal(lk1->getName(), loadlock1_process_name, loadlock1_auto_step);
 					}
 				}
 				break;
@@ -2183,27 +2344,27 @@ namespace FC{
 						cmd->wait();
 						if (cmd->hasError())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", robot_process_name, robot_auto_step);
+							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
 						}
 						else {
-							robot_auto_step = 2070;
+							loadlock1_auto_step = 2070;
 						}
 					}
 					else if (lk1->hasDoorOpend() == false)
 					{
-						logFailed(lk1->getName(), Poco::format("%s 传输腔门阀未打开， %s：%d", lk1->getName(), robot_process_name, robot_auto_step));
+						logFailed(lk1->getName(), Poco::format("%s 传输腔门阀未打开， %s：%d", lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
 					}
 					else
 					{
-						logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
 					}
 				}
 				break;
 				case 2070:
 				{
 					//下料到LL的晶圆 8->3
-					taskManager.updateTaskMaps(loadLockReturnPendingTasks.at(0).taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
-					taskManager.updateTaskMaps(loadLockReturnPendingTasks.at(0).taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::IN_PROGRESS);
+					taskManager.updateTaskStatus(loadLockReturnPendingTasks.at(0).taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					taskManager.updateTaskStatus(loadLockReturnPendingTasks.at(0).taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
 
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -2246,27 +2407,9 @@ namespace FC{
 				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-
-						//auto cmd = lk1->createMappingCommand();
-						//lk1->startCommand(cmd);
-						//cmd->wait();
-						//if (cmd->hasError())
-						//{
-						//	logFailedExcuteCommandHasError(lk1->getName(), "扫描晶圆盒", loadlock1_process_name, loadlock1_auto_step);
-						//}
-						//else {
-
-						//	if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
-						//	{
-						//		logInform("Cycle", "大气cycle，跳过破真空");
-						//		loadlock1_auto_step = 5022;
-						//	}
-						//	else
-						//		loadlock1_auto_step = 5021;
-						//}
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "大气cycle，跳过破真空");
+							logInform("Cycle", "step:5000 ,大气cycle，跳过破真空");
 							loadlock1_auto_step = 5022;
 						}
 						else
@@ -2371,13 +2514,15 @@ namespace FC{
 				break;
 				case 6000:
 				{
-					if (loadLockReturnCompletedTasks.size() == 0 && !is_lp2_cycle && is_lp1_cycle)
+					loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
+
+					if (loadLockAPendingTasks.size() == 0 && !is_lp2_cycle && is_lp1_cycle)
 					{
-						//lp1_cycle_one_time_finished = true;
+						lp1_cycle_one_time_finished = true;
 						//loadlock1_process_finished = true;
-						//taskManager.updateTaskMaps();
 					}
-					else {
+					else
+					{
 						loadlock1_auto_step = 10;
 					}
 				}
@@ -2394,6 +2539,805 @@ namespace FC{
 	void QSlotTransferCycleVTMWidgetPrivate::executeLLBTransfer()
 	{
 
+		if (!ewtr || !elp1 || !elp2 || !lk1 || !lk2 || wtr)
+		{
+			ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+			lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+			lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+			wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+		}
+		while (!taskManager.isStopped())
+		{
+			Sleep(500);
+			if (taskManager.waitForTasks(1000))
+			{
+				loadlock2_step_once_finished = false;
+				switch (loadlock2_auto_step)
+				{
+				case 10:
+				{
+					int taskSize = taskManager.getAllTasksSize();
+
+					UpdateLLBSubTransferDatas();
+
+					if (loadLockBPendingTasks.size() == 0 && !is_lp1_cycle && is_lp2_cycle)
+					{
+						loadlock2_auto_step = 6000;
+					}
+					//有无wafer
+					if (loadLockBPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0)
+					{
+						//有wafer，直接抽真空，走取放晶圆流程，下料流程，
+						loadlock2_auto_step = 400;
+					}
+					else if (loadLockBCompletedTasks.size() == 2 || loadLockBReturnPendingTasks.size() == 2 || efemUnkownStatusTasks.size() <= taskSize)
+					{
+						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
+
+						if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							Sleep(2000);
+							if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+							{ //大气
+								loadlock2_auto_step = 300;
+							}
+							else {
+								loadlock2_auto_step = 20;
+							}
+						}
+						else
+						{
+							logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+						}
+					}
+
+				}
+				break;
+				case 20://需要上晶圆,先破真空
+				{
+					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+					{
+						logInform("Cycle", "step 20:大气cycle，跳过真空检测");
+						loadlock2_auto_step = 300;
+					}
+					else
+					{
+						//排气压力达到设定值9W9  
+						if (!lk2->getExhaustVacuumValueReachesTheSetValue())
+						{
+							loadlock2_auto_step = 100;
+						}
+						else
+						{
+							loadlock2_auto_step = 300;//真空值达到大气设定值
+						}
+
+					}
+
+				}
+				break;
+#pragma region 没有晶圆盒的破真空流程
+				case 100:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = lk2->createAutoBreakVacuumCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "自动破真空", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else {
+							loadlock2_auto_step = 300;
+						}
+					}
+					else {
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 300:
+				{
+					loadlock2_put_cassette_finished = false;//放料到loadlock2未完成
+					loadlock2_auto_step = 301;
+				}
+				break;
+				case 301:
+				{
+					tool_allow_get_wafer = true;//呼叫LP上料
+					loadlock2_auto_step = 302;
+				}
+				break;
+				case 302:
+				{
+					if (!tool_allow_get_wafer)
+					{	//EFEM上料完成
+						loadlock2_auto_step = 350;
+						loadlock2_put_cassette_finished = true; //放料到loadlock2完成
+					}
+					else {
+						Sleep(50);
+					}
+				}
+				break;
+				case 350:
+				{
+					if (loadlock2_put_cassette_finished && !tool_allow_get_wafer)//上料完成
+					{
+						//此时task status 改成LockPendingTasks 
+						efemCompletedTasks = taskManager.getEfemCompletedTasks();
+						for (auto& task : efemCompletedTasks)
+						{
+							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+						}
+						loadlock2_auto_step = 400;
+					}
+					else
+					{
+						Sleep(50);
+					}
+				}
+				break;
+#pragma endregion
+
+				case 400://有晶圆盒
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//auto cmd = lk2->createCloseCassetteDoorCommand();
+						//lk2->startCommand(cmd);
+						//cmd->wait();
+						//if (cmd->hasError())
+						//{
+						//	logFailedExcuteCommandHasError(lk2->getName(), "关闭放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+						//}
+						//else {
+						//	if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						//	{
+						//		logInform("Cycle", "step:400, 大气cycle，跳过真空检测");
+						//		loadlock2_auto_step = 800;
+						//	}
+						//	else
+						//	{
+						//		loadlock2_auto_step = 410;
+						//	}
+
+						//}
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						{
+							logInform("Cycle", "step:400, 大气cycle，跳过真空检测");
+							loadlock2_auto_step = 800;
+						}
+						else
+						{
+							loadlock2_auto_step = 410;
+						}
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 410:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//Loadlock2有真空信号，未达到设定值，角阀未打开
+						if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
+						{
+							loadlock2_auto_step = 500;
+						}
+						else
+						{
+							loadlock2_auto_step = 800;
+						}
+					}
+					else {
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 500:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						loadlock2_get_vacuum = true; //开始抽Loadlock2真空
+						loadlock2_auto_step = 510;
+					}
+					else {
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 510:
+				{
+					if (loadlock2_get_vacuum == false)//Loadlock2抽真空完成
+					{
+						if (lk2->getVacuumValueUpperLimitReachesTheSetValue())
+						{
+							//Update status
+							auto loadlockPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
+							for (auto& task : loadlockPendingTasks)
+							{
+								taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							}
+							loadlock2_auto_step = 800;
+						}
+						else
+						{
+							loadlock2_auto_step = 500;//继续抽
+						}
+					}
+					else
+					{
+						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
+						{
+							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
+						}
+						Sleep(100);
+					}
+				}
+				break;
+#pragma region Mapping流程
+				case 800:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						{
+							logInform("Cycle", "step:800,大气cycle，跳过真空检测");
+							loadlock2_auto_step = 810;
+						}
+						else
+						{
+							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
+							{
+								loadlock2_auto_step = 500;
+							}
+						}
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 810:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						loadlock2_auto_step = 900;
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+#pragma endregion
+
+#pragma region 判断是否取晶圆、放晶圆流程、efem下料的流程
+				case 900:
+				{
+					logInform("Cycle", "step 900:判断是否取晶圆、放晶圆流程、efem下料的流程");
+					UpdateLLBSubTransferDatas();
+
+					if (loadLockBPendingTasks.size() > 0 || loadLockBReturnPendingTasks.size() > 0)
+					{
+						loadlock2_auto_step = 901;//取晶圆、放晶圆流程
+					}
+					else if (loadLockBReturnCompletedTasks.size() > 0) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
+					{
+						loadlock2_auto_step = 5000;//出空casstte的流程
+					}
+				}
+				break;
+#pragma endregion
+				case 901:
+				{
+					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+					{
+						logInform("Cycle", "step: 901,大气cycle，跳过真空检测");
+						loadlock2_auto_step = 950;
+					}
+					else
+					{
+						if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
+							{
+								loadlock2_get_vacuum = true;
+								loadlock2_auto_step = 920;
+							}
+							else {
+								loadlock2_auto_step = 950;
+							}
+						}
+						else {
+							logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+						}
+					}
+				}
+				break;
+				case 920:
+				{
+					if (loadlock2_get_vacuum == false)
+					{
+						if (lk2->getVacuumValueUpperLimitReachesTheSetValue())
+						{
+							loadlock2_auto_step = 950;
+						}
+						else
+						{
+							loadlock2_auto_step = 910;
+						}
+					}
+					else {
+						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
+						{
+							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
+						}
+						Sleep(100);
+					}
+				}
+				break;
+				case 950:
+				{
+					UpdateLLBSubTransferDatas();
+					if (loadLockBPendingTasks.size() > 0 && !abortCycle)
+					{
+						//取晶圆
+						loadlock2_auto_step = 1000;//允许取晶圆流程
+					}
+					else if (loadLockBReturnPendingTasks.size() > 0 && !abortCycle)
+					{
+						//放晶圆
+						loadlock2_auto_step = 2000;//允许放晶圆流程
+					}
+					else if (loadLockBReturnCompletedTasks.size() > 0)
+					{
+						loadlock2_auto_step = 5000;//出空Cassette流程
+					}
+					Sleep(500);
+				}
+				break;
+#pragma region 允许取晶圆流程
+				case 1000:
+				{
+					//取片原则，1.是上进下出， 只能取上层的， 2.是上下两层都可取，原则从下到上取，下层：1，上层：2 ，默认第2种
+					loadlock2_move_slot_index = loadLockBPendingTasks.at(0).targetSlot; //拿第一个task
+
+					//当取完结束，更新状态
+					logInform("Test", "loadlock2_move_slot_index %d loadLockBCompletedTasks=%d", loadlock2_move_slot_index, loadLockBCompletedTasks.size());
+					loadlock2_auto_step = 1010;
+				}
+				break;
+				case 1010:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
+						auto station_cass = cassManager->getCassette(lk2.get());
+
+						if (station_cass->getMapping(loadlock2_move_slot_index) == Cassette::Mapping::Present)
+						{
+							loadlock2_auto_step = 1040;
+						}
+						else
+						{
+							logFailed(lk2->getName(), Poco::format("%s 第%d槽不是正常片", lk2->getName(), loadlock2_move_slot_index));
+						}
+
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 1040:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						// 选择不加真空机械手线程，直接操作，真空检测和门阀，阀动作，csr取放动作
+						if (CheckLLVacuumMeetsStandard("LLA", 2010))
+						{
+							loadlock2_auto_step = 1050;
+						}
+						else
+						{
+							logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+						}
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 1050:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//Loadlock2 打开传输腔门阀
+						/*	auto cmd = lk2->createOpenTMCavityDoorCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "打开传输腔门阀", robot_process_name, robot_auto_step);
+						}
+						else
+						{
+							robot_auto_step = 1051;
+						}*/
+						loadlock2_auto_step = 1051;
+
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), robot_process_name, loadlock2_auto_step);
+					}
+
+				}
+				break;
+				case 1051:
+				{
+					if (wtr == nullptr)
+					{
+						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+					}
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//robot 用手臂A 从loadlock2 取wafer ，
+						auto cmd = wtr->createGetCommand(lk2, loadLockBPendingTasks.at(0).arm, loadlock2_move_slot_index);
+						wtr->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", robot_process_name, loadlock2_auto_step);
+						}
+						else
+						{
+							loadlock2_auto_step = 1052;
+						}
+					}
+					else
+					{
+						logFailedNotNormal(wtr->getName(), robot_process_name, loadlock2_auto_step);
+					}
+				}
+				case 1052:
+				{
+					//真空机械手取料完成
+					taskManager.updateTaskStatus(loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+
+					//这里要呼叫PM来取片吗？
+					pm_allow_get_put_wafer = true;
+
+					loadlock2_auto_step = 950;
+					//auto cmd = lk2->createCloseTMCavityDoorCommand();
+					//lk2->startCommand(cmd);
+					//cmd->wait();
+					//if (cmd->hasError())
+					//{
+					//	logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+					//}
+					//else {
+					//	loadlock2_auto_step = 950;
+					//}
+				}
+				break;
+#pragma endregion
+
+#pragma region 允许放晶圆流程
+				case 2000:
+				{
+					//放片原则，1.是上进下出， 只能放下层的， 2.是上下两层都可放，原则从下到上放，默认第2种
+					//放回到指定ll,对应的槽
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						loadlock2_move_slot_index = loadLockReturnPendingTasks.at(0).targetSlot;
+						loadlock2_auto_step = 2010;
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2010:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
+						auto station_cass = cassManager->getCassette(lk2.get());
+						if (station_cass->getMapping(loadlock2_move_slot_index) == Cassette::Mapping::Empty)
+						{
+							loadlock2_auto_step = 2030;
+						}
+						else
+						{
+							logFailed(lk2->getName(), Poco::format("%s 第%d槽不是空片", lk2->getName(), loadlock2_move_slot_index));
+						}
+
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2030:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						// 真空检测和门阀，阀动作，csr取放动作
+						if (CheckLLVacuumMeetsStandard("LLA", 2010))
+						{
+							loadlock2_auto_step = 2040;
+						}
+						else
+						{
+							logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+						}
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+
+				}
+				break;
+				case 2040:
+				{
+					if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//auto cmd = tm->createCloseDiaphragmValveCommand(TMCavityValveOpening::TMCavity_Both);
+						//tm->startCommand(cmd);
+						//cmd->wait();
+						//if (cmd->hasError())
+						//{
+						//	logFailedExcuteCommandHasError(tm->getName(), "关闭隔膜阀失败！", loadlock2_process_name, loadlock2_auto_step);
+						//}
+						//else
+						//{
+						//	loadlock2_auto_step = 2050;
+						//}
+						loadlock2_auto_step = 2050;
+					}
+					else
+					{
+						logFailedNotNormal(tm->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2050:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = lk2->createOpenTMCavityDoorCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "打开传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else
+						{
+							loadlock2_auto_step = 2060;
+						}
+
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2060:
+				{
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk2->hasDoorOpend())
+					{
+						//robot 把手臂A的放到Loadlock2
+						auto cmd = wtr->createPutCommand(lk2, loadLockReturnPendingTasks.at(0).arm, loadlock2_move_slot_index);
+						wtr->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else {
+							loadlock2_auto_step = 2070;
+						}
+					}
+					else if (lk2->hasDoorOpend() == false)
+					{
+						logFailed(lk2->getName(), Poco::format("%s 传输腔门阀未打开， %s：%d", lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
+					}
+					else
+					{
+						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2070:
+				{
+					//下料到LL的晶圆 8->3
+					taskManager.updateTaskStatus(loadLockReturnPendingTasks.at(0).taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					
+					//taskManager.updateTaskStatus(loadLockReturnPendingTasks.at(0).taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
+
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//auto cmd = lk2->createCloseTMCavityDoorCommand();
+						//lk2->startCommand(cmd);
+						//cmd->wait();
+						//if (cmd->hasError())
+						//{
+						//	logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+						//}
+						//else
+						//{
+						//	loadlock2_auto_step = 2080;
+						//}
+						loadlock2_auto_step = 2080;
+					}
+					else
+					{
+						Sleep(500);
+					}
+				}
+				break;
+				case 2080:
+				{
+
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						loadlock2_auto_step = 950;
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+
+				}
+				break;
+#pragma endregion
+
+#pragma region 出空casstte的流程
+				case 5000:
+				{
+					UpdateLLBSubTransferDatas();
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						{
+							logInform("Cycle", "step:5000 ,大气cycle，跳过破真空");
+							loadlock2_auto_step = 5022;
+						}
+						else
+							loadlock2_auto_step = 5021;
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+
+				}
+				break;
+				case 5021:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = lk2->createAutoBreakVacuumCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "自动破真空", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else {
+							loadlock2_auto_step = 5022;
+						}
+					}
+					else {
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 5022:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						{
+							logInform("Cycle", "大气cycle，跳过破真空");
+							loadlock2_auto_step = 5023;
+						}
+						else
+						{
+							if (lk2->getFastDiaphragmValveOpend() || lk2->getSlowDiaphragmValveOpend() || lk2->getVacuumValue() <= 99600)
+							{
+								loadlock2_auto_step = 5021;
+							}
+						}
+						auto cmd = lk2->createOpenCassetteDoorCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "打开放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else {
+							loadlock2_auto_step = 5023;
+						}
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 5023:
+				{
+					tool_allow_put_wafer = true;//呼叫EFEM下料
+					loadlock2_auto_step = 5024;
+				}
+				break;
+				case 5024:
+				{
+					if (!tool_allow_put_wafer) {//下料完成
+						loadlock2_auto_step = 5025;
+					}
+					else {
+						Sleep(50);
+					}
+				}
+				break;
+				case 5025:
+				{
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = lk2->createCloseCassetteDoorCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "关闭放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else {
+							loadlock2_auto_step = 6000;
+						}
+					}
+					else
+					{
+						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 6000:
+				{
+					if (loadLockBPendingTasks.size() == 0 && !is_lp1_cycle && is_lp2_cycle)
+					{
+						lp2_cycle_one_time_finished = true;
+						//loadlock2_process_finished = true;
+					}
+					else
+					{
+						loadlock2_auto_step = 10;
+					}
+				}
+				break;
+#pragma endregion
+				default:
+					break;
+				}
+			}
+			loadlock2_step_once_finished = true;
+		}
 	}
 
 
@@ -2418,23 +3362,35 @@ namespace FC{
 					case 10:
 					{
 						//获取待放片晶圆
-						loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
-						for (auto& task : loadLockACompletedTasks)
-						{
-							taskManager.updateTaskMaps(task.taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-						}
-
-						pmPendingTasks = taskManager.getPMPendingTasks("PM1");
-						pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
-
-						if (!pm_allow_get_put_wafer)
+						if (pm_allow_get_put_wafer)
 						{//允许取放
+							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
+							if(loadLockACompletedTasks.size()> 0)
+							{
+								for (auto& task : loadLockACompletedTasks)
+								{
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+								}
+							}
+
+							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
+							if(loadLockBCompletedTasks.size()>0 )
+							{
+								for (auto& task : loadLockBCompletedTasks)
+								{
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+								}
+							}
+
+							UpdatePmSubTransferDatas("PM1");
+
 							pm_auto_step = 100;
 						}
 						else
 						{
 							Sleep(200);
 						}
+
 						if (pm_allow_goto_craft)
 						{//转工艺
 							pm_auto_step = 2000;
@@ -2447,6 +3403,7 @@ namespace FC{
 
 					case 100:
 					{
+						UpdatePmSubTransferDatas("PM1");
 						//判断是放、取,不考虑交互手
 						if (pmPendingTasks.size() > 0 || pmCompletedTasks.size() > 0)
 						{
@@ -2469,35 +3426,35 @@ namespace FC{
 							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
 
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
-								robot_auto_step = 1010;
+								pm_auto_step = 1010;
 							}
 							else if (!haswaferpm && haswaferarm2) {//手臂2放料
-								robot_auto_step = 1030;
+								pm_auto_step = 1030;
 							}
 							else if (haswaferpm && !haswaferarm1) //手臂1取料
 							{
-								robot_auto_step = 1040;
+								pm_auto_step = 1040;
 							}
 							else if (haswaferpm && !haswaferarm2) //手臂1取料
 							{
-								robot_auto_step = 1050;
+								pm_auto_step = 1050;
 							}
 							//else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放
-							//	robot_auto_step = 1050;
+							//	pm_auto_step = 1050;
 							//}
 							//else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放
-							//	robot_auto_step = 1070;
+							//	pm_auto_step = 1070;
 							//}
 							//else if (haswaferpm && !haswaferarm2 && !haswaferarm1) {//两个手臂没料，A手取
-							//	robot_auto_step = 1090;
+							//	pm_auto_step = 1090;
 							//}
 							else {
-								logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", robot_process_name, robot_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm_process_name, pm_auto_step);
 							}
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+							logFailedNotNormal(wtr->getName(), pm_process_name, pm_auto_step);
 						}	
 					}
 					break;
@@ -2511,25 +3468,27 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", robot_process_name, robot_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm_auto_step);
 							}
 							else
 							{
 								//下层的
-								taskManager.updateTaskMaps(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 
 								pm_allow_get_put_wafer = false;
-								robot_auto_step = 2000;
+								pm_auto_step = 2000;
 							}
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+							logFailedNotNormal(wtr->getName(), pm_process_name, pm_auto_step);
 						}	
 					}
 					break;
 					case 1030:
-					{
+					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
@@ -2538,21 +3497,23 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", robot_process_name, robot_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm_auto_step);
 							}
 							else
 							{
 								//下层的
-								taskManager.updateTaskMaps(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskMaps(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+							
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 
 								pm_allow_get_put_wafer = false;
-								robot_auto_step = 2000;
+								pm_auto_step = 2000;
 							}
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+							logFailedNotNormal(wtr->getName(), pm_process_name, pm_auto_step);
 						}
 					}
 					break;
@@ -2567,21 +3528,21 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", robot_process_name, robot_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm_auto_step);
 							}
 							else
 							{
 								//下层的
-								taskManager.updateTaskMaps(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskMaps(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 
 								pm_allow_get_put_wafer = false;
-								robot_auto_step = 10;
+								pm_auto_step = 10;
 							}
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+							logFailedNotNormal(wtr->getName(), pm_process_name, pm_auto_step);
 						}
 					}
 					break;
@@ -2595,26 +3556,36 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", robot_process_name, robot_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, robot_auto_step);
 							}
 							else
 							{
 								//下层的
-								taskManager.updateTaskMaps(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm_allow_get_put_wafer = false;
-								robot_auto_step = 10;
+								pm_auto_step = 10;
 							}
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), robot_process_name, robot_auto_step);
+							logFailedNotNormal(wtr->getName(), pm_process_name, robot_auto_step);
 						}
 					}
 					break;
 					case 2000:
 					{
+						Sleep(500);
 						logInform("PM1","模拟做工艺流程.....");
+						taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+
+						pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
+
+
+						taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+
 						Sleep(10);
+						pm_auto_step = 10;
 					}
 					break;
 					default:
@@ -2683,17 +3654,47 @@ namespace FC{
 					finished_time_lla = 0;
 					cycleFinished_lla = true;
 				}
-
 				else
 				{
-					// 4---> 1
-
-
-
+					// 4---> 0
+					efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
+					for (auto& task : efemReturnCompletedTasks)
+					{
+						taskManager.updateTaskStatus(task.taskId,UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+					}
 				}
+				onUpdateCycleInfo();
+				lp1_cycle_one_time_finished = false;
+				update_auto_step = 10;
 			}
 			break;
+			case 1040:
+			{
+				finished_time_llb++;
+				if (is_lp2_cycle) {
+					is_lp2_cycle = false;
+				}
+				if (finished_time_llb >= cycle_times_llb)
+				{
+					logInform("Cycle", Poco::format("LP2 Cycle次数%d已完成", cycle_times_llb).c_str());
+					finished_time_llb = 0;
+					cycleFinished_llb = true;
 
+				}
+				else
+				{
+					efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
+					for (auto& task : efemReturnCompletedTasks)
+					{
+						taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+					}
+				}
+				onUpdateCycleInfo();
+				lp2_cycle_one_time_finished = false;
+				update_auto_step = 10;
+			
+			}
+			break;
 			default:
 				break;
 			update_step_once_finished = true;
@@ -2805,11 +3806,12 @@ namespace FC{
 
 
 	void QSlotTransferCycleVTMWidgetPrivate::resetAction(){
-		if (running)
+
+		if (!taskManager.isStopped())
 		{
 			return;
 		}
-		while (!robot_step_once_finished || !vacumm_step_once_finished || !loadlock1_step_once_finished || !loadlock2_step_once_finished)
+		while (!vacumm_step_once_finished || !loadlock1_step_once_finished || !loadlock2_step_once_finished)
 		{
 			Sleep(100);
 		}
@@ -2820,13 +3822,12 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		std::shared_ptr<FortrendTMCavitySubsystem> tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
+		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
+
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-
-		//std::shared_ptr<FortrendAlignerSubsystem> aligner = kernel->getKernelModule<FortrendAlignerSubsystem>("Aligner");
-
 		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 
 		std::shared_ptr<EFEMLPSubsystem> elp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
@@ -2852,23 +3853,17 @@ namespace FC{
 					)
 				{
 					logInform(reset_process_name.c_str(), "整机复位开始");
-
-					/*auto actSub = wtr->getKernel()->getKernelModule<KernelActionSubsytem>();
-					std::shared_ptr<KernelParallelAction> WTRandSMIFReset;
-					WTRandSMIFReset.reset(new KernelParallelAction("WTRandSMIFReset"));
-					WTRandSMIFReset->addCommand(wtr, wtr->createResetCommand());
-					WTRandSMIFReset->addCommand(smif1, smif1->createResetCommand());
-					WTRandSMIFReset->addCommand(smif2, smif2->createResetCommand());*/
-
-
 					auto cmd = wtr->createResetCommand();
 					wtr->startCommand(cmd);
 					
-					if (ui->disabledefem->checkState() == Qt::CheckState::Unchecked){
+					if (ui->disabledefem->checkState() == Qt::CheckState::Unchecked)
+					{
 						auto cmd_ewtr = ewtr->createResetCommand();
 						ewtr->startCommand(cmd_ewtr);
 						cmd_ewtr->wait();
-						if (cmd_ewtr->hasError()){
+
+						if (cmd_ewtr->hasError())
+						{
 							rest_step = 15000;
 							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", cmd_ewtr->getName()).c_str());
 						}
@@ -2911,14 +3906,17 @@ namespace FC{
 					auto cmd_lk2 = lk2->createResetCommand();
 					lk2->startCommand(cmd_lk2);
 
-					/*auto cmd_pm1 = pm1->createResetCommand();
-					pm1->startCommand(cmd_pm1);*/
+					auto cmd_pm1 = pm1->createResetCommand();
+					pm1->startCommand(cmd_pm1);
 
 					auto cmd_pm2 = pm2->createResetCommand();
 					pm2->startCommand(cmd_pm2);
 
-					/*auto cmd_pm3 = pm3->createResetCommand();
-					pm3->startCommand(cmd_pm3);*/
+					auto cmd_pm3 = pm3->createResetCommand();
+					pm3->startCommand(cmd_pm3);
+
+					auto cmd_pm4 = pm4->createResetCommand();
+					pm3->startCommand(cmd_pm4);
 
 					auto cmd_tm = tm->createResetCommand();
 					tm->startCommand(cmd_tm);
@@ -2946,13 +3944,12 @@ namespace FC{
 						elp1->setDoorOpend(false);
 						elp2->setDoorOpend(false);
 					}
-					
-
 					cmd_lk1->wait();
 					cmd_lk2->wait();
-					//cmd_pm1->wait();
+					cmd_pm1->wait();
 					cmd_pm2->wait();
-					//cmd_pm3->wait();
+					cmd_pm3->wait();
+					cmd_pm4->wait();
 					cmd_tm->wait();
 					
 					if (cmd_lk1->hasError())
@@ -2965,21 +3962,26 @@ namespace FC{
 						rest_step = 15000;
 						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", lk2->getName()).c_str());
 					}
-					/*else if (cmd_pm1->hasError())
+					else if (cmd_pm1->hasError())
 					{
 					rest_step = 15000;
 					logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm1->getName()).c_str());
-					}*/
+					}
 					else if (cmd_pm2->hasError())
 					{
 						rest_step = 15000;
 						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm2->getName()).c_str());
 					}
-					/*else if (cmd_pm3->hasError())
+					else if (cmd_pm3->hasError())
 					{
 					rest_step = 15000;
 					logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm3->getName()).c_str());
-					}*/
+					}
+					else if (cmd_pm4->hasError())
+					{
+						rest_step = 15000;
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm4->getName()).c_str());
+					}
 					else if (cmd_tm->hasError())
 					{
 						rest_step = 15000;
@@ -3005,18 +4007,22 @@ namespace FC{
 					{
 						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk2->getName()).c_str());
 					}
-					/*if (pm1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
+					if (pm1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
 					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm1->getName()).c_str());
-					}*/
+					}
 					if (pm2->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
 						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm2->getName()).c_str());
 					}
-					/*if (pm3->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
+					if (pm3->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
 					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm3->getName()).c_str());
-					}*/
+					}
+					if (pm4->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
+					{
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm4->getName()).c_str());
+					}
 					if (tm->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
 						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", tm->getName()).c_str());
@@ -3036,9 +4042,10 @@ namespace FC{
 			{
 				if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL &&
 					lk2->getState() == IKernelSubSystem::State::SUB_NORMAL &&
-					//pm1->getState() == IKernelSubSystem::State::SUB_NORMAL &&
+					pm1->getState() == IKernelSubSystem::State::SUB_NORMAL &&
 					pm2->getState() == IKernelSubSystem::State::SUB_NORMAL &&
-					//pm3->getState() == IKernelSubSystem::State::SUB_NORMAL &&
+					pm3->getState() == IKernelSubSystem::State::SUB_NORMAL &&
+					pm4->getState() == IKernelSubSystem::State::SUB_NORMAL &&
 					tm->getState() == IKernelSubSystem::State::SUB_NORMAL&&
 					(ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL || ui->disabledefem->checkState() == Qt::CheckState::Checked) &&
 					(elp1->getState() == IKernelSubSystem::State::SUB_NORMAL || ui->disabledefem->checkState() == Qt::CheckState::Checked) &&
@@ -3059,18 +4066,22 @@ namespace FC{
 					{
 						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk2->getName()).c_str());
 					}
-					/*if (pm1->getState() != IKernelSubSystem::State::SUB_NORMAL)
+					if (pm1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
 					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm1->getName()).c_str());
-					}*/
+					}
 					if (pm2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
 						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm2->getName()).c_str());
 					}
-					/*if (pm3->getState() != IKernelSubSystem::State::SUB_NORMAL)
+					if (pm3->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
 					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm3->getName()).c_str());
-					}*/
+					}
+					if (pm4->getState() != IKernelSubSystem::State::SUB_NORMAL)
+					{
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm4->getName()).c_str());
+					}
 					if (tm->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
 						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", tm->getName()).c_str());
@@ -3096,21 +4107,24 @@ namespace FC{
 			{
 				auto cmd_lk1 = lk1->createCloseTMCavityDoorCommand();
 				auto cmd_lk2 = lk1->createCloseTMCavityDoorCommand();
-				//auto cmd_pm1 = pm1->createCloseTMCavityDoorCommand();
+				auto cmd_pm1 = pm1->createCloseTMCavityDoorCommand();
 				auto cmd_pm2 = pm2->createCloseTMCavityDoorCommand();
-				//auto cmd_pm3 = pm3->createCloseTMCavityDoorCommand();
+				auto cmd_pm3 = pm3->createCloseTMCavityDoorCommand();
+				auto cmd_pm4 = pm4->createCloseTMCavityDoorCommand();
 
 				lk1->startCommand(cmd_lk1);
 				lk2->startCommand(cmd_lk2);
-				//pm1->startCommand(cmd_pm1);
+				pm1->startCommand(cmd_pm1);
 				pm2->startCommand(cmd_pm2);
-				//pm3->startCommand(cmd_pm3);
+				pm3->startCommand(cmd_pm3);
+				pm4->startCommand(cmd_pm4);
 
 				cmd_lk1->wait();
 				cmd_lk2->wait();
-				//cmd_pm1->wait();
+				cmd_pm1->wait();
 				cmd_pm2->wait();
-				//cmd_pm3->wait();
+				cmd_pm3->wait();
+				cmd_pm4->wait();
 
 				if (cmd_lk1->hasError())
 				{
@@ -3122,21 +4136,26 @@ namespace FC{
 					rest_step = 15000;
 					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", lk2->getName()).c_str());
 				}
-				/*else if (cmd_pm1->hasError())
+				else if (cmd_pm1->hasError())
 				{
 				rest_step = 15000;
 				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm1->getName()).c_str());
-				}*/
+				}
 				else if (cmd_pm2->hasError())
 				{
 					rest_step = 15000;
 					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm2->getName()).c_str());
 				}
-				/*else if (cmd_pm3->hasError())
+				else if (cmd_pm3->hasError())
 				{
 				rest_step = 15000;
 				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm3->getName()).c_str());
-				}*/
+				}
+				else if (cmd_pm4->hasError())
+				{
+					rest_step = 15000;
+					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm4->getName()).c_str());
+				}
 				else{
 					rest_step = 10000;
 				}
@@ -3508,7 +4527,7 @@ namespace FC{
 	void QSlotTransferCycleVTMWidgetPrivate::startLoadLock1Action(){
 		Q_Q(QSlotTransferCycleVTMWidget);
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-}
+	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::startLoadLock2Action(){
 
@@ -4004,7 +5023,7 @@ namespace FC{
 	}
 
 
-	bool QSlotTransferCycleVTMWidgetPrivate::setHLTransferSequence_1()
+	bool QSlotTransferCycleVTMWidgetPrivate::setHLTransferSequence()
 	{
 		taskManager.clearTasks();
 
@@ -4089,42 +5108,49 @@ namespace FC{
 			task.pm3Enabled = pm3->isChecked();
 			task.pm4Enabled = pm4->isChecked();
 
+			selectPmEnableList[0] = task.pm1Enabled; // 隐式转换：true->1, false->0
+			selectPmEnableList[1] = task.pm2Enabled;
+			selectPmEnableList[2] = task.pm3Enabled;
+			selectPmEnableList[3] = task.pm4Enabled;
+
 			// 轮换式LoadLock分配
 			const int GROUP_SIZE = 2;
 			int groupIndex = i / GROUP_SIZE;
 
-			//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB
+			//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB :-->2025/8/2 硬件原因调换,优先分配给LLB
 			if (groupIndex % 2 == 0)
 			{
-				task.target = UnifiedWaferTask::Location::LLA;
-				task.targetSlot = llaSlot++;
-				//setWaferId
-				const std::string& id = std::to_string(task.taskId);
-				lk1_cass->setWaferId(task.targetSlot, id);
-				if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
-			}
-			else
-			{
 				task.target = UnifiedWaferTask::Location::LLB;
+				task.target_pm = getSelectPmLocation(task);
 				task.targetSlot = llbSlot++;
+				
 				//setWaferId
 				const std::string& id = std::to_string(task.taskId);
 				lk2_cass->setWaferId(task.targetSlot, id);
 				if (llbSlot > GROUP_SIZE) llbSlot = 1;// 组内循环
 			}
-			
-			//tasks.push_back(task);
+			else
+			{
+				task.target = UnifiedWaferTask::Location::LLA;
+				task.target_pm = getSelectPmLocation(task);
+				task.targetSlot = llaSlot++;
+				//setWaferId
+				const std::string& id = std::to_string(task.taskId);
+				lk1_cass->setWaferId(task.targetSlot, id);
 
+				if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
+			}
 			taskManager.addTask(task);//加入到管理者
 
 			// 调试日志
-			logInform("TransferSetup", "Row %d: Source %s Group %d -> %s Slot %d  taskID %d  Status %s",
-				i, task.locationToString(task.source),
+			logInform("TransferSetup", "Row %d: Source %s Group %d -> %s Slot %d  taskID %d  Status %s  %s ",
+				i, task.locationToString(task.source), 
 				groupIndex,
 				(task.target == UnifiedWaferTask::Location::LLA) ? "LLA" : "LLB",
 				task.targetSlot,
 				task.taskId,
-				task.statusToString(task.status));
+				task.statusToString(task.status),
+				getSelectPmProcessName(task));
 		}
 
 		if (ui->sequence_edit_tbw->rowCount() > 0)
@@ -4840,7 +5866,7 @@ namespace FC{
 		{
 
 			//测试
-			if (d->setHLTransferSequence_1())
+			if (d->setHLTransferSequence())
 			{
 				d->ui->cycle_finished_times_spx->setValue(0);
 				d->ui->cycle_finished_times_spx_2->setValue(0);
@@ -5335,6 +6361,7 @@ namespace FC{
 		dsb->setValue(value);
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row, column, dsb);
 	}
+	
 	void QSlotTransferCycleVTMWidget::addEditTableWidgetItemComboBox(int row, int column, int value)
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
@@ -5360,11 +6387,33 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 
+		//d->efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();
+		//taskManager.updateTaskStatus(d->efemUnkownStatusTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+		//Sleep(500);
+
+		//d->efemPendingTasks = taskManager.getEfemPendingTasks();
+		//taskManager.updateTaskStatus(d->efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER,UnifiedWaferTask::Status::QUEUED);
+		//Sleep(500);
+		//
+
+		//d->loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");
+		//taskManager.updateTaskStatus(d->loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+	
+		//Sleep(500);
+
+		//d->loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
+		//taskManager.updateTaskStatus(d->loadLockACompletedTasks.at(0).taskId, UnifiedWaferTask::Status::COMPLETED,UnifiedWaferTask::TaskType::PM_PROCESS);
+		//
+		//Sleep(500);
+
 		std::thread thd_efem(&QSlotTransferCycleVTMWidget::executeEFEMTransfer, this);
 		thd_efem.detach();
 		
-		std::thread thd_LoadLock(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
-		thd_LoadLock.detach();
+		//std::thread thd_LoadLockA(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
+		//thd_LoadLockA.detach();
+
+		std::thread thd_LoadLockB(&QSlotTransferCycleVTMWidget::executeLLBTransfer, this);
+		thd_LoadLockB.detach();
 
 		std::thread thd_vacumn(&QSlotTransferCycleVTMWidget::startVacuumAction, this);
 		thd_vacumn.detach();
@@ -5375,4 +6424,3 @@ namespace FC{
 	}
 
 }
-

@@ -39,8 +39,8 @@ namespace FC{
 	/**
 	* PMCavityWriteProcessParametersCommand
 	*/
-	PMCavityWriteProcessParametersCommand::PMCavityWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters, InovancePlcSubSystemHelper* hexHelper)
-		:InovancePlcCommandExecuter(hexHelper)
+	PMCavityWriteProcessParametersCommand::PMCavityWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters, KeyencePlcSubSystemHelper* hexHelper)
+		:KeyencePlcCommandExecuter(hexHelper)
 		, d(new PMCavityWriteProcessParametersCommandPrivate){
 		d->process_parameters = process_parameters;
 		//setMessageName("WriteProcessParameters");

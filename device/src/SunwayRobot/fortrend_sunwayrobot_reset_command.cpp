@@ -68,12 +68,6 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	//logInform(getName().c_str(), "模拟复位命令执行");
 	//return RunResult::RUN_OK;
 
-	////先执行查询状态
-	//if (!sendRequest("QRY:STATE;"))
-	//{
-
-	//}
-
 
 	std::string error_message = "";
 	int error_type = 1;
@@ -82,6 +76,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	logInform(getName().c_str(), "复位命令开始执行");
 	std::string res;
 	//send
+	clearRobotMessage();
 	if (!sendRequest("ACT:RESET;"))
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, 
@@ -93,7 +88,10 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(60);
-	res = recvResponse(timeout);
+
+	//recvResponse2(timeout);
+	res = recvResponseRobotMessage(timeout);
+
 	Sleep(200);
 	while (true)
 	{
@@ -112,7 +110,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponse(timeout);
+		res = recvResponseRobotMessage(timeout);
 		Sleep(200);
 	}
 	if (res != "ACK;" && res != "RPS:RESET;")
@@ -154,6 +152,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	}
 	else
 	{
+		clearRobotMessage();
+		res = recvResponseRobotMessage(timeout);
 		//握手了
 		auto startTime2 = std::chrono::high_resolution_clock::now();
 		auto timeout3 = std::chrono::seconds(30);
@@ -175,7 +175,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponse(timeout);
+			//recvResponse2(timeout);
+			res = recvResponseRobotMessage(timeout);
 			Sleep(200);
 		}
 
@@ -192,9 +193,6 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			
 		}
 
-		
-
-
 		//auto cmd_update = robot->createUpdateCommand();
 		//robot->startCommand(cmd_update);
 		//cmd_update->wait();
@@ -205,7 +203,6 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		//	setAlarm(alarm);
 		//	return RunResult::RUN_FAILD;
 		//}
-
 
 		robot->setHasResetFlag(true);
 		logInform(getName().c_str(), "复位命令执行结束");

@@ -46,10 +46,19 @@ namespace FC{
 		if (!sub){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
-		if (sub->getTMCavityDoorOpend())
+		//if (sub->isBusy())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 子系统类型忙碌中（逻辑错误）", sub->getName()), this);
+		//}
+		if (sub->getVacuumEnable())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 传输腔门阀已打开（逻辑错误）", sub->getName()), this);
+			logInform(sub->getName().c_str(),"真空模式下，检测到传输腔门阀已打开");
+			if (sub->getTMCavityDoorOpend())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 真空模式下,传输腔门阀已打开（逻辑错误）", sub->getName()), this);
+			}
 		}
+
 		if (sub->getSlowDiaphragmValveOpend())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 慢充隔膜阀已打开（逻辑错误）", sub->getName()), this);
@@ -102,7 +111,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开晶圆盒门阀地址错误", sub->getName()), this);
 		}
-		Sleep(500);
+
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;

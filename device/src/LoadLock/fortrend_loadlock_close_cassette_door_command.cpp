@@ -104,7 +104,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到关闭晶圆盒门阀地址错误", sub->getName()), this);
 		}
-		Sleep(500);
+		//Sleep(500);
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;

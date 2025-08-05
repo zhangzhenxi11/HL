@@ -33,8 +33,8 @@ namespace FC{
 	/**
 	* PMCavityUploadFinishedCommand
 	*/
-	PMCavityUploadFinishedCommand::PMCavityUploadFinishedCommand(InovancePlcSubSystemHelper* helper)
-		:InovancePlcCommandExecuter(helper){
+	PMCavityUploadFinishedCommand::PMCavityUploadFinishedCommand(KeyencePlcSubSystemHelper* helper)
+		:KeyencePlcCommandExecuter(helper){
 		//setMessageName("UploadFinished");
 		//setDescription("upload request the pm cavity");
 	};

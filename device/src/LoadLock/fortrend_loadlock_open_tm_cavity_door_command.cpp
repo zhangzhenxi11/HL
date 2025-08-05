@@ -49,10 +49,11 @@ namespace FC{
 		if (!sub){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
-		if (sub->getCassetteDoorOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 晶圆盒门阀已打开（逻辑错误）", sub->getName()), this);
-		}
+#if 0
+		//if (sub->getCassetteDoorOpend())
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 晶圆盒门阀已打开（逻辑错误）", sub->getName()), this);
+		//}
 		if (sub->getSlowDiaphragmValveOpend())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 慢充隔膜阀已打开（逻辑错误）", sub->getName()), this);
@@ -69,7 +70,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空值未达到上限设定值（逻辑错误）", sub->getName()), this);
 		}
-
+#endif
 		
 		std::shared_ptr<FortrendTMCavitySubsystem> tm = getSubsystem()->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		if (!tm){
@@ -79,7 +80,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", tm->getName()), this);
 		}
-
+#if 0
 		double pressureA = tm->getTMCavityVacuumValue(); //TM 
 		double pressureB = sub->getVacuumValue(); //LOADLOCK
 		double maxSafeDiff;
@@ -98,6 +99,7 @@ namespace FC{
 		if (fabs(pressureA - pressureB) >= maxSafeDiff) {
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s和传输腔压强差大于10（逻辑错误）", tm->getName()), this);
 		}
+#endif
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 

@@ -745,6 +745,9 @@
 			<RQLoad>
 				<timeout>100000</timeout>
 			</RQLoad>
+			<Home>
+				<timeout>100000</timeout>
+			</Home>
 			<Reset>
 				<timeout>200000</timeout>
 			</Reset>

@@ -33,8 +33,8 @@ namespace FC{
 	/**
 	* PMCavityReadProcessParametersCommand
 	*/
-	PMCavityReadProcessParametersCommand::PMCavityReadProcessParametersCommand(InovancePlcSubSystemHelper* helper)
-		:InovancePlcCommandExecuter(helper){
+	PMCavityReadProcessParametersCommand::PMCavityReadProcessParametersCommand(KeyencePlcSubSystemHelper* helper)
+		:KeyencePlcCommandExecuter(helper){
 		//setMessageName("ReadProcessParameters");
 		//setDescription("read process parameters the pm cavity");
 	};

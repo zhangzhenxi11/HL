@@ -296,10 +296,14 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
 		}
 
+		if (SIM_MODE == 1)
+		{
+			if (!lk->getCassetteDoorOpend()){
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s door is closed now.", getStation()->getName()), this);
+			}
+		}
 		//µ÷ÊÔ×¢ÊÍ
-		//if (!lk->getCassetteDoorOpend()){
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s door is closed now.", getStation()->getName()), this);
-		//}
+	
 
 		//stationName = stationName == "LLA" ? "TOOLA1" : "TOOLA2"; //ÐÞ¸Ä
 

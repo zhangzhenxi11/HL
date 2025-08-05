@@ -104,8 +104,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			}
 		}
 	}
-
-	
 	if (robot->getWithWaferModeEnable())
 	{
 		//arm status
@@ -114,7 +112,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				Poco::format("机械手手臂%d 当前存在晶圆.", getArm()), this);
 		}
 	}
-
 	//check modules
 	auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
 	//get cass
@@ -126,23 +123,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 	
 	int mapping_slot = getSlot();
 
-	//if (getStation()->getName().find("LL") != std::string::npos)
-	//{
-	//	if (auto sub = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation()))
-	//	{
-	//		int loadlock_move_slot = sub->getLastMoveSlot();
-	//		if (loadlock_move_slot == 0 || loadlock_move_slot > 4)
-	//		{
-	//			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
-	//				Poco::format("工位： %s 移动到槽号错误.", getStation()->getName()), this);
-	//		}
-	//		else
-	//		{
-	//			mapping_slot = loadlock_move_slot;
-	//		}
-	//	}
-	//}
-
 	if (getStation()->getName().find("PM") != std::string::npos)
 	{
 		if (auto sub = std::dynamic_pointer_cast<FortrendPMCavitySubsystem>(getStation())){
@@ -150,25 +130,25 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统类型错误", this);
 			}
-			if (WTR_SIM_MODE == 0)
-			{
-				std::string PmName = getStation()->getName();
-				if (!robot->getSafeSignalInPlace(PmName))
-				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
-						"PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
-				}
-				//if (!sub->getPMCavitySafeSignal())
-				//{
-				//	logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
-				//	Sleep(50);
-				//	if (!sub->getPMCavitySafeSignal())
-				//	{
-				//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-				//			Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
-				//	}
-				//}
-			}
+
+			//std::string PmName = getStation()->getName();
+			//if (!robot->getSafeSignalInPlace(PmName))
+			//{
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
+			//		"PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
+			//}
+
+			//if (!sub->getPMCavitySafeSignal())
+			//{
+			//	logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
+			//	Sleep(50);
+			//	if (!sub->getPMCavitySafeSignal())
+			//	{
+			//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+			//			Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+			//	}
+			//}
+			
 
 		}
 		
@@ -181,27 +161,25 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "Loadlock子系统类型错误", this);
 			}
-			if (WTR_SIM_MODE == 0)
+
+		/*	std::string LLName = sub->getName();
+			if (!robot->getSafeSignalInPlace(LLName))
 			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
+			}*/
 
-				std::string LLName = sub->getName();
-				if (!robot->getSafeSignalInPlace(LLName))
+		/*	if (!sub->getLoadLockCavitySafeSignal())
+			{
+				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
+				Sleep(50);
+				if (!sub->getLoadLockCavitySafeSignal())
 				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
 				}
+			}*/
 
-				//if (!sub->getLoadLockCavitySafeSignal())
-				//{
-				//	logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
-				//	Sleep(50);
-				//	if (!sub->getLoadLockCavitySafeSignal())
-				//	{
-				//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-				//			Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
-				//	}
-				//}
-
-			}	
+			
 		}
 	}
 	if (robot->getWithWaferModeEnable() && station_cass->getMapping(mapping_slot) != Cassette::Mapping::Present)
@@ -231,7 +209,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		std::string error_message = "";
 		int error_type = 1;
 		int error_code = 0;
-
+		std::string res;
 		if (station_name == "LLA" || station_name == "LLB")
 		{
 			//MOV:GET/2/A/1;
@@ -247,8 +225,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			command.append("/");
 			command.append(std::to_string(mapping_slot));
 			command.append(";");
-			robot->getKernel()->getKernelBlockManager()->createBlock(robot->getName(), robot, 
-				{ (FortrendStation*)getStation().get() }, 0);
+			//robot->getKernel()->getKernelBlockManager()->createBlock(robot->getName(), robot, 
+			//	{ (FortrendStation*)getStation().get() }, 0);
 
 			logInform(robot->getName().c_str(), "取晶圆命令开始");
 			d->busy = false;
@@ -257,6 +235,9 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			auto startTime = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(30);
 
+			//2025-8-2
+			/*std::lock_guard<std::mutex> lock(robot->external_mtx);*/
+			clearRobotMessage();
 			if (!sendRequest(command))
 			{
 				AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
@@ -265,9 +246,10 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			};
-			Sleep(500);
-			std::string res = recvResponse(timeout);
 
+			//std::string res = recvResponse(timeout);
+			//recvResponse2(timeout);
+			res = recvResponseRobotMessage(timeout);
 			while (true)
 			{
 				auto currentTime = std::chrono::high_resolution_clock::now();
@@ -285,11 +267,12 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponse(timeout);
+				/*recvResponse2(timeout);*/
+				res = recvResponseRobotMessage(timeout);
 				Sleep(200);
 			}
 
-			if (res != std::string("ACK;"))
+			if (res != "ACK;" && res != "RPS:GET;")
 			{
 				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
 				int error_type = 1;
@@ -317,6 +300,10 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			}
 			else
 			{//"ACK;"
+
+				clearRobotMessage();
+				res = recvResponseRobotMessage(timeout);
+
 				//等待机械手返回指令
 				auto startTime2 = std::chrono::high_resolution_clock::now();
 				auto timeout3 = std::chrono::seconds(30);
@@ -338,7 +325,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						setAlarm(alarm);
 						return RunResult::RUN_FAILD;
 					}
-					res = recvResponse(timeout);
+					/*recvResponse2(timeout);*/
+					res = recvResponseRobotMessage(timeout);
 					Sleep(200);
 				}
 
@@ -355,7 +343,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 				else
 				{
-					//
+#if 0
 					std::string error_str = "ERR";
 					try {
 						if (!handleErrorCode(res, error_str, error_type, error_code)) {
@@ -383,6 +371,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					logError(robot->getName().c_str(), "机械手取晶圆失败,机械手返回：【%s】", res);
 					return RunResult::RUN_FAILD;
+#endif
 				}
 
 				int slot = 1;
@@ -422,8 +411,13 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			logInform(robot->getName().c_str(), "取晶圆命令开始");
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
+
+			clearRobotMessage();
 			sendRequest(command);
-			std::string res = recvResponse(timeout);
+			//std::string res = recvResponse(timeout);
+			/*recvResponse2(timeout);*/
+
+			res = recvResponseRobotMessage(timeout);
 
 			auto startTime = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(30);
@@ -445,7 +439,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponse(timeout);
+				/*recvResponse2(timeout);*/
+				res = recvResponseRobotMessage(timeout);
 				Sleep(200);
 			}
 			if (res != std::string("ACK;"))
@@ -502,9 +497,13 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						setAlarm(alarm);
 						return RunResult::RUN_FAILD;
 					}
-					res = recvResponse(timeout);
+					//recvResponse2(timeout);
+					res = recvResponseRobotMessage(timeout);
 					Sleep(200);
 				}
+
+				clearRobotMessage();
+				res = recvResponseRobotMessage(timeout);
 
 				std::string recvMessage = "RPS:GET;";
 				auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
@@ -519,6 +518,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 				else
 				{
+#if 0
 					std::string error_str = "ERR";
 					try {
 						if (!handleErrorCode(res, error_str, error_type, error_code)) {
@@ -546,6 +546,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					logError(robot->getName().c_str(), "机械手取晶圆失败,机械手返回：【%s】", res);
 					return RunResult::RUN_FAILD;
+#endif
 				}
 
 				int slot = 1;

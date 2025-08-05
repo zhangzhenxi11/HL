@@ -118,7 +118,6 @@ namespace FC{
 		:AbstractIOSubsystem(kernel, name)
 		, FortrendAbstractStation(kernel)
 		, KeyencePlcSubSystemHelper(name)
-		, InovancePlcSubSystemHelper(name)
 		, d(new FortrendPMCavitySubsystemPrivate(this)){
 		//init 
 		d->recard_enabled = true;
@@ -401,7 +400,7 @@ namespace FC{
 		float result = 0;
 		if (d->pm_cavity_coating_time_address != "")
 		{
-			InovancePlcSubSystemHelper::readFloat(d->pm_cavity_coating_time_address, result);
+			KeyencePlcSubSystemHelper::readFloat(d->pm_cavity_coating_time_address, result);
 		}
 		return result;
 
@@ -414,7 +413,7 @@ namespace FC{
 		short result = 0;
 		if (d->pm_cavity_processing_step_address != "")
 		{
-			InovancePlcSubSystemHelper::readShort(d->pm_cavity_processing_step_address, result);
+			KeyencePlcSubSystemHelper::readShort(d->pm_cavity_processing_step_address, result);
 		}
 
 		return result;
@@ -437,13 +436,13 @@ namespace FC{
 	bool FortrendPMCavitySubsystem::getPMCavityGetRequest(){
 		bool result = false;
 
-		InovancePlcSubSystemHelper::readBit(d->get_request_address, result);
+		KeyencePlcSubSystemHelper::readBit(d->get_request_address, result);
 		logInform1(getName().c_str(), Poco::format("获取取片请求address = %s, result = %d", d->get_request_address, (int)result).c_str());
 		return result;
 	}
 	bool FortrendPMCavitySubsystem::getPMCavityUploadRequest(){
 		bool result = false;
-		InovancePlcSubSystemHelper::readBit(d->upload_request_address, result);
+		KeyencePlcSubSystemHelper::readBit(d->upload_request_address, result);
 		logInform1(getName().c_str(), Poco::format("获取上片请求address = %s, result = %d", d->upload_request_address, (int)result).c_str());
 		return result;
 	}
@@ -454,50 +453,35 @@ namespace FC{
 
 	//获取PM腔安全信号
 	bool FortrendPMCavitySubsystem::getPMCavitySafeSignal(){
-		//bool result = false;
-		//KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, result);
-		//logInform1(getName().c_str(), Poco::format("获取%s腔安全信号address = %s, result = %d", getName(), d->pm_cavity_safe_address, (int)result).c_str());
-		//return result;
 		return d->pm_cavity_safe;
 	}
 
 	//获取PM腔步进电机后退到位信号
 	bool FortrendPMCavitySubsystem::getPMCavityMotorHomeSignal(){
-		//bool result = false;
-		//KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, result);
-		//logInform1(getName().c_str(), Poco::format("获取%s腔安全信号address = %s, result = %d", getName(), d->pm_cavity_safe_address, (int)result).c_str());
-		//return result;
 		return d->pm_cavity_motor_home;
 	}
 
 	//获取PM腔步进电机前进到位信号
 	bool FortrendPMCavitySubsystem::getPMCavityMotorForwardSignal(){
-		//bool result = false;
-		//KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, result);
-		//logInform1(getName().c_str(), Poco::format("获取%s腔安全信号address = %s, result = %d", getName(), d->pm_cavity_safe_address, (int)result).c_str());
-		//return result;
+
 		return d->pm_cavity_motor_forward;
 	}
 
 	//获取PM腔步进电机运动信号
 	bool FortrendPMCavitySubsystem::getPMCavityMotorRunSignal(){
-		//bool result = false;
-		//KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, result);
-		//logInform1(getName().c_str(), Poco::format("获取%s腔安全信号address = %s, result = %d", getName(), d->pm_cavity_safe_address, (int)result).c_str());
-		//return result;
 		return d->pm_cavity_motor_run;
 	}
 	//获取PM腔是否处于远程模式
 	bool FortrendPMCavitySubsystem::getPMCavityRemoteMode(){
 		bool result = false;
-		InovancePlcSubSystemHelper::readBit(d->pm_remote_mode_address, result);
+		KeyencePlcSubSystemHelper::readBit(d->pm_remote_mode_address, result);
 		logInform1(getName().c_str(), Poco::format("获取%s腔远程模式address = %s, result = %d", getName(), d->pm_remote_mode_address, (int)result).c_str());
 		return result;
 	}
 
 	bool FortrendPMCavitySubsystem::readPMCavityHasObjectState(){
 		bool result = false;
-		InovancePlcSubSystemHelper::readBit(d->pm_cavity_has_object_address, result);
+		KeyencePlcSubSystemHelper::readBit(d->pm_cavity_has_object_address, result);
 		return result;
 	}
 
@@ -507,7 +491,7 @@ namespace FC{
 			//读取PM腔的PLC报警
 			bool pm_alarm = false;
 
-			if (InovancePlcSubSystemHelper::readBit(d->pm_cavity_general_alarm_address, pm_alarm))
+			if (KeyencePlcSubSystemHelper::readBit(d->pm_cavity_general_alarm_address, pm_alarm))
 			{
 				return pm_alarm;
 			}
@@ -520,12 +504,12 @@ namespace FC{
 		std::string message = "";
 		//bool * alarm_address = new bool[d->pm_cavity_read_alarm_length];
 		std::unique_ptr<bool[]> alarm_address(new bool[d->pm_cavity_read_alarm_length]);
-		InovancePlcSubSystemHelper::readBits(d->pm_cavity_alarm_start_address, d->pm_cavity_read_alarm_length, alarm_address.get());
+		KeyencePlcSubSystemHelper::readBits(d->pm_cavity_alarm_start_address, d->pm_cavity_read_alarm_length, alarm_address.get());
 		for (size_t i = 0; i < d->pm_cavity_read_alarm_length; i++)
 		{
 			if (alarm_address[i])
 			{
-				auto alarm_message = InovancePlcSubSystemHelper::getErrorCode(1, 900 + i);
+				auto alarm_message = KeyencePlcSubSystemHelper::getErrorCode(1, 900 + i);
 				message = Poco::format(" %s腔报警：地址：M%d，报警信息：%s", getName(), int(900 + i), alarm_message->message);
 				break;
 			}
@@ -538,7 +522,7 @@ namespace FC{
 	//给PM腔PLC写放置晶圆状态
 	bool FortrendPMCavitySubsystem::writePMCavityHasObjectState(const bool value){
 		bool result = false;
-		result = InovancePlcSubSystemHelper::writeBit(d->pm_cavity_has_object_address, value);;
+		result = KeyencePlcSubSystemHelper::writeBit(d->pm_cavity_has_object_address, value);;
 		return result;
 	}
 
@@ -660,7 +644,6 @@ namespace FC{
 	void FortrendPMCavitySubsystem::onUnInitialize()throw(KernelException){
 		d->recard_enabled = false;
 		KeyencePlcSubSystemHelper::disableProtocol();
-		InovancePlcSubSystemHelper::disableProtocol();
 		if (d->thd_recard_vacuum.joinable())
 		{
 			d->thd_recard_vacuum.join();
@@ -675,9 +658,10 @@ namespace FC{
 
 			bool io_changed = false;
 			bool result = d->pm_cavity_safe;
-			if (d->pm_cavity_safe_address != "" &&KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, d->pm_cavity_safe))
+			if (d->pm_cavity_safe_address != "" && KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, d->pm_cavity_safe))
 			{
-				if (result != d->pm_cavity_safe){
+				if (result != d->pm_cavity_safe)
+				{
 					//logInform("Test", "PM腔安全信号读取，地址：%s  值%d", d->pm_cavity_safe_address, d->pm_cavity_safe);
 					io_changed = true;
 				}
@@ -744,7 +728,7 @@ namespace FC{
 			}
 			for (size_t i = 0; i < d->pm_cavity_motiner_float_state.size(); i++)
 			{
-				if (InovancePlcSubSystemHelper::readFloat(d->pm_cavity_motiner_float_state[i].address, d->pm_cavity_motiner_float_state[i].current_value)
+				if (KeyencePlcSubSystemHelper::readFloat(d->pm_cavity_motiner_float_state[i].address, d->pm_cavity_motiner_float_state[i].current_value)
 					&& d->pm_cavity_motiner_float_state[i].last_value != d->pm_cavity_motiner_float_state[i].current_value){
 					d->pm_cavity_motiner_float_state[i].last_value = d->pm_cavity_motiner_float_state[i].current_value;
 					io_changed = true;
@@ -752,14 +736,14 @@ namespace FC{
 			}
 			for (size_t i = 0; i < d->pm_cavity_motiner_short_state.size(); i++)
 			{
-				if (InovancePlcSubSystemHelper::readShort(d->pm_cavity_motiner_short_state[i].address, d->pm_cavity_motiner_short_state[i].current_value)
+				if (KeyencePlcSubSystemHelper::readShort(d->pm_cavity_motiner_short_state[i].address, d->pm_cavity_motiner_short_state[i].current_value)
 					&& d->pm_cavity_motiner_short_state[i].last_value != d->pm_cavity_motiner_short_state[i].current_value){
 					d->pm_cavity_motiner_short_state[i].last_value = d->pm_cavity_motiner_short_state[i].current_value;
 					io_changed = true;
 				}
 			}
 			if (d->dc_power_initial_address != "" &&
-				InovancePlcSubSystemHelper::readShorts(d->dc_power_initial_address, d->dc_power_address_length, dc_power_current_value))
+				KeyencePlcSubSystemHelper::readShorts(d->dc_power_initial_address, d->dc_power_address_length, dc_power_current_value))
 			{
 				for (size_t i = 0; i < d->dc_power_address_length; i++)
 				{
@@ -774,7 +758,7 @@ namespace FC{
 
 			for (size_t i = 0; i < d->pm_cavity_film_state.size(); i++)
 			{
-				if (InovancePlcSubSystemHelper::readInt(d->pm_cavity_film_state[i].address, d->pm_cavity_film_state[i].current_value)
+				if (KeyencePlcSubSystemHelper::readInt(d->pm_cavity_film_state[i].address, d->pm_cavity_film_state[i].current_value)
 					&& d->pm_cavity_film_state[i].last_value != d->pm_cavity_film_state[i].current_value){
 					d->pm_cavity_film_state[i].last_value = d->pm_cavity_film_state[i].current_value;
 					io_changed = true;
@@ -887,7 +871,6 @@ namespace FC{
 		if (config->has("PMCavityRecardAddress"))
 		{
 			d->pm_cavity_has_object_address = config->getString("PMCavityRecardAddress.HasObjectAddress", "M1004");
-			d->pm_cavity_safe_address = config->getString("PMCavityRecardAddress.SafeAddress", "MR30602");
 			d->pm_remote_mode_address = config->getString("PMCavityRecardAddress.RemoteModeAddress", "M33");
 			d->pm_cavity_general_alarm_address = config->getString("PMCavityRecardAddress.GeneralAlarmAddress", "");
 			d->pm_cavity_alarm_start_address = config->getString("PMCavityRecardAddress.AlarmStartAddress", "");
@@ -896,6 +879,10 @@ namespace FC{
 			d->pm_cavity_processing_step_address = config->getString("PMCavityRecardAddress.ProcessingStepAddress", "");
 			d->pm_cavity_motor_home_address = config->getString("PMCavityRecardAddress.MotorHomeAddress", "MR35105");
 			d->pm_cavity_motor_forward_address=config->getString("PMCavityRecardAddress.MotorForwardAddress", "MR35104");
+		}
+		if (config->has("Update"))
+		{
+			d->pm_cavity_safe_address = config->getString("Update.PMCavitySafetySignal", "");
 		}
 
 	}

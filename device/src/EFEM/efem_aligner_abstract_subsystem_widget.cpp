@@ -38,7 +38,7 @@ public:
 private:
 	Ui::EFEMAlignerAbstractSubsystemWidget* ui;
 	QEFEMAlignerAbstractSubsystemWidget* q_ptr;
-	std::shared_ptr<EFEMAlignerSubsystem> aligner; //模组指针，要是基类指针还是找不到成员函数
+	std::shared_ptr<EFEMAlignerSubsystem> aligner; //模组指针，要是基类指针找不到成员函数
 	
 
 };

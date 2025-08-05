@@ -286,7 +286,7 @@ void FortrendDeviceModel::addManualCompoments(){
 
 	//wtr
 	for (auto& sub : kernel->getKernelModules<FortrendSunwayRobotSubsystem>()){
-		QWidget* w = new QSunwayRobotSubsystemWidget(sub);
+		QWidget* w = new QSunwayRobotSubsystemWidget(kernel,sub);
 		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
 	}
 

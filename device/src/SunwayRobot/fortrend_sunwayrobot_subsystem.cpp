@@ -210,9 +210,17 @@ namespace FC{
 		{
 			while (current_count < try_count)
 			{
-				if (!readBit(it->second, is_safe_inplace)) {
+				std::string safeSignal_address = it->second;
 
-					logError("WTR", "读:%s机械手安全地址失败", it->second);
+				logInform("WTR", "读:%s机械手安全地址", safeSignal_address.c_str());
+
+				if (!KeyencePlcSubSystemHelper::readBit(safeSignal_address, is_safe_inplace)) {
+
+					logError("WTR", "读:%s机械手安全地址失败", (it->second).c_str());
+				}
+				else
+				{
+					break;
 				}
 				current_count++;
 				
@@ -258,10 +266,12 @@ namespace FC{
 
 	void FortrendSunwayRobotSubsystem::onUnInitialize()throw(KernelException){
 		SunwaySubSystemHelper::disableProtocol();
+		KeyencePlcSubSystemHelper::disableProtocol();
 	}
 
 	void FortrendSunwayRobotSubsystem::onProcess(){
 		// pollProtocol();
+		AbstractIOSubsystem::emitAttributeChanged(this);
 	}
 
 
@@ -412,6 +422,12 @@ namespace FC{
 	std::shared_ptr<SunwayRobotSetAxisZSpeedCommand>  FortrendSunwayRobotSubsystem::createSetAxisZSpeedCommand(uint8_t percentage)const{
 		FortrendSunwayRobotSubsystem* self = const_cast<FortrendSunwayRobotSubsystem*>(this);
 		SunwayRobotSetAxisZSpeedCommand::Ptr ret(new SunwayRobotSetAxisZSpeedCommand(percentage, self));
+		return ret;
+	}
+	std::shared_ptr<SunwayRobotHomeCommand> FortrendSunwayRobotSubsystem::createHomeCommand() const
+	{
+		FortrendSunwayRobotSubsystem* self = const_cast<FortrendSunwayRobotSubsystem*>(this);
+		SunwayRobotHomeCommand::Ptr ret(new SunwayRobotHomeCommand(self));
 		return ret;
 	}
 }

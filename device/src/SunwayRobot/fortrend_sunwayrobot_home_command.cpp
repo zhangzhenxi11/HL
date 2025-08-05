@@ -1,0 +1,210 @@
+﻿/**
+* @file     fortrend_sunwayrobot_home_command.h
+* @brief    home command for SunwayRobot
+* @author   xielonghua
+*/
+
+// Library: Fortrend
+// Package: SubSystem/SunwayRobot
+#include "Kernel/kernel_log.h"
+
+#include "SunwayRobot/fortrend_sunwayrobot_home_command.h"
+#include "SunwayRobot/fortrend_sunwayrobot_subsystem.h"
+#include "kernel/kernel_command_reject_exception.h"
+#include "SunwayRobot/fortrend_sunwayrobot_update_command.h"
+#include "Poco/Format.h"
+
+#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+
+namespace FC{
+
+/**
+* SunwayRobotHomeCommandPrivate
+*/
+class SunwayRobotHomeCommandPrivate{
+public:
+	
+};
+
+/**
+* SunwayRobotHomeCommand
+*/
+SunwayRobotHomeCommand::SunwayRobotHomeCommand(SunwaySubSystemHelper* helper)
+	:SunwayCommandExecuter(helper)
+	, d(new SunwayRobotHomeCommandPrivate){
+
+}
+bool SunwayRobotHomeCommand::IsBusy()
+{
+	return false;
+}
+std::vector<IKernelResources*> SunwayRobotHomeCommand::resources() const
+{
+	return std::vector<IKernelResources*>();
+}
+;
+
+SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelException){
+	FortrendSunwayRobotSubsystem* sub = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
+
+	//get command configure
+	std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
+	//fill params
+	int timeout = command_config->getInt("timeout", 100000);
+	if (timeout < 10) {
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
+			Poco::format("超时:%s回到home位超时参数错误", sub->getName()), this);
+	}
+	//HOME
+	std::string command = "MOV:HOME;";
+	std::string error_message = "";
+	int error_type = 1;
+	int error_code = 0;
+	std::string res;
+	auto startTime = std::chrono::high_resolution_clock::now();
+	auto timeout2 = std::chrono::seconds(30);
+
+	Sleep(500);
+	clearRobotMessage();
+	if (!sendRequest(command))
+	{
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
+			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+			Poco::format("%s 机械手通讯错误", sub->getName())));
+		setAlarm(alarm);
+		return RunResult::RUN_FAILD;
+	};
+	logInform(sub->getName().c_str(), "机械手HOME命令开始");
+	res = recvResponseRobotMessage(timeout);
+
+	while (true)
+	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+
+		if (res != std::string(""))
+		{
+			break;
+		}
+		if (elapsed >= timeout2)
+		{
+			error_message = "机械手HOME超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponseRobotMessage(timeout);
+		Sleep(200);
+	}
+
+	if (res != std::string("ACK;") && res!= std::string("RPS:HOME;"))
+	{
+		logError(sub->getName().c_str(), "机械手HOME时存在一个错误");
+		int error_type = 1;
+		int error_code = 0;
+		std::string error_message;
+		std::string error_str = "ERR";
+		if (!handleErrorCode(res, error_str, error_type, error_code)) {
+			error_type = 5;
+			error_code = 1;
+			error_message = ("机械手HOME命令执行失败，机械手返回的指令未定义：%s.", res);
+			logError(sub->getName().c_str(), "机械手HOME命令执行失败，机械手返回的指令未定义：%s", res);
+		}
+		else
+		{
+			logError(sub->getName().c_str(), "执行机械手HOME时存在一个错误");
+			auto error_strucct = getErrorCode(error_type, error_code);
+			error_type = error_strucct->type;
+			error_code = error_strucct->code;
+			error_message = error_strucct->message;
+		}
+		//set alarm data
+		AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+		setAlarm(alarm);
+		return RunResult::RUN_FAILD;
+	}
+
+	else
+	{
+		clearRobotMessage();
+		res = recvResponseRobotMessage(timeout);
+
+		auto startTime2 = std::chrono::high_resolution_clock::now();
+		auto timeout3 = std::chrono::seconds(60);
+
+		while (true)
+		{
+			auto currentTime = std::chrono::high_resolution_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
+
+			if (res != std::string("ACK;") && !res.empty())
+			{
+				break;
+			}
+			if (elapsed >= timeout3)
+			{
+				error_message = "机械手HOME返回指令超时";
+				error_code = 0x100;
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+				setAlarm(alarm);
+				return RunResult::RUN_FAILD;
+			}
+			res = recvResponseRobotMessage(timeout);
+			Sleep(200);
+		}
+
+		std::string recvMessage = "RPS:HOME;";
+		auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
+		if (found != res.end())
+		{
+			if (!sendRequest("ACK;"))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+					Poco::format("%s 机械手通讯错误", sub->getName()), this);
+			}
+		}
+		else
+		{
+
+			std::string error_str = "ERR";
+			try {
+				if (!handleErrorCode(res, error_str, error_type, error_code)) {
+
+					error_type = 5;
+					error_code = 1;
+					error_message = ("机械手HOME命令执行失败，机械手返回的指令未定义：%s.", res);
+					logError(sub->getName().c_str(), "机械手HOME命令执行失败，机械手返回的指令未定义：%s", res);
+				}
+				else
+				{
+					auto error_strucct = getErrorCode(error_type, error_code);
+					error_type = error_strucct->type;
+					error_code = error_strucct->code;
+					error_message = error_strucct->message;
+				}
+			}
+			catch (const std::invalid_argument& e) {
+				error_message = "处理字符串失败";
+				logError(getName().c_str(), "处理字符串失败");
+			}
+
+			//set alarm data
+			AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+			setAlarm(alarm);
+			logError(sub->getName().c_str(), "机械手HOME失败,机械手返回：【%s】", res);
+			return RunResult::RUN_FAILD;
+
+		}
+
+
+		return RunResult::RUN_OK;
+	}
+
+	return RunResult::RUN_FAILD;
+	}
+
+}

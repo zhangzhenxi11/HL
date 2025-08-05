@@ -63,31 +63,62 @@ public:
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
 				Poco::format("超时: %s 设置速度超时参数设置错误", sub->getName()), this);
 		}
+
+		
+
 		//SET:RUN_SPEED/50;
 		std::string macro = "SET:RUN_SPEED/";
 		macro.append(std::to_string(d->percentage));
 		macro.append(";");
 		logInform(sub->getName().c_str(), "设置速度命令执行开始");
-		//ALG
-		sendRequest(macro);
-		
-		std::string res = recvResponse(timeout);
+
 		std::string error_message;
 		int error_code = 0;
 		int error_type = 1;
+		
+		auto startTime = std::chrono::high_resolution_clock::now();
+		auto timeout2 = std::chrono::seconds(30);
+		clearRobotMessage();
+		sendRequest(macro);
+		
+		std::string res = recvResponseRobotMessage(timeout);
 
-		if (res == "ACK;"){
+		while (true)
+		{
+			auto currentTime = std::chrono::high_resolution_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
 
-			auto startTime = std::chrono::high_resolution_clock::now();
+			if (res != std::string(""))
+			{
+				break;
+			}
+			if (elapsed >= timeout2)
+			{
+				error_message = "机械手设置速度命令超时";
+				error_code = 0x100;
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+				setAlarm(alarm);
+				return RunResult::RUN_FAILD;
+			}
+			res = recvResponseRobotMessage(timeout);
+			Sleep(200);
+		}
+
+
+		if (res == "ACK;" || res == "RPS:RUN_SPEED;")
+		{
+			clearRobotMessage();
+			res = recvResponseRobotMessage(timeout);
+
+			auto startTime2 = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(10);
-
-			res = recvResponse(timeout);
+			res = recvResponseRobotMessage(timeout);
 			while (true)
 			{
 				auto currentTime = std::chrono::high_resolution_clock::now();
-				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-				if (!res.empty())
+				if (res != std::string("ACK;"))
 				{
 					break;
 				}
@@ -99,7 +130,7 @@ public:
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponse(timeout);
+				res = recvResponseRobotMessage(timeout);
 				Sleep(200);
 			}
 			std::string recvMessage = "RPS:RUN_SPEED;";

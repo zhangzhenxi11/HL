@@ -19,6 +19,8 @@
 #include "SunwayRobot/sunway_subsystem_helper.h"
 #include "SunwayRobot/sunway_command_executer.h"
 #include "SunwayRobot/fortrend_sunwayrobot_set_axis_z_speed_command.h"
+
+#include "SunwayRobot/fortrend_sunwayrobot_home_command.h"
 //special commands
 #include "fortrend_sunwayrobot_get_wafer_command.h"
 #include "fortrend_sunwayrobot_check_load_command.h"
@@ -78,13 +80,10 @@ namespace FC{
 		virtual std::shared_ptr<RobotAbstractSetSpeedCommand> createSetSpeedCommand(uint8_t percentage) const override;
 		
 		std::shared_ptr<SunwayRobotCheckLoadCommand> createCheckLoadCommand(int arm,int station_id)const;
-
 		std::shared_ptr<SunwayRobotRQLoadCommand> createRQLoadCommand(int arm)const;
-
 		std::shared_ptr<SunwayRobotClearErrorCommand> createClearErrorCommand()const;
-
 		std::shared_ptr<SunwayRobotSetAxisZSpeedCommand> createSetAxisZSpeedCommand(uint8_t percentage)const;
-	
+		std::shared_ptr<SunwayRobotHomeCommand> createHomeCommand()const;
 
 	public:
 		virtual void setObject(unsigned int arm_id, bool has);
@@ -106,7 +105,8 @@ namespace FC{
 		bool getSafeSignalInPlace(const std::string & subsystem);
 
 		void setSafeSignalInPlace(const std::string& subsystem,bool status);
-
+	public:
+		std::mutex external_mtx;
 
 	protected:
 		virtual void onInitialize()throw(KernelException)override;

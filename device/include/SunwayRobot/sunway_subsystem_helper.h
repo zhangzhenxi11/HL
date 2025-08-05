@@ -48,6 +48,8 @@ public:
 	*/
 	std::string recvResponse(unsigned int timeout_ms) throw(KernelException);
 
+	void recvResponse2(unsigned int timeout_ms) throw(KernelException);
+
 	/**
 	*@brief  recv string command from Sunway (auto remove 0x0D)
 	*/
@@ -61,11 +63,19 @@ public:
 	*@brief  get error code,Meet two parameters at the same time.
 	* 
 	*/
+
+	std::string recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException);
+
+	void clearRobotMessage()throw(KernelException);
+
 	std::shared_ptr<DefinedError> getErrorCode(const int type_id,const int code_id);
 
 	bool getBusyState();
 
 	bool getIsConnected();
+
+	//新增
+	std::string SunwaySubSystemHelper::sendCommand(const std::string& command,unsigned int timeout_ms);
 
 protected:
 	/**

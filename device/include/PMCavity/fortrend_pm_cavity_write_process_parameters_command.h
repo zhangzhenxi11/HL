@@ -14,6 +14,9 @@
 
 #include "InovancePLC/inovance_plc_command_executer.h"
 #include "InovancePLC/inovance_plc_subsystem_helper.h"
+
+#include "KeyencePLC/keyence_plc_command_executer.h"
+#include "KeyencePLC/keyence_plc_subsystem_helper.h"
 #include  "fortrend_pm_cavity_defined.h"
 
 namespace FC{
@@ -21,10 +24,10 @@ namespace FC{
 	/**
 	* @brief  write process parameters command for pm cavity
 	*/
-	class  PMCavityWriteProcessParametersCommand : public  KernelSubsystemCommand, public InovancePlcCommandExecuter{
+	class  PMCavityWriteProcessParametersCommand : public  KernelSubsystemCommand, public KeyencePlcCommandExecuter {
 	public:
 		DECLARE_PTR(PMCavityWriteProcessParametersCommand)
-		PMCavityWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters, InovancePlcSubSystemHelper* helper);
+		PMCavityWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters, KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "WriteProcessParameters"; }
 
 	protected:

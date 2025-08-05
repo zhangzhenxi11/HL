@@ -33,8 +33,8 @@ namespace FC{
 	/**
 	* PMCavityGetFinishedCommand
 	*/
-	PMCavityGetFinishedCommand::PMCavityGetFinishedCommand(InovancePlcSubSystemHelper* helper)
-		:InovancePlcCommandExecuter(helper){
+	PMCavityGetFinishedCommand::PMCavityGetFinishedCommand(KeyencePlcSubSystemHelper* helper)
+		:KeyencePlcCommandExecuter(helper){
 		//setMessageName("GetFinished");
 		//setDescription("get request the pm cavity");
 	};

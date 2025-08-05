@@ -116,7 +116,6 @@ public:
 		}
 		else
 		{
-
 			std::string error_str = "ERR";
 			if (!handleErrorCode(res, error_str, error_type, error_code)) {
 				error_type = 5;

@@ -27,6 +27,8 @@
 
 #include "kernel/Fortrend/fortrend_cassette_manager.h"
 
+#include "SunwayRobot/fortrend_sunwayrobot_subsystem.h" 
+
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
@@ -42,6 +44,8 @@ namespace FC{
 	public:
 		FortrendLoadLockSubsystem* p;
 
+		//std::shared_ptr<IKernel> kernel = 0; //2025-8-1 add
+		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = nullptr;
 		// present sensor
 		std::vector<std::string> io_present_sensor_names;
 		std::string io_present_sensor_address = "";
@@ -134,6 +138,7 @@ namespace FC{
 		, KeyencePlcSubSystemHelper(name)
 		, d(new FortrendLoadLockSubsystemPrivate(this)){
 		//init 
+		d->wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		d->recard_enabled = true;
 		d->thd_recard_vacuum = std::thread([this] { this->recardVacuum(); });
 		
@@ -570,6 +575,7 @@ namespace FC{
 			if (io_changed)
 			{
 				AbstractIOSubsystem::emitAttributeChanged(this);
+				//AbstractIOSubsystem::emitAttributeChanged(d->wtr.get());
 			}
 			Sleep(50);
 			

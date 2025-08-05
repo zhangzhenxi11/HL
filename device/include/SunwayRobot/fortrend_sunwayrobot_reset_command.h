@@ -16,7 +16,6 @@
 
 #include "SunwayRobot/sunway_subsystem_helper.h"
 #include "SunwayRobot/sunway_command_executer.h"
-
 namespace FC{
 
 /**
@@ -29,6 +28,7 @@ public:
 	SunwayRobotResetCommand(SunwaySubSystemHelper* helper);
 
 	virtual std::string getName()const override {return "Reset";}
+
 protected:
 	virtual RunResult onRun() throw(KernelException);
 

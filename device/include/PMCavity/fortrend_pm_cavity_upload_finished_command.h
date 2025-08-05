@@ -12,8 +12,8 @@
 
 #include "kernel/kernel_subsystem_command.h"
 
-#include "InovancePLC/inovance_plc_command_executer.h"
-#include "InovancePLC/inovance_plc_subsystem_helper.h"
+#include "KeyencePLC/keyence_plc_command_executer.h"
+#include "KeyencePLC/keyence_plc_subsystem_helper.h"
 #include "PMCavity/fortrend_pm_cavity_defined.h"
 
 namespace FC{
@@ -21,10 +21,10 @@ namespace FC{
 	/**
 	* @brief  upload finished command for pm cavity
 	*/
-	class  PMCavityUploadFinishedCommand : public  KernelSubsystemCommand, public InovancePlcCommandExecuter{
+	class  PMCavityUploadFinishedCommand : public  KernelSubsystemCommand, public KeyencePlcCommandExecuter {
 	public:
 		DECLARE_PTR(PMCavityUploadFinishedCommand)
-		PMCavityUploadFinishedCommand(InovancePlcSubSystemHelper* helper);
+		PMCavityUploadFinishedCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "UploadFinished"; }
 
 	protected:

@@ -59,6 +59,8 @@ protected:
 	*/
 	std::string recvResponse(unsigned int timeout_ms) throw(KernelException);
 
+	void recvResponse2(unsigned int timeout_ms) throw(KernelException);
+
 	/**
 	*@brief  recv string command from Sunway (auto remove 0x0D)
 	*/
@@ -67,6 +69,13 @@ protected:
 	*@brief  get busy state from Sunway
 	*/
 	bool getBusyState();
+
+	std::string recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException);
+
+	void clearRobotMessage()throw(KernelException);
+
+
+	std::string sendCommand(const std::string& command, unsigned int timeout_ms)throw(KernelException);
 
 private:
 	DECLARE_PRIVATE(SunwayCommandExecuter)

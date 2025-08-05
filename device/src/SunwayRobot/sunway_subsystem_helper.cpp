@@ -54,13 +54,16 @@ public:
 	//2025-5-21 增加
 	std::shared_ptr<SunwaySubSystemHelper::DefinedError> getErrorCode(const int type_id,const int code_id);
 
+	//2025-8-04 增加
+	void recvResponse2(unsigned int timeout_ms)throw(KernelException);
+
 	bool getBusyState();
 public:
 	int port = 1102;
 	std::string ip_address = "192.168.1.100";
 	std::shared_ptr<SOCKET> client;
 	std::string name;
-
+	std::string robotMessage = "";
 	SunwaySubSystemHelper* p;
 	std::mutex mtx;
 	bool is_busy = false;
@@ -89,6 +92,7 @@ SunwaySubSystemHelperPrivate::SunwaySubSystemHelperPrivate(SunwaySubSystemHelper
 
 bool SunwaySubSystemHelperPrivate::reconnect() {
 
+	//std::lock_guard<std::mutex> lock(mtx); // 加锁保护重连过程
 	isReconnect = true;
 
 	while (attempts < max_retries) {
@@ -180,22 +184,29 @@ bool SunwaySubSystemHelperPrivate::initialize()
 		return false;
 	}
 	isConnected = true;
-	if (!isReconnect)
-	{
-		//未重连，第一次连接
-		if (!sendRequest("QRY:VER;"))
-		{
-			logError(name.c_str(), "机械手查找失败！.");
-			closesocket(*client);
-			return false;
-		}
-		std::string data = recvResponse(1000);
-		if (data != "ACK;")
-		{
-			logError(name.c_str(), "接收机械手数据错误.");
-			return false;
-		}
-	}
+
+	std::thread* thread = new std::thread(&SunwaySubSystemHelperPrivate::recvResponse2, this,500 );
+	thread->detach();
+
+	//if (!isReconnect)
+	//{
+	//	//未重连，第一次连接
+	//	if (!sendRequest("QRY:VER;"))
+	//	{
+	//		logError(name.c_str(), "机械手查找失败！.");
+	//		closesocket(*client);
+	//		return false;
+	//	}
+
+	//	std::string data = robotMessage;
+
+	//	if (data != "ACK;" && data.find("RPS:")== std::string::npos)
+	//	{
+	//		logError(name.c_str(), "接收机械手数据错误.");
+	//		return false;
+	//	}
+	//	robotMessage.clear();
+	//}
 
 	return true;
 }
@@ -205,9 +216,6 @@ bool SunwaySubSystemHelperPrivate::setTimeout(const uint32_t milsecTime)
 	return ret != SOCKET_ERROR;
 }
 
-/**
-* Send command to sunway (auto add 0x0D)
-*/
 bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw(KernelException){
 
 	std::lock_guard<std::mutex> lock(mtx); 
@@ -256,7 +264,7 @@ bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw
 */
 std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) throw(KernelException){
 
-	std::lock_guard<std::mutex> lock(mtx); //加锁
+	//std::lock_guard<std::mutex> lock(mtx); //加锁
 	if (!isConnected) {
 		logInform1(name.c_str(), "检测到连接已断开，开始重连...");
 		if (!reconnect()) {
@@ -326,7 +334,7 @@ std::string SunwaySubSystemHelperPrivate::recvResponse(unsigned int timeout_ms) 
 * recv string command from sunway (auto remove  0x0D)
 */
 std::string SunwaySubSystemHelperPrivate::recvResponseRDY(unsigned int timeout_ms) throw(KernelException){
-	std::lock_guard<std::mutex> lock(mtx); //加锁
+	//std::lock_guard<std::mutex> lock(mtx); //加锁
 	Sleep(150);
 	setTimeout(timeout_ms);
 
@@ -425,6 +433,77 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelperPrivat
 }
 
 
+void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(KernelException)
+{
+	while (true)
+	{
+		//if (!isConnected) {
+		//	//logInform1(name.c_str(), "检测到连接已断开，开始重连...");
+		//	if (!reconnect()) {
+		//		is_busy = false;
+		//		throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "重连失败，无法接收数据.");
+		//		Sleep(100);
+		//		continue;
+		//	}
+		//}
+		setTimeout(timeout_ms);
+		std::string data;
+		char receiveBuf[1024];
+		int recvLen = recv(*client, receiveBuf, 1024, 0);
+
+		if (recvLen == SOCKET_ERROR || recvLen == 0)
+		{
+			//logError(name.c_str(), "接收数据错误，可能连接已断开.");
+			isConnected = false; // 连接断开
+			is_busy = false;
+			continue;
+		}
+		data.append(receiveBuf, recvLen);
+
+		size_t found = data.find("\r"); //0x0D
+		if (found != std::string::npos)
+		{
+			data.erase(found, -1);
+		}
+		else
+		{
+			setTimeout(3000);
+			recvLen = recv(*client, receiveBuf, 1024, 0);
+			if (recvLen == SOCKET_ERROR || recvLen == 0)
+			{
+				Sleep(100);
+				continue;
+				//data = "error";
+				//is_busy = false;
+				//throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "socket重新接收数据错误.");
+			}
+			data.append(receiveBuf, recvLen);
+			found = data.find("\r"); //0x0D
+			if (found != std::string::npos)
+			{
+				data.erase(found, -1);
+			}
+			else {
+				is_busy = false;
+				//logInform1(name.c_str(), "Rcv_Format_Error: %s", data.c_str());
+				throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "返回数据格式错误.");
+			}
+		}
+		logInform1(name.c_str(), "Rcv_Format_: %s", data.c_str());
+
+		is_busy = false;
+
+		//robotMessage == std::string("") &&
+
+		if (data != std::string(""))
+		{
+			robotMessage = data;
+			logInform1(name.c_str(), "其他--Rcv: %s", robotMessage.c_str());
+		}
+		Sleep(200);
+	}
+}
+
 bool SunwaySubSystemHelperPrivate::getBusyState(){
 	return is_busy;
 }
@@ -513,6 +592,11 @@ std::string SunwaySubSystemHelper::recvResponse(unsigned int timeout_ms) throw(K
 
 }
 
+void SunwaySubSystemHelper::recvResponse2(unsigned int timeout_ms) throw(KernelException)
+{
+	d->recvResponse2(timeout_ms);
+}
+
 /**
 * recv string command from sunway (auto remove 0x0A 0x0D)
 */
@@ -531,6 +615,16 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelper::getE
 
 }
 
+std::string SunwaySubSystemHelper::recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException)
+{
+	return d->robotMessage;
+}
+
+void SunwaySubSystemHelper::clearRobotMessage() throw(KernelException)
+{
+	d->robotMessage = "";
+}
+
 std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelper::getErrorCode(const int type_id, const int code_id)
 {
 	return d->getErrorCode(type_id, code_id);
@@ -543,6 +637,17 @@ bool SunwaySubSystemHelper::getBusyState(){
 bool SunwaySubSystemHelper::getIsConnected()
 {
 	return d->isConnected;
+}
+
+// SunwaySubSystemHelper 类中新增 public 方法
+std::string SunwaySubSystemHelper::sendCommand(const std::string& command,unsigned int timeout_ms) throw(KernelException)
+{
+	std::lock_guard<std::mutex> lock(d->mtx); // 锁定整个请求-响应过程
+	if (!d->sendRequest(command))
+	{
+		throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, "Send failed");
+	}
+	return d->recvResponse(timeout_ms);
 }
 
 KERNEL_NS_END

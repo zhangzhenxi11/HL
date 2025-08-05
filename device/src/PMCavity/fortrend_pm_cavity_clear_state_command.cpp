@@ -32,8 +32,8 @@ namespace FC{
 	/**
 	* PMCavityClearStateCommand
 	*/
-	PMCavityClearStateCommand::PMCavityClearStateCommand(InovancePlcSubSystemHelper* hexHelper)
-		:InovancePlcCommandExecuter(hexHelper){
+	PMCavityClearStateCommand::PMCavityClearStateCommand(KeyencePlcSubSystemHelper* hexHelper)
+		:KeyencePlcCommandExecuter(hexHelper){
 
 	};
 
