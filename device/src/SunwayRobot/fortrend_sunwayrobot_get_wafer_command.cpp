@@ -375,14 +375,13 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 
 				int slot = 1;
-				auto loadlock = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
+				//auto loadlock = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
 
-				//slot = loadlock->getLastMoveSlot();
+				robot->setObject(getArm(), true);
 
 				station_cass->setMapping(mapping_slot, Cassette::Mapping::Empty);
-
 				auto robot_cass = cassManager->getCassette(robot);
-				robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Present);
+				robot_cass->setMapping(getArm(), Cassette::Mapping::Present);
 
 				robot_cass->setPodSize(station_cass->getPodSize());//PM腔的工艺次数，需要本地存储，暂时使用PodSize字段
 				logInform(robot->getName().c_str(), "获取晶圆命令执行结束 %s %d %s", station_name, slot, station_cass->getBoxId());
@@ -550,16 +549,18 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 
 				int slot = 1;
-				if (station_name == "LLB")
-				{
-					auto loadlock = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
-					slot = loadlock->getLastMoveSlot();
-				}
+				//if (station_name == "LLB")
+				//{
+				//	auto loadlock = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
+				//	//slot = loadlock->getLastMoveSlot();
+				//}
 				station_cass->setMapping(slot, Cassette::Mapping::Empty);
+
 				robot->setObject(getArm(), true);
 				auto robot_cass = cassManager->getCassette(robot);
-				robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Present);
+				robot_cass->setMapping(getArm(), Cassette::Mapping::Present);
 				robot_cass->setPodSize(station_cass->getPodSize());
+
 				logInform(robot->getName().c_str(), "获取晶圆命令执行结束 %s %s", station_name, station_cass->getBoxId());
 			}
 		}

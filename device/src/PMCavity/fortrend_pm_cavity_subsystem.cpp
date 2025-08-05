@@ -782,7 +782,7 @@ namespace FC{
 			if (count == 100)
 			{
 				count = 0;
-				logInform1(Poco::format("%s_vacuum", getName()).c_str(), Poco::format("%f", getVacuumValue()).c_str());
+				//logInform1(Poco::format("%s_vacuum", getName()).c_str(), Poco::format("%f", getVacuumValue()).c_str());
 			}
 
 

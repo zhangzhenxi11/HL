@@ -102,6 +102,8 @@ namespace  FC {
 		void executePM4Transfer();
 
 		void executeTMTransfer();
+
+		void executeUpdateTransferStatus();
 		
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)

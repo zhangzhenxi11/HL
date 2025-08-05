@@ -96,7 +96,9 @@ namespace FC{
 		, KeyencePlcSubSystemHelper(name)
 		, d(new FortrendSunwayRobotSubsystemPrivate(this)){
 		//init 
-		
+		setObject(0, false);
+		setObject(1, false);
+
 
 	}
 

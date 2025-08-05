@@ -276,7 +276,9 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 	else {
 		station_cass->setMapping(1, Cassette::Present);
 	}
+	
 	robot->setObject(getArm(), false);
+
 //AWC 
 # if 0
 	

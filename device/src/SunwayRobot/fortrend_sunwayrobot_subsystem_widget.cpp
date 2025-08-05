@@ -402,7 +402,7 @@ namespace FC{
 				d->lk1->getSecondLayerMapping(mappingData);
 				cass->setMapping(1, mappingData);
 			}
-			else
+			else if(station->getName() == "LLB")
 			{
 				d->lk2->getFirstLayerMapping(mappingData);
 				cass->setMapping(2, mappingData);

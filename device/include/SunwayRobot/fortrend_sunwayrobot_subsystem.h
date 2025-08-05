@@ -57,7 +57,7 @@ namespace FC{
 		virtual int outputCount()const  override;
 		virtual bool getInput(int index)const override;
 
-		virtual bool hasObject(unsigned int arm_id)const override;
+		virtual bool hasObject(unsigned int arm_id)const override; //有无片子
 
 		virtual void  pause() override;
 		virtual void  resume() override;

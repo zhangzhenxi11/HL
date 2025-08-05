@@ -171,8 +171,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 					Poco::format("%s 机械手通讯错误", sub->getName()), this);
 			}
 			logInform(sub->getName().c_str(), "机械手上使能命令执行结束");
-
 		}
+
 	}
 
 	return RunResult::RUN_OK;

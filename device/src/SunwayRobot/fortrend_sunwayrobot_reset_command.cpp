@@ -193,6 +193,16 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			
 		}
 
+		auto cmd_update = robot->createSetSpeedCommand(10);
+		robot->startCommand(cmd_update);
+		cmd_update->wait();
+		if (cmd_update->hasError())
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "设置手臂速度命令执行失败！"));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+
 		//auto cmd_update = robot->createUpdateCommand();
 		//robot->startCommand(cmd_update);
 		//cmd_update->wait();
