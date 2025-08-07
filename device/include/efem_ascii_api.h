@@ -29,8 +29,8 @@ public:
 
 	// 例如：GET:STATE/parameter1
 	//            
-	//Command 构成： Type + Message    Message构成: Base/parameter   
-	// 就是Type: Base/parameter 
+	//Command 构成： Type : Message    Message构成: Base/parameter   
+	//Type: Base/parameters
 
 	typedef enum{ MOV, GET, SET, INF, ABS, EVT, ACK, NAK, TYPE_UNKNOWN } Type;
 

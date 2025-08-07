@@ -100,7 +100,6 @@ namespace FC{
 
 		//获取安全信号到位
 		bool getSafeSignalInPlace(const std::string & subsystem);
-
 		void setSafeSignalInPlace(const std::string& subsystem,bool status);
 	public:
 		std::mutex external_mtx;

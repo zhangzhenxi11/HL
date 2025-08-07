@@ -116,7 +116,6 @@ TaskManager& taskManager = TaskManager::getInstance();
 
 namespace FC{
 
-
 	//LK 内部传输任务 (机械手搬运)
 	struct LoadLockTransferWafer{
 		int slot = 0;
@@ -205,8 +204,6 @@ namespace FC{
 		bool setTransferSequence();
 
 		//衡流获取UI流程队列
-		/*bool setHLTransferSequence();*/
-
 		bool setHLTransferSequence();
 
 		bool setPMCavityParameter();
@@ -305,7 +302,9 @@ namespace FC{
 		bool CheckLLVacuumMeetsStandard(std::string llName, int preStep);
 
 		int originTaskSize;  //待传输任务的大小
+
 		int lp1TaskSize;
+
 		int lp2TaskSize;
 
 		/************************zzx  add*********************************/
@@ -780,7 +779,8 @@ namespace FC{
 						lk = efemUnkownStatusTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 						if (elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							if (!elp->hasDoorOpend()) {
+							if (!elp->hasDoorOpend())
+							{
 								auto cmd = elp->createOpenBoxCommand();
 								elp->startCommand(cmd);
 								cmd->wait();
@@ -962,6 +962,90 @@ namespace FC{
 					}
 				}
 				break;
+				case 131:
+				{
+					logInform(elp->getName().c_str(), "放晶圆到寻边器,step:%d", efem_auto_step);
+					if (ealigner == nullptr)
+					{
+						ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+					}
+					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (!ealigner->getPresentWafer())
+						{
+							auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);
+							ewtr->startCommand(cmd2);
+							cmd2->wait();
+							if (cmd2->hasError())
+							{
+								logFailedExcuteCommandHasError(ewtr->getName(), "放晶圆到寻边器", efem_process_name, efem_auto_step);
+							}
+							else
+							{
+								efem_auto_step = 132; //跳转到132
+							}
+						}
+						else
+						{
+							Sleep(2000);
+						}
+					}
+					else
+					{
+						logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+					}
+				}
+				break;
+				//加寻边并读码
+				case 132:
+				{
+					logInform(elp->getName().c_str(), "晶圆寻边,step:%d", efem_auto_step);
+
+					if(ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (ealigner->getPresentWafer())
+						{
+							auto alignerCmd = ealigner->createAlignCommand();
+							ealigner->startCommand(alignerCmd);
+							alignerCmd->wait();
+							if (alignerCmd->hasError())
+							{
+								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+							}
+							else {
+								Sleep(2000);
+								efem_auto_step = 133;
+							}
+						}
+						else {
+							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
+						}
+					}
+				}
+				break;
+				case 133:
+				{
+					logInform(elp->getName().c_str(), "取寻边器晶圆,step:%d", efem_auto_step);
+					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = ewtr->createGetCommand(ealigner, 1, 1);//1:1手，2：2手
+						ewtr->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(ewtr->getName(), "取寻边器晶圆", efem_process_name, efem_auto_step);
+						}
+						else
+						{
+							efem_auto_step = 135;
+						}
+					}
+					else {
+						logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+					}
+				}
+				break;
+
 				case 135://LP1上料
 				{
 					logInform(elp->getName().c_str(), "放LL晶圆,step:%d", efem_auto_step);
@@ -1092,6 +1176,174 @@ namespace FC{
 
 				}
 				break;
+				//加寻边
+				case 1540:
+				{
+					logInform(elp->getName().c_str(), "放晶圆到寻边器,step:%d", efem_auto_step);
+					if (ealigner == nullptr)
+					{
+						ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+					}
+					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (!ealigner->getPresentWafer())
+						{
+							auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);//A手放
+							ewtr->startCommand(cmd2);
+							cmd2->wait();
+							if (cmd2->hasError())
+							{
+								logFailedExcuteCommandHasError(ewtr->getName(), "A手放晶圆到寻边器", efem_process_name, efem_auto_step);
+							}
+							else
+							{
+								efem_auto_step = 1541; 
+							}
+						}
+						else
+						{
+							Sleep(2000);
+						}
+					}
+					else
+					{
+						logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+					}
+				}
+				break;
+				case 1541:
+				{
+					//寻边
+					logInform(elp->getName().c_str(), "晶圆寻边,step:%d", efem_auto_step);
+
+					if (ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (ealigner->getPresentWafer())
+						{
+							auto alignerCmd = ealigner->createAlignCommand();
+							ealigner->startCommand(alignerCmd);
+							alignerCmd->wait();
+							if (alignerCmd->hasError())
+							{
+								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+							}
+							else {
+								Sleep(2000);
+								efem_auto_step = 1542;
+							}
+						}
+						else {
+							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
+						}
+					}
+				}
+				break;
+				case 1542:
+				{
+					logInform(elp->getName().c_str(), "取寻边器晶圆,step:%d", efem_auto_step);
+					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = ewtr->createGetCommand(ealigner, 1, 1);//1:1手，2：2手
+						ewtr->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(ewtr->getName(), "取寻边器晶圆", efem_process_name, efem_auto_step);
+						}
+						else
+						{
+							efem_auto_step = 1543;
+						}
+					}
+					else {
+						logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+					}
+				}
+				break;
+				case 1544:
+				{
+				
+					logInform(elp->getName().c_str(), "放晶圆到寻边器,step:%d", efem_auto_step);
+					if (ealigner == nullptr)
+					{
+						ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+					}
+					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (!ealigner->getPresentWafer())
+						{
+							auto cmd2 = ewtr->createPutCommand(ealigner, 2, 1);//B手放
+							ewtr->startCommand(cmd2);
+							cmd2->wait();
+							if (cmd2->hasError())
+							{
+								logFailedExcuteCommandHasError(ewtr->getName(), "B手放晶圆到寻边器", efem_process_name, efem_auto_step);
+							}
+							else
+							{
+								efem_auto_step = 1545;
+							}
+						}
+						else
+						{
+							Sleep(2000);
+						}
+					}
+					else
+					{
+						logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+					}
+				}
+				break;
+				case 1545:
+				{
+					logInform(elp->getName().c_str(), "晶圆寻边,step:%d", efem_auto_step);
+
+					if (ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (ealigner->getPresentWafer())
+						{
+							auto alignerCmd = ealigner->createAlignCommand();
+							ealigner->startCommand(alignerCmd);
+							alignerCmd->wait();
+							if (alignerCmd->hasError())
+							{
+								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+							}
+							else {
+								Sleep(2000);
+								efem_auto_step = 1546;
+							}
+						}
+						else {
+							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
+						}
+					}
+				}
+				break;
+				case 1546:
+				{
+					logInform(elp->getName().c_str(), "取寻边器晶圆,step:%d", efem_auto_step);
+					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						auto cmd = ewtr->createGetCommand(ealigner, 2, 1);//1:1手，2：2手
+						ewtr->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(ewtr->getName(), "取寻边器晶圆", efem_process_name, efem_auto_step);
+						}
+						else
+						{
+							efem_auto_step = 155;
+						}
+					}
+					else {
+						logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
+					}
+				}
+				break;
+
 				case 155:
 				{
 					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
@@ -1780,13 +2032,15 @@ namespace FC{
 
 					if (loadLockAPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0 )
 					{
-						//有wafer，直接抽真空，走取放晶圆流程，下料流程，
+						//有wafer，直接抽真空，走取放晶圆流程，下料流程
+
 						loadlock1_auto_step = 400;
 					}
+
 					else if (loadLockAPendingTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize)
 					{
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
-		
+
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							Sleep(2000);
@@ -1827,9 +2081,7 @@ namespace FC{
 						{
 							loadlock1_auto_step = 300;//真空值达到大气设定值
 						}
-
 					}
-
 				}
 				break;
 #pragma region 没有晶圆盒的破真空流程
@@ -2541,6 +2793,17 @@ namespace FC{
 				}
 				break;
 #pragma endregion
+				
+#pragma region 模拟LLA流程
+				// efem 上料 5（2） ---> 6
+				// LL上料  --->7 --->8（3）
+
+
+#pragma endregion
+
+
+
+
 				default:
 					break;
 				}
@@ -5165,19 +5428,8 @@ namespace FC{
 			const int GROUP_SIZE = 2;
 			int groupIndex = i / GROUP_SIZE;
 
-			//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB :-->2025/8/2 硬件原因调换,优先分配给LLB
+			//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB 
 			if (groupIndex % 2 == 0)
-			{
-				task.target = UnifiedWaferTask::Location::LLB;
-				task.target_pm = getSelectPmLocation(task);
-				task.targetSlot = llbSlot++;
-				
-				//setWaferId
-				const std::string& id = std::to_string(task.taskId);
-				lk2_cass->setWaferId(task.targetSlot, id);
-				if (llbSlot > GROUP_SIZE) llbSlot = 1;// 组内循环
-			}
-			else
 			{
 				task.target = UnifiedWaferTask::Location::LLA;
 				task.target_pm = getSelectPmLocation(task);
@@ -5187,6 +5439,17 @@ namespace FC{
 				lk1_cass->setWaferId(task.targetSlot, id);
 
 				if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
+			}
+			else
+			{
+				task.target = UnifiedWaferTask::Location::LLB;
+				task.target_pm = getSelectPmLocation(task);
+				task.targetSlot = llbSlot++;
+
+				//setWaferId
+				const std::string& id = std::to_string(task.taskId);
+				lk2_cass->setWaferId(task.targetSlot, id);
+				if (llbSlot > GROUP_SIZE) llbSlot = 1;// 组内循环
 			}
 			taskManager.addTask(task);//加入到管理者
 
@@ -5449,8 +5712,9 @@ namespace FC{
 		//d->ui->enablesmif1->hide();
 		//d->ui->enablesmif2->hide();
 
-		std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::onProcess, this);
-		thd_vacuum.detach();
+		//注释
+		//std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::onProcess, this);
+		//thd_vacuum.detach();
 
 	}
 
@@ -6055,6 +6319,7 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = d->kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = d->kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+
 		bool  ups = false;
 		bool isCloseInsertingPlateTM = false;
 		bool isCloseInsertingPlateLLA = false;
@@ -6064,12 +6329,13 @@ namespace FC{
 		bool isCloseAngleValveTM = false;
 		bool isCloseAngleValveLLA = false;
 		bool isCloseAngleValveLLB = false;
-#if 0
+
 		while (true)
 		{
 			pm2->setIsRunning(d->running);
 			tm->readBit("MR35507", ups);
 			tm->readBit("MR50001", d->plcauto);
+
 			if (ups!=d->hasUPS)
 			{
 				d->hasUPS = ups;
@@ -6083,8 +6349,10 @@ namespace FC{
 			}
 
 
-			if (d->hasUPS){
-				if (d->robot_step_wafer_finished){
+			if (d->hasUPS)
+			{
+				if (d->robot_step_wafer_finished)
+				{
 					d->robot_step_wafer_finished = false;
 					logError("Cycle", "动作已完成，暂停cycle");
 					onPause();
@@ -6093,9 +6361,12 @@ namespace FC{
 					d->onUpdateControlEnabled("execute_pbt", true);
 					d->onUpdateControlEnabled("pause_pbt", false);*/
 				}
-				if (!d->running){
-					if (tm&&tm->getState() == IKernelSubSystem::State::SUB_NORMAL){
-						if (tm->getInsertingPlateValveOpend() && cmdstate){
+				if (!d->running)
+				{
+					if (tm&&tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (tm->getInsertingPlateValveOpend() && cmdstate)
+						{
 							auto cmd = tm->createCloseInsertingPlateValveCommand();
 							tm->startCommand(cmd);
 							cmd->wait();
@@ -6170,8 +6441,10 @@ namespace FC{
 				
 				
 			}
+			
 			else{
-				if (!d->running&&changed){
+				if (!d->running&&changed)
+				{
 					if (tm&&tm->getState() == IKernelSubSystem::State::SUB_NORMAL){
 						if (!tm->getAngleValveOpend() && isCloseAngleValveTM&& cmdstate){
 							auto cmd = tm->createOpenAngleValveCommand();
@@ -6254,8 +6527,6 @@ namespace FC{
 			}
 			Sleep(50);
 		}
-
-#endif
 	}
 
 	void QSlotTransferCycleVTMWidget::resetAction(){
@@ -6452,33 +6723,11 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 
-		//d->efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();
-		//taskManager.updateTaskStatus(d->efemUnkownStatusTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::QUEUED);
-		//Sleep(500);
-
-		//d->efemPendingTasks = taskManager.getEfemPendingTasks();
-		//taskManager.updateTaskStatus(d->efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER,UnifiedWaferTask::Status::QUEUED);
-		//Sleep(500);
-		//
-
-		//d->loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");
-		//taskManager.updateTaskStatus(d->loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-	
-		//Sleep(500);
-
-		//d->loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
-		//taskManager.updateTaskStatus(d->loadLockACompletedTasks.at(0).taskId, UnifiedWaferTask::Status::COMPLETED,UnifiedWaferTask::TaskType::PM_PROCESS);
-		//
-		//Sleep(500);
-		//d->loadlock2_auto_step = 950;
-		/*	d->efem_auto_step = 200;*/
-
 		std::thread thd_efem(&QSlotTransferCycleVTMWidget::executeEFEMTransfer, this);
 		thd_efem.detach();
 		
-		//std::thread thd_LoadLockA(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
-		//thd_LoadLockA.detach();
-
+		std::thread thd_LoadLockA(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
+		thd_LoadLockA.detach();
 
 		std::thread thd_LoadLockB(&QSlotTransferCycleVTMWidget::executeLLBTransfer, this);
 		thd_LoadLockB.detach();
@@ -6491,7 +6740,6 @@ namespace FC{
 
 		std::thread thread_update(&QSlotTransferCycleVTMWidget::executeUpdateTransferStatus,this);
 		thread_update.detach();
-
 
 	}
 

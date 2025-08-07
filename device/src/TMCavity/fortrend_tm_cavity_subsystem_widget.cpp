@@ -57,6 +57,7 @@ namespace FC{
 		QCheckBox* pid_ckb = 0;
 		QCheckBox* cda_ckb = 0;
 		QCheckBox* Axial_pressure_ckb = 0;
+		QCheckBox* plc_mode_status_ckb = 0;
 
 
 	};
@@ -142,6 +143,8 @@ namespace FC{
 		d->cda_ckb = new QCheckBox("CDA");
 		d->Axial_pressure_ckb = new QCheckBox("轴向压力表");
 
+		d->plc_mode_status_ckb = new QCheckBox("plc自动模式");
+
 		d->ultrahigh_vacuum_baffle_valve_ckb->setObjectName("io_object");
 		d->inserting_plate_value_ckb->setObjectName("io_object");
 		d->angle_valve_ckb->setObjectName("io_object");
@@ -151,6 +154,7 @@ namespace FC{
 		d->door_lock_valve_ckb->setObjectName("io_object");
 		d->cda_ckb->setObjectName("io_object");
 		d->Axial_pressure_ckb->setObjectName("io_object");
+		d->plc_mode_status_ckb->setObjectName("io_object");
 		
 		d->ultrahigh_vacuum_baffle_valve_ckb->setEnabled(false);
 		d->inserting_plate_value_ckb->setEnabled(false);
@@ -164,6 +168,7 @@ namespace FC{
 		d->ui->vacuum_pressure_gage_ckb->setEnabled(false);
 		d->cda_ckb->setEnabled(false);
 		d->Axial_pressure_ckb->setEnabled(false);
+		d->plc_mode_status_ckb->setEnabled(false);
 		
 		//d->ui->operation_state_gridLayout->addWidget(d->ultrahigh_vacuum_baffle_valve_ckb, 0, 0);
 		d->ui->operation_state_gridLayout->addWidget(d->angle_valve_ckb, 0, 0);
@@ -174,6 +179,7 @@ namespace FC{
 		d->ui->operation_state_gridLayout->addWidget(d->door_lock_valve_ckb, 1, 0);
 		d->ui->operation_state_gridLayout->addWidget(d->cda_ckb,1,1);
 		d->ui->gridLayout->addWidget(d->Axial_pressure_ckb, 1, 2);
+		d->ui->gridLayout->addWidget(d->plc_mode_status_ckb,1,3);
 
 	}
 
@@ -310,6 +316,7 @@ namespace FC{
 			d->ui->vacuum_pressure_gage_ckb->setChecked(getSubsystem()->getTMCavityVacuumPressureGageState() == 1);
 			d->Axial_pressure_ckb->setChecked(getSubsystem()->getAxialPressureGageState());
 			d->cda_ckb->setChecked(getSubsystem()->getCDAPressureState());
+			d->plc_mode_status_ckb->setChecked(getSubsystem()->getPlcMode()); //true 自动模式
 
 		}
 		catch (KernelException& e){

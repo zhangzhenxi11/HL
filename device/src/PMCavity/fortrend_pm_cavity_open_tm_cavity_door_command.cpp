@@ -57,7 +57,7 @@ namespace FC{
 		}
 
 		//TODO:要是区分不同的pm是否启用， 可读配置文件config.ini
-#if 0
+
 		QString fileName = QDir::currentPath() + "/config/" + "config.ini";
 		if (fileName.isEmpty())
 			return RunResult::RUN_FAILD;
@@ -82,7 +82,7 @@ namespace FC{
 			logInform(sub->getName().c_str(), "%s 模块设置不启用,打开PM腔指令不去执行...", pmName);
 			return RunResult::RUN_OK;
 		}
-#endif
+
 		//if (!sub->getPMCavityEnable()) {
 		//
 		//	logInform(sub->getName().c_str(), "PM模块设置不启用,打开PM腔指令不去执行...");
@@ -95,7 +95,8 @@ namespace FC{
 		if (!tm){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "传输腔类型错误", this);
 		}
-		//调试注释
+
+
 #if 0
 		if (!tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 		{
@@ -139,7 +140,7 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误），请检查压力是否正常", tm->getName()), this);
 			}*/
 		}
-#endif	
+#endif
 		//check modules
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass

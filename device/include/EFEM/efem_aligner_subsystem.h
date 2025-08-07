@@ -53,6 +53,10 @@ public:
 
 public:
 	void GetOCRCommand(int dirct);
+
+	bool getPresentWafer()const; //有无片在寻边器上
+	void setPresentWafer(bool present);
+
 	std::string getWaferID();
 	void setCommandState(EFEMAsciiApi::State newState);
 	bool hasFinishedCommandState()const;
@@ -61,6 +65,8 @@ public:
 	void handle(const std::shared_ptr<EFEMAsciiApi::Command>& command);
 	EFEMAsciiApi::State getCommandState();
 	bool onSetCommunicationState(KernelApi::CommunicationState comm);
+	bool isPresentWafer = false;
+
 	uint32_t timeout = 10000;   //default 3s
 	std::chrono::system_clock::time_point timestamp;
 	std::string primaryMessageName;

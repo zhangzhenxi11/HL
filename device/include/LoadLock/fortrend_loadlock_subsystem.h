@@ -91,8 +91,10 @@ namespace FC{
 	public:
 		bool getCassetteDoorOpend()const;
 		void setCassetteDoorOpend(const bool value);
+
 		bool getTMCavityDoorOpend()const;
 		void setTMCavityDoorOpend(const bool value);
+
 
 		bool getSlowDiaphragmValveOpend()const;
 		void setSlowDiaphragmValveOpend(const bool value);
@@ -174,10 +176,11 @@ namespace FC{
 		//单槽mapping
 		Cassette::Mapping handleSingleSlotMapping(short mapRes);
 
-
+		//LLA腔安全信号+_门阀开启to机械手的互锁
 		bool getLoadLockCavitySafeSignal();
 		void setLoadLockCavitySafeSignal(const bool value);
 
+		//EFEM 允许关_LLA上料门互锁
 		bool getLoadLockCassetteCloseSafeSignal();
 		void setLoadLockCassetteCloseSafeSignal(const bool value);
 

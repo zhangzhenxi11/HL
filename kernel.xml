@@ -866,6 +866,8 @@
 				<close_address>MR504</close_address>
 			</ClosePID>
 			<Update>
+				<!--PLC模式-->
+				<PLC_Mode_address>MR50001</PLC_Mode_address> 
 				<diaphragm_valve_address1>MR30900</diaphragm_valve_address1>
 				<diaphragm_valve_address2>MR30901</diaphragm_valve_address2>
 				<high_vacuum_baffle_value_address>MR20014</high_vacuum_baffle_value_address>
@@ -895,7 +897,6 @@
 				<pm3_awc_inplace_sensor>MR30308</pm3_awc_inplace_sensor>
 				<!-- PM4腔/AWC(在位)感应器1 -->
 				<pm4_awc_inplace_sensor>MR30310</pm4_awc_inplace_sensor>
-				
 			</Update>
 		</TM>
 
@@ -1063,6 +1064,7 @@
 				<close_tm_cavity_door_address>MR30201</close_tm_cavity_door_address>
 				<!-- PM1腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30602</PMCavitySafetySignal>
+				
 			</Update>
 			<Reset>
 				<start_address>DM25027</start_address>
@@ -1252,7 +1254,7 @@
 			<Update>
 				<open_tm_cavity_door_address>MR30202</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30203</close_tm_cavity_door_address>
-				<!-- PM腔安全信号+_门阀开启to机械手 -->
+				<!-- PM2腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30603</PMCavitySafetySignal>
 			</Update>
 			<Reset>
@@ -1427,7 +1429,7 @@
 			<Update>
 				<open_tm_cavity_door_address>MR30204</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30205</close_tm_cavity_door_address>
-				<!-- PM腔安全信号+_门阀开启to机械手 -->
+				<!-- PM3腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30604</PMCavitySafetySignal>
 			</Update>
 			<Reset>
@@ -1601,9 +1603,9 @@
 				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
 			</WriteProcessParameters>
 			<Update>
-				<open_tm_cavity_door_address>MR30204</open_tm_cavity_door_address>
-				<close_tm_cavity_door_address>MR30205</close_tm_cavity_door_address>
-				<!-- PM腔安全信号+_门阀开启to机械手 -->
+				<open_tm_cavity_door_address>MR30206</open_tm_cavity_door_address>
+				<close_tm_cavity_door_address>MR30207</close_tm_cavity_door_address>
+				<!-- PM4腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30605</PMCavitySafetySignal>
 			</Update>
 			<Reset>

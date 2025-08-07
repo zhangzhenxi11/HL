@@ -100,13 +100,16 @@ namespace FC{
 
 		bool getPMCavityGetRequest();
 		bool getPMCavityUploadRequest();
+
+		//PM腔安全信号+_门阀开启to机械手 互锁
 		bool getPMCavitySafeSignal();
 		void setPMCavitySafeSignal(bool value);
+
 		bool getPMCavityMotorHomeSignal();
 		bool getPMCavityMotorForwardSignal();
 		bool getPMCavityMotorRunSignal();
 		bool getPMCavityRemoteMode();
-		//
+		//Pm使能
 		bool getPMCavityEnable()const;
 		void setPMCavityEnable(const bool value);
 

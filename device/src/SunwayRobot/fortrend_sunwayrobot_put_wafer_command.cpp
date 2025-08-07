@@ -391,11 +391,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	{
 		if (!sub->hasDoorOpend()) 
 		{
-			if (getStation()->getName() != "PM")
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION,
-					Poco::format("工位： %s 门阀未处于打开状态（逻辑错误）.", getStation()->getName()), this);
-			}
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 门阀未处于打开状态（逻辑错误）.", getStation()->getName()), this);	
 		}
 	}
 	
@@ -419,11 +415,11 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统类型错误", this);
 			}
 
-			std::string PmName = getStation()->getName();
-			if (!robot->getSafeSignalInPlace(PmName))
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
-			}
+			//std::string PmName = getStation()->getName();
+			//if (!robot->getSafeSignalInPlace(PmName))
+			//{
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
+			//}
 
 			if (!sub->getPMCavitySafeSignal())
 			{
@@ -446,12 +442,12 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			}
 
 
-			std::string LLName = sub->getName();
-			if (!robot->getSafeSignalInPlace(LLName))
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
-					"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
-			}
+			//std::string LLName = sub->getName();
+			//if (!robot->getSafeSignalInPlace(LLName))
+			//{
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
+			//		"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
+			//}
 
 			if (!sub->getLoadLockCavitySafeSignal())
 			{

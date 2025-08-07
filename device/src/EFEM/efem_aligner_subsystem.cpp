@@ -187,6 +187,16 @@ void EFEMAlignerSubsystem::GetOCRCommand(int dirct) {
 
 }
 
+bool EFEMAlignerSubsystem::getPresentWafer()const
+{
+	return isPresentWafer;
+}
+
+void EFEMAlignerSubsystem::setPresentWafer(bool present)
+{
+	isPresentWafer = present;
+}
+
 std::string EFEMAlignerSubsystem::getWaferID()
 {
 	return d->OcrCode;
@@ -229,6 +239,7 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 		#pragma region STATE
 		if (command->message->base == EFEMAsciiApi::Base::STATE)
 		{
+			//INF:STATE/ALIGNER/NORMAL/IDLE;
 			if (command->message->paramers.size() == 3)
 			{
 				std::string  status = command->message->paramers.at(1); //Data1    NORMAL
@@ -266,7 +277,13 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 					return;
 				}
 				Cassette::Mapping map = getMappingFromChar(newStr);
-				cass->setMapping(1, map);	
+				cass->setMapping(1, map);
+
+				if (map == Cassette::Mapping::Present)
+					setPresentWafer(true);
+				else
+					setPresentWafer(false);
+
 				setCommandState(EFEMAsciiApi::State::TRANS_FINISHED);
 
 			}

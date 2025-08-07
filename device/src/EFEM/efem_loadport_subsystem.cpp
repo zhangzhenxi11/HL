@@ -346,7 +346,7 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 			if (command->message->base == EFEMAsciiApi::Base::STATE){
 				if (command->message->paramers.size() == 5)
 				{
-					std::string  status = command->message->paramers.at(1);
+					std::string  status = command->message->paramers.at(1);//UNKNOWN,IDLE,NORMAL,ERROR
 					std::string  busystatus = command->message->paramers.at(2);//BUSY or IDLE
 					std::string  boxstatus = command->message->paramers.at(3);//EMPTY or PRESENT
 					std::string  foupOpenStatus = command->message->paramers.at(4);//CLOSED or OPENED
@@ -358,7 +358,7 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 					if (status == "IDLE") setState(State::SUB_IDEL);
 					if (status == "NORMAL") setState(State::SUB_NORMAL);
 					if (status == "ERROR") setState(State::SUB_ERROR);
-					if (foupOpenStatus == "CLOSE"){
+					if (foupOpenStatus == "CLOSED"){
 						setDoorOpend(false);
 					}
 					else{
@@ -388,8 +388,7 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 								cass->setMapping(i + 1, Cassette::Unknown);
 							}
 							cassManager->loadCassette(this, cass);
-						}
-						 
+						} 
 					}
 				}
 				else{

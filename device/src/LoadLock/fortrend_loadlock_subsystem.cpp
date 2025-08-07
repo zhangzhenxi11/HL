@@ -74,7 +74,10 @@ namespace FC{
 		
 		bool box_placement = false;
 		bool cassette_door_opend = false;
+
 		bool tm_cavity_door_opend = false;
+		bool tm_cavity_door_closed = false;
+
 		bool slow_diaphragm_valve_opend = false;//慢充隔膜阀状态
 		bool fast_diaphragm_valve_opend = false;//快充隔膜阀状态
 		bool angle_valve_opend = false;
@@ -117,8 +120,6 @@ namespace FC{
 		std::string close_tm_cavity_door_address = "";
 
 		bool has_reset_flag = false;	//已复位标志
-
-		
 
 		bool recard_enabled = false;
 		std::thread thd_recard_vacuum;
@@ -465,7 +466,6 @@ namespace FC{
 		{
 			bool io_changed = false;
 
-
 			bool signal_value = false;
 			if (d->io_safeSignal_address != "" && readBit(d->io_safeSignal_address, signal_value))
 			{
@@ -474,7 +474,6 @@ namespace FC{
 					d->io_safeSignal_value = signal_value;
 					io_changed = true;
 				}
-
 			}
 
 			bool close_door_value = false;
@@ -742,7 +741,7 @@ namespace FC{
 			d->io_first_layer_detection_sensor_address = config->getString("Update.first_layer_detection_sensor","");
 			d->io_second_layer_detection_sensor_address = config->getString("Update.second_layer_detection_sensor", "");
 
-			d->io_safeSignal_address = config->getString("Update.LLCavitySafetySignal","");
+			d->io_safeSignal_address = config->getString("Update.LLCavitySafetySignal",""); //LLA腔安全信号+_门阀开启to机械手
 
 			d->io_allowd_close_casstedoor_signal_address = config->getString("Update.EFEMAlloweCloseCassteDoorSignal","");
 		}

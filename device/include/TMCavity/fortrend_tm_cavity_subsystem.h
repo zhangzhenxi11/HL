@@ -100,11 +100,9 @@ namespace FC{
 		void setPIDOpend(const bool value);
 
 		//前级泵管路压力表信号
-
 		bool getAxialPressureGageState()const;
 
 		//常务CDA信号
-
 		bool getCDAPressureState() const;
 
 		/*
@@ -145,6 +143,10 @@ namespace FC{
 		void setTMCavityPIDValue(const double pid_value);
 		bool writeTMCavityPIDValue(const double pid_value);
 		void recardVacuum()const;
+
+		//plc模式切换
+		bool getPlcMode()const;
+		void setPlcMode(bool mode);
 
 		//AWC(在位)感应器
 		bool getAwcPresentSensor(int index) const;

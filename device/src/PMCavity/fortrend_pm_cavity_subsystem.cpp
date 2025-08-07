@@ -668,10 +668,19 @@ namespace FC{
 			{
 				if (result != d->pm_cavity_safe)
 				{
-					//logInform("Test", "PM腔安全信号读取，地址：%s  值%d", d->pm_cavity_safe_address, d->pm_cavity_safe);
 					io_changed = true;
 				}
 			}
+
+			bool flag = d->tm_cavity_door_opend;
+			if (d->open_tm_cavity_door_address != "" && readBit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend))
+			{
+				if (flag != d->tm_cavity_door_opend)
+					io_changed = true;
+			}
+
+#if 0
+
 			bool result2 = d->pm_cavity_motor_home;
 			if (d->pm_cavity_motor_home_address != "" &&KeyencePlcSubSystemHelper::readBit(d->pm_cavity_motor_home_address, d->pm_cavity_motor_home))
 			{
@@ -719,15 +728,7 @@ namespace FC{
 				}
 			}	
 
-
-			bool flag = d->tm_cavity_door_opend;
-			if (d->open_tm_cavity_door_address != "" && readBit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend))
-			{
-				if (flag != d->tm_cavity_door_opend)
-					io_changed = true;
-			}
-
-			/*if (d->io_input_count > 0)
+			if (d->io_input_count > 0)
 			{
 				if (KeyencePlcSubSystemHelper::readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state))
 				{
@@ -778,12 +779,13 @@ namespace FC{
 					d->pm_cavity_film_state[i].last_value = d->pm_cavity_film_state[i].current_value;
 					io_changed = true;
 				}
-			}*/
-			//if (io_changed)
-			//{
-			//	AbstractIOSubsystem::emitAttributeChanged(this);
-			//}
-			//Sleep(100);
+			}
+#endif
+			if (io_changed)
+			{
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+			Sleep(100);
 
 		}
 	}
@@ -848,8 +850,11 @@ namespace FC{
 			d->pm_cavity_motiner_short_state.push_back(temperature);
 
 			PMCavityMoniterStateFloat vacuum_value = { config->getString("PMCavityStateAddress.VacuumValueAddress", ""), "VacuumValue", 0.0F, 0.1F };
+
 			PMCavityMoniterStateFloat pre_stage_pippeline_vacuum = { config->getString("PMCavityStateAddress.PreStagePippelineVacuumAddress", "Pre_stagePippelineVacuum"), "", 0.0, 0.1F };
+
 			PMCavityMoniterStateFloat sample_rotation_speed = { config->getString("PMCavityStateAddress.SampleRotationAddress", ""), "SampleRotation", 0.0F, 0.1F };
+
 			PMCavityMoniterStateFloat flow_meter_1 = { config->getString("PMCavityStateAddress.FlowMeter1Address", ""), "FlowMeter1", 0.0F, 0.0F };
 			PMCavityMoniterStateFloat flow_meter_2 = { config->getString("PMCavityStateAddress.FlowMeter2Address", ""), "FlowMeter2", 0.0F, 0.0F };
 			PMCavityMoniterStateFloat flow_meter_3 = { config->getString("PMCavityStateAddress.FlowMeter3Address", ""), "FlowMeter3", 0.0F, 0.0F };
@@ -886,18 +891,26 @@ namespace FC{
 		if (config->has("PMCavityRecardAddress"))
 		{
 			d->pm_cavity_has_object_address = config->getString("PMCavityRecardAddress.HasObjectAddress", "M1004");
+
 			d->pm_remote_mode_address = config->getString("PMCavityRecardAddress.RemoteModeAddress", "M33");
+
 			d->pm_cavity_general_alarm_address = config->getString("PMCavityRecardAddress.GeneralAlarmAddress", "");
+
 			d->pm_cavity_alarm_start_address = config->getString("PMCavityRecardAddress.AlarmStartAddress", "");
+
 			d->pm_cavity_read_alarm_length = config->getInt("PMCavityRecardAddress.ReadAlarmLength", 65);
+
 			d->pm_cavity_coating_time_address = config->getString("PMCavityRecardAddress.CoatingTimeAddress", "");
+
 			d->pm_cavity_processing_step_address = config->getString("PMCavityRecardAddress.ProcessingStepAddress", "");
+
 			d->pm_cavity_motor_home_address = config->getString("PMCavityRecardAddress.MotorHomeAddress", "MR35105");
+
 			d->pm_cavity_motor_forward_address=config->getString("PMCavityRecardAddress.MotorForwardAddress", "MR35104");
 		}
 		if (config->has("Update"))
 		{
-			d->pm_cavity_safe_address = config->getString("Update.PMCavitySafetySignal", "");
+			d->pm_cavity_safe_address = config->getString("Update.PMCavitySafetySignal", "");//PM腔安全信号+_门阀开启to机械手
 		}
 
 	}

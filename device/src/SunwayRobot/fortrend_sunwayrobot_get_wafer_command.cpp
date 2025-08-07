@@ -98,8 +98,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 	{
 		if (!sub->hasDoorOpend())
 		{
-			if (getStation()->getName() != "PM")
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 当前门阀处于关闭状态（逻辑错误）.", getStation()->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 当前门阀处于关闭状态（逻辑错误）.", getStation()->getName()), this);
 		}
 	}
 	
@@ -130,12 +129,12 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统类型错误", this);
 			}
 
-			std::string PmName = getStation()->getName();
-			if (!robot->getSafeSignalInPlace(PmName))
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
-					"PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
-			}
+			//std::string PmName = getStation()->getName();
+			//if (!robot->getSafeSignalInPlace(PmName))
+			//{
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
+			//		"PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
+			//}
 
 			if (!sub->getPMCavitySafeSignal())
 			{
@@ -159,11 +158,11 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "Loadlock子系统类型错误", this);
 			}
 
-			std::string LLName = sub->getName();
-			if (!robot->getSafeSignalInPlace(LLName))
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
-			}
+			//std::string LLName = sub->getName();
+			//if (!robot->getSafeSignalInPlace(LLName))
+			//{
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
+			//}
 
 			if (!sub->getLoadLockCavitySafeSignal())
 			{
@@ -231,8 +230,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			auto startTime = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(30);
 
-			//2025-8-2
-			/*std::lock_guard<std::mutex> lock(robot->external_mtx);*/
 			clearRobotMessage();
 			if (!sendRequest(command))
 			{
@@ -243,8 +240,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				return RunResult::RUN_FAILD;
 			};
 
-			//std::string res = recvResponse(timeout);
-			//recvResponse2(timeout);
 			res = recvResponseRobotMessage(timeout);
 			while (true)
 			{
@@ -263,7 +258,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				/*recvResponse2(timeout);*/
 				res = recvResponseRobotMessage(timeout);
 				Sleep(200);
 			}
@@ -321,7 +315,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						setAlarm(alarm);
 						return RunResult::RUN_FAILD;
 					}
-					/*recvResponse2(timeout);*/
 					res = recvResponseRobotMessage(timeout);
 					Sleep(200);
 				}
@@ -409,9 +402,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 
 			clearRobotMessage();
 			sendRequest(command);
-			//std::string res = recvResponse(timeout);
-			/*recvResponse2(timeout);*/
-
 			res = recvResponseRobotMessage(timeout);
 
 			auto startTime = std::chrono::high_resolution_clock::now();

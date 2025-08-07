@@ -110,6 +110,10 @@ namespace FC{
 
 		bool recard_enabled = false;
 		std::thread thd_recard_vacuum;
+
+		std::string plc_mode_address;
+		int plc_mode_value;
+
 	};
 
 	/**
@@ -398,8 +402,16 @@ namespace FC{
 		if (getState() != IKernelSubSystem::State::SUB_UNKNOWN )
 		{
 
+			bool plc_current_value = false;
+			if (d->plc_mode_address != "" && readBit(d->plc_mode_address, plc_current_value))
+			{
+				if (d->plc_mode_value!= plc_current_value)
+				{
+					d->plc_mode_value = plc_current_value;
+				}
+			}
 
-#if 0
+
 			bool io_changed = false;
 			if ((d->io_input_count > 0) && readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state.get()))
 			{
@@ -423,28 +435,29 @@ namespace FC{
 				}
 			}
 
-			if (d->molecule_pipeline_vacuum_read_value_address != "")
-			{
-				double buff_vacuum = 0.0;
-				if (readDouble(d->molecule_pipeline_vacuum_read_value_address, buff_vacuum) && d->molecule_pipeline_vacuum_current_value != buff_vacuum)
-				{
-					d->molecule_pipeline_vacuum_current_value = buff_vacuum;
-					io_changed = true;
-				}
-			}
+			//if (d->molecule_pipeline_vacuum_read_value_address != "")
+			//{
+			//	double buff_vacuum = 0.0;
+			//	if (readDouble(d->molecule_pipeline_vacuum_read_value_address, buff_vacuum) && d->molecule_pipeline_vacuum_current_value != buff_vacuum)
+			//	{
+			//		d->molecule_pipeline_vacuum_current_value = buff_vacuum;
+			//		io_changed = true;
+			//	}
+			//}
 
-			if (d->backing_pipeline_vacuum_read_value_address != "")
-			{
-				double buff_vacuum = 0.0;
-				if (readDouble(d->backing_pipeline_vacuum_read_value_address, buff_vacuum) &&
-					d->backing_pipeline_vacuum_current_value != buff_vacuum)
-				{
+			//if (d->backing_pipeline_vacuum_read_value_address != "")
+			//{
+			//	double buff_vacuum = 0.0;
+			//	if (readDouble(d->backing_pipeline_vacuum_read_value_address, buff_vacuum) &&
+			//		d->backing_pipeline_vacuum_current_value != buff_vacuum)
+			//	{
 
-					d->backing_pipeline_vacuum_current_value = buff_vacuum;
-					io_changed = true;
-				}
-			}
+			//		d->backing_pipeline_vacuum_current_value = buff_vacuum;
+			//		io_changed = true;
+			//	}
+			//}
 #pragma region 更新PM门阀状态
+
 			bool pm_flag = false;
 			bool value = false;
 
@@ -604,8 +617,7 @@ namespace FC{
 			{
 				AbstractIOSubsystem::emitAttributeChanged(this);
 			}
-			Sleep(50);
-#endif		
+			Sleep(50);		
 		}
 	}
 
@@ -657,6 +669,16 @@ namespace FC{
 		}
 	}
 
+	bool FortrendTMCavitySubsystem::getPlcMode() const
+	{
+		return d->plc_mode_value;
+	}
+
+	void FortrendTMCavitySubsystem::setPlcMode(bool mode)
+	{
+		d->plc_mode_value = mode;
+	}
+
 	bool FortrendTMCavitySubsystem::getAwcPresentSensor(int index) const
 	{
 		bool value = false;
@@ -678,6 +700,7 @@ namespace FC{
 		KernelAbstractSubSystem::onConfigure(config);
 		FortrendAbstractStation::configure(config);
 		configKeyencePlc(config);
+
 		d->io_input_count = inputCount();
 		for (size_t i = 0; i < d->io_input_count; i++)
 		{
@@ -704,13 +727,14 @@ namespace FC{
 		}
 		if (config->has("SignalAddress"))
 		{
-			d->tm_cavity_cover_safety_lock_address = config->getString("SignalAddress.CavityCoverSafetyLockAddress", "R60100");
+			d->tm_cavity_cover_safety_lock_address = config->getString("SignalAddress.CavityCoverSafetyLockAddress", "MR30505");
 			d->tm_cavity_pid_set_value_address = config->getString("SignalAddress.PIDSetValueAddress", "DM400");
 			d->CDA_pressure_address = config->getString("CdaPressureAddress","MR30506");
 			
 		}
 		if (config->has("Update"))
 		{
+			d->plc_mode_address = config->getString("Update.PLC_Mode_address","");
 			d->diaphragm_valve_address1 = config->getString("Update.diaphragm_valve_address1", "");
 			d->diaphragm_valve_address2 = config->getString("Update.diaphragm_valve_address2", "");
 			d->high_vacuum_baffle_value_address = config->getString("Update.high_vacuum_baffle_value_address", "");
@@ -718,7 +742,7 @@ namespace FC{
 			d->close_angle_valve_address = config->getString("Update.close_angle_valve_address", "");
 			d->open_inserting_plate_valve_address = config->getString("Update.open_inserting_plate_valve_address", "");
 			d->close_inserting_plate_valve_address = config->getString("Update.close_inserting_plate_valve_address", "");
-
+			//打开完成信号
 			d->pm1_cavity_door_opend_address = config->getString("Update.pm1_cavity_door_address","");
 			d->pm2_cavity_door_opend_address = config->getString("Update.pm2_cavity_door_address", "");
 			d->pm3_cavity_door_opend_address = config->getString("Update.pm3_cavity_door_address", "");
