@@ -57,11 +57,11 @@ EFEMLoadPortOpenBoxCommand::RunResult EFEMLoadPortOpenBoxCommand::onRun() throw(
 	}
 	std::shared_ptr<KernelConfiguration> command_config = lp->getConfigure()->createView(getName());
 	
-	if (SIM_MODE == 1)
-	{
-		logInform("lp1:","EFEMLoadPortOpenBoxCommand Ä£Äâ²âÊÔ");
-		return RunResult::RUN_OK;
-	}
+	//if (SIM_MODE == 1)
+	//{
+	//	logInform("lp1:","EFEMLoadPortOpenBoxCommand Ä£Äâ²âÊÔ");
+	//	return RunResult::RUN_OK;
+	//}
 
 	//fill params
 	int macroId = command_config->getInt("macroid", -1);

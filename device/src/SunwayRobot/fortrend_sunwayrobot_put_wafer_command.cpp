@@ -385,18 +385,19 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY,
 			Poco::format("%s 处于忙碌中.", robot->getName()), this);
 	}
+
 	//check door open
-	if (WTR_SIM_MODE == 0)
+	if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(getStation()))
 	{
-		if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(getStation())) {
-			if (!sub->hasDoorOpend()) {
-				if (getStation()->getName() != "PM")
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION,
-						Poco::format("工位： %s 门阀未处于打开状态（逻辑错误）.", getStation()->getName()), this);
+		if (!sub->hasDoorOpend()) 
+		{
+			if (getStation()->getName() != "PM")
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION,
+					Poco::format("工位： %s 门阀未处于打开状态（逻辑错误）.", getStation()->getName()), this);
 			}
 		}
 	}
-
 	
 	//check modules
 	auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
@@ -418,23 +419,21 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统类型错误", this);
 			}
 
-			//std::string PmName = getStation()->getName();
-			//if (!robot->getSafeSignalInPlace(PmName))
-			//{
-			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, 
-			//		"PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
-			//}
+			std::string PmName = getStation()->getName();
+			if (!robot->getSafeSignalInPlace(PmName))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统，PM腔安全信号+_门阀开启to机械手未到位", this);
+			}
 
-			//if (!sub->getPMCavitySafeSignal())
-			//{
-			//	logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
-			//	Sleep(50);
-			//	if (!sub->getPMCavitySafeSignal())
-			//	{
-			//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-			//			Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
-			//	}
-			//}
+			if (!sub->getPMCavitySafeSignal())
+			{
+				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
+				Sleep(50);
+				if (!sub->getPMCavitySafeSignal())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+				}
+			}
 		}
 	}
 	else
@@ -447,23 +446,23 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			}
 
 
-			//std::string LLName = sub->getName();
-			//if (!robot->getSafeSignalInPlace(LLName))
-			//{
-			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
-			//		"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
-			//}
+			std::string LLName = sub->getName();
+			if (!robot->getSafeSignalInPlace(LLName))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE,
+					"Loadlock子系统，Loadlock腔安全信号+_门阀开启to机械手未到位", this);
+			}
 
-			//if (!sub->getLoadLockCavitySafeSignal())
-			//{
-			//	logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
-			//	Sleep(50);
-			//	if (!sub->getLoadLockCavitySafeSignal())
-			//	{
-			//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-			//			Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
-			//	}
-			//}
+			if (!sub->getLoadLockCavitySafeSignal())
+			{
+				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
+				Sleep(50);
+				if (!sub->getLoadLockCavitySafeSignal())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+				}
+			}
 			
 		}
 	}

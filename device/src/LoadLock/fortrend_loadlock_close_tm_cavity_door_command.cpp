@@ -67,6 +67,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭传输腔门阀地址未定义", getName()), this);
 		}
+
 		bool is_safe = false;
 		if (!readBit(safe_Interlock_signal_address, is_safe))
 		{
@@ -77,11 +78,11 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s LLA-机械手抓放料完成信号未到位", sub->getName()), this);
 		}
 
-		if (SIMULATION_TEST == 1)
-		{
-			logInform(sub->getName().c_str(), "模拟关闭传输腔门阀命令...");
-			return RunResult::RUN_OK;
-		}
+		//if (SIMULATION_TEST == 1)
+		//{
+		//	logInform(sub->getName().c_str(), "模拟关闭传输腔门阀命令...");
+		//	return RunResult::RUN_OK;
+		//}
 		logInform(sub->getName().c_str(), "关闭传输腔门阀命令开始");
 		if (!writeBit(open_address, false))
 		{

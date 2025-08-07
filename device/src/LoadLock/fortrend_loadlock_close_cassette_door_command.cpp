@@ -72,10 +72,10 @@ namespace FC{
 		std::string failed_address = command_config->getString("failed_address","");
 
 		//测试强制注释
-		//if (!sub->getLoadLockCassetteCloseSafeSignal())
-		//{
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("地址: %s EFEM允许关闭cassette门信号未到位", sub->getName()), this);
-		//}
+		if (!sub->getLoadLockCassetteCloseSafeSignal())
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("地址: %s EFEM允许关闭cassette门信号未到位", sub->getName()), this);
+		}
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){

@@ -51,6 +51,7 @@ namespace FC{
 		std::vector<bool> io_input_last_value;
 		//bool *ptr_io_input_state;
 		std::unique_ptr<bool[]> ptr_io_input_state;
+
 		bool tm_cavity_door_opend = false;   //传输腔门阀
 		bool vacuum_enable = false;			 //真空开启
 		bool with_wafer_mode = false;		 //带晶圆模式
@@ -99,6 +100,11 @@ namespace FC{
 
 		bool pm_update_process_parameters = false;
 		PMCavityProcessParameters pm_process_parameters;   //PM腔工艺参数
+
+		std::string open_tm_cavity_door_address = "";
+		std::string close_tm_cavity_door_address = "";
+
+		
 
 	};
 
@@ -711,7 +717,16 @@ namespace FC{
 				if (resultlocation != d->axlelocation){
 					io_changed = true;
 				}
-			}		
+			}	
+
+
+			bool flag = d->tm_cavity_door_opend;
+			if (d->open_tm_cavity_door_address != "" && readBit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend))
+			{
+				if (flag != d->tm_cavity_door_opend)
+					io_changed = true;
+			}
+
 			/*if (d->io_input_count > 0)
 			{
 				if (KeyencePlcSubSystemHelper::readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state))

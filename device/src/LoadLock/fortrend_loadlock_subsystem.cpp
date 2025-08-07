@@ -111,7 +111,10 @@ namespace FC{
 		std::string close_inserting_plate_valve_address = "";
 
 		std::string open_cassette_door_address = "";
+		std::string close_cassette_door_address = "";
+
 		std::string open_tm_cavity_door_address = "";
+		std::string close_tm_cavity_door_address = "";
 
 		bool has_reset_flag = false;	//已复位标志
 
@@ -203,6 +206,7 @@ namespace FC{
 			AbstractIOSubsystem::emitAttributeChanged(this);
 		}
 	}
+
 	bool FortrendLoadLockSubsystem::getTMCavityDoorOpend()const{
 		return d->tm_cavity_door_opend;
 	}
@@ -526,6 +530,7 @@ namespace FC{
 				if (flag != d->angle_valve_opend)
 					io_changed = true;
 			}
+
 			flag = d->cassette_door_opend;
 			if (d->open_cassette_door_address != ""&&readBit(d->open_cassette_door_address, d->cassette_door_opend))
 			{
@@ -726,9 +731,14 @@ namespace FC{
 			d->close_angle_valve_address = config->getString("Update.close_angle_valve_address", "");
 			d->open_inserting_plate_valve_address = config->getString("Update.open_inserting_plate_valve_address", "");
 			d->close_inserting_plate_valve_address = config->getString("Update.close_inserting_plate_valve_address", "");
-			d->open_cassette_door_address = config->getString("Update.open_cassette_door_address", "");
-			d->open_tm_cavity_door_address = config->getString("Update.open_tm_cavity_door_address", "");
 
+			d->open_cassette_door_address = config->getString("Update.open_cassette_door_address", "");
+			d->close_cassette_door_address = config->getString("Update.close_cassette_door_address", "");
+
+			d->open_tm_cavity_door_address = config->getString("Update.open_tm_cavity_door_address", "");
+			d->close_tm_cavity_door_address = config->getString("Update.close_tm_cavity_door_address", "");
+			
+		
 			d->io_first_layer_detection_sensor_address = config->getString("Update.first_layer_detection_sensor","");
 			d->io_second_layer_detection_sensor_address = config->getString("Update.second_layer_detection_sensor", "");
 

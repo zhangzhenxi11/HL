@@ -70,7 +70,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 关闭传输腔门阀超时参数设置失败", sub->getName()), this);
 		}
 
-		if ((open_address == "") || (close_address == "") || (finish_address == "")||(failed_address == ""))
+		if ((open_address == "") || (close_address == "") || (finish_address == "")||(failed_address == "")||(safe_Interlock_signal_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭传输腔门阀命令地址未定义", getName()), this);
 		}

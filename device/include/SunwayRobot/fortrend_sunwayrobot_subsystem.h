@@ -63,10 +63,7 @@ namespace FC{
 		virtual void  resume() override;
 		virtual void  abort() override;
 		std::string getRunningStatus()const;
-		/*
-			复位：先检查状态，是否报警，是就返回false，否就返回OK,执行home动作
-			清楚错误：执行reset
-		*/
+
 		virtual std::shared_ptr<KernelSubsystemResetCommand> createResetCommand()const override;
 		virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
 		virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
