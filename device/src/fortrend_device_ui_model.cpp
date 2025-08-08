@@ -84,6 +84,7 @@
 #include "EFEM/efem_aligner_subsystem.h"
 #include  "EFEM/efem_aligner_abstract_subsystem_widget.h" 
 
+#include  "STATIONMODE/fortrend_StationMode_subsystem_widget.h"
 //SMIF
 //#include "Kernel/Fortrend/fortrend_SMIF_subsystem.h" 
 //#include  "Kernel/FortrendUI/fortrend_SMIF_subsystem_widget.h"
@@ -286,7 +287,8 @@ void FortrendDeviceModel::addManualCompoments(){
 
 	//wtr
 	for (auto& sub : kernel->getKernelModules<FortrendSunwayRobotSubsystem>()){
-		QWidget* w = new QSunwayRobotSubsystemWidget(kernel,sub);
+		//QWidget* w = new QSunwayRobotSubsystemWidget(kernel,sub);
+		QWidget* w = new QSunwayRobotSubsystemWidget(sub);
 		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
 	}
 
@@ -306,6 +308,12 @@ void FortrendDeviceModel::addManualCompoments(){
 	//pm
 	for (auto& sub : kernel->getKernelModules<FortrendPMCavitySubsystem>()){
 		QWidget* w = new QPMCavitySubsystemWidget(sub);
+		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
+	}
+
+	//mode 
+	for (auto& sub : kernel->getKernelModules<FortrendSTATIONMODESubsystem>()) {
+		QWidget* w = new QSTATIONMODESubsystemWidget(sub);
 		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
 	}
 

@@ -493,8 +493,6 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 
 		is_busy = false;
 
-		//robotMessage == std::string("") &&
-
 		if (data != std::string(""))
 		{
 			robotMessage = data;

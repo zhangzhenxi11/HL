@@ -50,7 +50,7 @@ namespace FC{
 		std::vector<QCheckBox*> input_checkboxs;
 		std::vector<QCheckBox*> arm_stat;
 		std::vector<QRadioButton*> arm_select;
-		std::shared_ptr<IKernel> kernel = 0;
+		//std::shared_ptr<IKernel> kernel = 0;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = nullptr;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = nullptr;
 
@@ -69,7 +69,7 @@ namespace FC{
 	/**
 	* QSunwayRobotSubsystemWidget
 	**/
-	QSunwayRobotSubsystemWidget::QSunwayRobotSubsystemWidget(const std::shared_ptr<IKernel>& kernel,
+	QSunwayRobotSubsystemWidget::QSunwayRobotSubsystemWidget(
 		const std::shared_ptr<FortrendSunwayRobotSubsystem>& robot,
 		QWidget*parent)
 		: QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem>(robot, parent)
@@ -78,9 +78,9 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		d->ui = new Ui::SunwayRobotSubsystemWidget;
 		d->ui->setupUi(this);
-		d->kernel = kernel;
-		d->lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-		d->lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+		//d->kernel = kernel;
+	/*	d->lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		d->lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");*/
 
 		//d->robot_sub = std::dynamic_pointer_cast<FortrendSunwayRobotSubsystem>(robot);
 		//init samethong
@@ -387,6 +387,7 @@ namespace FC{
 			d->ui->pm3_awc_x_dsb->setValue(data.X);
 			d->ui->pm3_awc_y_dsb->setValue(data.Y);*/
 
+#if 0
 			auto cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
 			auto cass = cassManager->getCassette(getSubsystem().get());
 
@@ -410,7 +411,7 @@ namespace FC{
 				d->lk2->getSecondLayerMapping(mappingData);
 				cass->setMapping(1, mappingData);
 			}
-
+#endif
 		}
 		catch (KernelException& e){
 			logError(getSubsystem()->getName().c_str(), e.what());

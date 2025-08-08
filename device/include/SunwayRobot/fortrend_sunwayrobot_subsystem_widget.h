@@ -27,7 +27,7 @@ class QSunwayRobotSubsystemWidgetPrivate;
 class QSunwayRobotSubsystemWidget : public QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem>{
 	Q_OBJECT
 public:
-	QSunwayRobotSubsystemWidget(const std::shared_ptr<IKernel>& kernel, const std::shared_ptr<FortrendSunwayRobotSubsystem>& fliper, QWidget* parent = NULL);
+	QSunwayRobotSubsystemWidget(const std::shared_ptr<FortrendSunwayRobotSubsystem>& fliper, QWidget* parent = NULL);
 	~QSunwayRobotSubsystemWidget();
 private slots:
 	void onReset();

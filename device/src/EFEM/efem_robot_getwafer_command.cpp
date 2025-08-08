@@ -34,6 +34,7 @@ public:
 	std::string TOOLA2 = "TOOLA2";
 	std::string TOOLB1 = "TOOLB1";
 	std::string TOOLB2 = "TOOLB2";
+	std::string stationName;
 
 };
 
@@ -87,11 +88,11 @@ EFEMRobotReadyGetWaferCommand::RunResult EFEMRobotReadyGetWaferCommand::onRun() 
 	int armn = getArm();
 	std::string robotName = robot->getName();//模组名
 
-	std::string stationName = getStation()->getName();
-	handleStationName(stationName, slotn);
+	d->stationName = getStation()->getName();
+	handleStationName(d->stationName, slotn);
 
 	//MOV:GOTO/WTR/ALIGNER/1/2/DOWN;
-	std::string str = Poco::format("MOV:GOTO/%s/%s/%d/%d/%s", robotName,stationName, slotn, armn, std::string("DOWN"));//DOWN到取料位，UP到放料位
+	std::string str = Poco::format("MOV:GOTO/%s/%s/%d/%d/%s", robotName, d->stationName, slotn, armn, std::string("DOWN"));//DOWN到取料位，UP到放料位
 	str.push_back(';');
 	bool result = robot->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;
@@ -115,7 +116,7 @@ EFEMRobotReadyGetWaferCommand::RunResult EFEMRobotReadyGetWaferCommand::onRun() 
 	//执行Load指令
 
 	//MOV:LOAD/WTR/ALIGNER/1/0/1;
-	str = Poco::format("MOV:LOAD/%s/%s/%d/%d/%d", robotName, stationName, slotn, 0, armn);//参数三，0不执行寻边，1先执行寻边，目标工站是Aligner时生效
+	str = Poco::format("MOV:LOAD/%s/%s/%d/%d/%d", robotName, d->stationName, slotn, 0, armn);//参数三，0不执行寻边，1先执行寻边，目标工站是Aligner时生效
 	str.push_back(';');
 	result = robot->api->sendMessage(str.data(), str.size());
 	if (!result){
@@ -223,7 +224,10 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 	////check modules
 	auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
-	std::string stationName = getStation()->getName();
+
+	d->stationName = getStation()->getName();
+	logInform(robot->getName().c_str(), "stationName:%s", d->stationName.c_str());
+
 	int slotnum = getSlot();
 	////get cass
 	Cassette::Ptr robot_cass1 = cassManager->getCassette(robot);
@@ -249,7 +253,7 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	//if (timeout > 0){
 	//	this->setReplyTimeout(timeout);
 	//}
-	if (stationName == "ELP1" || stationName == "ELP2"){
+	if (d->stationName == "ELP1" || d->stationName == "ELP2"){
 
 		if (!getStation()->hasBoxPresent()){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("Station %s box not present now(sensor).", getStation()->getName()), this);
@@ -265,9 +269,9 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("Station %s box is closed now.", getStation()->getName()), this);
 		}
 
-		stationName = stationName == "ELP1" ? "LP1" : "LP2";
+		d->stationName = d->stationName == "ELP1" ? "LP1" : "LP2";
 	}
-	else if (stationName == "EALIGNER")
+	else if (d->stationName == "EALIGNER")
 	{
 		std::shared_ptr<EFEMAlignerSubsystem> aligner = std::dynamic_pointer_cast<EFEMAlignerSubsystem>(getStation());
 		if (!aligner) {
@@ -276,7 +280,7 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 		if (aligner->getState() != IKernelSubSystem::State::SUB_NORMAL) {
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, Poco::format("%s state not SUB_NORMAL ", getStation()->getName()), this);
 		}
-		stationName = stationName == "ALIGNER";
+		d->stationName = "ALIGNER";
 	}
 	else{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
@@ -301,22 +305,22 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_CASS_CLOSE_EXCEPTION, "EFEM机械手的手爪二不能取LL腔最下面一层", this);
 		//}
 
-		if (stationName == "LLA" && slotnum == 1)
+		if (d->stationName == "LLA" && slotnum == 1)
 		{
-			stationName = d->TOOLA2;
+			d->stationName = d->TOOLA2;
 		}
-		else if (stationName == "LLA" && slotnum == 2)
+		else if (d->stationName == "LLA" && slotnum == 2)
 		{
-			stationName =  d->TOOLA1;
+			d->stationName =  d->TOOLA1;
 
 		}
-		else if (stationName == "LLB" && slotnum == 1)
+		else if (d->stationName == "LLB" && slotnum == 1)
 		{
-			stationName = d->TOOLB2;
+			d->stationName = d->TOOLB2;
 		}
 		else
 		{
-			stationName = d->TOOLB1;
+			d->stationName = d->TOOLB1;
 		}
 		slotnum = 1;
 
@@ -349,10 +353,19 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	std::string robotName = robot->getName();//模组名
 	robotName = robotName.erase(0,1);
 
-	//MOV:LOAD/WTR/ALIGNER/1/0/1;    0:不寻边
-	std::string str = Poco::format("MOV:LOAD/%s/%s/%d/0/%d", robotName, stationName, slotnum,getArm());
+	logInform(robot->getName().c_str(), "stationName:%s", d->stationName.c_str());
 
+	if (d->stationName.empty() || robotName.empty())
+	{
+		logError(robot->getName().c_str(), "%s指令有错误！", robot->getName());
+		return RunResult::RUN_FAILD;
+	}
+
+	//MOV:LOAD/WTR/ALIGNER/1/0/1;    0:不寻边
+	std::string str = Poco::format("MOV:LOAD/%s/%s/%d/0/%d", robotName, d->stationName, slotnum,getArm());
 	str.push_back(';');
+	logInform(robot->getName().c_str(), "command str:%s", str.c_str());
+
 	bool result = robot->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;
 	if (!result){

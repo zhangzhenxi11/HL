@@ -41,6 +41,9 @@ namespace FC {
 		void onSetPM2Disable();
 		void onSetPM3Enable();
 		void onSetPM3Disable();
+		void onSetPM4Enable();
+		void onSetPM4Disable();
+
 		void onSetLoadLock1VacuumParameters();
 		void onSetLoadLock2VacuumParameters();
 		void onSetTMCavityVacuumParamerers();

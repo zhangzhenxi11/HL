@@ -56,7 +56,7 @@ void ThreadSafeStateMachine::processPhase(UnifiedWaferTask& task, std::function<
     }
     else
     {
-        taskManager_.updateTaskStatus(task.taskId, UnifiedWaferTask::Status::COMPLETED, TaskType);
+        //taskManager_.updateTaskStatus(task.taskId, UnifiedWaferTask::Status::COMPLETED, TaskType);
         //if (completionHandler_)
         //{
         //    completionHandler_(task); // 执行回调函数

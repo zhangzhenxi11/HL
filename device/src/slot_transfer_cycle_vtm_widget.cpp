@@ -102,9 +102,9 @@
 #include  <QCoreApplication>
 #include  <QDir>
 
-#include "./device/UnifiedWaferTask.h"
-#include "./device/TaskManager.h"
-#include "./device/ThreadSafeStateMachine.h"
+#include "UnifiedWaferTask.h"
+#include "TaskManager.h"
+#include "ThreadSafeStateMachine.h"
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
@@ -953,7 +953,7 @@ namespace FC{
 						}
 						else {
 							Sleep(2000);
-							efem_auto_step = 135;
+							efem_auto_step = 131;
 						}
 
 					}
@@ -965,13 +965,16 @@ namespace FC{
 				case 131:
 				{
 					logInform(elp->getName().c_str(), "放晶圆到寻边器,step:%d", efem_auto_step);
+
+					auto cassManager = ealigner->getKernel()->getKernelModule<FortrendCassetteManager>();
+					auto station_cass = cassManager->getCassette(ealigner.get());
 					if (ealigner == nullptr)
 					{
 						ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (!ealigner->getPresentWafer())
+						if (station_cass->getMapping(1) == Cassette::Mapping::Empty)
 						{
 							auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);
 							ewtr->startCommand(cmd2);
@@ -1000,10 +1003,12 @@ namespace FC{
 				case 132:
 				{
 					logInform(elp->getName().c_str(), "晶圆寻边,step:%d", efem_auto_step);
+					auto cassManager = ealigner->getKernel()->getKernelModule<FortrendCassetteManager>();
+					auto station_cass = cassManager->getCassette(ealigner.get());
 
 					if(ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (ealigner->getPresentWafer())
+						if (station_cass->getMapping(1) == Cassette::Mapping::Present)
 						{
 							auto alignerCmd = ealigner->createAlignCommand();
 							ealigner->startCommand(alignerCmd);
@@ -1167,7 +1172,7 @@ namespace FC{
 						}
 						else
 						{
-							efem_auto_step = 155;
+							efem_auto_step = 1540;
 						}
 					}
 					else {
@@ -1252,7 +1257,7 @@ namespace FC{
 						}
 						else
 						{
-							efem_auto_step = 1543;
+							efem_auto_step = 1544;
 						}
 					}
 					else {
@@ -2482,16 +2487,27 @@ namespace FC{
 					//这里要呼叫PM来取片吗？，等待Pm取片成功？
 					pm_allow_get_put_wafer = true;
 
-					auto cmd = lk1->createCloseTMCavityDoorCommand();
-					lk1->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
+					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+						logInform("cycle", "大气模式，不关闭TM腔门!");
+
+						loadlock2_auto_step = 950;
 					}
-					else {
-						loadlock1_auto_step = 950;
+					else
+					{
+						auto cmd = lk1->createCloseTMCavityDoorCommand();
+						lk1->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+						}
+						else {
+							loadlock1_auto_step = 950;
+						}
+
 					}
+					
 				}
 				break;
 #pragma endregion
@@ -2634,16 +2650,24 @@ namespace FC{
 
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = lk1->createCloseTMCavityDoorCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+							logInform("cycle", "大气模式，不关闭传输腔门阀!");
+							loadlock1_auto_step = 2080;
 						}
 						else
 						{
-							loadlock1_auto_step = 2080;
+							auto cmd = lk1->createCloseTMCavityDoorCommand();
+							lk1->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+							}
+							else
+							{
+								loadlock1_auto_step = 2080;
+							}
 						}
 					}
 					else
@@ -2793,17 +2817,6 @@ namespace FC{
 				}
 				break;
 #pragma endregion
-				
-#pragma region 模拟LLA流程
-				// efem 上料 5（2） ---> 6
-				// LL上料  --->7 --->8（3）
-
-
-#pragma endregion
-
-
-
-
 				default:
 					break;
 				}
@@ -3313,17 +3326,28 @@ namespace FC{
 					//这里要呼叫PM来取片吗？
 					pm_allow_get_put_wafer = true;
 
-					loadlock2_auto_step = 950;
-					//auto cmd = lk2->createCloseTMCavityDoorCommand();
-					//lk2->startCommand(cmd);
-					//cmd->wait();
-					//if (cmd->hasError())
-					//{
-					//	logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
-					//}
-					//else {
-					//	loadlock2_auto_step = 950;
-					//}
+					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+					{
+						logInform("cycle", "大气模式，不关闭TM腔门!");
+
+						loadlock2_auto_step = 950;
+					}
+					else
+					{
+						auto cmd = lk2->createCloseTMCavityDoorCommand();
+						lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else {
+							loadlock2_auto_step = 950;
+						}
+					}
+
+					
+
 				}
 				break;
 #pragma endregion
@@ -3481,18 +3505,26 @@ namespace FC{
 
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						//auto cmd = lk2->createCloseTMCavityDoorCommand();
-						//lk2->startCommand(cmd);
-						//cmd->wait();
-						//if (cmd->hasError())
-						//{
-						//	logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
-						//}
-						//else
-						//{
-						//	loadlock2_auto_step = 2080;
-						//}
-						loadlock2_auto_step = 2080;
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+						{
+							logInform("cycle", "大气模式，不关闭TM腔门!");
+							loadlock2_auto_step = 2080;
+						}
+						else
+						{
+							auto cmd = lk2->createCloseTMCavityDoorCommand();
+							lk2->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+							}
+							else
+							{
+								loadlock2_auto_step = 2080;
+							}
+						}
+						
 					}
 					else
 					{
@@ -4164,9 +4196,15 @@ namespace FC{
 					)
 				{
 					logInform(reset_process_name.c_str(), "整机复位开始");
+					//wtr
 					auto cmd = wtr->createResetCommand();
 					wtr->startCommand(cmd);
+
+					//加home，为了复位关腔门的安全信号
+					//auto home_cmd = wtr->createHomeCommand();
+					//wtr->startCommand(home_cmd);
 					
+					//ewtr
 					if (ui->disabledefem->checkState() == Qt::CheckState::Unchecked)
 					{
 						auto cmd_ewtr = ewtr->createResetCommand();
@@ -4179,10 +4217,10 @@ namespace FC{
 							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", cmd_ewtr->getName()).c_str());
 						}
 					}
-
 					cmd->wait();
+				/*	home_cmd->wait();*/
 
-					if (cmd->hasError())
+					if (cmd->hasError() /*|| home_cmd->hasError()*/)
 					{
 						rest_step = 15000;
 						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", wtr->getName()).c_str());
@@ -4227,10 +4265,13 @@ namespace FC{
 					pm3->startCommand(cmd_pm3);
 
 					auto cmd_pm4 = pm4->createResetCommand();
-					pm3->startCommand(cmd_pm4);
+					pm4->startCommand(cmd_pm4);
 
 					auto cmd_tm = tm->createResetCommand();
 					tm->startCommand(cmd_tm);
+
+					
+
 
 					if (ui->disabledefem->checkState() == Qt::CheckState::Unchecked){
 						auto cmd_elp1 = elp1->createResetCommand();
@@ -4363,7 +4404,8 @@ namespace FC{
 					(elp2->getState() == IKernelSubSystem::State::SUB_NORMAL || ui->disabledefem->checkState() == Qt::CheckState::Checked)
 					)
 				{
-					rest_step = 200;
+					//rest_step = 200;
+					rest_step = 10000;
 
 				}
 				else
@@ -4476,7 +4518,7 @@ namespace FC{
 			case 10000:
 			{
 				logInform(reset_process_name.c_str(), "整机复位完成");
-				robot_auto_step = 10;
+				/*robot_auto_step = 10;*/
 				loadlock1_auto_step = 10;
 				loadlock2_auto_step = 10;
 				vacuum_auto_step = 10;
@@ -5359,6 +5401,17 @@ namespace FC{
 		FortrendCassetteManager::Ptr llbManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 		lk2_cass = llbManager->getCassette(lk2.get());
 
+		QString fileName = QDir::currentPath() + "/config/" + "config.ini";
+		if (fileName.isEmpty())
+		{
+			logInform("Cycle:","读取的配置文件为空");
+			return false;
+		}
+		QSettings settings(fileName, QSettings::IniFormat);
+		int slots_ = settings.value("LoadLockSlots", true).toInt();
+		bool loadlockAEnable = settings.value("LoadLockAEnable", true).toBool();
+		bool loadlockBEnable = settings.value("LoadLockBEnable", true).toBool();
+
 		// 处理UI中的每一行
 		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i)
 		{
@@ -5425,22 +5478,11 @@ namespace FC{
 			selectPmEnableList[3] = task.pm4Enabled;
 
 			// 轮换式LoadLock分配
-			const int GROUP_SIZE = 2;
+			const int GROUP_SIZE = slots_; //可配置
 			int groupIndex = i / GROUP_SIZE;
 
 			//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB 
 			if (groupIndex % 2 == 0)
-			{
-				task.target = UnifiedWaferTask::Location::LLA;
-				task.target_pm = getSelectPmLocation(task);
-				task.targetSlot = llaSlot++;
-				//setWaferId
-				const std::string& id = std::to_string(task.taskId);
-				lk1_cass->setWaferId(task.targetSlot, id);
-
-				if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
-			}
-			else
 			{
 				task.target = UnifiedWaferTask::Location::LLB;
 				task.target_pm = getSelectPmLocation(task);
@@ -5451,6 +5493,19 @@ namespace FC{
 				lk2_cass->setWaferId(task.targetSlot, id);
 				if (llbSlot > GROUP_SIZE) llbSlot = 1;// 组内循环
 			}
+			else
+			{
+				task.target = UnifiedWaferTask::Location::LLA;
+				task.target_pm = getSelectPmLocation(task);
+				task.targetSlot = llaSlot++;
+				//setWaferId
+				const std::string& id = std::to_string(task.taskId);
+				lk1_cass->setWaferId(task.targetSlot, id);
+
+				if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
+
+			}
+
 			taskManager.addTask(task);//加入到管理者
 
 			// 调试日志
@@ -6144,15 +6199,18 @@ namespace FC{
 			d->ui->cycle_finished_times_spx_2->setValue(0);
 			logInform("Cycle", "传送流程配置成功。");
 		}*/
+		std::shared_ptr<FortrendTMCavitySubsystem> tm = d->kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
+		d->plcauto = tm->getPlcMode();
+
 		if (!isEnabledplcAuto()){
 			QMessageBox::warning(this, "警告", "PLC不在自动模式.");
 			return;
 		}
 		//ZZX
-		if (!taskManager.isStopped())
-		{
-			taskManager.stop();
-		}
+		//if (!taskManager.isStopped())
+		//{
+		//	taskManager.stop();
+		//}
 
 		d->running = false;
 		d->ispause = false;
@@ -6726,8 +6784,8 @@ namespace FC{
 		std::thread thd_efem(&QSlotTransferCycleVTMWidget::executeEFEMTransfer, this);
 		thd_efem.detach();
 		
-		std::thread thd_LoadLockA(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
-		thd_LoadLockA.detach();
+		//std::thread thd_LoadLockA(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
+		//thd_LoadLockA.detach();
 
 		std::thread thd_LoadLockB(&QSlotTransferCycleVTMWidget::executeLLBTransfer, this);
 		thd_LoadLockB.detach();

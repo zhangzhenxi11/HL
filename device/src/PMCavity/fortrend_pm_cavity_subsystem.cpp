@@ -126,6 +126,7 @@ namespace FC{
 		, KeyencePlcSubSystemHelper(name)
 		, d(new FortrendPMCavitySubsystemPrivate(this)){
 		//init 
+
 		d->recard_enabled = true;
 		d->thd_recard_vacuum = std::thread([this] { this->recardVacuum(); });
 	}
@@ -781,10 +782,10 @@ namespace FC{
 				}
 			}
 #endif
-			if (io_changed)
-			{
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
+			//if (io_changed)
+			//{
+			//	AbstractIOSubsystem::emitAttributeChanged(this);
+			//}
 			Sleep(100);
 
 		}

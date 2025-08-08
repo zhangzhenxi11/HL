@@ -3,6 +3,9 @@
 #include <chrono>
 #include "kernel/kernel.h"
 
+#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
 
 namespace FC {
     
@@ -36,11 +39,12 @@ namespace FC {
 
         int taskId; //ID
         TaskType taskType; 
-        int currentStep = 3;  // 当前步骤索引
-
-        Location source; //来源模组
-        Location target; //目标模组
         Status status;
+        int currentStep = 3;  // 当前步骤索引
+        Location source;  //来源模组   lp
+        Location target;  //目标模组   loadlock
+        Location target_pm;//目标模组2  PM
+
         int sourceSlot;  //来源模组槽
         int targetSlot;  //目标模组槽
 
@@ -52,11 +56,6 @@ namespace FC {
         bool pm2Enabled;
         bool pm3Enabled;
         bool pm4Enabled;
-
-        //EFEMSubState EfemState;   //efem
-        //LLSubState   LLState;    //LLA,LLB
-        //PMSubState   pmState;    //PM1,PM2,PM3,PM4
-
         // 时间戳
         std::chrono::system_clock::time_point createdAt;
         std::chrono::system_clock::time_point startedAt;
@@ -83,6 +82,7 @@ namespace FC {
             switch (stat) {
             case Status::QUEUED: return "QUEUED";
             case Status::IN_PROGRESS: return "IN_PROGRESS";
+            case Status::IN_ERROR: return "IN_ERROR";
             case Status::COMPLETED: return "COMPLETED";
             default: return "UNKNOWN";
             }
@@ -93,6 +93,7 @@ namespace FC {
             switch (stat) {
             case TaskType::EFEM_TRANSFER: return "EFEM_TRANSFER";
             case TaskType::LOADLOCK_TRANSFER: return "LOADLOCK_TRANSFER";
+            case TaskType::ROBOT_PROCESS:return "ROBOT_PROCESS";
             case TaskType::PM_PROCESS: return "PM_PROCESS";
             case TaskType::LOADLOCK_RETURN: return "LOADLOCK_RETURN";
             case TaskType::EFEM_RETURN: return "EFEM_RETURN";

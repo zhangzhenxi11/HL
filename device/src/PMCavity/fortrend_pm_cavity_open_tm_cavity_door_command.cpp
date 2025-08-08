@@ -63,7 +63,7 @@ namespace FC{
 			return RunResult::RUN_FAILD;
 		QSettings settings(fileName, QSettings::IniFormat);
 		std::string pmName = sub->getName();
-		//qDebug() << "PM NAME:" << pmName.c_str() << endl; //PM NAME: PM2
+
 		bool pmEnable = false;
 		if (pmName == "PM1")
 		{
@@ -76,6 +76,10 @@ namespace FC{
 		else if (pmName == "PM3")
 		{
 			pmEnable = settings.value("PM3Enable", true).toBool();
+		}
+		else if (pmName == "PM4")
+		{
+			pmEnable = settings.value("PM4Enable", true).toBool();
 		}
 		if (!pmEnable)
 		{

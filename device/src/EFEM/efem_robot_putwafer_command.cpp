@@ -355,6 +355,8 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 	robotName = robotName.erase(0, 1);
 	std::string str = Poco::format("MOV:UNLOAD/%s/%s/%d/0/%d", robotName,stationName, slotnum,getArm());
 	str.push_back(';');
+	logInform(robot->getName().c_str(), "command str:%s", str.c_str());
+
 	bool result = robot->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;
 	if (!result){

@@ -465,8 +465,12 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 
 	if (robot->getWithWaferModeEnable() && (station_cass->getMapping(mapping_slot) != Cassette::Mapping::Empty))
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, 
-			Poco::format("工位： %s 槽 %d 当前不为空.", getStation()->getName(), mapping_slot), this);
+		if (getStation()->getName().find("PM") == std::string::npos)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION,
+				Poco::format("工位： %s 槽 %d 当前不为空.", getStation()->getName(), mapping_slot), this);
+		}
+
 	}
 
 	//fill params

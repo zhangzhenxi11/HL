@@ -57,6 +57,7 @@ namespace FC{
 		bool pm1_enable = false;
 		bool pm2_enable = false;
 		bool pm3_enable = false;
+		bool pm4_enable = false;
 
 		double loadlock1_vacuum_upper_limit = 8;			 //LoadLock1真空上限值
 		double loadlock1_vacuum_extraction = 5;				 //LoadLock1抽真空设定值
@@ -183,7 +184,7 @@ namespace FC{
 			pm3_enable = value;
 		}
 		else{
-
+			pm4_enable = value;
 		}
 	}
 
@@ -514,12 +515,14 @@ namespace FC{
 		connect(d->ui->disable_vacuum_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetVacuumDisable);
 		connect(d->ui->enable_with_wafer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetWithWaferModeEnable);
 		connect(d->ui->disable_with_wafer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetWithWaferModeDisable);
-		//connect(d->ui->enable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Enable);
-		//connect(d->ui->disable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Disable);
+		connect(d->ui->enable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Enable);
+		connect(d->ui->disable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Disable);
 		connect(d->ui->enable_pm2_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM2Enable);
 		connect(d->ui->disable_pm2_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM2Disable);
-		//connect(d->ui->enable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Enable);
-		//connect(d->ui->disable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Disable);
+		connect(d->ui->enable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Enable);
+		connect(d->ui->disable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Disable);
+		connect(d->ui->enable_pm4_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM4Enable);
+		connect(d->ui->disable_pm4_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM4Disable);
 		//d->kernel->addListener(d);
 
 		connect(d->ui->loadlock1_vacuum_set_pbt, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetLoadLock1VacuumParameters);
@@ -632,6 +635,22 @@ namespace FC{
 		saveConfigFile();
 	}
 
+	void QControlModeVTMWidget::onSetPM4Enable()
+	{
+		Q_D(QControlModeVTMWidget);
+		d->setPMCavity(4, true);
+		updateState();
+		saveConfigFile();
+	}
+
+	void QControlModeVTMWidget::onSetPM4Disable()
+	{
+		Q_D(QControlModeVTMWidget);
+		d->setPMCavity(4, false);
+		updateState();
+		saveConfigFile();
+	}
+
 	void QControlModeVTMWidget::onSetLoadLock1VacuumParameters(){
 		Q_D(QControlModeVTMWidget);
 		d->setLoadLockVacuumParameters(1);
@@ -672,9 +691,10 @@ namespace FC{
 		d->ui->buzzer_label->setText(enable_stat_map[d->buzzer_enable]);
 		d->ui->vacuum_label->setText(enable_stat_map[d->vacuum_enable]);
 		d->ui->with_wafer_label->setText(enable_stat_map[d->with_wafer_enable]);
-		//d->ui->pm1_enable_label->setText(enable_stat_map[d->pm1_enable]);
+		d->ui->pm1_enable_label->setText(enable_stat_map[d->pm1_enable]);
 		d->ui->pm2_enable_label->setText(enable_stat_map[d->pm2_enable]);
-		//d->ui->pm3_enable_label->setText(enable_stat_map[d->pm3_enable]);
+		d->ui->pm3_enable_label->setText(enable_stat_map[d->pm3_enable]);
+		d->ui->pm4_enable_label->setText(enable_stat_map[d->pm4_enable]);
 
 		d->loadlock1_vacuum_upper_limit_dsb->setValue(d->loadlock1_vacuum_upper_limit);
 		d->loadlock1_vacuum_extraction_dsb->setValue(d->loadlock1_vacuum_extraction);
@@ -718,10 +738,11 @@ namespace FC{
 		bool pm1 = settings.value("PM1Enable", true).toBool();
 		bool pm2 = settings.value("PM2Enable", true).toBool();
 		bool pm3 = settings.value("PM3Enable", true).toBool();
+		bool pm4 = settings.value("PM4Enable", true).toBool();
 		d->setPMCavity(1, pm1);
 		d->setPMCavity(2, pm2);
 		d->setPMCavity(3, pm3);
-
+		d->setPMCavity(4, pm4);
 
 		d->loadlock1_vacuum_upper_limit = settings.value("LoadLock1VacuumUpperLimit", true).toDouble();
 		d->loadlock1_vacuum_extraction = settings.value("LoadLock1VacuumExtraction", true).toDouble();
