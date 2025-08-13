@@ -159,6 +159,11 @@ namespace FC{
 		}
 	}
 
+	bool FortrendSunwayRobotSubsystem::getVacuumEnable() const
+	{
+		return d->vacuum_enable;
+	}
+
 	bool FortrendSunwayRobotSubsystem::getWithWaferModeEnable()const{
 		return d->with_wafer_mode;
 	}

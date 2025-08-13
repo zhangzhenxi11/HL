@@ -87,6 +87,9 @@ namespace FC{
 		void setAWCRecordData(const AWCRecordData value);
 
 		void setVacuumEnable(const bool value);
+		bool getVacuumEnable()const;
+
+
 		bool getWithWaferModeEnable()const;
 		void setWithWaferModeEnable(const bool value);
 

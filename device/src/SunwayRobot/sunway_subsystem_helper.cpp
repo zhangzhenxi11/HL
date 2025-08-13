@@ -437,15 +437,6 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 {
 	while (true)
 	{
-		//if (!isConnected) {
-		//	//logInform1(name.c_str(), "检测到连接已断开，开始重连...");
-		//	if (!reconnect()) {
-		//		is_busy = false;
-		//		throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "重连失败，无法接收数据.");
-		//		Sleep(100);
-		//		continue;
-		//	}
-		//}
 		setTimeout(timeout_ms);
 		std::string data;
 		char receiveBuf[1024];
@@ -453,9 +444,11 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 
 		if (recvLen == SOCKET_ERROR || recvLen == 0)
 		{
-			//logError(name.c_str(), "接收数据错误，可能连接已断开.");
-			isConnected = false; // 连接断开
-			is_busy = false;
+			//2025-8-13 注释
+			//isConnected = false; // 连接断开  
+			//is_busy = false;
+
+			Sleep(200);
 			continue;
 		}
 		data.append(receiveBuf, recvLen);
@@ -473,9 +466,6 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 			{
 				Sleep(100);
 				continue;
-				//data = "error";
-				//is_busy = false;
-				//throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "socket重新接收数据错误.");
 			}
 			data.append(receiveBuf, recvLen);
 			found = data.find("\r"); //0x0D
@@ -484,8 +474,8 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 				data.erase(found, -1);
 			}
 			else {
-				is_busy = false;
-				//logInform1(name.c_str(), "Rcv_Format_Error: %s", data.c_str());
+				//is_busy = false;
+				logInform1(name.c_str(), "Rcv_Format_Error: %s", data.c_str());
 				throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "返回数据格式错误.");
 			}
 		}
@@ -573,9 +563,7 @@ void SunwaySubSystemHelper::configSunway(const std::shared_ptr<KernelConfigurati
 	d->configure(config);
 }
 
-/**
-* Send command to sunway (auto add 0x0D)
-*/
+/* Send command to sunway (auto add 0x0D) */
 bool SunwaySubSystemHelper::sendRequest(const std::string& command) throw(KernelException){
 
 	return d->sendRequest(command);

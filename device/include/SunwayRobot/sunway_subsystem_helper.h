@@ -58,12 +58,13 @@ public:
 	/**
 	*@brief  get error code
 	*/
+
 	std::shared_ptr<DefinedError> getErrorCode(const int code_id);
+
 	/*
 	*@brief  get error code,Meet two parameters at the same time.
 	* 
 	*/
-
 	std::string recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException);
 
 	void clearRobotMessage()throw(KernelException);

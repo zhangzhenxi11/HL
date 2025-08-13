@@ -258,12 +258,18 @@ namespace FC{
 		std::shared_ptr<FortrendTMCavitySubsystem> tmplc;
 		bool plcauto = false;
 
+		std::chrono::steady_clock::time_point start_time; //检测真空
+
 		/************************zzx  add*********************************/
 		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr = nullptr;
 		std::shared_ptr<EFEMLPSubsystem> elp1 = nullptr;
 		std::shared_ptr<EFEMLPSubsystem> elp2 = nullptr;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = nullptr;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = nullptr;
+
+		std::shared_ptr<EFEMLPSubsystem> elp = nullptr;
+		std::shared_ptr<FortrendLoadLockSubsystem> lk = nullptr;
+
 		/*std::shared_ptr<FortrendSTATIONMODESubsystem> lk1_down = nullptr;*/
 
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = nullptr;
@@ -717,9 +723,9 @@ namespace FC{
 	
 	void QSlotTransferCycleVTMWidgetPrivate::executeEFEMTransfer()
 	{
-		std::shared_ptr<EFEMLPSubsystem> elp;
-		std::shared_ptr<FortrendLoadLockSubsystem> lk; 
-		if (!ewtr || !elp1 || !elp2 || !lk1 || !lk2)
+		try {
+
+		if (ewtr == nullptr || elp1 == nullptr || elp2 == nullptr || lk1 == nullptr || lk2 == nullptr|| ealigner == nullptr)
 		{
 			ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 			elp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
@@ -728,8 +734,11 @@ namespace FC{
 			lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 			ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
 		}
+
+		
 		while (!taskManager.isStopped())
 		{
+			logInform1("Cyclelog", "EFEM thread started------------------->");
 			Sleep(500);
 			efem_step_once_finished = false;
 
@@ -779,6 +788,12 @@ namespace FC{
 					{
 						elp = efemUnkownStatusTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//UI中确定的数据，elp就是确定的
 						lk = efemUnkownStatusTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+
+						if (elp == nullptr && lk == nullptr)
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "elp or lk is nullptr", efem_process_name, efem_auto_step);
+						}
+
 						if (elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
@@ -819,6 +834,10 @@ namespace FC{
 						else {
 							logFailedNotNormal(elp->getName(), efem_process_name, efem_auto_step);
 						}
+					}
+					else
+					{
+						Sleep(500);
 					}
 				}
 				break;
@@ -879,6 +898,11 @@ namespace FC{
 					}
 					else
 					{//上料完成
+						if (elp == nullptr)
+						{
+							logFailedExcuteCommandHasError(elp->getName(), "elp  is nullptr", efem_process_name, efem_auto_step);
+						}
+
 						if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
@@ -916,6 +940,10 @@ namespace FC{
 				#pragma region 单取LP单放LK
 				case 115:
 				{
+					if (elp == nullptr)
+					{
+						logFailedExcuteCommandHasError(elp->getName(), "elp  is nullptr", efem_process_name, efem_auto_step);
+					}
 					//打开晶圆盒
 					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -2063,10 +2091,23 @@ namespace FC{
 					break;
 				}
 			}
+
+			logInform1("Cyclelog", "EFEM thread finished<-------------------");
 			efem_step_once_finished = true;
 			Sleep(10);	
 		}
 	
+		}
+		catch (const std::exception& e) {
+
+			logInform1("Cyclelog", "EFEM thread crashed:", e.what());
+			qCritical() << "EFEM thread crashed:" << e.what();
+		}
+		catch (...) {
+			logInform1("Cyclelog", "EFEM thread crashed: unknown exception");
+			qCritical() << "EFEM thread crashed: unknown exception";
+		}
+
 	}
 	/*
 	* 大气/真空流程，分为取晶圆，放晶圆，下料到EFEM, 破真空，抽真空
@@ -2074,7 +2115,9 @@ namespace FC{
 	*/
 	void QSlotTransferCycleVTMWidgetPrivate::executeLLATransfer()
 	{
-		if (!ewtr || !elp1 || !elp2 || !lk1 || !lk2 || !wtr)
+		try {
+
+		if (ewtr ==nullptr || elp1 == nullptr || elp2 == nullptr || lk1 == nullptr || lk2 == nullptr || wtr == nullptr)
 		{
 			ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 			lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
@@ -2084,10 +2127,14 @@ namespace FC{
 
 		while (!taskManager.isStopped())
 		{
+
+			logInform1("Cyclelog", "LLA thread started------------------->");
 			Sleep(500);
+
 			if (taskManager.waitForTasks(1000))
 			{
 				loadlock1_step_once_finished = false;
+				
 				switch (loadlock1_auto_step)
 				{
 				case 10:
@@ -2105,7 +2152,6 @@ namespace FC{
 						当LP1和LP2同时处理时，确保只在其中一个LoadPort完成时增加循环计数
 						避免因为两个LoadPort同时完成而导致循环计数被重复增加
 					*/
-
 					//在LLA槽中，没有传输任务,说明没有上料需求，所有wafer都完成下料到LP中
 					if (loadLockAPendingTasks.size() == 0 && !is_lp2_cycle && is_lp1_cycle)
 					{
@@ -2299,11 +2345,11 @@ namespace FC{
 						if (lk1->getVacuumValueUpperLimitReachesTheSetValue())
 						{
 							//Update status
-							auto loadlockPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
-							for (auto& task : loadlockPendingTasks)
-							{
-								taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-							}
+							//auto loadlockPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
+							//for (auto& task : loadlockPendingTasks)
+							//{
+							//	taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							//}
 							loadlock1_auto_step = 800;
 						}
 						else
@@ -2494,6 +2540,7 @@ namespace FC{
 				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						start_time = std::chrono::steady_clock::now();
 						// 选择不加真空机械手线程，直接操作，真空检测和门阀，阀动作，csr取放动作
 						if (CheckLLVacuumMeetsStandard("LLA", 2010))
 						{
@@ -2571,6 +2618,12 @@ namespace FC{
 				}
 				case 1052:
 				{
+					//Update status
+					//auto loadlockPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
+					//for (auto& task : loadlockPendingTasks)
+					//{
+					//	taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+					//}
 					//真空机械手取料完成
 					taskManager.updateTaskStatus(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 					
@@ -2578,6 +2631,7 @@ namespace FC{
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
 						logInform("cycle", "step:1052,大气模式，不关闭TM腔门!");
+						
 						pm_allow_get_put_wafer = true;
 
 						loadlock1_auto_step = 950;
@@ -2592,6 +2646,7 @@ namespace FC{
 							logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
 						}
 						else {
+							pm_allow_get_put_wafer = true;
 							loadlock1_auto_step = 950;
 						}
 
@@ -2966,14 +3021,29 @@ namespace FC{
 					break;
 				}
 			}
+
+			logInform1("Cyclelog", "LLA thread finished<-------------------");
 			loadlock1_step_once_finished = true;
 		}
+	
+		}
+		catch (const std::exception& e) {
+			logInform1("Cyclelog", "LLATransfer thread crashed:", e.what());
+			qCritical() << "LLATransfer thread crashed:" << e.what();
+		}
+		catch (...) {
+			logInform1("Cyclelog", "LLATransfer thread crashed: unknown exception");
+			qCritical() << "LLATransfer thread crashed: unknown exception";
+		}
+
+
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::executeLLBTransfer()
 	{
+		try {
 
-		if (!ewtr || !elp1 || !elp2 || !lk1 || !lk2 || !wtr)
+		if (ewtr == nullptr || elp1 == nullptr || elp2 == nullptr || lk1 == nullptr || lk2 == nullptr || wtr == nullptr)
 		{
 			ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
 			lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
@@ -2982,6 +3052,7 @@ namespace FC{
 		}
 		while (!taskManager.isStopped())
 		{
+			logInform1("Cyclelog", "LLB thread started------------------->");
 			Sleep(500);
 			if (taskManager.waitLLBForTasks(1000))
 			{
@@ -3838,8 +3909,21 @@ namespace FC{
 					break;
 				}
 			}
+			logInform1("Cyclelog", "LLB thread finished<-------------------");
 			loadlock2_step_once_finished = true;
 		}
+	
+		}
+		catch (const std::exception& e) {
+			logInform1("Cyclelog", "LLBTransfer thread crashed:", e.what());
+			qCritical() << "LLBTransfer thread crashed:" << e.what();
+		}
+		catch (...) {
+			logInform1("Cyclelog", "LLBTransfer thread crashed: unknown exception");
+			qCritical() << "LLBTransfer thread crashed: unknown exception";
+		}
+
+
 	}
 
 
@@ -3848,6 +3932,8 @@ namespace FC{
 	*/
 	void QSlotTransferCycleVTMWidgetPrivate::executePM1Transfer()
 	{
+		try {
+
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
@@ -3858,6 +3944,7 @@ namespace FC{
 
 		while (!taskManager.isStopped())
 		{
+			logInform1("Cyclelog", "PM thread started------------------->");
 			Sleep(500);
 			pm_step_once_finished = false;
 
@@ -3973,21 +4060,32 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							robot_selected_arm = 0;
-							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm_auto_step);
-							}
-							else
-							{
-								//下层的
-								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-								//pm_allow_get_put_wafer = false;
-								pm_auto_step = 2000;
-							}
+							////TODO:测试阶段，机械手不去PM放晶圆
+							//if (!wtr->getVacuumEnable())
+							//{
+							//	robot_selected_arm = 0;
+							//	auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
+							//	wtr->startCommand(cmd);
+							//	cmd->wait();
+							//	if (cmd->hasError())
+							//	{
+							//		logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm_auto_step);
+							//	}
+							//	else
+							//	{
+							//		//下层的
+							//		//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+							//		//pm_allow_get_put_wafer = false;
+							//		pm_auto_step = 2000;
+							//	}
+							//}
+							//else
+							//{
+							//	logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							//	pm_auto_step = 2000;
+							//}
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							pm_auto_step = 2000;
 						}
 						else
 						{
@@ -4095,7 +4193,19 @@ namespace FC{
 				}
 
 			}
+			
+			logInform1("Cyclelog", "PM thread finished<-------------------");
 			pm_step_once_finished = true;
+		}
+	
+		}
+		catch (const std::exception& e) {
+			logInform1("Cyclelog", "PM1Transfer thread crashed:", e.what());
+			qCritical() << "PM1Transfer thread crashed:" << e.what();
+		}
+		catch (...) {
+			logInform1("Cyclelog", "PM1Transfer thread crashed: unknown exception");
+			qCritical() << "PM1Transfer thread crashed: unknown exception";
 		}
 	}
 
@@ -4121,88 +4231,100 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::executeUpdateTransferStatus()
 	{
-		while (!taskManager.isStopped())
-		{
-			Sleep(500);
-			update_step_once_finished = false;
+		try {
+			while (!taskManager.isStopped())
+			{
+				logInform1("Cyclelog", "UpdateTransfer thread started------------------->");
+				Sleep(500);
+				update_step_once_finished = false;
 
-			switch (update_auto_step)
-			{
-			case 10:
-			{
-				if (lp1_cycle_one_time_finished && !cycleFinished_lla) {//Lp1的一次Cycle已做完
-					update_auto_step = 1030;
-				}
-				else if (lp2_cycle_one_time_finished && !cycleFinished_llb) {//Lp2的一次Cycle已做完
-					update_auto_step = 1040;
-				}
-				else {
-					Sleep(1000);
-				}
-			}
-			break;
-			case 1030:
-			{
-				finished_time_lla++;
-
-				if (is_lp1_cycle)
+				switch (update_auto_step)
 				{
-					is_lp1_cycle = false;
-				}
-				if (finished_time_lla >= cycle_times_lla)
+				case 10:
 				{
-					//cycle 完成
-					logInform("Cycle", Poco::format("LP1 Cycle次数%d已完成", cycle_times_lla).c_str());
-					finished_time_lla = 0;
-					cycleFinished_lla = true;
-				}
-				else
-				{
-					// 4---> 0
-					efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
-					for (auto& task : efemReturnCompletedTasks)
-					{
-						taskManager.updateTaskStatus(task.taskId,UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+					if (lp1_cycle_one_time_finished && !cycleFinished_lla) {//Lp1的一次Cycle已做完
+						update_auto_step = 1030;
+					}
+					else if (lp2_cycle_one_time_finished && !cycleFinished_llb) {//Lp2的一次Cycle已做完
+						update_auto_step = 1040;
+					}
+					else {
+						Sleep(1000);
 					}
 				}
-				onUpdateCycleInfo();
-				lp1_cycle_one_time_finished = false;
-				update_auto_step = 10;
-			}
-			break;
-			case 1040:
-			{
-				finished_time_llb++;
-				if (is_lp2_cycle) 
-				{
-					is_lp2_cycle = false;
-				}
-				if (finished_time_llb >= cycle_times_llb)
-				{
-					logInform("Cycle", Poco::format("LP2 Cycle次数%d已完成", cycle_times_llb).c_str());
-					finished_time_llb = 0;
-					cycleFinished_llb = true;
-				}
-				else
-				{
-					efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
-					for (auto& task : efemReturnCompletedTasks)
-					{
-						taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
-					}
-				}
-				onUpdateCycleInfo();
-				lp2_cycle_one_time_finished = false;
-				update_auto_step = 10;
-			
-			}
-			break;
-			default:
 				break;
-			update_step_once_finished = true;
-			Sleep(10);
-			}
+				case 1030:
+				{
+					finished_time_lla++;
 
+					if (is_lp1_cycle)
+					{
+						is_lp1_cycle = false;
+					}
+					if (finished_time_lla >= cycle_times_lla)
+					{
+						//cycle 完成
+						logInform("Cycle", Poco::format("LP1 Cycle次数%d已完成", cycle_times_lla).c_str());
+						finished_time_lla = 0;
+						cycleFinished_lla = true;
+					}
+					else
+					{
+						// 4---> 0
+						efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
+						for (auto& task : efemReturnCompletedTasks)
+						{
+							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+						}
+					}
+					onUpdateCycleInfo();
+					lp1_cycle_one_time_finished = false;
+					update_auto_step = 10;
+				}
+				break;
+				case 1040:
+				{
+					finished_time_llb++;
+					if (is_lp2_cycle)
+					{
+						is_lp2_cycle = false;
+					}
+					if (finished_time_llb >= cycle_times_llb)
+					{
+						logInform("Cycle", Poco::format("LP2 Cycle次数%d已完成", cycle_times_llb).c_str());
+						finished_time_llb = 0;
+						cycleFinished_llb = true;
+					}
+					else
+					{
+						efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
+						for (auto& task : efemReturnCompletedTasks)
+						{
+							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+						}
+					}
+					onUpdateCycleInfo();
+					lp2_cycle_one_time_finished = false;
+					update_auto_step = 10;
+
+				}
+				break;
+				default:
+					break;
+					update_step_once_finished = true;
+					Sleep(10);
+				}
+				
+				logInform1("Cyclelog", "UpdateTransfer thread finished<-------------------");
+			}
+		}
+		catch (const std::exception& e) {
+			logInform1("Cyclelog", "UpdateTransfer thread crashed:", e.what());
+			qCritical() << "UpdateTransfer thread crashed:" << e.what();
+		}
+		catch (...) {
+			logInform1("Cyclelog", "UpdateTransfer thread crashed: unknown exception");
+			qCritical() << "UpdateTransfer thread crashed: unknown exception";
 		}
 	}
 
@@ -4218,26 +4340,48 @@ namespace FC{
 		tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-		std::shared_ptr<FortrendLoadLockSubsystem> lk;
+		std::shared_ptr<FortrendLoadLockSubsystem> lk = nullptr;
 
 		bool loadlock_get_vacuum = false;
-		if (llName == "PM1")
+		if (llName == "LLA")
 		{
 			lk = lk1;
-			loadlock_get_vacuum = loadlock1_get_vacuum;
+			//loadlock1_get_vacuum = loadlock_get_vacuum;
 		}
-		else if (llName == "PM2")
+		else if (llName == "LLB")
 		{
 			lk = lk2;
-			loadlock_get_vacuum = loadlock2_get_vacuum;
+			//loadlock2_get_vacuum = loadlock_get_vacuum;
+		}
+		else
+		{
+			logError("cycle", "llName:%s 输入参数不是LL", llName.c_str());
+			return false;
+		}
+		if (lk == nullptr)
+		{
+			return false;
 		}
 		if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 		{
 			logInform("cycle", "大气模式，lk和tm腔室不检测极限真空值!");
 			return true;
 		}
-		switch (preStep)
+
+		robot_auto_step = preStep;
+		while (true)
 		{
+			auto now_time = std::chrono::steady_clock::now();
+			auto elapsed = now_time - start_time;
+
+			if (elapsed >= std::chrono::minutes(30))
+			{
+				logError("cycle", "sub:%s,检测LL真空和TM真空超时", llName.c_str());
+				return false;
+			}
+
+			switch (robot_auto_step)
+			{
 			case 2010:
 			{
 				if (lk->getVacuumValueUpperLimitReachesTheSetValue())
@@ -4246,19 +4390,40 @@ namespace FC{
 				}
 				else
 				{
-					loadlock_get_vacuum = true;
+					if (llName == "LLA")
+					{
+						loadlock1_get_vacuum = true;
+					}
+					else if (llName == "LLB")
+					{
+						loadlock2_get_vacuum = true;
+
+					}
 					robot_auto_step = 2020;
 				}
 			}
 			break;
 			case 2020:
 			{
-				if (loadlock_get_vacuum == false)
+				if (llName == "LLA")
 				{
-					robot_auto_step = 2010;
+					if (loadlock1_get_vacuum == false)
+					{
+						robot_auto_step = 2010;
+					}
+					else {
+						Sleep(100);
+					}
 				}
-				else {
-					Sleep(100);
+				else if (llName == "LLB")
+				{
+					if (loadlock2_get_vacuum == false)
+					{
+						robot_auto_step = 2010;
+					}
+					else {
+						Sleep(100);
+					}
 				}
 			}
 			break;
@@ -4291,7 +4456,7 @@ namespace FC{
 				if (lk->getVacuumValueUpperLimitReachesTheSetValue() &&
 					tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 				{
-					logInform("cycle","lk和tm腔室都达到了极限真空值!");
+					logInform("cycle", "lk和tm腔室都达到了极限真空值!");
 					return true;
 				}
 				else
@@ -4302,6 +4467,8 @@ namespace FC{
 			break;
 			default:
 				break;
+			}
+
 		}
 		return false;
 	}
@@ -6341,10 +6508,10 @@ namespace FC{
 	void QSlotTransferCycleVTMWidget::onPause(){
 		Q_D(QSlotTransferCycleVTMWidget);
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+
 		pm2->setIsRunning(false);
 		d->running = false;
 		d->ispause = true;
-		//ZZX
 		taskManager.stop();
 
 		d->ui->execute_pbt->setEnabled(true);
@@ -6388,11 +6555,8 @@ namespace FC{
 			return;
 		}
 		//ZZX
-		//if (!taskManager.isStopped())
-		//{
-		//	taskManager.stop();
-		//}
 
+		taskManager.stop();//stopped_ = true;
 		d->running = false;
 		d->ispause = false;
 		std::thread thread(&QSlotTransferCycleVTMWidget::resetAction, this);
@@ -6415,8 +6579,8 @@ namespace FC{
 		}
 		d->cycle_times_lla = d->ui->cycle_setting_times_sbx->value(); //LP1循环次数
 		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();//LP2循环次数
-		if (d->sequence_lp1_transfer_wafer.size() == 0 && d->sequence_lp2_transfer_wafer.size() == 0 &&
-			d->sequence_robot_transfer_wafer.size() == 0 && !d->ispause)// && !d->ispause暂停重新启动的情况不需要重新配置
+
+		if (taskManager.getAllTasksSize() == 0 && !d->ispause)// && !d->ispause暂停重新启动的情况不需要重新配置
 		{
 
 			//测试
@@ -6424,17 +6588,17 @@ namespace FC{
 			{
 				UnifiedWaferTask task;
 				task.taskId = 0; //ID
-				task.status = UnifiedWaferTask::Status::COMPLETED;
+				task.status = UnifiedWaferTask::Status::QUEUED;
 				task.taskType = UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER;
 				task.arm = 0;
 				task.source = UnifiedWaferTask::Location::LP1;
-				task.target = UnifiedWaferTask::Location::LLB;
+				task.target = UnifiedWaferTask::Location::LLA;
 				task.target_pm = UnifiedWaferTask::Location::PM1;
 				task.targetSlot = 1;
 				task.sourceSlot = 1;
 				taskManager.addTask(task);
 
-				d->loadlock1_auto_step = 1051;
+				d->loadlock1_auto_step = 410;
 			}
 			else
 			{
@@ -6463,13 +6627,10 @@ namespace FC{
 		d->running = true;
 		pm2->setIsRunning(d->running);
 		d->ispause = false;
-
-		//d->efem_auto_step = 10;
-		
+		taskManager.start();
+		Sleep(500);
 		//新流程线程启动
 		startProcessingThreads();
-		taskManager.start();
-
 
 #if 0
 		std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::startVacuumAction, this);
@@ -6962,6 +7123,49 @@ namespace FC{
 	void QSlotTransferCycleVTMWidget::startProcessingThreads()
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
+
+		//std::thread thd_efem([this] {
+		//	logInform("Cycle", "EFEM thread started------------------->");
+		//	executeEFEMTransfer();
+		//	logInform("Cycle", "EFEM thread finished<-------------------");// 如果没打印说明崩溃在此
+		//});
+		//thd_efem.detach();
+
+		//std::thread thd_LoadLockA([this] {
+		//	logInform("Cycle", " LoadLockA thread started------------------->");
+		//	executeLLATransfer();
+		//	logInform("Cycle", "LoadLockA thread finished<-------------------");
+		//});
+		//thd_LoadLockA.detach();
+
+		//std::thread thd_LoadLockB([this] {
+		//	logInform("Cycle", " LoadLockB thread started------------------->");
+		//	executeLLBTransfer();
+		//	logInform("Cycle", "LoadLockB thread finished<-------------------");
+		//});
+		//thd_LoadLockB.detach();
+
+		//std::thread thd_vacumn([this] {
+		//	logInform("Cycle", " Vacuum thread started------------------->");
+		//	startVacuumAction();
+		//	logInform("Cycle", "Vacuum thread finished<-------------------");
+		//});
+		//thd_vacumn.detach();
+
+		//std::thread thread_pm1([this] {
+		//	logInform("Cycle", " pm1 thread started------------------->");
+		//	executePM1Transfer();
+		//	logInform("Cycle", "pm1 thread finished<-------------------");
+		//});
+		//thread_pm1.detach();
+
+		//std::thread thread_update([this] {
+		//	logInform1("Cycle", " update thread started------------------->");
+		//	executeUpdateTransferStatus();
+		//	logInform1("Cycle", "update thread finished<-------------------");
+		//});
+		//thread_update.detach();
+
 
 		std::thread thd_efem(&QSlotTransferCycleVTMWidget::executeEFEMTransfer, this);
 		thd_efem.detach();
