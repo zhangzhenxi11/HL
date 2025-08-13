@@ -1520,7 +1520,8 @@ namespace FC{
 
 	void QFortrendStationStatusVTMWidget::updateCassetteAnimation(const std::string &name, bool isBoxOpened, const std::vector<Cassette::Mapping> &mapping) {
 		Q_D(QFortrendStationStatusVTMWidget);
-		if (name == d->wtr->getName()){
+		if (name == d->wtr->getName())
+		{
 			if (mapping.size()>=1 && mapping[0] == Cassette::Present){
 			logInform(d->wtr->getName().c_str(),"updateCassetteAnimation wtr 1 Present");
 			d_ptr->ui->robot_widget->setIsWaferArm1(true);
@@ -1544,19 +1545,6 @@ namespace FC{
 			}
 			
 		}
-		//else if (name == d->aligner->getName()){
-		//	//logInform("Test", "setIsWaferAligner start");
-		//	if (mapping.empty())return;
-
-		//	if (mapping[0] == Cassette::Present){
-		//		//logInform("Test", "setIsWaferAligner true");
-		//		d->ui->tm_widget->setIsWaferAligner(true);
-		//	}
-		//	else{
-		//		//logInform("Test", "setIsWaferAligner false");
-		//		d->ui->tm_widget->setIsWaferAligner(false);
-		//	}
-		//}
 		else if (name == d->pm2->getName()){
 			if (mapping.empty())return;
 
@@ -1565,6 +1553,36 @@ namespace FC{
 			}
 			else{
 			     d->ui->pm2_widget->setWafer(false);
+			}
+		}
+		else if (name == d->pm1->getName()) {
+			if (mapping.empty())return;
+
+			if (mapping[0] == Cassette::Present) {
+				d->ui->pm1_widget->setWafer(true);
+			}
+			else {
+				d->ui->pm1_widget->setWafer(false);
+			}
+		}
+		else if (name == d->pm3->getName()) {
+			if (mapping.empty())return;
+
+			if (mapping[0] == Cassette::Present) {
+				d->ui->pm3_widget->setWafer(true);
+			}
+			else {
+				d->ui->pm3_widget->setWafer(false);
+			}
+		}
+		else if (name == d->pm4->getName()) {
+			if (mapping.empty())return;
+
+			if (mapping[0] == Cassette::Present) {
+				d->ui->pm4_widget->setWafer(true);
+			}
+			else {
+				d->ui->pm4_widget->setWafer(false);
 			}
 		}
 

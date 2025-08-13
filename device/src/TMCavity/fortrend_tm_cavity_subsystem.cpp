@@ -444,18 +444,17 @@ namespace FC{
 			//		io_changed = true;
 			//	}
 			//}
+			//前级管道真空值
+			if (d->backing_pipeline_vacuum_read_value_address != "")
+			{
+				double buff_vacuum = 0.0;
+				if (readDouble(d->backing_pipeline_vacuum_read_value_address, buff_vacuum) && d->backing_pipeline_vacuum_current_value != buff_vacuum)
+				{
+					d->backing_pipeline_vacuum_current_value = buff_vacuum;
+					io_changed = true;
+				}
+			}
 
-			//if (d->backing_pipeline_vacuum_read_value_address != "")
-			//{
-			//	double buff_vacuum = 0.0;
-			//	if (readDouble(d->backing_pipeline_vacuum_read_value_address, buff_vacuum) &&
-			//		d->backing_pipeline_vacuum_current_value != buff_vacuum)
-			//	{
-
-			//		d->backing_pipeline_vacuum_current_value = buff_vacuum;
-			//		io_changed = true;
-			//	}
-			//}
 #pragma region 更新PM门阀状态
 
 			bool pm_flag = false;
@@ -563,9 +562,9 @@ namespace FC{
 			//bool close_inserting_plate_valve_value = false;
 
 			flag = d->inserting_plate_valve_opend;
-			if (d->open_inserting_plate_valve_address!=""&&readBit(d->open_inserting_plate_valve_address, d->inserting_plate_valve_opend))
+			if (d->open_inserting_plate_valve_address != "" && readBit(d->open_inserting_plate_valve_address, d->inserting_plate_valve_opend))
 			{
-				if (flag != d->angle_valve_opend)
+				if (flag != d->inserting_plate_valve_opend)
 					io_changed = true;
 			}
 
@@ -578,7 +577,7 @@ namespace FC{
 				int buff_vacuum_pressure_gage_state = -1;
 				if (readBit(d->tm_cavity_vacuum_pressure_gage_address, buff_vacuum_pressure_gage))
 				{
-					buff_vacuum_pressure_gage_state = (buff_vacuum_pressure_gage)? 1:0;	
+					buff_vacuum_pressure_gage_state = (buff_vacuum_pressure_gage)? 1:0;	//true:大气，false:真空
 				}
 				if (buff_vacuum_pressure_gage_state != d->tm_cavity_vacuum_pressure_gage_state)
 				{
@@ -735,8 +734,8 @@ namespace FC{
 		if (config->has("Update"))
 		{
 			d->plc_mode_address = config->getString("Update.PLC_Mode_address","");
-			d->diaphragm_valve_address1 = config->getString("Update.diaphragm_valve_address1", "");
-			d->diaphragm_valve_address2 = config->getString("Update.diaphragm_valve_address2", "");
+			d->diaphragm_valve_address1 = config->getString("Update.diaphragm_valve_address1", "");//TM慢充隔膜阀
+			d->diaphragm_valve_address2 = config->getString("Update.diaphragm_valve_address2", "");//TM快充隔膜阀
 			d->high_vacuum_baffle_value_address = config->getString("Update.high_vacuum_baffle_value_address", "");
 			d->open_angle_valve_address = config->getString("Update.open_angle_valve_address", "");
 			d->close_angle_valve_address = config->getString("Update.close_angle_valve_address", "");

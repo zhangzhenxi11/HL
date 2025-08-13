@@ -290,7 +290,7 @@ namespace FC{
 		d->door_lock_valve_ckb->setChecked(getSubsystem()->TMCavityCoverSafetyLock());
 
 		d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(getSubsystem()->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
-		d->ui->molecule_pipeline_value_let->setText(QString::number(getSubsystem()->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
+		d->ui->molecule_pipeline_value_let->setText(QString::number(getSubsystem()->getBackingPipelineVacuumValue(), 'e', 3).append("Pa"));
 
 		//bool res = false;
 		//int length = 0;

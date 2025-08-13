@@ -31,10 +31,13 @@
 #pragma execution_character_set("utf-8")
 #endif
 
+void  TestDumpGeneration()
+{
+	int* p = NULL;
+	*p = 5;
+}
+
 namespace FC{
-
-
-
 	/**
 	* LoadLockResetCommand
 	*/
@@ -42,10 +45,7 @@ namespace FC{
 		:KeyencePlcCommandExecuter(helper){
 
 
-
-
 	};
-
 
 	/**
 	* return true if success else false.
@@ -54,27 +54,15 @@ namespace FC{
 		FortrendLoadLockSubsystem* sub = dynamic_cast<FortrendLoadLockSubsystem*>(getSubsystem());
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 
+		////测试dump
+		//TestDumpGeneration();
 		for (auto robot : sub->getRobots()){
 			if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("机械手: %s 状态不在正常状态", robot->getName()), this);
 			}
 		}
-		/*if (getSubsystem()->getName()=="LLA"){
-			auto smif = getSubsystem()->getKernel()->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
-			if (smif && smif->getState() != IKernelSubSystem::State::SUB_NORMAL){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 状态不在正常状态", smif->getName()), this);
-			}
-		}
-		else{
-			auto smif = getSubsystem()->getKernel()->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
-			if (smif && smif->getState() != IKernelSubSystem::State::SUB_NORMAL){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 状态不在正常状态", smif->getName()), this);
-			}
-		}*/
-		
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-
 		//fill params
 		std::string start_address = command_config->getString("start_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
@@ -100,6 +88,10 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到复位命令地址错误", sub->getName()), this);
 		}
+	
+
+
+
 
 		return IKernelCommand::RunResult::RUN_OK;
 	}

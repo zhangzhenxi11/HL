@@ -102,18 +102,20 @@ namespace FC{
 		bool diaphragm_valve_2_value = false;
 		if (readBit(diaphragm_valve_address1, diaphragm_valve_1_value))
 		{
-			if (diaphragm_valve_1_value )
-			{
-				sub->setSlowDiaphragmValveOpend(true);
-			}
+			//2025-8-13 注释
+			//if (diaphragm_valve_1_value )
+			//{
+			//	sub->setSlowDiaphragmValveOpend(true);
+			//}
 			
 		}
 		if (readBit(diaphragm_valve_address2, diaphragm_valve_2_value))
 		{
-			if (diaphragm_valve_2_value)
-			{
-				sub->setFastDiaphragmValveOpend(true);
-			}
+			//2025-8-13 注释
+			//if (diaphragm_valve_2_value)
+			//{
+			//	sub->setFastDiaphragmValveOpend(true);
+			//}
 		}
 		bool open_angle_valve_value = false;
 		bool close_angle_valve_value = false;

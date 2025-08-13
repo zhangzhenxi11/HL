@@ -131,7 +131,6 @@ namespace FC{
 		int getVacuumPressureGageState()const;
 
 		bool getVacuumValueReachesTheSetValue()const;
-
 		bool getVacuumValueUpperLimitReachesTheSetValue()const;
 
 

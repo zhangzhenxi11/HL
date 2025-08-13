@@ -51,6 +51,7 @@ namespace FC{
 
 
 		QCheckBox* cassette_door_ckb = 0, *tm_cavity_door_ckb = 0, *slow_diaphragm_valve_ckb = 0, *fast_diaphragm_valve_ckb = 0, *ultrahigh_vacuum_baffle_valve_ckb = 0, *inserting_plate_value_ckb = 0, *angle_valve_ckb = 0;
+		//QCheckBox* vacuum_pressure_gage_ckb = 0;
 		//QCheckBox* present_sensor_left_ckb = 0, *present_sensor_right_ckb = 0, *protruding_sensor_ckb = 0;
 		QLineEdit *current_vacuumvalue_let = 0;
 	};
@@ -106,7 +107,7 @@ namespace FC{
 		connect(d->ui->moveorigin, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onMoveToOrigin);
 		connect(d->ui->movetoslot_efem_btn, &QAbstractButton::clicked, this, &QLoadLockSubsystemWidget::onMoveToSlotEFEM);*/
 		
-		d->ui->vacuum_pressure_gage_ckb->hide();
+		//d->ui->vacuum_pressure_gage_ckb->hide();
 	}
 
 	QLoadLockSubsystemWidget::~QLoadLockSubsystemWidget(){
@@ -171,6 +172,7 @@ namespace FC{
 		d->slow_diaphragm_valve_ckb = new QCheckBox("慢充隔膜阀");
 		d->fast_diaphragm_valve_ckb = new QCheckBox("快充隔膜阀");
 		d->angle_valve_ckb = new QCheckBox("角阀");
+		//d->vacuum_pressure_gage_ckb = new QCheckBox("真空压力表");
 
 		//d->ultrahigh_vacuum_baffle_valve_ckb->setObjectName("io_object");
 		//d->inserting_plate_value_ckb->setObjectName("io_object");
@@ -179,6 +181,7 @@ namespace FC{
 		d->slow_diaphragm_valve_ckb->setObjectName("io_object");
 		d->fast_diaphragm_valve_ckb->setObjectName("io_object");
 		d->angle_valve_ckb->setObjectName("io_object");
+		//d->vacuum_pressure_gage_ckb->setObjectName("io_object");
 
 		//d->ultrahigh_vacuum_baffle_valve_ckb->setEnabled(false);
 		//d->inserting_plate_value_ckb->setEnabled(false);
@@ -187,6 +190,7 @@ namespace FC{
 		d->slow_diaphragm_valve_ckb->setEnabled(false);
 		d->fast_diaphragm_valve_ckb->setEnabled(false);
 		d->angle_valve_ckb->setEnabled(false);
+		//d->vacuum_pressure_gage_ckb->setEnabled(false);
 
 		d->ui->vacuum_pressure_gage_ckb->setObjectName("io_object");
 		d->ui->vacuum_pressure_gage_ckb->setEnabled(false);
@@ -197,6 +201,8 @@ namespace FC{
 		d->ui->operation_state_gridLayout->addWidget(d->angle_valve_ckb, 0, 2);
 		d->ui->operation_state_gridLayout->addWidget(d->slow_diaphragm_valve_ckb, 1, 0);
 		d->ui->operation_state_gridLayout->addWidget(d->fast_diaphragm_valve_ckb, 1, 1);
+
+		d->ui->operation_state_gridLayout->addWidget(d->ui->vacuum_pressure_gage_ckb, 2, 0);
 		//d->ui->operation_state_gridLayout->addWidget(d->ultrahigh_vacuum_baffle_valve_ckb, 1, 2);
 		//d->ui->operation_state_gridLayout->addWidget(d->inserting_plate_value_ckb, 2, 0);
 
@@ -416,6 +422,7 @@ namespace FC{
 
 		d->slow_diaphragm_valve_ckb->setChecked(getSubsystem()->getSlowDiaphragmValveOpend());
 		d->fast_diaphragm_valve_ckb->setChecked(getSubsystem()->getFastDiaphragmValveOpend());
+		/*d->vacuum_pressure_gage_ckb->setChecked(getSubsystem()->getVacuumPressureGageState() == 1);*/
 
 		//d->ultrahigh_vacuum_baffle_valve_ckb->setChecked(getSubsystem()->getHeightVacuumBaffleValveOpend());
 		//d->inserting_plate_value_ckb->setChecked(getSubsystem()->getInsertingPlateValveOpend());

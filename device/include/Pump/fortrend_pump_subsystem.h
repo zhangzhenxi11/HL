@@ -48,8 +48,6 @@ public:
 	virtual bool getInput(int index)const { return false; };
 	virtual std::string getInputName(int index)const { return ""; };
 	virtual std::string getOutputName(int index)const { return ""; };
-	
-	
 	virtual std::shared_ptr<KernelSubsystemResetCommand> createResetCommand()const override;
 	virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
 	virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;
@@ -60,9 +58,11 @@ public:
 	std::shared_ptr<PumpMechanicalOpenCommand> createMechanicalOpenCommand()const;
 	std::shared_ptr<PumpMolecularCloseCommand> createMolecularCloseCommand(std::string name)const;
 	std::shared_ptr<PumpMolecularOpenCommand> createMolecularOpenCommand(std::string name)const;
+
 	std::shared_ptr<PumpOpenLoadLock1AutoVacuumCommand> createOpenLoadLock1AutoVacuumCommand() const;//LL1打开真空（抽真空）
 	std::shared_ptr<PumpOpenLoadLock2AutoVacuumCommand> createOpenLoadLock2AutoVacuumCommand() const;//LL2打开真空（抽真空）
 	std::shared_ptr<PumpOpenTMCavityAutoVacuumCommand> createOpenTMCavityAutoVacuumCommand() const;//TM打开真空（抽真空）
+
 	std::shared_ptr<PumpClearErrorCommand> createClearErrorCommand()const;
 
 public:
@@ -89,6 +89,10 @@ public:
 	bool getMechanicalPumpOpened()const;
 	void setMechanicalPumpOpened(const bool value);
 
+	bool getProcessAbort()const;
+	void setProcessAbort(const bool flag);
+
+
 	//干泵报警
 	bool getMechanicalPumpHasAlarm()const;
 	bool getMechanicalPumpHasWarn()const;
@@ -97,6 +101,8 @@ public:
 	bool getMechanicalPumpRunningState()const;
 	//acc 加速状态
 	bool getMechanicalPumpAcc()const;
+
+
 
 
 	//是否打开

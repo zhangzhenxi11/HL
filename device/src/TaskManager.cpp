@@ -438,12 +438,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockPendingTasks(std::
         });
         if (it != tasks_.end()) 
         {
-            logInform("TaskManager", "找到了LOADLOCK_TRANSFER/QUEUED 任务.taskID:%d",(*it).taskId);
             result.push_back(*it);
-        }
-        else
-        {
-            logWarn("TaskManager", "没找到LOADLOCK_TRANSFER/QUEUED 任务.taskID:%d", (*it).taskId);
         }
     }
 
@@ -586,12 +581,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockPendingTasks()
         });
         if (it != tasks_.end())
         {
-            logInform("TaskManager", "找到了LOADLOCK_TRANSFER/QUEUED 任务.taskID:%d", (*it).taskId);
             result.push_back(*it);
-        }
-        else
-        {
-            logWarn("TaskManager", "没找到LOADLOCK_TRANSFER/QUEUED 任务.taskID:%d", (*it).taskId);
         }
     }
 
@@ -660,6 +650,12 @@ bool FC::TaskManager::waitForTasks(int timeoutMs)
 {
     std::unique_lock<std::mutex> lock(mutex_);
     return cv_.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return !tasks_.empty(); });//不为空返回true
+}
+
+bool FC::TaskManager::waitLLBForTasks(int timeoutMs)
+{
+    std::unique_lock<std::mutex> lock(mutex_);
+    return cv_.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return !tasks_.size() > 2; });//不为空返回true
 }
 
 bool FC::TaskManager::hasTasks()
@@ -742,7 +738,7 @@ void FC::TaskManager::updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type
         {
             it->taskType = type;
             it->status = status;
-            logInform("TaskManger", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, (*it).typeToString(type).c_str(), (*it).statusToString(status).c_str());
+            logInform("TaskManager", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, (*it).typeToString(type).c_str(), (*it).statusToString(status).c_str());
         }
     }
 
@@ -759,7 +755,7 @@ void FC::TaskManager::updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type
     //    if (it != tasks_.end()) {
     //    
     //        auto task = (*it);
-    //        logInform("TaskManger", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, task.typeToString(task.taskType).c_str(), task.statusToString(task.status).c_str());
+    //        logInform("TaskManager", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, task.typeToString(task.taskType).c_str(), task.statusToString(task.status).c_str());
     //        break;
     //    };
     //}

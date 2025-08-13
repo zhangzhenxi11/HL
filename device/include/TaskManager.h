@@ -76,11 +76,11 @@ namespace FC {
 
         //类似写实时的三色灯逻辑，只是每个步骤是组合动作而已
 
-        //状态转变  第一次循环0---> 1---> 5（2） ---> 6  ---> 9---> 10 --->11 --->7 --->8（3）
+        //状态转变 
+        // 第一次循环  0---> 1---> 5（2） ---> 6  ---> 9---> 10 --->11 --->7 --->8（3）
         // 第二次循环  4---> 0---> 1---> 5（2） ---> 6  ---> 9---> 10 --->11--->7 --->8（3）
 
-         /*################################## EFEM ###########################################################*/
-
+         /*-----------------------------------------EFEM-------------------------------------------------------------*/
         //获取待EFEM 初始状态的任务
         std::vector<UnifiedWaferTask> getEfemUnkownStatusTasks();//0
 
@@ -96,28 +96,19 @@ namespace FC {
         //获取EFEM下料完成的任务，(成功回到LP)   下次循环重新更新为EfemPendingTasks
         std::vector<UnifiedWaferTask> getEfemRuturnCompletedTasks();//4
 
-        /*################################## LoadLock ########################################################*/
+        /*-----------------------------------------LoadLock-------------------------------------------------------------*/
         //获取Loadlock待工艺的任务   （破完真空,casste门开,efem放到LL槽上，待抽真空，待取走的晶圆） QUEUED 
         std::vector<UnifiedWaferTask> getLoadLockPendingTasks(std::string LLName);//5
 
-        //获取Loadlock工艺完成的任务：（抽完真空，开传输门后,csr取到手, 下一步是传到Pm腔待加工的晶圆数量  COMPLETED）
+        //获取Loadlock工艺完成的任务：（抽完真空，开传输门后,待csr取片, 下一步是传到Pm腔待加工的晶圆数量  COMPLETED）
         std::vector<UnifiedWaferTask> getLoadLockCompletedTasks(std::string LLName);//6
 
 
-        //获取Loadlock待下料的任务：（检查真空,开传输门后，做完PM工艺后的 待放到LL的晶圆数量  从PM腔收集的QUEUED）
+        //获取Loadlock待下料的任务：（检查真空,开传输门后，做完PM工艺后的,待放到LL的晶圆数量  从PM腔收集的QUEUED）
         std::vector<UnifiedWaferTask> getLoadLockReturnPendingTasks(std::string LLName);//7
 
         //获取Loadlock下料完成的任务 (做完PM工艺后的,放回到LL的晶圆数量)
         std::vector<UnifiedWaferTask> getLoadLockReturnCompletedTasks(std::string LLName);//8
-
-        /*################################## PM ###########################################################*/
-        //获取PM待工艺的任务 （csr已取到手片子，待放到PM取放片位的片子） QUEUED
-        std::vector<UnifiedWaferTask> getPMPendingTasks(std::string PM); //9
-
-        std::vector<UnifiedWaferTask> getPMProcessTasks(std::string PM); //10
-
-        //获取PM工艺完成的任务 （工艺结束后，回到取放片位，待机械手取走的片子） COMPLETED
-        std::vector<UnifiedWaferTask> getPMCompletedTasks(std::string PM); //11
 
 
         //获取Loadlock待工艺的任务   
@@ -133,9 +124,19 @@ namespace FC {
         //获取Loadlock下料完成的任务
         std::vector<UnifiedWaferTask> getLoadLockReturnCompletedTasks();//8
 
+        /*-----------------------------------------PM-------------------------------------------------------------*/
+        //获取PM待工艺的任务 （csr已取到手片子，待放到PM取放片位的片子） QUEUED
+        std::vector<UnifiedWaferTask> getPMPendingTasks(std::string PM); //9
+
+        std::vector<UnifiedWaferTask> getPMProcessTasks(std::string PM); //10
+
+        //获取PM工艺完成的任务 （工艺结束后，回到取放片位，待机械手取走的片子） COMPLETED
+        std::vector<UnifiedWaferTask> getPMCompletedTasks(std::string PM); //11
+
         // 等待新任务（带超时）
         bool waitForTasks(int timeoutMs = 100);
 
+        bool waitLLBForTasks(int timeoutMs = 100);
         // 检查是否有任务
         bool hasTasks();
 

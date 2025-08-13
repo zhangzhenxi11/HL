@@ -36,6 +36,7 @@ private slots:
 	void onMolecularCloseLLB();
 	void onMolecularOpenTM();
 	void onMolecularCloseTM();
+
 	void onOpenLoadLock1AutoVacuum();
 	void onOpenLoadLock2AutoVacuum();
 	void onOpenTMCavityAutoVacuum();

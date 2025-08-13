@@ -101,7 +101,7 @@ namespace FC{
 			std::string command = "QRY:LOAD/A;";
 			sendRequest(command);
 
-			std::string res = recvResponse(timeout);
+			std::string res = recvResponseRobotMessage(timeout);
 
 			if (res == "RPS:LOAD/ON;")//有片
 			{
@@ -115,8 +115,6 @@ namespace FC{
 			}
 			else if (res == "LOAD A ?")
 			{
-				//robot->setObject(0, false);
-				//robot_cass->setMapping(1, Cassette::Mapping::Empty);
 				robot->setObject(0, false);
 				robot_cass->setMapping(1, Cassette::Mapping::Unknown);
 			}

@@ -84,16 +84,8 @@ namespace FC{
 		:KeyencePlcCommandExecuter(helper),
 		d(new PumpOpenLoadLock1AutoVacuumCommandPrivate(this))
 		{
-		// 使用 this 指针绑定成员函数
-		//stateHandlers = std::unordered_map<int, StateHandler>{
-		//	{10,    std::bind(&PumpOpenLoadLock1AutoVacuumCommand::handleStep10, this)},
-		//	{100,   std::bind(&PumpOpenLoadLock1AutoVacuumCommand::handleStep100, this)},
-		//	{1010,  std::bind(&PumpOpenLoadLock1AutoVacuumCommand::handleStep1010, this)},
-		//	{10000, std::bind(&PumpOpenLoadLock1AutoVacuumCommand::handleStep10000, this)}
-		//};
-		initializeHLStateHandlers();
-				
-	};
+			initializeHLStateHandlers();		
+		};
 
 	bool PumpOpenLoadLock1AutoVacuumCommand::executeCommand(std::shared_ptr<IKernelSubSystem> subsystem, 
 		std::shared_ptr<IKernelCommand> cmd, int currentStep,const std::string errorMessage)
@@ -161,34 +153,37 @@ namespace FC{
 	{
 		/*
 		* 前提：例如loadLockA 抽真空：casste门，tM传输腔门，快慢隔膜阀，其他腔体的角阀是否关闭
-		*
 		1.打开干泵							 handleStep10  
 		2.打开对应的角阀						 handleStep1310：判断是否达到粗抽真空设定值，超时时间1小时，超时报警。最后结束
 		3.关闭当前腔体的隔膜阀				 handleStep1030
 		4.检查casste门和LL-TM腔体门是否关闭    handleStep1045 ,handleStep1040
-		5.关闭其他腔体的角阀					 handleStep1050,handleStep1060
+		5.关闭其他腔体的角阀					 handleStep1050, handleStep1060
 		6.抽到达标真空值结束                   handleStep1100  handleStep5210
 		*/
+
 		/*
 		loadLockA 抽真空：
-		1.casste门，tM传输腔门，快慢隔膜阀，loadlockb腔体的角阀,TM角阀是否关闭
-		2.打开干泵
-		3.打开loadLockA腔体的角阀（先慢后快）
-		4.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
-		5.最后结束，打印结束日志
+		1.关闭casste门，   handleStep1045
+		2.关闭tm传输腔门， handleStep1040
+		3.关闭快慢隔膜阀， handleStep1030
+		4.TM角阀关闭,        handleStep1050
+		5.关闭loadlockb腔体的角阀 handleStep1060
+		6.打开干泵		 handleStep10
+		7.打开loadLockA腔体的角阀（先慢后快）  handleStep1310
+		8.(判断是否达到粗抽真空设定值)，抽到真空上限值（1pa）,超时时间1小时，超时报警  handleStep1100
+		9.最后结束，打印结束日志  handleStep5210,handleStep10000
 		*/
 
-
 		stateHandlers = std::unordered_map<int, StateHandler>{
-			{1045,[this]() {return handleStep1045(); }},
-			{1040,[this]() {return handleStep1040(); }},
-			{1030,[this]() {return handleStep1030(); }},
-			{1050,[this]() {return handleStep1050(); }},
-			{1060,[this]() {return handleStep1060(); }},
-			{10, [this]() { return handleStep10(); }},
-			{1310,[this]() { return handleStep1310(); }},
-			{1100,[this]() {return handleStep1100(); }},
-			{5210,[this]() {return handleStep5210(); }},
+			{1045,  [this]() {return handleStep1045(); }},
+			{1040,  [this]() {return handleStep1040(); }},
+			{1030,  [this]() {return handleStep1030(); }},
+			{1050,  [this]() {return handleStep1050(); }},
+			{1060,  [this]() {return handleStep1060(); }},
+			{10,    [this]() { return handleStep10(); }},
+			{1310,  [this]() { return handleStep1310(); }},
+			{1100,  [this]() {return handleStep1100(); }},
+			{5210,  [this]() {return handleStep5210(); }},
 			{10000, [this]() { return handleStep10000(); }}
 		};
 	}
@@ -244,6 +239,7 @@ namespace FC{
 		//fill params
 		int timeout = command_config->getInt("timeout", 2 * 60 * 60);
 		timeout = timeout * 1000;
+
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开%s 真空命令超时参数错误", d->pump->getName()), this);
 		}
@@ -254,12 +250,20 @@ namespace FC{
 		//int step = 10;
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
 		
-		int robot_auto_step = 10;
+		int robot_auto_step = 1045;
 		//查表调用状态处理函数
 		while (loop)
 		{
+			if (d->pump->getProcessAbort()) {d->pump->setProcessAbort(false);
+				
+				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止", d->lk1->getName()).c_str());
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
+
+				return IKernelCommand::RunResult::RUN_OK;
+			};
 			auto it = stateHandlers.find(robot_auto_step);
-			if (it == stateHandlers.end()) {
+			if (it == stateHandlers.end())
+			{
 				d->ret = IKernelCommand::RunResult::RUN_FAILD;
 				logError(d->pump->getName().c_str(), Poco::format("未知的状态码：%s", std::to_string(robot_auto_step)).c_str());
 				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10001, Poco::format("打开%s真空命令,执行到未知的状态码,逻辑错误", d->lk1->getName())));
@@ -418,7 +422,8 @@ namespace FC{
 			{
 				//关闭隔膜阀
 				auto cmd = d->lk1->createCloseDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Both);
-				if (!executeCommand(d->lk1, cmd, step, errorMessage)) {
+				if (!executeCommand(d->lk1, cmd, step, errorMessage))
+				{
 					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
 					step = 10000;
 				}
@@ -576,7 +581,7 @@ namespace FC{
 
 		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk2->getAngleValveOpend() && d->lk1->getVacuumValue() > 300)
+			if (d->lk2->getAngleValveOpend())
 			{
 				auto cmd = d->lk2->createCloseAngleValveCommand();
 				if (!executeCommand(d->lk2, cmd, step, errorMessage)) 
@@ -644,20 +649,22 @@ namespace FC{
 		auto elapsed = now_time - d->start_time;
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
-		//是否达到粗抽压力
-		if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue() == false)
+
+		//是否达到真空上限值
+		if (d->lk1->getVacuumValueUpperLimitReachesTheSetValue())
 		{
 			//达到
 			step = 5210;
 		}
 		else
 		{
+			Sleep(100);
+
 			if (elapsed >= d->timeout) {
 			
 				//超时
 				lla_loop_count = 0;
-				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待loadlockA腔体压力小于1Pa,当前压力：%f",
-					getName(), d->lk1->getVacuumValue()).c_str());
+				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待loadlockA腔体压力小于1Pa,当前压力：%f",getName(), d->lk1->getVacuumValue()).c_str());
 
 				addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
 				step = 5210;//退出
@@ -666,7 +673,6 @@ namespace FC{
 			{
 				auto remaining = d->timeout - elapsed;
 				auto sec = std::chrono::duration_cast<std::chrono::seconds>(remaining).count();
-				//std::cout << "\r剩余时间: " << sec << " 秒" << std::flush;
 				//继续当前函数
 				step = 1100;
 			}	
@@ -852,7 +858,7 @@ namespace FC{
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1310()
 	{
 		int step = 1310;
-		std::string errorMessage = "打开角阀";
+		std::string errorMessage = "打开LLA角阀";
 		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
 			if (d->lk1->getAngleValveOpend() == false)
@@ -862,7 +868,7 @@ namespace FC{
 				cmd->wait();
 				if (cmd->hasError())
 				{
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), "打开角阀");
+					addCommandExecutionAlarmMessage(step, d->lk1->getName(), "打开LLA角阀");
 					step = 10000;
 				}
 				else

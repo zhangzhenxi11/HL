@@ -51,6 +51,8 @@ public:
 	bool with_wafer_mode = false;				 //带晶圆模式
 	bool mechanical_pump_opened = false;		 //机械泵打开状态
 
+	bool isAbort = false; //终止抽真空流程
+
 	bool molecular_pump_opened_lla = false;			 //分子泵打开状态
 	bool molecular_pump_opened_llb = false;			 //分子泵打开状态
 	bool molecular_pump_opened_tm = false;			 //分子泵打开状态
@@ -195,15 +197,6 @@ void FortrendPumpSubsystem::onProcess(){
 	{
 		bool io_changed = false;
 
-		//bool isAlarm = false;
-		//if (d->mechanical_pump_alarm_address != "" && readBit(d->mechanical_pump_alarm_address, isAlarm))
-		//{
-		//	if (d->mechanical_pump_isAlarm != isAlarm)
-		//	{
-		//		d->mechanical_pump_isAlarm = isAlarm;
-		//		io_changed = true;
-		//	}	
-		//}
 		bool isWarn = false;
 		if (d->mechanical_pump_warn_address != "" && readBit(d->mechanical_pump_warn_address, isWarn))
 		{
@@ -213,16 +206,6 @@ void FortrendPumpSubsystem::onProcess(){
 				io_changed = true;
 			}	
 		}
-
-		//bool isAcc = false;
-		//if (d->mechanical_pump_acc_address != "" && readBit(d->mechanical_pump_acc_address, isAcc))
-		//{
-		//	if (d->mechanical_pump_isAccPresence != isAcc)
-		//	{
-		//		d->mechanical_pump_isAccPresence = isAcc;
-		//		io_changed = true;
-		//	}
-		//}
 
 		bool isRunning = false;
 		if (d->mechanical_pump_running_address != "" && readBit(d->mechanical_pump_running_address, isRunning))
@@ -481,9 +464,8 @@ void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguratio
 	configKeyencePlc(config);
 	if (config->has("Update"))
 	{
-		//d->mechanical_pump_alarm_address = config->getString("Update.MechanicalPumpAlarmAddress", "MR30403");
-		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR30401");
-		d->mechanical_pump_warn_address = config->getString("Update.MechanicalPumpWarnAddress","");
+		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR35313");
+		d->mechanical_pump_warn_address = config->getString("Update.MechanicalPumpWarnAddress","MR35312");
 	}
 	if (config->has("IsVacuum")){
 		d->isVacuum = config->getBool("IsVacuum", false);
@@ -663,6 +645,16 @@ void FortrendPumpSubsystem::setMechanicalPumpOpened(const bool value){
 		AbstractIOSubsystem::emitAttributeChanged(this);
 	}
 	
+}
+
+bool FortrendPumpSubsystem::getProcessAbort() const
+{
+	return d->isAbort;
+}
+
+void FortrendPumpSubsystem::setProcessAbort(const bool flag)
+{
+	d->isAbort = flag;
 }
 
 /*

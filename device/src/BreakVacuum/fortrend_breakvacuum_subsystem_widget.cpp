@@ -128,7 +128,7 @@ namespace FC{
 		QObject::connect(d->ui->gmfk_llb, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onLLBGMFKClicked);
 		QObject::connect(d->ui->gmfm_llb, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onLLBGMFMClicked);
 
-		QObject::connect(d->ui->open_loadlock1_break_vacuum_btn, &QAbstractButton::clicked, this, &QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand);//一键抽真空
+		QObject::connect(d->ui->open_loadlock1_break_vacuum_btn, &QAbstractButton::clicked, this, &QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand);//
 		QObject::connect(d->ui->open_loadlock2_break_vacuum_btn, &QAbstractButton::clicked, this, &QBreakVacuumSubsystemWidget::onOpenLoadLock2AutoBreakVacuumCommand);//
 		QObject::connect(d->ui->open_tm_cavity_break_vacuum_btn, &QAbstractButton::clicked, this, &QBreakVacuumSubsystemWidget::onOpenTMCavityAutoBreakVacuumCommand);//
 		
@@ -477,10 +477,10 @@ namespace FC{
 			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位", d->tm->getName().c_str());
 			return;
 		}
-		KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
-		cmd->setOrigin("GUI");
-		cmd->addListener(d);
-		d->pump->startCommand(cmd);
+		//KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
+		//cmd->setOrigin("GUI");
+		//cmd->addListener(d);
+		//d->pump->startCommand(cmd);
 	}
 	void QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);

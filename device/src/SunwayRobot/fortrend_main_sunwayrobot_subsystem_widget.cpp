@@ -310,7 +310,7 @@ namespace FC{
 		}
 
 		//update awc record data
-		auto data = getSubsystem()->getAWCRecordData(1);
+		auto data = getSubsystem()->getAWCRecordData();
 		/*d->ui->pm1_awc_r_dsb->setValue(data.R);
 		d->ui->pm1_awc_t_dsb->setValue(data.T);
 		d->ui->pm1_awc_x_dsb->setValue(data.X);
@@ -319,8 +319,8 @@ namespace FC{
 		data = getSubsystem()->getAWCRecordData(1);*/
 		d->ui->pm2_awc_r_dsb->setValue(data.R);
 		d->ui->pm2_awc_t_dsb->setValue(data.T);
-		d->ui->pm2_awc_x_dsb->setValue(data.X);
-		d->ui->pm2_awc_y_dsb->setValue(data.Y);
+		//d->ui->pm2_awc_x_dsb->setValue(data.X);
+		//d->ui->pm2_awc_y_dsb->setValue(data.Y);
 
 		/*data = getSubsystem()->getAWCRecordData(2);
 		d->ui->pm3_awc_r_dsb->setValue(data.R);

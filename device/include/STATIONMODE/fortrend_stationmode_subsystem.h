@@ -34,7 +34,6 @@ public:
      virtual bool getInput(int index)const;
      virtual std::string getInputName(int index)const;
      virtual std::string getOutputName(int index)const;
-
      virtual std::shared_ptr<KernelSubsystemResetCommand> createResetCommand()const override;
      virtual std::shared_ptr<KernelSubsystemUpdateCommand> createUpdateCommand() const override;
      virtual std::shared_ptr<AbstractOutPutCommand>  createOutputCommand(int channel, bool stat)const override;

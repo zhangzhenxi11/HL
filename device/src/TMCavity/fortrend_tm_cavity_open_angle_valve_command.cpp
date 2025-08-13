@@ -109,10 +109,10 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
 					Poco::format("前级泵未打开（逻辑错误）", sub->getName()), this);
 			}
-			if (sub->getMoleculePipelineVacuumValue() > 30) {
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
-					Poco::format("前级管道当前压力未小于30Pa（逻辑错误）", sub->getName()), this);
-			}
+			//if (sub->getMoleculePipelineVacuumValue() > 30) {
+			//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION,
+			//		Poco::format("前级管道当前压力未小于30Pa（逻辑错误）", sub->getName()), this);
+			//}
 
 		}
 		

@@ -37,6 +37,7 @@ namespace FC{
 
 		void initializeStateHandlers();
 
+		//打开机械泵
 		int handleStep10();
 
 		//关闭隔膜阀

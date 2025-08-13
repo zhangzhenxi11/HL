@@ -48,31 +48,31 @@ namespace FC{
 
 		void initializeStateHandlers();
 
-		//打开干泵
+		//10 打开干泵
 		SystemState handleStepOpenMechanicalPump();
 
-		//打开TM腔的角阀
+		//20 打开TM腔的角阀
 		SystemState handleStepOpenAngleValve();
 
-		//关闭隔膜阀
+		//30 关闭隔膜阀
 		SystemState handleStepCLoseDiaphragmValve();
 
-		//关闭传输腔门阀(LL1-TM之间的门)
+		//40 关闭传输腔门阀(LL1-TM之间的门)
 		SystemState handleStepCloseLlaTmDoor();
 
-		//关闭传输腔门阀(LL2-TM之间的门)
+		//50 关闭传输腔门阀(LL2-TM之间的门)
 		SystemState handleStepCloseLlbTmDoor();
 
-		//关闭PM腔门阀(PM1~PM4)
+		//60 关闭PM腔门阀(PM1~PM4)
 		SystemState handleStepClosePmDoor();
 
-		//关闭loadLock2的角阀
+		//70 关闭loadLock2的角阀
 		SystemState handleStepCloseLlbAngleValve();
 
-		//关闭loadlock1角阀
+		//80 关闭loadlock1角阀
 		SystemState handleStepCloseLlaAngleValve();
 
-		//TM是否达到粗抽压力判断
+		//90 TM是否达到粗抽压力判断
 		SystemState handleStepCoarseSuctionPressure();
 
 		//退出循环

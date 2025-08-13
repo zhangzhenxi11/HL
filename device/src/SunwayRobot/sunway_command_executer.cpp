@@ -150,4 +150,49 @@ bool SunwayCommandExecuter::handleErrorCode(const std::string &commandStr, const
 	return false;
 }
 
+bool SunwayCommandExecuter::parseResponse(const std::string& response, std::string& prefix, std::string& command, std::vector<std::string>& parameters)
+{
+	size_t colonPos = response.find(':');
+	if (colonPos == std::string::npos) {
+		std::cerr << "解析失败: 未找到冒号分隔符" << std::endl;
+		return false;
+	}
+	prefix = response.substr(0, colonPos);
+
+	size_t semicolonPos = response.find(';', colonPos);
+	if (semicolonPos == std::string::npos) {
+		std::cerr << "解析失败: 未找到结束分号" << std::endl;
+		return false;
+	}
+
+	std::string content = response.substr(
+		colonPos + 1,
+		semicolonPos - (colonPos + 1)
+	);
+
+	size_t firstSlash = content.find('/');
+	if (firstSlash == std::string::npos) {
+		// 没有参数的情况
+		command = content;
+		return true;
+	}
+
+	command = content.substr(0, firstSlash);
+	std::string paramsStr = content.substr(firstSlash + 1);
+
+	// 解析参数列表
+	size_t start = 0;
+	size_t end = 0;
+	while ((end = paramsStr.find('/', start)) != std::string::npos) {
+		parameters.push_back(paramsStr.substr(start, end - start));
+		start = end + 1;
+	}
+	// 添加最后一个参数
+	if (start < paramsStr.length()) {
+		parameters.push_back(paramsStr.substr(start));
+	}
+
+	return true;
+}
+
 KERNEL_NS_END

@@ -95,7 +95,7 @@ namespace FC{
 		std::string vacuum_read_value_address = "";
 		double vacuum_extraction_set_value = 1.3;       //真空抽气设定值
 		double vacuum_upper_limit_set_value = 8.0;      //真空上限设定值
-		double vacuum_break_set_value = 99600.0;        //真空破气设定值
+		double vacuum_break_set_value = 99900.0;        //真空破气设定值
 
 		double vacuum_current_value = 100000.0;		    //真空当前值
 		std::string vacuum_pressure_gage_address = "";  //真空压力表信号地址
@@ -298,7 +298,9 @@ namespace FC{
 		return d->vacuum_pressure_gage_state;
 	}
 
+	//真空值达到抽真空设定值
 	bool FortrendLoadLockSubsystem::getVacuumValueReachesTheSetValue()const{
+
 		if (d->vacuum_current_value < d->vacuum_extraction_set_value)
 		{
 			return true;
@@ -306,6 +308,7 @@ namespace FC{
 		return false;
 	}
 
+	//真空值达到真空上限值 
 	bool FortrendLoadLockSubsystem::getVacuumValueUpperLimitReachesTheSetValue()const{
 		if (d->vacuum_enable == false)
 		{
@@ -323,17 +326,17 @@ namespace FC{
 	真空值达到大气设定值
 	*/
 	bool FortrendLoadLockSubsystem::getExhaustVacuumValueReachesTheSetValue()const{
-		if (d->vacuum_current_value > d->vacuum_break_set_value)
+		logInform(getName().c_str(), Poco::format("%s 大气设定值：%f, 当前真空值：%f", getName(),
+			d->vacuum_break_set_value, d->vacuum_current_value).c_str());
+		if (d->vacuum_current_value > d->vacuum_break_set_value) //99900
 		{
 			return true;
 		}
 		return false;
 	}
 
-
-
 	/*
-	*达到LoadLock粗抽压力,看分子泵工作条件判断
+	*达到LoadLock粗抽压力,看分子泵工作条件判断 
 	*/
 	bool FortrendLoadLockSubsystem::getLoadLockRoughVacuumReachesTheSetValue()const{
 		return d->vacuum_current_value < d->rough_vacuum_set_value;
@@ -346,17 +349,20 @@ namespace FC{
 	}
 
 	/**
-	隔膜阀快充条件
+	隔膜阀快充条件  100000pa >  99000
 	*/
 	bool FortrendLoadLockSubsystem::getQuickInflationValueReachesTheSetValue()const{
+		logInform(getName().c_str(), Poco::format("%s 设置快充隔膜阀真空设定值：%f, 当前真空值：%f", getName(),
+			d->vacuum_diaphragm_valve_fast_charge_set_value, d->vacuum_current_value).c_str());
+
 		return d->vacuum_current_value > d->vacuum_diaphragm_valve_fast_charge_set_value;
 	}
 
 	/**
-	*@brief  角阀快抽条件
+	*@brief  角阀快抽条件  20000pa <=  30000pa
 	*/
 	bool FortrendLoadLockSubsystem::getFastAngleValveReachesTheSetValue() const{
-		return d->vacuum_current_value >= d->vacuum_angle_valve_fast_vacuumization_set_value;
+		return d->vacuum_current_value <= d->vacuum_angle_valve_fast_vacuumization_set_value;
 	}
 
 	/**
@@ -509,19 +515,19 @@ namespace FC{
 #pragma region 自动更新门阀状态 
 			bool flag = false;
 
-			//flag = d->slow_diaphragm_valve_opend;
-			//if (d->diaphragm_valve_address1 != ""&&readBit(d->diaphragm_valve_address1, d->slow_diaphragm_valve_opend))
-			//{
-			//	if (flag != d->slow_diaphragm_valve_opend)
-			//		io_changed = true;
-			//}
+			flag = d->slow_diaphragm_valve_opend;
+			if (d->diaphragm_valve_address1 != ""&&readBit(d->diaphragm_valve_address1, d->slow_diaphragm_valve_opend))
+			{
+				if (flag != d->slow_diaphragm_valve_opend)
+					io_changed = true;
+			}
 
-			//flag = d->fast_diaphragm_valve_opend;
-			//if (d->diaphragm_valve_address2 != ""&&readBit(d->diaphragm_valve_address2, d->fast_diaphragm_valve_opend))
-			//{
-			//	if (flag != d->fast_diaphragm_valve_opend)
-			//		io_changed = true;
-			//}
+			flag = d->fast_diaphragm_valve_opend;
+			if (d->diaphragm_valve_address2 != ""&&readBit(d->diaphragm_valve_address2, d->fast_diaphragm_valve_opend))
+			{
+				if (flag != d->fast_diaphragm_valve_opend)
+					io_changed = true;
+			}
 
 			flag = d->angle_valve_opend;
 			if (d->open_angle_valve_address != ""&&readBit(d->open_angle_valve_address, d->angle_valve_opend))
@@ -563,7 +569,7 @@ namespace FC{
 				{
 					if (buff_vacuum_pressure_gage)
 					{
-						buff_vacuum_pressure_gage_state = 1;
+						buff_vacuum_pressure_gage_state = 1; //true:大气，false:真空
 					}
 					else
 					{
@@ -579,7 +585,6 @@ namespace FC{
 			if (io_changed)
 			{
 				AbstractIOSubsystem::emitAttributeChanged(this);
-				//AbstractIOSubsystem::emitAttributeChanged(d->wtr.get());
 			}
 			Sleep(50);
 			
@@ -725,6 +730,7 @@ namespace FC{
 		{
 			d->diaphragm_valve_address1 = config->getString("Update.diaphragm_valve_address1", "");
 			d->diaphragm_valve_address2 = config->getString("Update.diaphragm_valve_address2", "");
+
 			d->high_vacuum_baffle_value_address = config->getString("Update.high_vacuum_baffle_value_address", "");
 			d->open_angle_valve_address = config->getString("Update.open_angle_valve_address", "");
 			d->close_angle_valve_address = config->getString("Update.close_angle_valve_address", "");

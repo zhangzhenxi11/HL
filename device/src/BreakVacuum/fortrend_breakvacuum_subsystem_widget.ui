@@ -1071,6 +1071,19 @@
    </property>
    <layout class="QGridLayout" name="gmfm_llb_layout"/>
   </widget>
+  <widget class="QPushButton" name="abort_process_btn">
+   <property name="geometry">
+    <rect>
+     <x>1490</x>
+     <y>540</y>
+     <width>171</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>终止流程</string>
+   </property>
+  </widget>
   <zorder>widget_35</zorder>
   <zorder>widget_36</zorder>
   <zorder>widget_37</zorder>
@@ -1161,6 +1174,7 @@
   <zorder>gridLayoutWidget_4</zorder>
   <zorder>gridLayoutWidget_5</zorder>
   <zorder>gridLayoutWidget_6</zorder>
+  <zorder>abort_process_btn</zorder>
  </widget>
  <customwidgets>
   <customwidget>

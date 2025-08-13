@@ -52,37 +52,28 @@ namespace FC{
 		//}
 		if (sub->getVacuumEnable())
 		{
-			logInform(sub->getName().c_str(),"真空模式下，检测到传输腔门阀已打开");
+			logInform(sub->getName().c_str(), "真空模式下，检测到传输腔门阀已打开");
 			if (sub->getTMCavityDoorOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 真空模式下,传输腔门阀已打开（逻辑错误）", sub->getName()), this);
 			}
+			if (sub->getSlowDiaphragmValveOpend())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 慢充隔膜阀已打开（逻辑错误）", sub->getName()), this);
+			}
+			if (sub->getFastDiaphragmValveOpend())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 快充隔膜阀已打开（逻辑错误）", sub->getName()), this);
+			}
+			if (sub->getAngleValveOpend())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
+			}
+			if (sub->getVacuumValue() <= 98800)
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 当前的真空值%d未达到设定值（逻辑错误）", sub->getName(), sub->getVacuumValue()), this);
+			}
 		}
-
-		if (sub->getSlowDiaphragmValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 慢充隔膜阀已打开（逻辑错误）", sub->getName()), this);
-		}
-		if (sub->getFastDiaphragmValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 快充隔膜阀已打开（逻辑错误）", sub->getName()), this);
-		}
-		if (sub->getAngleValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
-		}
-		/*if (sub->getExhaustValveOpend())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位: %s 排气阀已打开（逻辑错误）", sub->getName()), this);
-		}*/
-		if (sub->getVacuumValue()<=98800)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 当前的真空值%d未达到设定值（逻辑错误）", sub->getName(), sub->getVacuumValue()), this);
-		}
-		/*if (sub->getVacuumPressureGageState() == 1 && sub->getVacuumEnable())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误）", sub->getName()), this);
-		}*/
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 

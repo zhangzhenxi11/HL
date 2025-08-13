@@ -74,20 +74,25 @@ namespace FC{
 		if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 不在正常状态.", robot->getName()), this);
 		}
-		if (d->station_id != 20 && d->station_id != 21)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_SAFE_ALARM, Poco::format("%s 查询手指有无晶圆工位ID只能是20或者21.", robot->getName()), this);
-		}
+		//if (d->station_id != 20 && d->station_id != 21)
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_SAFE_ALARM, Poco::format("%s 查询手指有无晶圆工位ID只能是20或者21.", robot->getName()), this);
+		//}
+
 		if (robot->getBusyState())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s 处于忙碌中.", robot->getName()), this);
 		}
-		//check door open
-		/*if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(d->station)){
-			if (!sub->hasDoorOpend()){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 当前门阀处于关闭状态（逻辑错误）.", d->station->getName()), this);
-			}
-		}*/
+
+		//if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(getStation()))
+		//{
+		//	if (!sub->hasDoorOpend())
+		//	{
+		//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION,
+		//			Poco::format("工位： %s 当前门阀处于关闭状态（逻辑错误）.", getStation()->getName()), this);
+		//	}
+		//}
+
 		//check modules
 		auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass
@@ -113,8 +118,11 @@ namespace FC{
 		command.append(";");
 
 		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行", str_arm).c_str());
+
+		clearRobotMessage();
 		sendRequest(command);
-		std::string res = recvResponse(timeout);
+
+		std::string res = recvResponseRobotMessage(timeout);
 		if (res != std::string("ACK;"))
 		{
 			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误", str_arm).c_str());
@@ -128,7 +136,6 @@ namespace FC{
 			}
 			else
 			{
-				logError(robot->getName().c_str(), "执行执行查询手指时存在一个错误");
 				auto error_strucct = getErrorCode(error_type, error_code);
 				error_type = error_strucct->type;
 				error_code = error_strucct->code;
@@ -142,7 +149,6 @@ namespace FC{
 		}
 		else
 		{
-			//ACK
 			// RPS:LOAD/ON;  或者 RPS:LOAD/OFF;
 			//等待机械手返回指令
 			auto startTime2 = std::chrono::high_resolution_clock::now();
@@ -165,31 +171,28 @@ namespace FC{
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponse(timeout);
+				res = recvResponseRobotMessage(timeout);
 				Sleep(200);
 			}
-			std::string recvMessage = "RPS:LOAD;";
+
 			std::string robot_staus = "";
-			size_t found = res.find("RPS:LOAD");
-
-			auto search_found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
-
-			if (search_found != res.end())
+			std::string prefix, command;
+			std::vector<std::string> params;
+			if (parseResponse(res, prefix, command, params)) 
 			{
-				//找到了
-				if (found != std::string::npos)
+				
+				std::cout << "  前缀: " << prefix << std::endl;
+				std::cout << "  命令: " << command << std::endl;
+				std::cout << "  参数: ";
+				for (const auto& p : params) {
+					std::cout << "[" << p << "] ";
+				}
+				std::cout << "\n" << std::endl;
+
+				if(params.size()==1)
 				{
-					try {
-						size_t lastCommaPos = res.find('/', found);
-						size_t semicolonPos = res.find(';', lastCommaPos + 3);
-						robot_staus = res.substr(lastCommaPos + 1, semicolonPos - (lastCommaPos + 1));
-						std::cout << "robot_staus:" << robot_staus << std::endl;
-					}
-					catch (const std::invalid_argument& e)
-					{
-						error_message = "处理字符串失败";
-						logError(getName().c_str(), "处理字符串失败");
-					}
+					robot_staus = params.at(0);
+					std::cout << "\n" << robot_staus<< std::endl;
 				}
 			}
 			else

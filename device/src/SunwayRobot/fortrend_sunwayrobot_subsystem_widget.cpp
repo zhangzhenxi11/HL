@@ -50,6 +50,7 @@ namespace FC{
 		std::vector<QCheckBox*> input_checkboxs;
 		std::vector<QCheckBox*> arm_stat;
 		std::vector<QRadioButton*> arm_select;
+		std::shared_ptr<FortrendStation> selected_station;
 		//std::shared_ptr<IKernel> kernel = 0;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = nullptr;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = nullptr;
@@ -79,7 +80,7 @@ namespace FC{
 		d->ui = new Ui::SunwayRobotSubsystemWidget;
 		d->ui->setupUi(this);
 		//d->kernel = kernel;
-	/*	d->lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		/*	d->lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		d->lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");*/
 
 		//d->robot_sub = std::dynamic_pointer_cast<FortrendSunwayRobotSubsystem>(robot);
@@ -87,13 +88,13 @@ namespace FC{
 		init();
 
 		onAttributeUpdate();
-		//d->ui->check_load_btn->setEnabled(false);
+	
 
 		connect(d->ui->reset_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReset);
 		connect(d->ui->generate_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onGetStatus);
 		connect(d->ui->put_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onPutWaferCommand);
 		connect(d->ui->get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onGetWaferCommand);
-		//connect(d->ui->check_load_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onCheckLoadCommand);
+		connect(d->ui->check_load_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onCheckLoadCommand);
 		connect(d->ui->clear_error_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onClearErrorCommand);
 		//connect(d->ui->ready_get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyGetWaferCommand);
 		//connect(d->ui->ready_put_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyPutWaferCommand);
@@ -122,14 +123,38 @@ namespace FC{
 
 
 		//create station select
-		for (int i = 0; i < getSubsystem()->getWorkStations().size(); i++){
+		for (int i = 0; i < getSubsystem()->getWorkStations().size(); i++)
+		{
 			auto station = getSubsystem()->getWorkStations().at(i);
 			QRadioButton* radioButton = new QRadioButton;
 			radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(getSubsystem()->getName())));
 			radioButton->setProperty("index", i); //index
 			d->ui->station_layout->addWidget(radioButton);
 			if (i == 0)
+			{
 				radioButton->setChecked(true);
+			}
+			connect(radioButton, &QRadioButton::clicked, this, [=]() {
+				d->selected_station = station;
+				QLayoutItem* child;
+				//delete all child
+				while ((child = d->ui->slots_layout->takeAt(0)) != 0) {
+					if (child->widget()) {
+						child->widget()->setParent(NULL);
+						delete child->widget();//
+					}
+					delete child;
+				}
+				//recreate
+				Cassette::Ptr cass = cassManager->getCassette(station.get());
+				if (cass) {
+					QFortrendSlotWidget* w = new QFortrendSlotWidget(cass, 15, 20); //max row count = 5
+					w->canSelected(true, false);
+					d->ui->slots_layout->addWidget(w);
+					d->ui->slots_layout->addStretch();
+				}
+				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(getSubsystem()->getName())));
+			});
 		}
 
 		d->ui->station_layout->addStretch();
@@ -203,6 +228,19 @@ namespace FC{
 		}
 	}
 
+	int QSunwayRobotSubsystemWidget::getSelectSlotId() const
+	{
+		for (int i = 0; i < d_ptr->ui->slots_layout->count(); i++)
+		{
+			QLayoutItem* child = d_ptr->ui->slots_layout->itemAt(i);
+			QFortrendSlotWidget* w = qobject_cast<QFortrendSlotWidget*>(child->widget());
+			if (w) {
+				return w->selected().size() > 0 ? w->selected().at(0) : -1;
+			}
+		}
+		return -1;
+	}
+
 	void QSunwayRobotSubsystemWidget::onReset(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createResetCommand();
@@ -229,17 +267,21 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
 		std::shared_ptr<FortrendStation> station = getSelectStation();
+		int slot = getSelectSlotId();
 
 		if (!station){
 			QMessageBox::information(this, "警告", "请选择工位");
 			return;
 		}
-
+		if (slot < 0) {
+			QMessageBox::information(this, "警告", "请选择槽号");
+			return;
+		}
 		if (arm < 0){
 			QMessageBox::information(this, "警告", "请选择手臂");
 			return;
 		}
-		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createGetCommand(station, arm, 1);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createGetCommand(station, arm, slot);
 		executeCommand(getSubsystem(), cmd);
 	}
 
@@ -247,17 +289,21 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
 		std::shared_ptr<FortrendStation> station = getSelectStation();
+		int slot = getSelectSlotId();
 
 		if (!station){
 			QMessageBox::information(this, "警告", "请选择工位");
 			return;
 		}
-
+		if (slot < 0) {
+			QMessageBox::information(this, "警告", "请选择槽号");
+			return;
+		}
 		if (arm < 0){
 			QMessageBox::information(this, "警告", "请选择手臂");
 			return;
 		}
-		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createPutCommand(station, arm, 1);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createPutCommand(station, arm, slot);
 		executeCommand(getSubsystem(), cmd);
 	}
 
@@ -265,17 +311,20 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
 		std::shared_ptr<FortrendStation> station = getSelectStation();
-
+		int slot = getSelectSlotId();
 		if (!station){
 			QMessageBox::information(this, "警告", "请选择工位");
 			return;
 		}
-
+		if (slot < 0) {
+			QMessageBox::information(this, "警告", "请选择槽号");
+			return;
+		}
 		if (arm < 0){
 			QMessageBox::information(this, "警告", "请选择手臂");
 			return;
 		}
-		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createReadyGetCommand(station, arm, 1);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createReadyGetCommand(station, arm, slot);
 		executeCommand(getSubsystem(), cmd);
 	}
 
@@ -283,17 +332,20 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
 		std::shared_ptr<FortrendStation> station = getSelectStation();
-
+		int slot = getSelectSlotId();
 		if (!station){
 			QMessageBox::information(this, "警告", "请选择工位");
 			return;
 		}
-
+		if (slot < 0) {
+			QMessageBox::information(this, "警告", "请选择槽号");
+			return;
+		}
 		if (arm < 0){
 			QMessageBox::information(this, "警告", "请选择手臂");
 			return;
 		}
-		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createReadyPutCommand(station, arm, 1);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createReadyPutCommand(station, arm, slot);
 		executeCommand(getSubsystem(), cmd);
 	}
 
@@ -323,17 +375,34 @@ namespace FC{
 			QMessageBox::information(this, "警告", "请选择手臂");
 			return;
 		}
-		int station_id = 20;
+		int station_id = 1;
+
 		if (station->getName() == "LLA")
 		{
-			station_id = 20;
+			station_id = 1;
 		}
 		else if (station->getName() == "LLB")
 		{
-			station_id = 21;
+			station_id = 6;
+		}
+		else if (station->getName() == "PM1")
+		{
+			station_id = 2;
+		}
+		else if (station->getName() == "PM2")
+		{
+			station_id = 3;
+		}
+		else if (station->getName() == "PM3")
+		{
+			station_id = 4;
+		}
+		else if (station->getName() == "PM5")
+		{
+			station_id = 6;
 		}
 		else{
-			QMessageBox::information(this, "错误", "查询手指有无晶圆只能是LoadLock1或者LoadLock2工位");
+			QMessageBox::information(this, "错误", "查询手指有无晶圆输入工位错误");
 			return;
 		}
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createCheckLoadCommand(arm, station_id);
@@ -364,28 +433,15 @@ namespace FC{
 			}
 
 			//update object state
-			for (int i = 0; i < d->arm_stat.size(); i++){
+			for (int i = 0; i < d->arm_stat.size(); i++)
+			{
 				d->arm_stat.at(i)->setChecked(getSubsystem()->hasObject(i));
 			}
 
 			//update awc record data
-			auto data = getSubsystem()->getAWCRecordData(1);
-			/*d->ui->pm1_awc_r_dsb->setValue(data.R);
-			d->ui->pm1_awc_t_dsb->setValue(data.T);
-			d->ui->pm1_awc_x_dsb->setValue(data.X);
-			d->ui->pm1_awc_y_dsb->setValue(data.Y);
-*/
-
+			auto data = getSubsystem()->getAWCRecordData();
 			d->ui->pm2_awc_r_dsb->setValue(data.R);
 			d->ui->pm2_awc_t_dsb->setValue(data.T);
-			d->ui->pm2_awc_x_dsb->setValue(data.X);
-			d->ui->pm2_awc_y_dsb->setValue(data.Y);
-
-			/*data = getSubsystem()->getAWCRecordData(2);
-			d->ui->pm3_awc_r_dsb->setValue(data.R);
-			d->ui->pm3_awc_t_dsb->setValue(data.T);
-			d->ui->pm3_awc_x_dsb->setValue(data.X);
-			d->ui->pm3_awc_y_dsb->setValue(data.Y);*/
 
 #if 0
 			auto cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
@@ -421,4 +477,6 @@ namespace FC{
 
 		
 	}
+
+
 }

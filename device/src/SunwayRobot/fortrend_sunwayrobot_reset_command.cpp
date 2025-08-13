@@ -193,7 +193,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			
 		}
 
-		auto cmd_update = robot->createSetSpeedCommand(10);
+		auto cmd_update = robot->createSetSpeedCommand(5);
 		robot->startCommand(cmd_update);
 		cmd_update->wait();
 		if (cmd_update->hasError())

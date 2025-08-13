@@ -156,11 +156,20 @@ namespace FC{
 		logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令开始", d->tm->getName()).c_str());
 
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
-		SystemState currentState = SystemState::OPEN_MECHANICAL_PUMP;
+		SystemState currentState = SystemState::CLOSE_PM_CAVITY_DOOR;
 		while (d->loop)
 		{
+			if (d->pump->getProcessAbort()) {
+				d->pump->setProcessAbort(false);
+
+				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止", d->pump->getName()).c_str());
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
+				return IKernelCommand::RunResult::RUN_OK;
+			};
+
 			auto it = stateHandlers.find(currentState);
-			if (it == stateHandlers.end()) {
+			if (it == stateHandlers.end())
+			{
 				logError(d->pump->getName().c_str(), Poco::format("未知的状态码：%d", int(currentState)).c_str());
 				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行失败", d->pump->getName())));
 				setAlarm(alarm);
@@ -201,11 +210,14 @@ namespace FC{
 	void PumpOpenTMCavityAutoVacuumCommand::initializeStateHandlers()
 	{
 		//TM 抽真空：
-		//1.pM工艺腔门（备用），tm快慢隔膜阀，loadlockb,loadlocka传输腔阀门, loadlockb,loadlocka角阀是否关闭
-		//2.打开干泵
-		//3.打开TM腔体的角阀（先慢后快）
-		//4.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
-		//5.最后结束，打印结束日志
+		//1.pM工艺腔门（备用）
+		//2.tm快慢隔膜阀，
+		//3.loadlockb,loadlocka传输腔阀门
+		//4.loadlockb,loadlocka角阀是否关闭
+		//5.打开干泵
+		//6.打开TM腔体的角阀（先慢后快）
+		//7.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
+		//8.最后结束，打印结束日志
 
 		stateHandlers = std::unordered_map<SystemState, StateHandler>{
 			{SystemState::CLOSE_PM_CAVITY_DOOR,[this]() {return handleStepClosePmDoor(); }},
@@ -226,7 +238,7 @@ namespace FC{
 		int step = 10;
 		if (d->pump->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->pump->getMechanicalPumpOpened() == false)
+			if (!d->pump->getMechanicalPumpOpened())
 			{
 				auto cmd_open_mechanical = d->pump->createMechanicalOpenCommand();
 				d->pump->startCommand(cmd_open_mechanical);
@@ -265,7 +277,7 @@ namespace FC{
 		std::string errorMessage = "打开TM腔的角阀";
 		if (d->tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->tm->getAngleValveOpend())
+			if (!d->tm->getAngleValveOpend())
 			{
 				auto cmd = d->tm->createOpenAngleValveCommand();
 				d->tm->startCommand(cmd);
@@ -519,7 +531,7 @@ namespace FC{
 		auto elapsed = now_time - d->start_time;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 
-		if (d->tm->getTMCavityRoughVacuumReachesTheSetValue() == false) //5000PA
+		if (d->tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue()) 
 		{
 			//达到
 			step = 10000;
@@ -530,8 +542,7 @@ namespace FC{
 			{
 				//超时
 				d->tm_loop_count = 0;
-				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待TM腔体压力达到1pa超时,当前压力：%f",
-					getName(), d->tm->getTMCavityVacuumValue()).c_str());
+				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待TM腔体压力达到1pa超时,当前压力：%f",getName(), d->tm->getTMCavityVacuumValue()).c_str());
 				addCommandExecutionAlarmMessage(step, d->tm->getName(), errorMessage);
 				step = 10000;
 			}
@@ -545,11 +556,11 @@ namespace FC{
 
 	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepEND()
 	{
-		int step = 10000;
 		d->ret = IKernelCommand::RunResult::RUN_OK;
 		logInform(d->lk1->getName().c_str(), "循环结束");
 		d->loop = false;
-		step = 10;
+
+		int step = 10;
 		return SystemState(step);
 	}
 

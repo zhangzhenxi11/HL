@@ -43,11 +43,19 @@ private slots:
 	void onPBVTMClicked(bool status);
 	void onPBVLLAClicked(bool status);
 	void onPBVLLBClicked(bool status);
+
+	//³éTMÕæ¿Õ
 	void onOpenTMCavityAutoVacuumCommand();
+	//³éLLAÕæ¿Õ
 	void onOpenLoadLock1AutoVacuumCommand();
+	//³éLLBÕæ¿Õ
 	void onOpenLoadLock2AutoVacuumCommand();
 
+	
+
 	void showMessage(const QString& message);
+
+	
 
 private:
 	void onAttributeUpdate()throw(KernelException);

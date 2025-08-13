@@ -83,8 +83,8 @@ namespace FC{
 		std::shared_ptr<FortrendPumpSubsystem> pump(new FortrendPumpSubsystem(this, "PUMP"));
 
 		//FortrendSTATIONMODESubsystem
-		std::shared_ptr<FortrendSTATIONMODESubsystem> LLALower(new FortrendSTATIONMODESubsystem(this, "LLALower"));
-		std::shared_ptr<FortrendSTATIONMODESubsystem> LLBUp(new FortrendSTATIONMODESubsystem(this, "LLBUp"));
+		//std::shared_ptr<FortrendSTATIONMODESubsystem> LLALower(new FortrendSTATIONMODESubsystem(this, "LLALower"));
+		//std::shared_ptr<FortrendSTATIONMODESubsystem> LLBUp(new FortrendSTATIONMODESubsystem(this, "LLBUp"));
 
 
 		//std::shared_ptr<FortrendAlignerSubsystem> aligner(new FortrendAlignerSubsystem(this, "Aligner"));
@@ -108,8 +108,8 @@ namespace FC{
 		this->addKernelModule(pm3);
 		this->addKernelModule(pm4);
 		this->addKernelModule(pump);
-		this->addKernelModule(LLALower);
-		this->addKernelModule(LLBUp);
+		//this->addKernelModule(LLALower);
+		//this->addKernelModule(LLBUp);
 
 		//this->addKernelModule(aligner);
 		//this->addKernelModule(cooling);
@@ -135,8 +135,8 @@ namespace FC{
 		cassManager->addStation(pm2.get());
 		cassManager->addStation(pm3.get());
 		cassManager->addStation(pm4.get());
-		cassManager->addStation(LLALower.get());
-		cassManager->addStation(LLBUp.get());
+		//cassManager->addStation(LLALower.get());
+		//cassManager->addStation(LLBUp.get());
 
 		//cassManager->addStation(aligner.get());
 		//cassManager->addStation(cooling.get());
@@ -261,16 +261,16 @@ namespace FC{
 			cassManager->loadCassette(pm.get(), cass);
 		}
 
-		for (auto& stationMode : getKernelModules<FortrendSTATIONMODESubsystem>()) {
-			//virtual cassette
-			Cassette::Ptr cass(new Cassette(stationMode.get(), 1, true));
-			cass->setBoxId(Poco::format("%s", stationMode->getName()));
-			cass->setBoxOpened(true);
-			for (size_t i = 0; i < 1; i++) {
-				cass->setMapping(i + 1, Cassette::Empty);
-			}
-			cassManager->loadCassette(stationMode.get(), cass);
-		}
+		//for (auto& stationMode : getKernelModules<FortrendSTATIONMODESubsystem>()) {
+		//	//virtual cassette
+		//	Cassette::Ptr cass(new Cassette(stationMode.get(), 1, true));
+		//	cass->setBoxId(Poco::format("%s", stationMode->getName()));
+		//	cass->setBoxOpened(true);
+		//	for (size_t i = 0; i < 1; i++) {
+		//		cass->setMapping(i + 1, Cassette::Empty);
+		//	}
+		//	cassManager->loadCassette(stationMode.get(), cass);
+		//}
 
 
 		//set cooling virtual cassette

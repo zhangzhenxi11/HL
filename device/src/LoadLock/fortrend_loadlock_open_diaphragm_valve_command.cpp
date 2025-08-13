@@ -72,6 +72,8 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
 		}
+
+
 		if (d->opening == LoadLockValveOpening::LoadLock_Fast || d->opening == LoadLockValveOpening::LoadLock_Both)
 		{
 			if (sub->getQuickInflationValueReachesTheSetValue() == false)
@@ -119,14 +121,14 @@ namespace FC{
 		if (write_result)
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
-			if (d->opening == LoadLockValveOpening::LoadLock_Slow || d->opening == LoadLockValveOpening::LoadLock_Both)
-			{
-				sub->setSlowDiaphragmValveOpend(true);
-			}
-			if (d->opening == LoadLockValveOpening::LoadLock_Fast || d->opening == LoadLockValveOpening::LoadLock_Both)
-			{
-				sub->setFastDiaphragmValveOpend(true);
-			}
+			//if (d->opening == LoadLockValveOpening::LoadLock_Slow || d->opening == LoadLockValveOpening::LoadLock_Both)
+			//{
+			//	sub->setSlowDiaphragmValveOpend(true);
+			//}
+			//if (d->opening == LoadLockValveOpening::LoadLock_Fast || d->opening == LoadLockValveOpening::LoadLock_Both)
+			//{
+			//	sub->setFastDiaphragmValveOpend(true);
+			//}
 			
 			logInform(sub->getName().c_str(), "打开隔膜阀命令执行结束");
 		}

@@ -66,6 +66,9 @@ namespace FC{
 		FortrendLoadLockSubsystem* sub;
 		//std::shared_ptr<FortrendLoadLockSubsystem> sub;
 		bool loop = true;
+		std::chrono::steady_clock::time_point start_time;//开始时间点
+		std::chrono::steady_clock::time_point start_time_1;//开始时间点
+		const  std::chrono::hours timeout = std::chrono::hours(1); //超时时间
 	};
 
 
@@ -103,7 +106,9 @@ namespace FC{
 			{SystemState::OPEN_DIAPHRAGM_VALVE_SLOW,[this]() {return handleStepDiaphragmValveSlow(); }},
 			{SystemState::OPEN_DIAPHRAGM_VALVE_FAST,[this]() {return handleStepDiaphragmValveFast(); }},
 			{SystemState::JUDGE_FAST_CHARGING_CONDITION,[this]() {return handleStepFastChargingCondition(); }},
+			{SystemState::JUDGE_CHARGING_ATMOSPHERE_CONDITION,[this]() {return handleStepAtmosphereCondition(); }},
 			{SystemState::CLOSE_DIAPHRAGM_VALVE,[this]() {return handleStepCloseDiaphragmValve(); }},
+
 			{SystemState::CREATE_END,[this]() {return handleStepEnd(); }}
 		};
 	}
@@ -113,7 +118,12 @@ namespace FC{
 	*/
 	LoadLockAutoBreakVacuumCommand::RunResult LoadLockAutoBreakVacuumCommand::onRun() throw(KernelException)
 	{
-		//d->lk1 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		auto pump = getSubsystem()->getKernel()->getKernelModule<FortrendPumpSubsystem>("PUMP");
+		if (!pump)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "pump子系统类型错误", this);
+		}
+
 		d->sub = dynamic_cast<FortrendLoadLockSubsystem*>(getSubsystem());
 		if (!d->sub)
 		{
@@ -148,6 +158,14 @@ namespace FC{
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
 		while (d->loop)
 		{
+			if (pump->getProcessAbort()) 
+			{
+				pump->setProcessAbort(false);
+				logInform(pump->getName().c_str(), Poco::format("破%s真空命令终止", pump->getName()).c_str());
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
+				return IKernelCommand::RunResult::RUN_OK;
+			};
+
 			auto it = stateHandlers.find(currentState);
 			if (it == stateHandlers.end()) {
 				d->ret = IKernelCommand::RunResult::RUN_FAILD;
@@ -159,9 +177,11 @@ namespace FC{
 			auto nextState = it->second();//执行回调函数
 			if (nextState == SystemState::CREATE_END)
 			{
+				d->ret == IKernelCommand::RunResult::RUN_OK;
 				//结束
 				logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成", d->sub->getName()).c_str());
-				break;
+				return IKernelCommand::RunResult::RUN_OK;
+				//break;
 			}
 			currentState = nextState;
 			Sleep(100);
@@ -170,7 +190,7 @@ namespace FC{
 			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
 			if (pass >= timeout && d->loop)
 			{
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName())));
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName().c_str())));
 				setAlarm(alarm);
 				currentState = SystemState::CREATE_END;
 				d->loop = false;
@@ -178,18 +198,10 @@ namespace FC{
 			}
 		}
 
-		if (d->ret == IKernelCommand::RunResult::RUN_OK)
-		{
-			logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成", d->sub->getName()).c_str());
-		}
-
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName().c_str())));
+		setAlarm(alarm);
+	
 		//NOTE:返回d->ret ,且一定要报警，否则virtual void onAttributeChange(const IKernelCommand* cmd)虚函数，找不到报警信息报错！！
-
-		if (d->ret != IKernelCommand::RunResult::RUN_OK)
-		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName())));
-			setAlarm(alarm);
-		}
 		return d->ret;
 	}
 	
@@ -207,11 +219,11 @@ namespace FC{
 	{
 		//int step = 10;
 		SystemState step = SystemState::CREATE_END;
+
 		//排气压力达到设定值
 		if (!d->sub->getExhaustVacuumValueReachesTheSetValue())
 		{
 			step = SystemState::CLOSE_TMCAVITY_DOOR;
-			
 		}
 		else
 		{
@@ -301,7 +313,9 @@ namespace FC{
 				step = 10000;
 			}
 			else {
-				step = 50;
+				//开始计时
+				d->start_time = std::chrono::steady_clock::now();
+				step = 60;
 			}
 		}
 		else {
@@ -313,7 +327,7 @@ namespace FC{
 
 	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepDiaphragmValveFast()
 	{
-		int step = 60;
+		int step = 50;
 		if (d->sub->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
 			auto cmd = d->sub->createOpenDiaphragmValveCommand(LoadLockValveOpening::LoadLock_Fast);
@@ -326,7 +340,8 @@ namespace FC{
 			}
 			else 
 			{
-				step = 70;
+				d->start_time_1 = std::chrono::steady_clock::now();
+				step = 80;
 			}
 		}
 		else {
@@ -338,24 +353,31 @@ namespace FC{
 
 	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepFastChargingCondition()
 	{
-		int step = 50;
+		int step = 60;
+
+		auto now_time = std::chrono::steady_clock::now();
+		auto elapsed = now_time - d->start_time;
+
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+
 		//加上计数条件，否则会死循环
-		if (d->sub->getQuickInflationValueReachesTheSetValue())//真空值大于5000pa
+		if (d->sub->getQuickInflationValueReachesTheSetValue())//真空值大于99000pa
 		{
-			d->loop_count = 0;
-			step = 60;
+			step = 50;
 		}
 		else {
-			Sleep(100);
-			++d->loop_count;
-			if (d->loop_count > 30)
+			Sleep(100); //1s
+
+			if (elapsed >= d->timeout)
 			{
 				d->loop_count = 0;
-				addCommandExecutionAlarmMessage(d->sub->getName(), "检测是否达到真空值超时", step);
+				addCommandExecutionAlarmMessage(d->sub->getName(), "检测是否达到快充隔膜阀真空值超时", step);
 				step = 10000;
 			}
 			else
 			{
+				auto remaining = d->timeout - elapsed;
+				auto sec = std::chrono::duration_cast<std::chrono::seconds>(remaining).count();
 				step = 60;//继续当前函数
 			}
 
@@ -377,12 +399,45 @@ namespace FC{
 				step = 10000;
 			}
 			else {
-				step = 180;
+				step = 10000;
 			}
 		}
 		else {
 			addSubsystemNotNormalAlarmMessage(step, d->sub->getName());
 			step = 10000;
+		}
+		return SystemState(step);
+	}
+
+	LoadLockAutoBreakVacuumCommand::SystemState LoadLockAutoBreakVacuumCommand::handleStepAtmosphereCondition()
+	{
+		int step = 80;
+		auto now_time = std::chrono::steady_clock::now();
+		auto elapsed = now_time - d->start_time_1;
+
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+
+		//2025-8-13： getExhaustVacuumValueReachesTheSetValue()---> 改为getVacuumPressureGageState() == 1
+
+		if (d->sub->getVacuumPressureGageState() == 1)//大气值
+		{
+			step = 70;
+		}
+		else {
+			Sleep(100); //1s
+
+			if (elapsed >= d->timeout)
+			{
+				addCommandExecutionAlarmMessage(d->sub->getName(), "检测是否达到大气值超时", step);
+				step = 10000;
+			}
+			else
+			{
+				auto remaining = d->timeout - elapsed;
+				auto sec = std::chrono::duration_cast<std::chrono::seconds>(remaining).count();
+				step = 80;//继续当前函数
+			}
+
 		}
 		return SystemState(step);
 	}

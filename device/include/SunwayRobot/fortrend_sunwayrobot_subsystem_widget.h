@@ -49,6 +49,7 @@ private:
 	std::shared_ptr<IKernel> kernel = 0;
 	std::shared_ptr<FortrendStation> getSelectStation()const;
 	int getSelectArmId()const;
+	int getSelectSlotId()const;
 
 private:
 	Q_DECLARE_PRIVATE(QSunwayRobotSubsystemWidget)

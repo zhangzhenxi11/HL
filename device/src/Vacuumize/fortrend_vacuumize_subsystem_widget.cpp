@@ -204,6 +204,7 @@ public:
 	QObject::connect(d->ui->open_loadlock2_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock2AutoVacuumCommand);//
 	QObject::connect(d->ui->open_tm_cavity_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenTMCavityAutoVacuumCommand);//
 
+	QObject::connect(d->ui->abort_process_btn, &QAbstractButton::clicked, this, [=]() {d->pump->setProcessAbort(true); });
 
 	//d->widget_tm_tmp_ckb = new QCheckBox("TM分子泵");
 	//d->widget_lla_tmp_ckb = new QCheckBox("LLA分子泵");
@@ -424,7 +425,7 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	Q_D(QVacuumizeSubsystemWidget);
 
 	d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(d->tm->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
-	d->ui->molecule_pipeline_value_let->setText(QString::number(d->tm->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
+	d->ui->molecule_pipeline_value_let->setText(QString::number(d->tm->getBackingPipelineVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 

@@ -114,11 +114,15 @@ namespace FC{
 
 		/*
 		loadLockB 抽真空：
-		1.casste门，tM传输腔门，快慢隔膜阀，loadlockA腔体的角阀,TM角阀是否关闭
-		2.打开干泵
-		3.打开loadLockB腔体的角阀（先慢后快）
-		4.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
-		5.最后结束，打印结束日志
+		1.casste门
+		2.tM传输腔门
+		3.快慢隔膜阀
+		4.loadlockA腔体的角阀
+		5.TM角阀是否关闭
+		6.打开干泵
+		7.打开loadLockB腔体的角阀（先慢后快）
+		8.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
+		9.最后结束，打印结束日志
 		*/
 
 		stateHandlers = std::unordered_map<int, StateHandler>{
@@ -141,7 +145,7 @@ namespace FC{
 		std::string errorMessage = "打开机械泵";
 		if (d->pump->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->pump->getMechanicalPumpOpened() == false)
+			if (!d->pump->getMechanicalPumpOpened())
 			{
 				auto cmd_open_mechanical = d->pump->createMechanicalOpenCommand();
 				d->pump->startCommand(cmd_open_mechanical);
@@ -347,8 +351,8 @@ namespace FC{
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 
-		//是否达到粗抽压力
-		if (d->lk2->getLoadLockRoughVacuumReachesTheSetValue() == false)
+		//是否达到真空上限值
+		if (d->lk2->getVacuumValueUpperLimitReachesTheSetValue())
 		{
 			step = 5210;
 		}
@@ -368,6 +372,8 @@ namespace FC{
 			}
 			else
 			{
+				auto remaining = d->timeout - elapsed;
+				auto sec = std::chrono::duration_cast<std::chrono::seconds>(remaining).count();
 				//继续当前函数
 				step = 1100;
 			}
@@ -478,12 +484,23 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开%s 真空命令超时参数错误", d->pump->getName()), this);
 		}
 		logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令开始", d->lk2->getName()).c_str());
-		int robot_auto_step = 10;
+
+		int robot_auto_step = 1045;
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
+
 		while (d->loop)
 		{
+
+			if (d->pump->getProcessAbort()) {
+				d->pump->setProcessAbort(false);
+				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止", d->lk2->getName()).c_str());
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
+				return IKernelCommand::RunResult::RUN_OK;
+			};
+
 			auto it = stateHandlers.find(robot_auto_step);
-			if (it == stateHandlers.end()) {
+			if (it == stateHandlers.end())
+			{
 				d->ret = IKernelCommand::RunResult::RUN_FAILD;
 				logError(d->pump->getName().c_str(), Poco::format("未知的状态码：%s", std::to_string(robot_auto_step)).c_str());
 				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10001, Poco::format("打开%s真空命令,执行到未知的状态码,逻辑错误", d->lk1->getName())));

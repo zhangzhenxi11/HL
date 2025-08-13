@@ -13,50 +13,20 @@
 #include "CCreateDump.h"
 #endif
 
-void  TestDumpGeneration()
-{
-	std::ofstream ofs("test.txt", std::ios::app);
-	ofs << "begin!!!" << std::endl;
-	ofs.close();
-
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-
-	CCreateDump::Instance()->DeclarDumpFile("dumpfile");
-
-	int* p = NULL;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	*p = 5;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-	std::cout << "11111111111111111" << std::endl;
-
-	std::ofstream ofs1("test.txt", std::ios::app);
-	ofs1 << "end!!!" << std::endl;
-	ofs1.close();
-}
-
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
 	SetConsoleOutputCP(CP_UTF8);
 #endif
-	//TestDumpGeneration();
 	//高分辨率自动缩放
 	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	 FC::CoreRunner app(argc, argv); 
+	 CCreateDump::Instance()->DeclarDumpFile("app_dump");
+	 qDebug() << "The application Dump file has been set";
 	if (app.isRunning()){
 		QMessageBox::warning(0, "Warn", "The gui is already running!!!");
 		return 0;
 	}
-
 	if (app.init()){
 		return  FC::CoreRunner::exec();
 	}

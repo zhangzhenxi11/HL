@@ -44,7 +44,6 @@ namespace FC{
 	* return true if success else false.
 	*/
 	PumpMechanicalOpenCommand::RunResult PumpMechanicalOpenCommand::onRun() throw(KernelException){
-		//FortrendPumpSubsystem* sub = dynamic_cast<FortrendPumpSubsystem*>(getSubsystem());
 		std::shared_ptr<FortrendPumpSubsystem> sub = getSubsystem()->getKernel()->getKernelModule<FortrendPumpSubsystem>("PUMP");
 		//
 		if (!sub){
@@ -56,21 +55,22 @@ namespace FC{
 				Poco::format("工位: %s 机械泵警告中！", sub->getName()), this);
 		}
 
-		if (SIMULATION_TEST == 1)
-		{
-			logInform(sub->getName().c_str(), "模拟执行机械泵命令...");
-			return RunResult::RUN_OK;
-		}
+		//if (SIMULATION_TEST == 1)
+		//{
+		//	logInform(sub->getName().c_str(), "模拟执行机械泵命令...");
+		//	return RunResult::RUN_OK;
+		//}
+		
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 
-		std::string motrol_control_address = command_config->getString("switch_control_mode","");
+		
 		std::string address = command_config->getString("start_address", "");
 		std::string finish_address = command_config->getString("finish_address", "");
 		std::string failed_address = command_config->getString("failed_address", "");
 
 		int	timeout = command_config->getInt("timeout", 45000);
-		if (address == "" || finish_address == "" || failed_address == ""|| motrol_control_address== "")
+		if (address == "" || finish_address == "" || failed_address == "")
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
 				Poco::format("地址: 打开机械泵地址未定义", getName()), this);
@@ -81,12 +81,6 @@ namespace FC{
 		}
 
 		logInform(sub->getName().c_str(), "打开机械泵命令开始");
-
-		if (!writeBit(motrol_control_address, true))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-				Poco::format(" %s 写1到切换控制模式地址错误", sub->getName()), this);
-		}
 
 		if (!writeBit(address, true))
 		{

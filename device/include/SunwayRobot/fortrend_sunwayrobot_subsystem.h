@@ -46,8 +46,6 @@ namespace FC{
 		{
 			double R = 0.0;
 			double T = 0.0;
-			double X = 0.0;
-			double Y = 0.0;
 		};
 
 		//override for FortrendAbstractStation
@@ -85,8 +83,8 @@ namespace FC{
 	public:
 		virtual void setObject(unsigned int arm_id, bool has);
 
-		AWCRecordData getAWCRecordData(const int channel) const;
-		void setAWCRecordData(const int channel, const AWCRecordData value);
+		AWCRecordData getAWCRecordData() const;
+		void setAWCRecordData(const AWCRecordData value);
 
 		void setVacuumEnable(const bool value);
 		bool getWithWaferModeEnable()const;

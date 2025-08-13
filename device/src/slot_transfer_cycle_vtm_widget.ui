@@ -461,6 +461,32 @@
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <layout class="QGridLayout" name="gridLayout_3">
+          <item row="10" column="0">
+           <widget class="QPushButton" name="pause_pbt">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>暂停</string>
+            </property>
+           </widget>
+          </item>
+          <item row="13" column="0">
+           <widget class="QPushButton" name="reset_pbt">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>复位</string>
+            </property>
+           </widget>
+          </item>
           <item row="9" column="0">
            <widget class="QPushButton" name="execute_pbt">
             <property name="maximumSize">
@@ -481,39 +507,24 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_3">
+          <item row="14" column="0">
+           <widget class="QPushButton" name="get_step_pbt">
             <property name="text">
-             <string>循环最大槽位</string>
+             <string>获取步骤</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="0">
-           <widget class="QPushButton" name="loadlock2_put_cassette_finished_pbt">
+          <item row="5" column="0">
+           <widget class="QCheckBox" name="enableAtmosphere">
             <property name="text">
-             <string>LoadLock2放置
-晶圆盒完成</string>
+             <string>大气CYCLE</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="0">
-           <widget class="QPushButton" name="pause_pbt">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>暂停</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0">
-           <widget class="QPushButton" name="loadlock1_put_cassette_finished_pbt">
-            <property name="text">
-             <string>LoadLock1放置
-晶圆盒完成</string>
+          <item row="1" column="0">
+           <widget class="QSpinBox" name="spb_min">
+            <property name="minimum">
+             <number>1</number>
             </property>
            </widget>
           </item>
@@ -534,20 +545,37 @@
             </property>
            </widget>
           </item>
-          <item row="11" column="0">
-           <widget class="QPushButton" name="reset_pbt">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
+          <item row="8" column="0">
+           <widget class="QPushButton" name="loadlock2_put_cassette_finished_pbt">
             <property name="text">
-             <string>复位</string>
+             <string>LoadLock2放置
+晶圆盒完成</string>
             </property>
            </widget>
           </item>
-          <item row="13" column="0">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>循环最大槽位</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QPushButton" name="loadlock1_put_cassette_finished_pbt">
+            <property name="text">
+             <string>LoadLock1放置
+晶圆盒完成</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="0">
+           <widget class="QPushButton" name="continue_btn">
+            <property name="text">
+             <string>继续</string>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="0">
            <widget class="QPushButton" name="abort_pbt">
             <property name="maximumSize">
              <size>
@@ -556,28 +584,14 @@
              </size>
             </property>
             <property name="text">
-             <string>中止当前流程</string>
+             <string>中止</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QSpinBox" name="spb_min">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-           </widget>
-          </item>
-          <item row="12" column="0">
-           <widget class="QPushButton" name="get_step_pbt">
+          <item row="6" column="0">
+           <widget class="QCheckBox" name="simulation_cbx">
             <property name="text">
-             <string>获取步骤</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QCheckBox" name="enableAtmosphere">
-            <property name="text">
-             <string>大气CYCLE</string>
+             <string> 模拟流程</string>
             </property>
            </widget>
           </item>

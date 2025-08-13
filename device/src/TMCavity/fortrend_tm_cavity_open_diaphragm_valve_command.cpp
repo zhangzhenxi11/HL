@@ -120,14 +120,14 @@ namespace FC{
 		if (write_result)
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
-			if (d->opening == TMCavityValveOpening::TMCavity_Slow || d->opening == TMCavityValveOpening::TMCavity_Both)
-			{
-				sub->setSlowDiaphragmValveOpend(true);
-			}
-			if (d->opening == TMCavityValveOpening::TMCavity_Fast || d->opening == TMCavityValveOpening::TMCavity_Both)
-			{
-				sub->setFastDiaphragmValveOpend(true);
-			}
+			//if (d->opening == TMCavityValveOpening::TMCavity_Slow || d->opening == TMCavityValveOpening::TMCavity_Both)
+			//{
+			//	sub->setSlowDiaphragmValveOpend(true);
+			//}
+			//if (d->opening == TMCavityValveOpening::TMCavity_Fast || d->opening == TMCavityValveOpening::TMCavity_Both)
+			//{
+			//	sub->setFastDiaphragmValveOpend(true);
+			//}
 			logInform(sub->getName().c_str(), "打开隔膜阀命令执行结束");
 
 		}

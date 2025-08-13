@@ -35,6 +35,12 @@ public:
 	// 更新晶圆状态
 	bool updateWaferMapping();
 
+	//通用操作函数
+	RunResult robotRobotOperation(const std::function<std::string()>& commandBuilder);
+
+	bool updateAwcData();
+
+
 protected:
 	virtual RunResult onRun() throw(KernelException);
 

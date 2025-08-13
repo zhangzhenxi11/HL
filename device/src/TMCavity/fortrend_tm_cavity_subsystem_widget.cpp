@@ -312,7 +312,7 @@ namespace FC{
 
 			d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(getSubsystem()->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
 			//d->ui->molecule_pipeline_value_let->setText(QString::number(getSubsystem()->getMoleculePipelineVacuumValue(), 'e', 3).append("Pa"));
-			d->ui->backing_pipeline_value_let->setText(QString::number(getSubsystem()->getBackingPipelineVacuumValue()).append("Pa"));
+			d->ui->backing_pipeline_value_let->setText(QString::number(getSubsystem()->getBackingPipelineVacuumValue(), 'e', 3).append("Pa"));
 			d->ui->vacuum_pressure_gage_ckb->setChecked(getSubsystem()->getTMCavityVacuumPressureGageState() == 1);
 			d->Axial_pressure_ckb->setChecked(getSubsystem()->getAxialPressureGageState());
 			d->cda_ckb->setChecked(getSubsystem()->getCDAPressureState());

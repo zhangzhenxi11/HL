@@ -42,6 +42,10 @@ public:
 	std::shared_ptr<SunwaySubSystemHelper::DefinedError> getErrorCode(const int type_id,const int code_id);
 
 	bool handleErrorCode(const std::string &commandStr, const std::string errorStr,int& type,int& code);
+
+	//解析参数
+	bool parseResponse(const std::string& response,std::string& prefix,std::string& command,std::vector<std::string>& parameters);
+
 protected:
 	/**
 	* @brief return true if success else false.

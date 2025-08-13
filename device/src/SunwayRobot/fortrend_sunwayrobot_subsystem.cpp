@@ -50,6 +50,8 @@ namespace FC{
 		std::vector<int> arm_wafer_slot;
 		FortrendSunwayRobotSubsystem::AWCRecordData awc_record_data[3];
 
+		FortrendSunwayRobotSubsystem::AWCRecordData current_record_data;
+
 		std::string LLACavitySafetySignalAddress = "";
 		std::string LLBCavitySafetySignalAddress = "";
 		std::string PM1CavitySafetySignalAddress = "";
@@ -80,7 +82,8 @@ namespace FC{
 
 	void FortrendSunwayRobotSubsystemPrivate::setObject(uint8_t arm_id, bool has){
 		auto it = armHasObjectMap.find(arm_id);
-		if (it == armHasObjectMap.end() || it->second != has){
+		if (it == armHasObjectMap.end() || it->second != has)
+		{
 			armHasObjectMap[arm_id] = has;
 			p->emitSubsystemAttributeChanged();
 		}
@@ -141,21 +144,11 @@ namespace FC{
 		d->setObject(arm_id, has);
 	}
 
-	FortrendSunwayRobotSubsystem::AWCRecordData FortrendSunwayRobotSubsystem::getAWCRecordData(const int channel) const{
-		
-		if (channel > 3)
-		{
-			AWCRecordData data;
-			return data;
-		}
-		return d->awc_record_data[channel];
+	FortrendSunwayRobotSubsystem::AWCRecordData FortrendSunwayRobotSubsystem::getAWCRecordData() const{
+		return d->current_record_data;
 	}
-	void FortrendSunwayRobotSubsystem::setAWCRecordData(const int channel, const FortrendSunwayRobotSubsystem::AWCRecordData value){
-		if (channel > 3)
-		{
-			return ;
-		}
-		d->awc_record_data[channel] = value;
+	void FortrendSunwayRobotSubsystem::setAWCRecordData(const FortrendSunwayRobotSubsystem::AWCRecordData value){
+		d->current_record_data = value;
 		KernelAbstractSubSystem::emitAttributeChanged(this);
 	}
 
@@ -273,7 +266,7 @@ namespace FC{
 
 	void FortrendSunwayRobotSubsystem::onProcess(){
 		// pollProtocol();
-		AbstractIOSubsystem::emitAttributeChanged(this);
+		//AbstractIOSubsystem::emitAttributeChanged(this);
 	}
 
 

@@ -719,6 +719,19 @@
    </property>
    <layout class="QGridLayout" name="widget_vp_layout"/>
   </widget>
+  <widget class="QPushButton" name="abort_process_btn">
+   <property name="geometry">
+    <rect>
+     <x>1550</x>
+     <y>510</y>
+     <width>171</width>
+     <height>81</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>终止流程</string>
+   </property>
+  </widget>
   <zorder>ppv_llb_h_1</zorder>
   <zorder>pav_llb_w_1</zorder>
   <zorder>pav_lla_w_1</zorder>
@@ -772,6 +785,7 @@
   <zorder>gridLayoutWidget_9</zorder>
   <zorder>gridLayoutWidget_12</zorder>
   <zorder>gridLayoutWidget_13</zorder>
+  <zorder>abort_process_btn</zorder>
  </widget>
  <customwidgets>
   <customwidget>

@@ -331,8 +331,9 @@ namespace FC{
 			//d->molecular_pump_reach_speed_ckb_llb->setChecked(getSubsystem()->getMolecularPumpReachSpeedLLB());
 			//d->molecular_pump_ckb_tm->setChecked(getSubsystem()->getMolecularPumpOpenedTM());
 			//d->molecular_pump_reach_speed_ckb_tm->setChecked(getSubsystem()->getMolecularPumpReachSpeedTM());
-			d->mechanical_pump_Acc_ckb->setChecked(getSubsystem()->getMechanicalPumpAcc());
+			/*d->mechanical_pump_Acc_ckb->setChecked(getSubsystem()->getMechanicalPumpAcc());*/
 			//d->mechanical_pump_alarm_ckb->setChecked(getSubsystem()->getMechanicalPumpHasAlarm());
+
 			d->mechanical_pump_running_ckb->setChecked(getSubsystem()->getMechanicalPumpRunningState());
 			d->mechanical_pump_warn_ckb->setChecked(getSubsystem()->getMechanicalPumpHasWarn());
 

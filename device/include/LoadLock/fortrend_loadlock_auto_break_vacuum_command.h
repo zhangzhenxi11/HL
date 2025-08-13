@@ -38,6 +38,7 @@ namespace FC{
 			OPEN_DIAPHRAGM_VALVE_FAST = 50,
 			JUDGE_FAST_CHARGING_CONDITION = 60,
 			CLOSE_DIAPHRAGM_VALVE = 70,
+			JUDGE_CHARGING_ATMOSPHERE_CONDITION = 80,
 			CREATE_END = 10000
 		};
 		using StateHandler = std::function<SystemState()>;
@@ -57,6 +58,8 @@ namespace FC{
 		SystemState handleStepFastChargingCondition();//快充条件
 
 		SystemState handleStepCloseDiaphragmValve();
+
+		SystemState handleStepAtmosphereCondition();
 		
 		SystemState handleStepEnd();
 			
