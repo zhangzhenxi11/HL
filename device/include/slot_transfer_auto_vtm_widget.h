@@ -42,7 +42,6 @@ namespace  FC {
 		void onSaveSequence();
 		void onLoadSequence();
 
-
 		void onLoadTargetSite();
 		void onSaveTargetSite();
 

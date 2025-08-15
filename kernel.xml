@@ -1773,7 +1773,7 @@
 				<!-- 前级泵警告信号 -->
 				<MechanicalPumpWarnAddress> MR35312 </MechanicalPumpWarnAddress>
 				<!-- 前级泵运行中 -->
-				<MechanicalPumpRunningAddress>MR35313</MechanicalPumpRunningAddress>
+				<MechanicalPumpRunningAddress>MR50001</MechanicalPumpRunningAddress>
 				<timeout>30000</timeout>
 			</Update>
 			<!-- 打开前级泵-->

@@ -73,6 +73,8 @@ namespace FC {
             UnifiedWaferTask::Status status,
             UnifiedWaferTask::Location location);
 
+        //检测有非初始状态的任务
+        bool detectionHasNoInitialTypeTasks();
 
         //类似写实时的三色灯逻辑，只是每个步骤是组合动作而已
 

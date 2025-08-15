@@ -464,7 +464,7 @@ void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguratio
 	configKeyencePlc(config);
 	if (config->has("Update"))
 	{
-		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR35313");
+		d->mechanical_pump_running_address = config->getString("Update.MechanicalPumpRunningAddress", "MR50001");
 		d->mechanical_pump_warn_address = config->getString("Update.MechanicalPumpWarnAddress","MR35312");
 	}
 	if (config->has("IsVacuum")){

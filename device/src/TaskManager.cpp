@@ -346,6 +346,26 @@ std::vector< FC::UnifiedWaferTask> FC::TaskManager::getTasksByTypeStatusAndLocat
     return result;
 }
 
+bool FC::TaskManager::detectionHasNoInitialTypeTasks()
+{
+    if(tasks_.size() > 0)
+    {
+        auto it = std::find_if(tasks_.begin(), tasks_.end(), [](const UnifiedWaferTask& t) {
+            return t.taskType != UnifiedWaferTask::UNKNOWN;
+        });
+        if (it != tasks_.end())
+        {//’“µΩ
+            return true;
+        }
+    }
+    else
+    {
+        logInform("TaskManager", "current no task!",);
+        return false;
+    }
+}
+
+
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);

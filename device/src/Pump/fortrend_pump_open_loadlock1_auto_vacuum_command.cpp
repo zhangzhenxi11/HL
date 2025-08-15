@@ -649,11 +649,24 @@ namespace FC{
 		auto elapsed = now_time - d->start_time;
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
+		//int successCount = 0; //达到极限值次数
 
 		//是否达到真空上限值
 		if (d->lk1->getVacuumValueUpperLimitReachesTheSetValue())
 		{
-			//达到
+			//successCount++;
+			//Sleep(1000);
+			//if(successCount >= 5)
+			//{
+			//	//达到5次
+			//	step = 5210;
+			//	successCount = 0;
+			//}
+			//else
+			//{
+			//	step = 1100;
+			//	
+			//}
 			step = 5210;
 		}
 		else

@@ -72,6 +72,9 @@ namespace  FC {
 		//新增 流程启动
 		void startProcessingThreads();
 
+		//检测机制
+		bool checkTheStatusMachine();
+
 	private:
 		void startVacuumAction();
 		void startVacuumMoniterAction();

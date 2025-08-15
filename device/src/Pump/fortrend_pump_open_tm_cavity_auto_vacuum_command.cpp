@@ -530,10 +530,11 @@ namespace FC{
 		auto now_time = std::chrono::steady_clock::now();
 		auto elapsed = now_time - d->start_time;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
+		
+		//int successCount = 0; //达到极限值次数
 
 		if (d->tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue()) 
 		{
-			//达到
 			step = 10000;
 		}
 		else
