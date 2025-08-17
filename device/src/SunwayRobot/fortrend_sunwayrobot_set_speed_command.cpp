@@ -107,12 +107,12 @@ public:
 
 		if (res == "ACK;" || res == "RPS:RUN_SPEED;")
 		{
-			clearRobotMessage();
-			res = recvResponseRobotMessage(timeout);
 
 			auto startTime2 = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(10);
+
 			res = recvResponseRobotMessage(timeout);
+
 			while (true)
 			{
 				auto currentTime = std::chrono::high_resolution_clock::now();
@@ -137,7 +137,6 @@ public:
 			auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
 			if (found != res.end())
 			{
-
 				if (!sendRequest("ACK;"))
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,

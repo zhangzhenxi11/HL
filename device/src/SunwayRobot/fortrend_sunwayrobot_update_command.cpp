@@ -90,7 +90,6 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 
 		if (res != std::string(""))
 		{
-			//clearRobotMessage();
 			break;
 		}
 		if (elapsed >= timeout2)
@@ -131,7 +130,6 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	}
 	else
 	{
-		//clearRobotMessage();
 		res = recvResponseRobotMessage(timeout);
 
 		auto startTime2 = std::chrono::high_resolution_clock::now();

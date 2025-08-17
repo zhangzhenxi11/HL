@@ -739,7 +739,6 @@ namespace FC{
 
 		while (!taskManager.isStopped())
 		{
-			//logInform1("Cyclelog", "EFEM thread started------------------->");
 			Sleep(500);
 			efem_step_once_finished = false;
 
@@ -2096,7 +2095,6 @@ namespace FC{
 				}
 			}
 
-			//logInform1("Cyclelog", "EFEM thread finished<-------------------");
 			efem_step_once_finished = true;
 			Sleep(10);	
 		}
@@ -2259,9 +2257,12 @@ namespace FC{
 					{
 						//此时task status 改成LockPendingTasks 
 						efemCompletedTasks = taskManager.getEfemCompletedTasks();
-						for (auto& task : efemCompletedTasks)
+
+						auto efemToLLACompletedTasks = taskManager.getTasksByLocation(efemCompletedTasks,UnifiedWaferTask::Location::LLA);
+
+						for (auto& task : efemToLLACompletedTasks)
 						{
-							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED); //TASKID:1 ,TASKID:2
 						}
 						loadlock1_auto_step = 400;
 					}
@@ -2356,7 +2357,7 @@ namespace FC{
 						{
 							loadlock1_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
-						//注释.否则线程之间会竞争loadlock1_get_vacuum变量，加锁
+						//注释.否则线程之间会竞争loadlock1_get_vacuum变量，要么加锁
 						//loadlock1_auto_step = 500;  
 						Sleep(1000);
 					}
@@ -2476,7 +2477,7 @@ namespace FC{
 				break;
 				case 950:
 				{
-					logInform("Cycle", "step 950");
+					logInform("Cycle", "llA step 950");
 					UpdateLLASubTransferDatas();
 					if (loadLockAPendingTasks.size() > 0 && !abortCycle)
 					{
@@ -3046,7 +3047,6 @@ namespace FC{
 		}
 		while (!taskManager.isStopped())
 		{
-			//logInform1("Cyclelog", "LLB thread started------------------->");
 			Sleep(500);
 			if (taskManager.waitLLBForTasks(1000))
 			{
@@ -3147,6 +3147,8 @@ namespace FC{
 				break;
 				case 301:
 				{
+					//WARNNING:   2025-8-15: 共享变量,LLA,LLB多线程下会产生竞争条件，方法： 1.区分开 2.加互斥锁
+
 					tool_allow_get_wafer = true;//呼叫LP上料
 					loadlock2_auto_step = 302;
 				}
@@ -3167,11 +3169,14 @@ namespace FC{
 				{
 					if (loadlock2_put_cassette_finished && !tool_allow_get_wafer)//上料完成
 					{
-						//此时task status 改成LockPendingTasks 
+						//WARNNING:   2025-8-15: 区分开LLA线程操作，
 						efemCompletedTasks = taskManager.getEfemCompletedTasks();
-						for (auto& task : efemCompletedTasks)
+						
+						auto efemToLLBCompletedTasks = taskManager.getTasksByLocation(efemCompletedTasks,UnifiedWaferTask::Location::LLB);
+
+						for (auto& task : efemToLLBCompletedTasks)
 						{
-							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);//TASKID:3,TASKID:4
 						}
 						loadlock2_auto_step = 400;
 					}
@@ -3252,13 +3257,6 @@ namespace FC{
 					{
 						if (lk2->getVacuumValueUpperLimitReachesTheSetValue())
 						{
-							//Update status
-							
-							auto loadlockPendingTasks = taskManager.getLoadLockPendingTasks("LLB");
-							for (auto& task : loadlockPendingTasks)
-							{
-								taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-							}
 							loadlock2_auto_step = 800;
 						}
 						else
@@ -3291,6 +3289,10 @@ namespace FC{
 							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
 							{
 								loadlock2_auto_step = 500;
+							}
+							else
+							{
+								loadlock2_auto_step = 810;
 							}
 						}
 					}
@@ -3386,7 +3388,9 @@ namespace FC{
 				break;
 				case 950:
 				{
+					logInform("Cycle", "LLB step 950");
 					UpdateLLBSubTransferDatas();
+
 					if (loadLockBPendingTasks.size() > 0 && !abortCycle)
 					{
 						//取晶圆
@@ -3903,7 +3907,7 @@ namespace FC{
 					break;
 				}
 			}
-			//logInform1("Cyclelog", "LLB thread finished<-------------------");
+			
 			loadlock2_step_once_finished = true;
 		}
 	
@@ -7044,6 +7048,15 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->executeUpdateTransferStatus();
+	}
+
+	void FC::QSlotTransferCycleVTMWidget::executeTestRobotTransfer()
+	{
+		//先取后放
+
+
+
+
 	}
 
 

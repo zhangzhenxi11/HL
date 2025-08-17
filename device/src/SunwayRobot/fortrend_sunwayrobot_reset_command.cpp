@@ -89,7 +89,6 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(60);
 
-	//recvResponse2(timeout);
 	res = recvResponseRobotMessage(timeout);
 
 	Sleep(200);
@@ -152,7 +151,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	}
 	else
 	{
-		clearRobotMessage();
+		//clearRobotMessage();
 		res = recvResponseRobotMessage(timeout);
 		//握手了
 		auto startTime2 = std::chrono::high_resolution_clock::now();
@@ -175,7 +174,6 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			//recvResponse2(timeout);
 			res = recvResponseRobotMessage(timeout);
 			Sleep(200);
 		}
@@ -202,39 +200,12 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-
-		//auto cmd_update = robot->createUpdateCommand();
-		//robot->startCommand(cmd_update);
-		//cmd_update->wait();
-		//if (cmd_update->hasError())
-		//{
-		//	//set alarm data
-		//	AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "更新手臂状态命令执行失败！"));
-		//	setAlarm(alarm);
-		//	return RunResult::RUN_FAILD;
-		//}
-
 		robot->setHasResetFlag(true);
 		logInform(getName().c_str(), "复位命令执行结束");
 
 		return RunResult::RUN_OK;
 
 	}
-
-
-
-
 	}
-
-
-
-
-
-
-
-
-
-
-
 
 }

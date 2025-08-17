@@ -88,6 +88,19 @@ std::vector< FC::UnifiedWaferTask> FC::TaskManager::getTasksByLocation(FC::Unifi
     return result;
 }
 
+std::vector<FC::UnifiedWaferTask> FC::TaskManager::getTasksByLocation(std::vector<UnifiedWaferTask> tasks, UnifiedWaferTask::Location location)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<UnifiedWaferTask> result;
+
+    for (const auto& task : tasks) {
+        if (task.source == location || task.target == location) {
+            result.push_back(task);
+        }
+    }
+    return result;
+}
+
 void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType newTaskType,UnifiedWaferTask::Status newStatus)
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -761,25 +774,6 @@ void FC::TaskManager::updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type
             logInform("TaskManager", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, (*it).typeToString(type).c_str(), (*it).statusToString(status).c_str());
         }
     }
-
- 
-    //// Ìí¼ÓÐÂÓ³Éä
-    //taskTypeStatusMap_[type][status].push_back(taskId);
-
-    //auto& Tasks = taskTypeStatusMap_[type];
-    //for (int taskId : Tasks[status])
-    //{
-    //    auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) {
-    //        return t.taskId == taskId;
-    //    });
-    //    if (it != tasks_.end()) {
-    //    
-    //        auto task = (*it);
-    //        logInform("TaskManager", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, task.typeToString(task.taskType).c_str(), task.statusToString(task.status).c_str());
-    //        break;
-    //    };
-    //}
-
 }   
 
 

@@ -18,6 +18,8 @@
 #include "Poco/StringTokenizer.h"
 #include "Poco/NumberParser.h"
 
+#include <queue>
+#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <fstream>
@@ -75,6 +77,12 @@ private:
 
 public:
 	bool isConnected = false;
+
+	// 添加消息队列和同步机制
+	std::queue<std::string> messageQueue;
+	std::mutex queueMutex;
+	std::condition_variable queueCV;
+
 private:
 	bool isReconnect = false;     //此次连接是否为重连
 	int max_retries = 5;         // 最大重连次数
@@ -432,14 +440,17 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelperPrivat
 	return res;
 }
 
-
+/*
+通过线程安全队列解决消息覆盖问题，使用条件变量实现精准同步，避免轮询间隔导致的丢失问题。改造后能正确处理快速连续消息（20ms间隔）。
+*/
 void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(KernelException)
 {
 	while (true)
 	{
 		setTimeout(timeout_ms);
 		std::string data;
-		char receiveBuf[1024];
+		//char receiveBuf[1024];
+		char receiveBuf[4096];
 		int recvLen = recv(*client, receiveBuf, 1024, 0);
 
 		if (recvLen == SOCKET_ERROR || recvLen == 0)
@@ -483,12 +494,21 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 
 		is_busy = false;
 
-		if (data != std::string(""))
+		// ... 接收数据 ...
 		{
-			robotMessage = data;
-			logInform1(name.c_str(), "其他--Rcv: %s", robotMessage.c_str());
+			std::lock_guard<std::mutex> lock(queueMutex);
+			messageQueue.push(data); // 入队不覆盖
 		}
-		Sleep(200);
+		queueCV.notify_one(); // 通知等待线程
+		Sleep(20);
+
+		//if (data != std::string(""))
+		//{
+		//	robotMessage = data;
+		//	logInform1(name.c_str(), "其他--Rcv: %s", robotMessage.c_str());
+		//}
+		////2025-08-16 改成20ms
+		//Sleep(20);
 	}
 }
 
@@ -603,12 +623,28 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelper::getE
 
 std::string SunwaySubSystemHelper::recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException)
 {
-	return d->robotMessage;
+	//return d->robotMessage;
+
+	std::unique_lock<std::mutex> lock(d->queueMutex);
+	if (d->queueCV.wait_for(lock, std::chrono::milliseconds(timeout_ms),
+		[this] { return !d->messageQueue.empty(); }))
+	{
+		auto msg = d->messageQueue.front();
+		d->messageQueue.pop();
+		return msg;
+	}
+	return ""; // 超时返回空
 }
 
 void SunwaySubSystemHelper::clearRobotMessage() throw(KernelException)
 {
-	d->robotMessage = "";
+	//d->robotMessage = "";
+	std::lock_guard<std::mutex> lock(d->queueMutex);
+	while (!d->messageQueue.empty())
+	{
+		d->messageQueue.pop();
+	}
+
 }
 
 std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelper::getErrorCode(const int type_id, const int code_id)

@@ -378,7 +378,6 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 门阀未处于打开状态（逻辑错误）.", getStation()->getName()), this);	
 		}
 	}
-	
 	//check modules
 	auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
 	//get cass
@@ -390,6 +389,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	}
 
 	int mapping_slot = getSlot();
+
 
 	if (getStation()->getName().find("PM") != std::string::npos)
 	{
@@ -440,9 +440,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION,
 				Poco::format("工位： %s 槽 %d 当前不为空.", getStation()->getName(), mapping_slot), this);
 		}
-
 	}
-
 	//fill params
 	d->station_name = getStation()->getName();
 	std::string str_arm = (getArm() == 0) ? "A" : "B";

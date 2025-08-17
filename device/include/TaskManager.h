@@ -31,6 +31,10 @@ namespace FC {
         // 获取特定位置的任务
         std::vector<UnifiedWaferTask> getTasksByLocation(UnifiedWaferTask::Location location);
 
+        //获取特定位置的任务
+        std::vector<UnifiedWaferTask> getTasksByLocation(std::vector<UnifiedWaferTask> tasks, UnifiedWaferTask::Location location);
+
+
         // 通过任务ID获取任务状态和类型
         const std::pair<UnifiedWaferTask::TaskType, UnifiedWaferTask::Status>& getTaskStatusAndType(int taskId);
 
