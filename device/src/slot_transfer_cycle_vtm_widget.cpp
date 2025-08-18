@@ -290,9 +290,27 @@ namespace FC{
 		bool tool_allow_get_wafer = false;// true呼叫LP上料，  false LP上料完成
 		bool tool_allow_put_wafer = false;// true呼叫LP下料，  false LP下料完成
 
+		bool tool_allow_get_wafer_LLA = false; // LLA上料请求   true呼叫LP上料， false LP上料完成
+		bool tool_allow_put_wafer_LLA = false; // LLA下料请求   true呼叫LP下料， false LP下料完成
+		bool tool_allow_get_wafer_LLB = false; // LLB上料请求
+		bool tool_allow_put_wafer_LLB = false; // LLB下料请求
+
+		// 为每个变量添加互斥锁
+		std::mutex get_wafer_mutex_LLA;
+		std::mutex put_wafer_mutex_LLA;
+		std::mutex get_wafer_mutex_LLB;
+		std::mutex put_wafer_mutex_LLB;
+
+		// 添加当前处理的LoadLock标识
+		std::string current_loadlock; // "LLA" 或 "LLB"
+
+		std::mutex get_wafer_mutex;
+		std::mutex put_wafer_mutex;
+
 
 		bool tool_allow_pm1_get_wafer = false;//true呼叫pm1上料，  false pm1上料完成
 		bool tool_allow_pm1_put_wafer = false; //true呼叫pm1下料，  false pm1下料完成
+
 
 		bool tool_allow_pm2_get_wafer = false;
 		bool tool_allow_pm2_put_wafer = false;
@@ -750,37 +768,41 @@ namespace FC{
 				{
 					UpdateEfemSubTransferDatas();
 					originTaskSize = taskManager.getAllTasksSize();
-
-					if (tool_allow_get_wafer || efemPendingTasks.size() >0 )//给tool上料
-					{
-						efem_auto_step = 100;
-						//if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
-						//	efem_auto_step = 3000;
+					// 处理下料请求（优先）
+					if (tool_allow_put_wafer_LLA || efemReturnPendingTasks.size() > 0) {
+						current_loadlock = "LLA";
+						efem_auto_step = 200;  // 下料流程
 					}
-					else if (tool_allow_put_wafer || efemReturnPendingTasks.size() >0 )//给tool下料
-					{
-						efem_auto_step = 200;
-						//if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
-						//	efem_auto_step = 4000;
+					else if (tool_allow_put_wafer_LLB || efemReturnPendingTasks.size() > 0) {
+						current_loadlock = "LLB";
+						efem_auto_step = 200;  // 下料流程
 					}
-
+					// 处理上料请求
+					else if (tool_allow_get_wafer_LLA || efemPendingTasks.size() > 0) {
+						current_loadlock = "LLA";
+						efem_auto_step = 100;  // 上料流程
+					}
+					else if (tool_allow_get_wafer_LLB || efemPendingTasks.size() > 0) {
+						current_loadlock = "LLB";
+						efem_auto_step = 100;  // 上料流程
+					}
+					// 检查循环完成状态
 					else if (efemReturnCompletedTasks.size() == originTaskSize)
 					{
-						if(efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP1)
+						if (efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP1)
 						{
-							logInform("cycle","当前一次lp1循环完成");
+							logInform("cycle", "当前一次lp1循环完成");
 							lp1_cycle_one_time_finished = true;//一次lp1循环完成
 						}
-						else if(efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP2)
+						else if (efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP2)
 						{
 							logInform("cycle", "当前一次lp2循环完成");
 							lp2_cycle_one_time_finished = true;//一次lp2循环完成
 						}
 						Sleep(10);
 					}
-					else
-					{
-						Sleep(10);//没任务需求，cpu切到其他线程
+					else {
+						Sleep(10);
 					}
 				}
 				break;
@@ -910,7 +932,13 @@ namespace FC{
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
-								tool_allow_get_wafer = false; //LP上料完成
+								//tool_allow_get_wafer = false; //LP上料完成						
+								if (current_loadlock == "LLA") {
+									tool_allow_get_wafer_LLA = false;
+								}
+								else if (current_loadlock == "LLB") {
+									tool_allow_get_wafer_LLB = false;
+								}
 								efem_auto_step = 10; //跳转到开始步骤
 							}
 							else
@@ -934,7 +962,16 @@ namespace FC{
 
 						if (!elp->hasDoorOpend())
 						{
-							tool_allow_get_wafer = false; //LP1上料完成
+							//tool_allow_get_wafer = false; //LP1上料完成
+ 
+							// 清除当前处理的LoadLock请求标志
+							if (current_loadlock == "LLA") {
+								tool_allow_get_wafer_LLA = false;
+							}
+							else if (current_loadlock == "LLB") {
+								tool_allow_get_wafer_LLB = false;
+							}
+
 							efem_auto_step = 10; //跳转到开始步骤
 						}
 					}
@@ -1599,7 +1636,17 @@ namespace FC{
 					{
 						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
-							tool_allow_put_wafer = false;//下料到LP完成
+							//tool_allow_put_wafer = false;//下料到LP完成
+							if (current_loadlock == "LLA") {
+								tool_allow_put_wafer_LLA = false;
+							}
+							else if (current_loadlock == "LLB") {
+								tool_allow_put_wafer_LLB = false;
+							}
+							else
+							{
+								Sleep(100);
+							}
 							efem_auto_step = 10;
 						}
 						else
@@ -1636,7 +1683,18 @@ namespace FC{
 							}
 							if (!elp2->hasDoorOpend() && !elp1->hasDoorOpend())
 							{
-								tool_allow_put_wafer = false;//下料到LP完成
+								//tool_allow_put_wafer = false;//下料到LP完成
+								// 清除当前处理的LoadLock请求标志
+								if (current_loadlock == "LLA") {
+									tool_allow_put_wafer_LLA = false;
+								}
+								else if (current_loadlock == "LLB") {
+									tool_allow_put_wafer_LLB = false;
+								}
+								else
+								{
+									Sleep(100);
+								}
 								efem_auto_step = 10;
 							}
 						}
@@ -2152,14 +2210,14 @@ namespace FC{
 					{
 						loadlock1_auto_step = 6000;
 					}
-
+					//优先
 					if (loadLockAPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0 )
 					{
 						//有wafer，直接抽真空，走取放晶圆流程/下料流程
 						loadlock1_auto_step = 400;
 					}
-					//需上料
-					else if (loadLockAPendingTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize)
+					//需上料  0 < efemUnkownStatusTasks.size() <= originTaskSize：代表传片动作中....
+					else if (loadLockAPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size()== 0 ||  0 < efemUnkownStatusTasks.size() <= originTaskSize)
 					{
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -2235,25 +2293,33 @@ namespace FC{
 			break;
 				case 301:
 				{
-					tool_allow_get_wafer = true;//呼叫LP上料
+					//tool_allow_get_wafer = true;//呼叫LP上料
+					tool_allow_get_wafer_LLA = true;
+					logInform(lk1->getName().c_str(), "已发送上料请求");
 					loadlock1_auto_step = 302;
 				}
 				break;
 				case 302:
 				{
-					if (!tool_allow_get_wafer)
-					{	//EFEM上料完成
+					if (!tool_allow_get_wafer_LLA)
+					{	
+						//EFEM上料完成
 						loadlock1_auto_step = 350;
 						loadlock1_put_cassette_finished = true; //放料到loadlock1完成
 					}
 					else {
+						// 添加等待状态提示
+						static int wait_count = 0;
+						if ((wait_count++ % 20) == 0) {  // 每20次循环打印一次
+							logInform(lk1->getName().c_str(), "等待EFEM上料中...");
+						}
 						Sleep(50);
 					}
 				}
 				break;
 				case 350:
 				{
-					if (loadlock1_put_cassette_finished && !tool_allow_get_wafer)//上料完成
+					if (loadlock1_put_cassette_finished && !tool_allow_get_wafer_LLA)//上料完成
 					{
 						//此时task status 改成LockPendingTasks 
 						efemCompletedTasks = taskManager.getEfemCompletedTasks();
@@ -2918,13 +2984,14 @@ namespace FC{
 				break;
 				case 5023:
 				{
-					tool_allow_put_wafer = true;//呼叫EFEM下料
+					//tool_allow_put_wafer = true;//呼叫EFEM下料
+					tool_allow_put_wafer_LLA = true;
 					loadlock1_auto_step = 5024;
 				}
 				break;
 				case 5024:
 				{
-					if (!tool_allow_put_wafer) {//下料完成
+					if (!tool_allow_put_wafer_LLA) {//下料完成
 						loadlock1_auto_step = 5025;
 					}
 					else {
@@ -3007,7 +3074,8 @@ namespace FC{
 #pragma region  模拟出空casstte的流程
 				case 6003:
 				{
-					tool_allow_put_wafer = true;//呼叫EFEM下料
+					//tool_allow_put_wafer = true;//呼叫EFEM下料
+					tool_allow_put_wafer_LLA = true;
 					loadlock1_auto_step = 5024;
 				}
 				break;
@@ -3072,7 +3140,7 @@ namespace FC{
 						loadlock2_auto_step = 400;
 					}
 
-					else if (loadLockBPendingTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize)
+					else if (loadLockBPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize)
 					{
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 
@@ -3147,27 +3215,32 @@ namespace FC{
 				break;
 				case 301:
 				{
-					//WARNNING:   2025-8-15: 共享变量,LLA,LLB多线程下会产生竞争条件，方法： 1.区分开 2.加互斥锁
-
-					tool_allow_get_wafer = true;//呼叫LP上料
+					tool_allow_get_wafer_LLB = true;//呼叫LP上料
+					logInform(lk2->getName().c_str(), "已发送上料请求");
 					loadlock2_auto_step = 302;
 				}
 				break;
 				case 302:
 				{
-					if (!tool_allow_get_wafer)
+					if (!tool_allow_get_wafer_LLB)
 					{	//EFEM上料完成
+						logInform(lk2->getName().c_str(), "EFEM上料完成");
 						loadlock2_auto_step = 350;
 						loadlock2_put_cassette_finished = true; //放料到loadlock2完成
 					}
 					else {
+						// 添加等待状态提示
+						static int wait_count = 0;
+						if ((wait_count++ % 20) == 0) {  // 每20次循环打印一次
+							logInform(lk2->getName().c_str(), "等待EFEM上料中...");
+						}
 						Sleep(50);
 					}
 				}
 				break;
 				case 350:
 				{
-					if (loadlock2_put_cassette_finished && !tool_allow_get_wafer)//上料完成
+					if (loadlock2_put_cassette_finished && !tool_allow_get_wafer_LLB)//上料完成
 					{
 						//WARNNING:   2025-8-15: 区分开LLA线程操作，
 						efemCompletedTasks = taskManager.getEfemCompletedTasks();
@@ -3825,13 +3898,14 @@ namespace FC{
 				break;
 				case 5023:
 				{
-					tool_allow_put_wafer = true;//呼叫EFEM下料
+					//tool_allow_put_wafer = true;//呼叫EFEM下料
+					tool_allow_put_wafer_LLB = true;
 					loadlock2_auto_step = 5024;
 				}
 				break;
 				case 5024:
 				{
-					if (!tool_allow_put_wafer) {//下料完成
+					if (!tool_allow_put_wafer_LLB) {//下料完成
 						loadlock2_auto_step = 5025;
 					}
 					else {
