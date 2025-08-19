@@ -55,6 +55,10 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	{
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s 处于忙碌中.", sub->getName()), this);
 	}
+	//if (SIMULATION_TEST == 1)
+	//{
+	//	return RunResult::RUN_OK;
+	//}
 	//check modules
 	auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 	//get cass

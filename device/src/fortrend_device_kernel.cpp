@@ -75,12 +75,13 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> loadlock2(new FortrendLoadLockSubsystem(this, "LLB"));
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr(new FortrendSunwayRobotSubsystem(this, "WTR"));
 		std::shared_ptr<FortrendTMCavitySubsystem> tm(new FortrendTMCavitySubsystem(this, "TM"));
+		std::shared_ptr<FortrendPumpSubsystem> pump(new FortrendPumpSubsystem(this, "PUMP"));
 		//add
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1(new FortrendPMCavitySubsystem(this, "PM1"));
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2(new FortrendPMCavitySubsystem(this, "PM2"));
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3(new FortrendPMCavitySubsystem(this, "PM3"));
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4(new FortrendPMCavitySubsystem(this, "PM4"));
-		std::shared_ptr<FortrendPumpSubsystem> pump(new FortrendPumpSubsystem(this, "PUMP"));
+		
 
 		//FortrendSTATIONMODESubsystem
 		//std::shared_ptr<FortrendSTATIONMODESubsystem> LLALower(new FortrendSTATIONMODESubsystem(this, "LLALower"));
@@ -103,11 +104,12 @@ namespace FC{
 		this->addKernelModule(loadlock1);
 		this->addKernelModule(loadlock2);
 		this->addKernelModule(tm);
+		this->addKernelModule(pump);
 		this->addKernelModule(pm1);
 		this->addKernelModule(pm2);
 		this->addKernelModule(pm3);
 		this->addKernelModule(pm4);
-		this->addKernelModule(pump);
+		
 		//this->addKernelModule(LLALower);
 		//this->addKernelModule(LLBUp);
 

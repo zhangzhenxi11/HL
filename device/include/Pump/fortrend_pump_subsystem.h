@@ -14,6 +14,7 @@
 #include "kernel/Fortrend/abstract_io_subsystem.h"
 #include "kernel/Fortrend/fortrend_abstract_station.h"
 
+#include "Kernel/Fortrend/hex_subsystem_helper.h"
 #include "KeyencePLC/keyence_plc_command_executer.h"
 #include "KeyencePLC/keyence_plc_subsystem_helper.h"
 
@@ -101,9 +102,6 @@ public:
 	bool getMechanicalPumpRunningState()const;
 	//acc 加速状态
 	bool getMechanicalPumpAcc()const;
-
-
-
 
 	//是否打开
 	bool getMolecularPumpOpenedLLA()const;

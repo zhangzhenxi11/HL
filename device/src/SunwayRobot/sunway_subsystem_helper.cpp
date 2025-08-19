@@ -445,25 +445,44 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelperPrivat
 */
 void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(KernelException)
 {
+	std::string data; // 累积缓冲区
 	while (true)
 	{
 		setTimeout(timeout_ms);
-		std::string data;
+		//std::string data;
 		//char receiveBuf[1024];
 		char receiveBuf[4096];
-		int recvLen = recv(*client, receiveBuf, 1024, 0);
+		int recvLen = recv(*client, receiveBuf, sizeof(receiveBuf) - 1, 0);
 
-		if (recvLen == SOCKET_ERROR || recvLen == 0)
+		if (recvLen <= 0)
 		{
-			//2025-8-13 注释
-			//isConnected = false; // 连接断开  
-			//is_busy = false;
-
-			Sleep(200);
+			if (WSAGetLastError() == WSAETIMEDOUT) continue;
+			Sleep(100);
 			continue;
 		}
+
 		data.append(receiveBuf, recvLen);
 
+		// 处理完整消息（以\r分隔）
+		size_t pos = 0;
+		while ((pos = data.find('\r')) != std::string::npos)
+		{
+			// 1. 提取从开始到\r之前的内容（不包含\r）
+			std::string message = data.substr(0, pos);
+
+			// 2. 从缓冲区删除已处理部分（包含\r）
+			data.erase(0, pos + 1);  // +1 确保删除\r字符
+
+			{
+				std::lock_guard<std::mutex> lock(queueMutex);
+				logInform1(name.c_str(), "Rcv_Format_: %s", message.c_str());
+				messageQueue.push(message);// 这里message不包含\r
+			}
+			queueCV.notify_one();
+		}
+		Sleep(5); // 适当降低CPU占用
+
+#if 0
 		size_t found = data.find("\r"); //0x0D
 		if (found != std::string::npos)
 		{
@@ -472,7 +491,7 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 		else
 		{
 			setTimeout(3000);
-			recvLen = recv(*client, receiveBuf, 1024, 0);
+			recvLen = recv(*client, receiveBuf, sizeof(receiveBuf) - 1, 0);
 			if (recvLen == SOCKET_ERROR || recvLen == 0)
 			{
 				Sleep(100);
@@ -490,6 +509,9 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 				throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "返回数据格式错误.");
 			}
 		}
+
+
+
 		logInform1(name.c_str(), "Rcv_Format_: %s", data.c_str());
 
 		is_busy = false;
@@ -500,15 +522,9 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 			messageQueue.push(data); // 入队不覆盖
 		}
 		queueCV.notify_one(); // 通知等待线程
-		Sleep(20);
 
-		//if (data != std::string(""))
-		//{
-		//	robotMessage = data;
-		//	logInform1(name.c_str(), "其他--Rcv: %s", robotMessage.c_str());
-		//}
-		////2025-08-16 改成20ms
-		//Sleep(20);
+		Sleep(5); // 适当降低CPU占用
+#endif
 	}
 }
 

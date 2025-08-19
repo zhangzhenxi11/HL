@@ -297,6 +297,12 @@ void FortrendDeviceModel::addManualCompoments(){
 	//	QWidget* w = new QAlignerSubsystemWidget(sub);
 	//	module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
 	//}
+	
+	//pm
+	for (auto& sub : kernel->getKernelModules<FortrendPMCavitySubsystem>()) {
+		QWidget* w = new QPMCavitySubsystemWidget(sub);
+		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
+	}
 
 	//tm
 	for (auto& sub : kernel->getKernelModules<FortrendTMCavitySubsystem>())
@@ -305,11 +311,7 @@ void FortrendDeviceModel::addManualCompoments(){
 		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
 	}
 
-	//pm
-	for (auto& sub : kernel->getKernelModules<FortrendPMCavitySubsystem>()){
-		QWidget* w = new QPMCavitySubsystemWidget(sub);
-		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
-	}
+
 
 	////mode 
 	//for (auto& sub : kernel->getKernelModules<FortrendSTATIONMODESubsystem>()) {

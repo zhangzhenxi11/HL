@@ -630,7 +630,7 @@ namespace FC{
 	void FortrendLoadLockSubsystem::getSecondLayerMapping(Cassette::Mapping &map)
 	{
 		short second_wafer_res = 0;
-		second_wafer_res = (d->io_second_layer_wafer_presence_value) ? 2 : 1;
+		second_wafer_res = (d->io_second_layer_wafer_presence_value) ? 2 : 1; //2:有片子 1：空片
 		Cassette::Mapping slotState = handleSingleSlotMapping(second_wafer_res);
 		map = slotState;
 	}

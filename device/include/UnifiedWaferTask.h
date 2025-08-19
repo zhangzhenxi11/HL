@@ -2,7 +2,7 @@
 // UnifiedWaferTask.h
 #include <chrono>
 #include "kernel/kernel.h"
-
+#include <array>
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
 #endif
@@ -53,6 +53,8 @@ namespace FC {
 
         int arm;         // 真空机械臂选择0=A, 1=B
         AlignerStatus Aligner_status;
+
+        std::array<int, 4> selectPmEnableList;
 
         // 工艺参数
         bool pm1Enabled;

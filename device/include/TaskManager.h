@@ -90,6 +90,13 @@ namespace FC {
         //获取待EFEM 初始状态的任务
         std::vector<UnifiedWaferTask> getEfemUnkownStatusTasks();//0
 
+        //分给LLA的任务
+        std::vector<UnifiedWaferTask> getEfemUnkownStatusLLATasks();
+
+        //分给LLB的任务
+        std::vector<UnifiedWaferTask> getEfemUnkownStatusLLBTasks();
+
+
         //获取待EFEM待上料的任务 QUEUED (根据LLK MAPPING决定，要上料的晶圆)
         std::vector<UnifiedWaferTask> getEfemPendingTasks();//1
 

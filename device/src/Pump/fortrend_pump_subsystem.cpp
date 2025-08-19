@@ -460,7 +460,7 @@ void FortrendPumpSubsystem::onProcess(){
 
 void FortrendPumpSubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){
 	KernelAbstractSubSystem::onConfigure(config);
-	
+	FortrendAbstractStation::configure(config);
 	configKeyencePlc(config);
 	if (config->has("Update"))
 	{

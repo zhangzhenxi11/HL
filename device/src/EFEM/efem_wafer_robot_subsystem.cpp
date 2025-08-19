@@ -250,10 +250,12 @@ void EFEMWaferRobotSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command
 			}
 			std::vector<int> slots;
 			std::vector<Cassette::Mapping> mappings;
-			for (size_t i = 0; i < mapdt.size(); i++){
+			for (size_t i = 0; i < mapdt.size(); i++)
+			{
 				slots.push_back(i + 1);
 				auto map = getMappingFromChar(mapdt[i]);
 				mappings.push_back(map);
+
 				setObject(i, map==Cassette::Present);
 			}
 			cass->setMapping(slots, mappings);

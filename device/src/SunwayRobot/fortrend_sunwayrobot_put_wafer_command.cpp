@@ -81,6 +81,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::performRobotOp
 	const std::function<std::string()>& commandBuilder,
 	const std::function<bool()>& onSuccess)
 {
+	clearRobotMessage();
 	if (robotRobotOperation(commandBuilder) == RunResult::RUN_OK)
 	{
 		if (!onSuccess())
@@ -224,7 +225,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			return RunResult::RUN_FAILD;
 		}
 		res = recvResponseRobotMessage(timeout);
-		Sleep(200);
+		Sleep(10);
 	}
 
 	if (res != "ACK;" && res.find(VerificationMessage) == std::string::npos)//没找到
@@ -277,7 +278,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 				return RunResult::RUN_FAILD;
 			}
 			res = recvResponseRobotMessage(timeout);
-			Sleep(200);
+			Sleep(10);
 		}
 
 		auto found = search(res.begin(), res.end(), VerificationMessage.begin(), VerificationMessage.end());

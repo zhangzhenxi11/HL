@@ -394,6 +394,44 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusTasks()
     return result;
 }
 
+std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusLLATasks()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<UnifiedWaferTask> result;
+
+    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::UNKNOWN];
+    for (int taskId : efemTasks[UnifiedWaferTask::UNKNOWN_PROGRESS])
+    {
+        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) { 
+            return t.taskId == taskId && t.target == UnifiedWaferTask::Location::LLA;
+           
+        
+        });
+        if (it != tasks_.end()) result.push_back(*it);
+    }
+
+    return result;
+}
+
+std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusLLBTasks()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<UnifiedWaferTask> result;
+
+    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::UNKNOWN];
+    for (int taskId : efemTasks[UnifiedWaferTask::UNKNOWN_PROGRESS])
+    {
+        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) {
+            return t.taskId == taskId && t.target == UnifiedWaferTask::Location::LLB;
+
+
+        });
+        if (it != tasks_.end()) result.push_back(*it);
+    }
+
+    return result;
+}
+
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemPendingTasks()
 {
     //先获取TaskType，再找到此类型下所有QUEUED状态下的集合  
@@ -688,7 +726,7 @@ bool FC::TaskManager::waitForTasks(int timeoutMs)
 bool FC::TaskManager::waitLLBForTasks(int timeoutMs)
 {
     std::unique_lock<std::mutex> lock(mutex_);
-    return cv_.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return !tasks_.size() > 2; });//不为空返回true
+    return cv_.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return !tasks_.size() >= 2; });//不为空返回true
 }
 
 bool FC::TaskManager::hasTasks()
