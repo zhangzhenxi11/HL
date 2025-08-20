@@ -101,8 +101,6 @@ namespace FC{
 		//init 
 		setObject(0, false);
 		setObject(1, false);
-
-
 	}
 
 	void  FortrendSunwayRobotSubsystem::pause(){
@@ -141,6 +139,10 @@ namespace FC{
 	}
 
 	void FortrendSunwayRobotSubsystem::setObject(unsigned int arm_id, bool has){
+
+		std::string hasWafer = has ? "has" : "noHas";
+		logInform("WTR", "arm_id:%d, ishasWafer:%s", arm_id, hasWafer.c_str());
+
 		d->setObject(arm_id, has);
 	}
 

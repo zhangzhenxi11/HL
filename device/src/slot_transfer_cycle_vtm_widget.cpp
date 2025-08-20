@@ -106,11 +106,12 @@
 #include "TaskManager.h"
 #include "ThreadSafeStateMachine.h"
 
+
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
 
-#define CYCLE_SIM_MODE 1
+#define CYCLE_SIM_MODE 0
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
 
@@ -402,6 +403,25 @@ namespace FC{
 		std::vector<UnifiedWaferTask> pmCompletedTasks;
 		// IN_PROGRESS
 		std::vector<UnifiedWaferTask> pmProgressingTasks;
+
+		std::vector<UnifiedWaferTask> pm2PendingTasks;
+
+		std::vector<UnifiedWaferTask> pm2CompletedTasks;
+		// IN_PROGRESS
+		std::vector<UnifiedWaferTask> pm2ProgressingTasks;
+
+		std::vector<UnifiedWaferTask> pm3PendingTasks;
+
+		std::vector<UnifiedWaferTask> pm3CompletedTasks;
+		// IN_PROGRESS
+		std::vector<UnifiedWaferTask> pm3ProgressingTasks;
+
+		std::vector<UnifiedWaferTask> pm4PendingTasks;
+
+		std::vector<UnifiedWaferTask> pm4CompletedTasks;
+		// IN_PROGRESS
+		std::vector<UnifiedWaferTask> pm4ProgressingTasks;
+
 
 		/******************************************1.LP->LK 任务池（按 LK 分类）******************************************************/
 		// 1.LP->LK 任务池（按 LK 分类）
@@ -726,10 +746,10 @@ namespace FC{
 		loadLockAReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLA");// 7下料 ，待放到LL的晶圆数量
 		loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");// 8下料 ，放到LL的晶圆数量
 
-		loadLockPendingTasks = taskManager.getLoadLockPendingTasks();
-		loadLockCompletedTasks = taskManager.getLoadLockCompletedTasks();
-		loadLockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-		loadLockReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks();
+		//loadLockPendingTasks = taskManager.getLoadLockPendingTasks();
+		//loadLockCompletedTasks = taskManager.getLoadLockCompletedTasks();
+		//loadLockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+		//loadLockReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks();
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLBSubTransferDatas()
@@ -740,10 +760,10 @@ namespace FC{
 		loadLockBReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLB");// 7下料 ，待放到LL的晶圆数量
 		loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB");// 8下料 ，放到LL的晶圆数量
 
-		loadLockPendingTasks = taskManager.getLoadLockPendingTasks();
-		loadLockCompletedTasks = taskManager.getLoadLockCompletedTasks();
-		loadLockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-		loadLockReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks();
+		//loadLockPendingTasks = taskManager.getLoadLockPendingTasks();
+		//loadLockCompletedTasks = taskManager.getLoadLockCompletedTasks();
+		//loadLockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+		//loadLockReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks();
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateEfemSubTransferDatas()
@@ -757,9 +777,30 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdatePmSubTransferDatas(std::string pmName)
 	{
-		pmPendingTasks = taskManager.getPMPendingTasks(pmName);
-		pmCompletedTasks = taskManager.getPMPendingTasks(pmName);
-		pmProgressingTasks = taskManager.getPMPendingTasks(pmName);
+		if(pmName == "PM1")
+		{
+			pmPendingTasks = taskManager.getPMPendingTasks(pmName);
+			pmCompletedTasks = taskManager.getPMPendingTasks(pmName);
+			pmProgressingTasks = taskManager.getPMPendingTasks(pmName);
+		}
+		else if (pmName == "PM2")
+		{
+			pm2PendingTasks = taskManager.getPMPendingTasks(pmName);
+			pm2CompletedTasks = taskManager.getPMPendingTasks(pmName);
+			pm2ProgressingTasks = taskManager.getPMPendingTasks(pmName);
+		}
+		else if (pmName == "PM3")
+		{
+			pm3PendingTasks = taskManager.getPMPendingTasks(pmName);
+			pm3CompletedTasks = taskManager.getPMPendingTasks(pmName);
+			pm3ProgressingTasks = taskManager.getPMPendingTasks(pmName);
+		}
+		else
+		{
+			pm4PendingTasks = taskManager.getPMPendingTasks(pmName);
+			pm4CompletedTasks = taskManager.getPMPendingTasks(pmName);
+			pm4ProgressingTasks = taskManager.getPMPendingTasks(pmName);
+		}
 	}
 
 	/*
@@ -2267,11 +2308,11 @@ namespace FC{
 		}
 		catch (const std::exception& e) {
 
-			logInform1("Cyclelog", "EFEM thread crashed:", e.what());
+			logError("Cyclelog", "EFEM thread crashed:", e.what());
 			qCritical() << "EFEM thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "EFEM thread crashed: unknown exception");
+			logError("Cyclelog", "EFEM thread crashed: unknown exception");
 			qCritical() << "EFEM thread crashed: unknown exception";
 		}
 
@@ -3244,11 +3285,11 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "LLATransfer thread crashed:", e.what());
+			logError("Cyclelog", "LLATransfer thread crashed:", e.what());
 			qCritical() << "LLATransfer thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "LLATransfer thread crashed: unknown exception");
+			logError("Cyclelog", "LLATransfer thread crashed: unknown exception");
 			qCritical() << "LLATransfer thread crashed: unknown exception";
 		}
 
@@ -3765,9 +3806,6 @@ namespace FC{
 					std::string pmName = getSelectPmProcessName(loadLockBCompletedTasks.at(0));
 					logInform(lk2->getName().c_str(), "step:1052,pmName:%s", pmName.c_str());
 
-					//pmName = loadLockBPendingTasks.at(0).locationToString(loadLockBCompletedTasks.at(0).target_pm);
-					//logInform(lk2->getName().c_str(), "step:1052,pmName:%s", pmName.c_str());
-
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
 							logInform("cycle", "step:1052,大气模式，不关闭TM腔门!");
@@ -4217,11 +4255,11 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "LLBTransfer thread crashed:", e.what());
+			logError("Cyclelog", "LLBTransfer thread crashed:", e.what());
 			qCritical() << "LLBTransfer thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "LLBTransfer thread crashed: unknown exception");
+			logError("Cyclelog", "LLBTransfer thread crashed: unknown exception");
 			qCritical() << "LLBTransfer thread crashed: unknown exception";
 		}
 
@@ -4260,33 +4298,24 @@ namespace FC{
 						{//允许取放
 
 							//要区分那个LL腔！！！
-							if (tool_allow_lla)
-							{
-								loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
-								if (loadLockACompletedTasks.size() > 0)
-								{
-									for (auto& task : loadLockACompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
-								}
 
-								tool_allow_lla = false;
-							}
-							else if(tool_allow_llb)
+							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
+							if (loadLockACompletedTasks.size() > 0)
 							{
-								loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
-								if (loadLockBCompletedTasks.size() > 0)
+								for (auto& task : loadLockACompletedTasks)
 								{
-									for (auto& task : loadLockBCompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 								}
-
-								tool_allow_llb = false;
 							}
 
+							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
+							if (loadLockBCompletedTasks.size() > 0)
+							{
+								for (auto& task : loadLockBCompletedTasks)
+								{
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+								}
+							}
 							UpdatePmSubTransferDatas("PM1");
 
 							pm1_auto_step = 100;
@@ -4318,7 +4347,7 @@ namespace FC{
 							}
 							else
 							{
-								pm1_auto_step = 199; //取放片
+								pm1_auto_step = 200; //取放片
 							}
 							
 						}
@@ -4540,7 +4569,7 @@ namespace FC{
 						}
 					}
 					break;
-#pragma 交换料
+#pragma region 交换料
 					case 1060:
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -4674,17 +4703,35 @@ namespace FC{
 					case 2000:
 					{
 						Sleep(2000);
+						UpdatePmSubTransferDatas("PM1");
 						logInform("PM1","2s延迟，来模拟做工艺流程.....");
-						taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-						pm1_auto_step = 2001;
+						if(pmPendingTasks.size() > 0 )
+						{
+							taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+							pm1_auto_step = 10;
+						}
+						else
+						{
+							pm1_auto_step = 10;
+						}
 					}
 					case 2001:
 					{
-						pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
-						taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-						pm1_allow_get_put_wafer = false;
-						Sleep(10);
-						pm1_auto_step = 10;
+
+						UpdatePmSubTransferDatas("PM1");
+						if(pmCompletedTasks.size() >0 )
+						{
+							taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm1_allow_get_put_wafer = false;
+							pm1_auto_step = 10;
+							Sleep(10);
+						}
+						else
+						{
+							pm1_auto_step = 10;
+							Sleep(10);
+						}
 					}
 					break;
 					default:
@@ -4698,11 +4745,11 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "PM1Transfer thread crashed:", e.what());
+			logError("Cyclelog", "PM1Transfer thread crashed:", e.what());
 			qCritical() << "PM1Transfer thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "PM1Transfer thread crashed: unknown exception");
+			logError("Cyclelog", "PM1Transfer thread crashed: unknown exception");
 			qCritical() << "PM1Transfer thread crashed: unknown exception";
 		}
 	}
@@ -4730,30 +4777,25 @@ namespace FC{
 						if (pm2_allow_get_put_wafer)
 						{//允许取放
 
-							if (tool_allow_lla)
+
+							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
+							if (loadLockACompletedTasks.size() > 0)
 							{
-								loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
-								if (loadLockACompletedTasks.size() > 0)
+								for (auto& task : loadLockACompletedTasks)
 								{
-									for (auto& task : loadLockACompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 								}
-								tool_allow_lla = false;
 							}
 
-							else if(tool_allow_llb)
+
+
+							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
+							if (loadLockBCompletedTasks.size() > 0)
 							{
-								loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
-								if (loadLockBCompletedTasks.size() > 0)
+								for (auto& task : loadLockBCompletedTasks)
 								{
-									for (auto& task : loadLockBCompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 								}
-								tool_allow_llb = false;
 							}
 
 							UpdatePmSubTransferDatas("PM2");
@@ -4777,9 +4819,9 @@ namespace FC{
 
 					case 100:
 					{
-						UpdatePmSubTransferDatas("PM1");
+						UpdatePmSubTransferDatas("PM2");
 						//判断是放、取,不考虑交互手
-						if (pmPendingTasks.size() > 0 || pmCompletedTasks.size() > 0)
+						if (pm2PendingTasks.size() > 0 || pm2CompletedTasks.size() > 0)
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
@@ -4787,7 +4829,7 @@ namespace FC{
 							}
 							else
 							{
-								pm2_auto_step = 199; //取放片
+								pm2_auto_step = 200; //取放片
 							}
 							
 						}
@@ -4964,10 +5006,10 @@ namespace FC{
 							else
 							{
 								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 
-								pm1_allow_get_put_wafer = false;
+								pm2_allow_get_put_wafer = false;
 								pm2_auto_step = 10;
 							}
 						}
@@ -4992,9 +5034,9 @@ namespace FC{
 							else
 							{
 								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-								pm1_allow_get_put_wafer = false;
+								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm2_allow_get_put_wafer = false;
 								pm2_auto_step = 10;
 							}
 						}
@@ -5004,21 +5046,37 @@ namespace FC{
 						}
 					}
 					break;
-
 					case 2000:
 					{
-						Sleep(2000);
 						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
-						taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-						pm2_auto_step = 2001;
+						UpdatePmSubTransferDatas("PM2");
+						if(pm2PendingTasks.size() > 0)
+						{
+							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm2_auto_step = 10;
+						}
+						else
+						{
+							pm2_auto_step = 10;
+						}
 					}
 					case 2001:
 					{
-						pmCompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10
-						taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-						pm2_allow_get_put_wafer = false;
-						pm2_auto_step = 10;
-						Sleep(10);
+						UpdatePmSubTransferDatas("PM2");
+						if(pm2CompletedTasks.size() > 0)
+						{
+							taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm2_allow_get_put_wafer = false;
+
+							pm2_auto_step = 10;
+							Sleep(10);
+						}
+						else
+						{
+							pm2_auto_step = 10;
+							Sleep(10);
+						}
 					}
 					break;
 					default:
@@ -5031,11 +5089,11 @@ namespace FC{
 
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "PM2Transfer thread crashed:", e.what());
-			qCritical() << "PM1Transfer thread crashed:" << e.what();
+			logError("Cyclelog", "PM2Transfer thread crashed:", e.what());
+			qCritical() << "PM2ransfer thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "PM2Transfer thread crashed: unknown exception");
+			logError("Cyclelog", "PM2Transfer thread crashed: unknown exception");
 			qCritical() << "PM2Transfer thread crashed: unknown exception";
 		}
 		
@@ -5063,31 +5121,27 @@ namespace FC{
 						//获取待放片晶圆
 						if (pm3_allow_get_put_wafer)
 						{//允许取放
-							if (tool_allow_lla)
-							{
 
-								loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
-								if (loadLockACompletedTasks.size() > 0)
-								{
-									for (auto& task : loadLockACompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
-								}
-								tool_allow_lla = false;
-							}
-							else if(tool_allow_llb)
+
+							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
+							if (loadLockACompletedTasks.size() > 0)
 							{
-								loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
-								if (loadLockBCompletedTasks.size() > 0)
+								for (auto& task : loadLockACompletedTasks)
 								{
-									for (auto& task : loadLockBCompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 								}
-								tool_allow_llb = false;
 							}
+
+
+							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
+							if (loadLockBCompletedTasks.size() > 0)
+							{
+								for (auto& task : loadLockBCompletedTasks)
+								{
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+								}
+							}
+
 
 							UpdatePmSubTransferDatas("PM3");
 
@@ -5112,9 +5166,9 @@ namespace FC{
 					{
 						UpdatePmSubTransferDatas("PM3");
 						//判断是放、取,不考虑交互手
-						if (pmPendingTasks.size() > 0 || pmCompletedTasks.size() > 0)
+						if (pm3PendingTasks.size() > 0 || pm3CompletedTasks.size() > 0)
 						{
-							pm3_auto_step = 199; //取放片
+							pm3_auto_step = 200; //取放片
 						}
 						else
 						{
@@ -5287,8 +5341,8 @@ namespace FC{
 							else
 							{
 								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 
 								pm3_allow_get_put_wafer = false;
 								pm3_auto_step = 10;
@@ -5315,8 +5369,8 @@ namespace FC{
 							else
 							{
 								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm3_allow_get_put_wafer = false;
 								pm3_auto_step = 10;
 							}
@@ -5330,19 +5384,37 @@ namespace FC{
 					case 2000:
 					{
 						Sleep(500);
+						UpdatePmSubTransferDatas("PM3");
+
 						logInform("PM3", "2s延迟，来模拟做工艺流程.....");
-						taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-						pm3_auto_step = 2001;
+						if(pm3PendingTasks.size() >0 )
+						{
+							taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm3_auto_step = 10;
+						}
+						else
+						{
+							pm3_auto_step = 10;
+						}
 					}
 					break;
 					case 2001:
 					{
-						pmCompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
-						taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-						pm3_allow_get_put_wafer = false;
-						Sleep(10);
-						pm3_auto_step = 10;
-					
+						//pmCompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
+						UpdatePmSubTransferDatas("PM3");
+						if(pm3CompletedTasks.size() > 0)
+						{
+							taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm3_allow_get_put_wafer = false;
+							Sleep(10);
+							pm3_auto_step = 10;
+						}
+						else
+						{
+							Sleep(10);
+							pm3_auto_step = 10;
+						}
 					}
 					break;
 					default:
@@ -5355,11 +5427,11 @@ namespace FC{
 
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "PM3Transfer thread crashed:", e.what());
+			logError("Cyclelog", "PM3Transfer thread crashed:", e.what());
 			qCritical() << "PM3Transfer thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "PM3Transfer thread crashed: unknown exception");
+			logError("Cyclelog", "PM3Transfer thread crashed: unknown exception");
 			qCritical() << "PM3Transfer thread crashed: unknown exception";
 		}
 	}
@@ -5386,32 +5458,26 @@ namespace FC{
 						//获取待放片晶圆
 						if (pm4_allow_get_put_wafer)
 						{//允许取放
-							if (tool_allow_lla)
+
+							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
+							if (loadLockACompletedTasks.size() > 0)
 							{
-								loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
-								if (loadLockACompletedTasks.size() > 0)
+								for (auto& task : loadLockACompletedTasks)
 								{
-									for (auto& task : loadLockACompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 								}
-								tool_allow_lla = false;
-							}
-							else if(tool_allow_llb)
-							{
-								loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
-								if (loadLockBCompletedTasks.size() > 0)
-								{
-									for (auto& task : loadLockBCompletedTasks)
-									{
-										taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
-									}
-								}
-								tool_allow_llb = false;
 							}
 
-							UpdatePmSubTransferDatas("PM3");
+							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
+							if (loadLockBCompletedTasks.size() > 0)
+							{
+								for (auto& task : loadLockBCompletedTasks)
+								{
+									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+								}
+							}
+
+							UpdatePmSubTransferDatas("PM4");
 
 							pm4_auto_step = 100;
 						}
@@ -5434,9 +5500,9 @@ namespace FC{
 					{
 						UpdatePmSubTransferDatas("PM4");
 						//判断是放、取,不考虑交互手
-						if (pmPendingTasks.size() > 0 || pmCompletedTasks.size() > 0)
+						if (pm4PendingTasks.size() > 0 || pm4CompletedTasks.size() > 0)
 						{
-							pm4_auto_step = 199; //取放片
+							pm4_auto_step = 200; //取放片
 						}
 						else
 						{
@@ -5606,8 +5672,8 @@ namespace FC{
 							else
 							{
 								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 
 								pm4_allow_get_put_wafer = false;
 								pm4_auto_step = 10;
@@ -5634,8 +5700,8 @@ namespace FC{
 							else
 							{
 								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm4_allow_get_put_wafer = false;
 								pm4_auto_step = 10;
 							}
@@ -5649,18 +5715,37 @@ namespace FC{
 					case 2000:
 					{
 						Sleep(500);
+						UpdatePmSubTransferDatas("PM4");
 						logInform("PM4", "模拟做工艺流程.....");
-						taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-						pm4_auto_step = 2001;
+						if(pm4PendingTasks.size() >0 )
+						{
+							taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm4_auto_step = 10;
+						}
+						else
+						{
+							pm4_auto_step = 10;
+							Sleep(10);
+						}
 					}
 					break;
 					case 2001:
 					{
-						pmCompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
-						taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-						pm4_allow_get_put_wafer = false;
-						Sleep(10);
-						pm4_auto_step = 10;
+						//pmCompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
+						UpdatePmSubTransferDatas("PM4");
+						if(pm4CompletedTasks.size() >0 )
+						{
+							taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm4_allow_get_put_wafer = false;
+							Sleep(10);
+							pm4_auto_step = 10;
+						}
+						else
+						{
+							pm4_auto_step = 10;
+							Sleep(10);
+						}
 					}
 					default:
 						break;
@@ -5672,11 +5757,11 @@ namespace FC{
 
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "PM4Transfer thread crashed:", e.what());
+			logError("Cyclelog", "PM4Transfer thread crashed:", e.what());
 			qCritical() << "PM4Transfer thread crashed:" << e.what();
 		}
 		catch (...) {
-			logInform1("Cyclelog", "PM4Transfer thread crashed: unknown exception");
+			logError("Cyclelog", "PM4Transfer thread crashed: unknown exception");
 			qCritical() << "PM4Transfer thread crashed: unknown exception";
 		}
 
@@ -5694,7 +5779,7 @@ namespace FC{
 		try {
 			while (!taskManager.isStopped())
 			{
-				//logInform1("Cyclelog", "UpdateTransfer thread started------------------->");
+				
 				Sleep(500);
 				update_step_once_finished = false;
 
@@ -5777,15 +5862,15 @@ namespace FC{
 					Sleep(10);
 				}
 				
-				//logInform1("Cyclelog", "UpdateTransfer thread finished<-------------------");
 			}
 		}
 		catch (const std::exception& e) {
-			logInform1("Cyclelog", "UpdateTransfer thread crashed:", e.what());
+			logError("Cyclelog", "UpdateTransfer thread crashed:", e.what());
 			qCritical() << "UpdateTransfer thread crashed:" << e.what();
+			
 		}
 		catch (...) {
-			logInform1("Cyclelog", "UpdateTransfer thread crashed: unknown exception");
+			logError("Cyclelog", "UpdateTransfer thread crashed: unknown exception");
 			qCritical() << "UpdateTransfer thread crashed: unknown exception";
 		}
 	}

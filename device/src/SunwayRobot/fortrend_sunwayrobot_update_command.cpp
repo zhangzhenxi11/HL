@@ -176,6 +176,162 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		}
 
 	}
+	//ARM A
+	command = "QRY:LOAD/A;";
+	clearRobotMessage();
+	sendRequest(command);
+	res = recvResponseRobotMessage(timeout);
+
+	while (true)
+	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+
+		if (res != std::string(""))
+		{
+			break;
+		}
+		if (elapsed >= timeout2)
+		{
+			error_message = "查询机械手有无片子超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponseRobotMessage(timeout);
+		logInform(sub->getName().c_str(), "查询A机械手有无片子ACK：%s", res.c_str());
+		Sleep(10);
+	}
+	logInform(sub->getName().c_str(), "res：%s", res);
+
+	//res = recvResponseRobotMessage(timeout);
+	//logInform(sub->getName().c_str(), "查询机械手有无片子RPS：%s", res);
+
+	//等待机械手返回指令
+	auto startTime2 = std::chrono::high_resolution_clock::now();
+	auto timeout3 = std::chrono::seconds(10);
+
+	while (true)
+	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
+
+		if (res != std::string("ACK;") && !res.empty())
+		{
+			break;
+		}
+		if (elapsed >= timeout3)
+		{
+			error_message = "查询A机械手有无片子指令超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponseRobotMessage(timeout);
+		logInform(sub->getName().c_str(), "查询B机械手有无片子RPS：%s", res.c_str());
+		Sleep(20);
+	}
+
+	if (res.find("RPS:LOAD/ON;") != std::string::npos)
+	{
+		sub->setObject(0, true);
+		sub_cass->setMapping(1, Cassette::Mapping::Present);
+	}
+	else if (res.find("RPS:LOAD/OFF;") != std::string::npos)
+	{
+		sub->setObject(0, false);
+		sub_cass->setMapping(1, Cassette::Mapping::Empty);
+	}
+	else
+	{
+		sub->setObject(0, false);
+		sub_cass->setMapping(1, Cassette::Mapping::Unknown);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("工位: %s 获取手臂A状态通讯错误.", sub->getName()), this);
+	}
+
+	//ARM B
+	command = "QRY:LOAD/B;";
+	clearRobotMessage();
+	sendRequest(command);
+	res = recvResponseRobotMessage(timeout);
+
+	while (true)
+	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+
+		if (res != std::string(""))
+		{
+			break;
+		}
+		if (elapsed >= timeout2)
+		{
+			error_message = "查询B机械手有无片子超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponseRobotMessage(timeout);
+		logInform(sub->getName().c_str(), "查询B机械手有无片子ACK：%s", res.c_str());
+		Sleep(10);
+	}
+	logInform(sub->getName().c_str(), "res：%s", res.c_str());
+
+	auto startTime3 = std::chrono::high_resolution_clock::now();
+	auto timeout4 = std::chrono::seconds(10);
+
+	while (true)
+	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime3);
+
+		if (res != std::string("ACK;") && !res.empty())
+		{
+			break;
+		}
+		if (elapsed >= timeout4)
+		{
+			error_message = "查询B机械手有无片子指令超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponseRobotMessage(timeout);
+		logInform(sub->getName().c_str(), "查询B机械手有无片子RPS：%s", res.c_str());
+		Sleep(20);
+	}
+
+	if (res.find("RPS:LOAD/ON;") != std::string::npos)
+	{
+		sub->setObject(1, true);
+		sub_cass->setMapping(2, Cassette::Mapping::Present);
+	}
+	else if (res.find("RPS:LOAD/OFF;") != std::string::npos)
+	{
+		sub->setObject(1, false);
+		sub_cass->setMapping(2, Cassette::Mapping::Empty);
+	}
+	else
+	{
+		sub->setObject(1, false);
+		sub_cass->setMapping(2, Cassette::Mapping::Unknown);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("工位: %s 获取手臂B状态通讯错误.", sub->getName()), this);
+	}
+
+	////调用查询指令
+	//auto cmd1 = sub->createCheckLoadCommand(0, 2); //1手
+	//sub->startCommand(cmd1);
+	//cmd1->wait();
+
+
+	//auto cmd2 = sub->createCheckLoadCommand(1, 2); //1手
+	//sub->startCommand(cmd2);
+	//cmd2->wait();
+
 
 	return RunResult::RUN_OK;
 

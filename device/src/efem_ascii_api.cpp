@@ -340,7 +340,7 @@ void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 		return;
 	}
 
-	if (base == READY&&type == INF && msg->paramers.size() == 1 && msg->paramers.at(0) == std::string("COMM")){//收到Ready消息回复
+	if (base == READY && type == INF && msg->paramers.size() == 1 && msg->paramers.at(0) == std::string("COMM")){//收到Ready消息回复
 		sendACK(command->message);
 		logInform(getName().c_str(), "sendACK processSingleMessage=%s", message.c_str());
 		setCommunicationState(COMMUNICATING);

@@ -123,7 +123,7 @@ namespace FC{
 		sendRequest(command);
 
 		std::string res = recvResponseRobotMessage(timeout);
-		if (res != std::string("ACK;"))
+		if (res != std::string("ACK;") && res.find("QRY:LOAD") == std::string::npos)
 		{
 			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误", str_arm).c_str());
 			
@@ -176,24 +176,15 @@ namespace FC{
 			}
 
 			std::string robot_staus = "";
-			std::string prefix, command;
-			std::vector<std::string> params;
-			if (parseResponse(res, prefix, command, params)) 
+			//std::string prefix, command;
+			//std::vector<std::string> params;
+			if (res == "RPS:LOAD/ON;")
 			{
-				
-				std::cout << "  前缀: " << prefix << std::endl;
-				std::cout << "  命令: " << command << std::endl;
-				std::cout << "  参数: ";
-				for (const auto& p : params) {
-					std::cout << "[" << p << "] ";
-				}
-				std::cout << "\n" << std::endl;
-
-				if(params.size()==1)
-				{
-					robot_staus = params.at(0);
-					std::cout << "\n" << robot_staus<< std::endl;
-				}
+				robot_staus = "ON";
+			}
+			else if (res == "RPS:LOAD/OFF;")
+			{
+				robot_staus = "OFF";
 			}
 			else
 			{
@@ -254,16 +245,6 @@ namespace FC{
 			}
 
 			Sleep(200);
-			//auto cmd_update = robot->createRQLoadCommand(d->arm);
-			//robot->startCommand(cmd_update);
-			//cmd_update->wait();
-			//if (cmd_update->hasError())
-			//{
-			//	//set alarm data
-			//	AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "更新手臂状态命令执行失败！"));
-			//	setAlarm(alarm);
-			//	return RunResult::RUN_FAILD;
-			//}
 			
 			logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令执行结束", str_arm).c_str());
 		}

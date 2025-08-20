@@ -641,11 +641,22 @@ std::string SunwaySubSystemHelper::recvResponseRobotMessage(unsigned int timeout
 {
 	//return d->robotMessage;
 
+	//if (!d->messageQueue.empty())
+	//{
+	//	auto msg = d->messageQueue.front();
+	//	d->messageQueue.pop();
+	//	logInform1("WTR", "messageQueue pop: %s ", msg.c_str());
+	//	return msg;
+	//}
+	//return ""; // 超时返回空
+
+
 	std::unique_lock<std::mutex> lock(d->queueMutex);
 	if (d->queueCV.wait_for(lock, std::chrono::milliseconds(timeout_ms),
 		[this] { return !d->messageQueue.empty(); }))
 	{
 		auto msg = d->messageQueue.front();
+		logInform1("WTR", "messageQueue pop: %s ", msg.c_str());
 		d->messageQueue.pop();
 		return msg;
 	}
@@ -655,7 +666,7 @@ std::string SunwaySubSystemHelper::recvResponseRobotMessage(unsigned int timeout
 void SunwaySubSystemHelper::clearRobotMessage() throw(KernelException)
 {
 	//d->robotMessage = "";
-	std::lock_guard<std::mutex> lock(d->queueMutex);
+	//std::lock_guard<std::mutex> lock(d->queueMutex);
 	while (!d->messageQueue.empty())
 	{
 		d->messageQueue.pop();

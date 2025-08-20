@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <functional>
 #include <chrono>
+#include <mutex>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -48,6 +49,7 @@ namespace FC{
 class SunwayRobotGetWaferCommandPrivate{
 public:
 	bool busy = true;
+	
 };
 
 /**
@@ -78,6 +80,9 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 	if (!robot){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 	}
+
+	std::lock_guard<std::mutex> lock (robot->robot_mutex); //加锁
+
 	//check subsystem state
 	if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 不在正常状态.", robot->getName()), this);
@@ -211,15 +216,12 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			command.append(std::to_string(mapping_slot));
 			command.append(";");
 
-			//robot->getKernel()->getKernelBlockManager()->createBlock(robot->getName(), robot, 
-			//	{ (FortrendStation*)getStation().get() }, 0);
-
 			logInform(robot->getName().c_str(), "取晶圆命令开始");
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 		
 			auto startTime = std::chrono::high_resolution_clock::now();
-			auto timeout2 = std::chrono::seconds(30);
+			auto timeout2 = std::chrono::seconds(60);
 
 			clearRobotMessage();
 			if (!sendRequest(command))
@@ -231,7 +233,10 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				return RunResult::RUN_FAILD;
 			};
 
+			
 			res = recvResponseRobotMessage(timeout);
+			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
+
 			while (true)
 			{
 				auto currentTime = std::chrono::high_resolution_clock::now();
@@ -250,10 +255,13 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					return RunResult::RUN_FAILD;
 				}
 				res = recvResponseRobotMessage(timeout);
-				Sleep(200);
+				logInform(robot->getName().c_str(), "机械手取晶圆ACK：%s", res.c_str());
+				Sleep(10);
 			}
+			logInform(robot->getName().c_str(), "res：%s", res.c_str());
 
-			if (res != "ACK;" && res != "RPS:GET;")
+			//if (res != "ACK;" && res != "RPS:GET;")
+			if (res != "ACK;")
 			{
 				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
 				int error_type = 1;
@@ -281,20 +289,18 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			}
 			else
 			{//"ACK;"
-
-				//clearRobotMessage();
+				
 				res = recvResponseRobotMessage(timeout);
-
 				//等待机械手返回指令
 				auto startTime2 = std::chrono::high_resolution_clock::now();
-				auto timeout3 = std::chrono::seconds(30);
+				auto timeout3 = std::chrono::seconds(60);
 
 				while (true)
 				{
 					auto currentTime = std::chrono::high_resolution_clock::now();
 					auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-					if (res != std::string("ACK;"))
+					if (res != std::string("ACK;") && !res.empty())
 					{
 						break;
 					}
@@ -307,8 +313,9 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						return RunResult::RUN_FAILD;
 					}
 					res = recvResponseRobotMessage(timeout);
-					Sleep(200);
+					Sleep(20);
 				}
+				logInform(robot->getName().c_str(), "获取取晶圆RPS：%s", res.c_str());
 
 				std::string recvMessage = "RPS:GET;";
 				auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
@@ -327,7 +334,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					try {
 						if (!handleErrorCode(res, error_str, error_type, error_code)) {
 
-							error_type = 5;
+							error_type = 10;
 							error_code = 1;
 							error_message = ("取晶圆命令执行失败，机械手返回的指令未定义：%s.", res);
 							logError(robot->getName().c_str(), "取晶圆命令执行失败，机械手返回的指令未定义：%s", res);
@@ -358,7 +365,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				station_cass->setMapping(mapping_slot, Cassette::Mapping::Empty);
 
 				auto robot_cass = cassManager->getCassette(robot);
-				robot_cass->setMapping(getArm(), Cassette::Mapping::Present);
+				robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Present);
 
 				robot_cass->setPodSize(station_cass->getPodSize());//PM腔的工艺次数，需要本地存储，暂时使用PodSize字段
 				logInform(robot->getName().c_str(), "获取晶圆命令执行结束 %s %d %s", station_name, slot, station_cass->getBoxId());
@@ -390,9 +397,10 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			clearRobotMessage();
 			sendRequest(command);
 			res = recvResponseRobotMessage(timeout);
+			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
 
 			auto startTime = std::chrono::high_resolution_clock::now();
-			auto timeout2 = std::chrono::seconds(30);
+			auto timeout2 = std::chrono::seconds(60);
 
 			while (true)
 			{
@@ -411,10 +419,12 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				/*recvResponse2(timeout);*/
 				res = recvResponseRobotMessage(timeout);
-				Sleep(200);
+				Sleep(20);
 			}
+
+			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
+
 			if (res != std::string("ACK;"))
 			{
 				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
@@ -450,14 +460,14 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			else
 			{
 				auto startTime2 = std::chrono::high_resolution_clock::now();
-				auto timeout3 = std::chrono::seconds(30);
+				auto timeout3 = std::chrono::seconds(60);
 
 				while (true)
 				{
 					auto currentTime = std::chrono::high_resolution_clock::now();
 					auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-					if (res != std::string("ACK;"))
+					if (res != std::string("ACK;") && !res.empty())
 					{
 						break;
 					}
@@ -469,13 +479,11 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						setAlarm(alarm);
 						return RunResult::RUN_FAILD;
 					}
-					//recvResponse2(timeout);
 					res = recvResponseRobotMessage(timeout);
 					Sleep(200);
 				}
-
-				clearRobotMessage();
-				res = recvResponseRobotMessage(timeout);
+				logInform(robot->getName().c_str(), "取晶圆RPS：%s", res.c_str());
+				//res = recvResponseRobotMessage(timeout);
 
 				std::string recvMessage = "RPS:GET;";
 				auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());

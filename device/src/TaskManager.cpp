@@ -528,10 +528,14 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockCompletedTasks(std
     {
         auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, LLName](const UnifiedWaferTask& t)
         {
-            logInform("TaskManager", "找到了LLName:%s, LOADLOCK_TRANSFER/COMPLETED taskId:%d", LLName.c_str(), taskId);
+            
             return t.taskId == taskId && t.target == loc;
         });
-        if (it != tasks_.end()) result.push_back(*it);
+        if (it != tasks_.end())
+        {
+            logInform("TaskManager", "LOADLOCK_TRANSFER/COMPLETED taskId:%d", (*it).taskId);
+            result.push_back(*it);
+        }
     }
 
     return result;
@@ -548,10 +552,14 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnPendingTasks
     for (int taskId : efemReturnTasks[UnifiedWaferTask::QUEUED]) {
         auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, LLName](const UnifiedWaferTask& t)
         {
-            logInform("TaskManager", "找到了LLName:%s, LOADLOCK_RETURN/QUEUED taskId:%d", LLName.c_str(), taskId);
+            
             return t.taskId == taskId && t.target == loc;
         });
-        if (it != tasks_.end()) result.push_back(*it);
+        if (it != tasks_.end()) 
+        {
+            logInform("TaskManager", "找到LOADLOCK_RETURN/QUEUED taskId:%d", (*it).taskId);
+            result.push_back(*it);
+        }
     }
 
     return result;
@@ -568,10 +576,13 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnCompletedTas
     for (int taskId : efemReturnCompletedTasks[UnifiedWaferTask::COMPLETED]) {
         auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, LLName](const UnifiedWaferTask& t)
         {
-            logInform("TaskManager", "找到了LLName:%s, LOADLOCK_RETURN/COMPLETED taskId:%d", LLName.c_str(), taskId);
             return t.taskId == taskId && t.target == loc;
         });
-        if (it != tasks_.end()) result.push_back(*it);
+        if (it != tasks_.end()) 
+        {
+            logInform("TaskManager", "LOADLOCK_RETURN/COMPLETED taskId:%d", (*it).taskId);
+            result.push_back(*it);
+        }
     }
 
     return result;
@@ -589,10 +600,14 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMPendingTasks(std::string
     {
         auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, PM](const UnifiedWaferTask& t)
         {
-            logInform("TaskManager", "找到了PMName:%s, PM_PROCESS/QUEUED taskId:%d", PM.c_str(), taskId);
+            
             return t.taskId == taskId && t.target_pm == loc;
         });
-        if (it != tasks_.end()) result.push_back(*it);
+        if (it != tasks_.end())
+        {
+            logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
+            result.push_back(*it);
+        }
     }
     return result;
 }
@@ -608,7 +623,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMProcessTasks(std::string
     for (int taskId : pmTasks[UnifiedWaferTask::IN_PROGRESS]) {
         auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, PM](const UnifiedWaferTask& t) {
 
-            logInform("TaskManager", "找到了PMName:%s, PM_PROCESS/IN_PROGRESS taskId:%d", PM.c_str(), taskId);
+            
             return t.taskId == taskId && t.target_pm == loc;
         });
         if (it != tasks_.end()) result.push_back(*it);
@@ -628,10 +643,13 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMCompletedTasks(std::stri
     for (int taskId : pmTasks[UnifiedWaferTask::COMPLETED]) {
         auto it = std::find_if(tasks_.begin(), tasks_.end(),[taskId, loc,PM](const UnifiedWaferTask& t) {
 
-            logInform("TaskManager", "找到了PMName:%s, PM_PROCESS/COMPLETED taskId:%d", PM.c_str(), taskId);
             return t.taskId == taskId && t.target_pm == loc;
         });
-        if (it != tasks_.end()) result.push_back(*it);
+        if (it != tasks_.end())
+        {
+            logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
+            result.push_back(*it);
+        }
     }
 
     return result;

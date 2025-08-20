@@ -105,6 +105,9 @@ namespace FC{
 	public:
 		std::mutex external_mtx;
 
+		std::mutex robot_mutex; //全局变量
+
+
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

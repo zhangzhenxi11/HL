@@ -41,6 +41,7 @@
 #include <functional>
 #include <stdexcept>
 #include <iomanip>
+#include <mutex>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -50,6 +51,7 @@
 
 namespace FC{
 
+	//std::mutex robot_mutex;
 /**
 * SunwayRobotPutWaferCommandPrivate
 */
@@ -58,6 +60,7 @@ public:
 	std::string station_name;
 	//FortrendSunwayRobotSubsystem* robot;
 	IKernelCommand::RunResult result_;
+	
 };
 
 /**
@@ -81,6 +84,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::performRobotOp
 	const std::function<std::string()>& commandBuilder,
 	const std::function<bool()>& onSuccess)
 {
+
 	clearRobotMessage();
 	if (robotRobotOperation(commandBuilder) == RunResult::RUN_OK)
 	{
@@ -124,20 +128,24 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 	robot->setObject(getArm(), false);
 
 	//对机械手的虚拟cassette，放晶圆完成后，更新状态
-	auto robot_mapping_res = robot_cass->getAllMapping();
-	robot_mapping_res[getArm()] = Cassette::Empty;
+	//auto robot_mapping_res = robot_cass->getAllMapping();
+	//robot_mapping_res[getArm()] = Cassette::Empty;
 
-	std::vector<int> robot_all_alots;
-	for (size_t i = 0; i < robot_mapping_res.size(); i++)
-	{
-		robot_all_alots.push_back(i + 1);
-	}
-	robot_cass->setMapping(robot_all_alots, robot_mapping_res);
+	//std::vector<int> robot_all_alots;
+	//for (size_t i = 0; i < robot_mapping_res.size(); i++)
+	//{
+	//	robot_all_alots.push_back(i + 1);
+	//}
+	//robot_cass->setMapping(robot_all_alots, robot_mapping_res); //应该单槽置位
+
+	robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Empty);
+
 
 	station_cass->setPodSize(robot_cass->getPodSize());//PM腔的工艺次数，需要本地存储，暂时使用PodSize字段
 
 	//Loadlock的cassete状态会自动更新
-	robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+	//robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+
 	logInform(robot->getName().c_str(), "放晶圆命令执行结束 %s %d %s", d->station_name, slot, station_cass->getBoxId());
 	return true;
 }
@@ -159,7 +167,6 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 	if (timeout < 10) {
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,Poco::format("超时: %s 放晶圆超时参数错误", robot->getName()), this);
 	}
-
 	logInform(robot->getName().c_str(), "放晶圆命令开始,工位%s", d->station_name);
 	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
@@ -205,7 +212,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 	sendRequest(command);
 
 	auto startTime = std::chrono::high_resolution_clock::now();
-	auto timeout2 = std::chrono::seconds(30);
+	auto timeout2 = std::chrono::seconds(60);
 
 	res = recvResponseRobotMessage(timeout);
 	while (true)
@@ -222,13 +229,16 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			error_code = 0x100;
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
 			setAlarm(alarm);
+			
 			return RunResult::RUN_FAILD;
 		}
 		res = recvResponseRobotMessage(timeout);
 		Sleep(10);
 	}
+	logInform(robot->getName().c_str(), "ACK res:%s", res.c_str());
 
-	if (res != "ACK;" && res.find(VerificationMessage) == std::string::npos)//没找到
+	//if (res != "ACK;" && res.find(VerificationMessage) == std::string::npos)
+	if (res != "ACK;")//没找到
 	{
 		logError(robot->getName().c_str(), error_message.c_str());
 
@@ -236,7 +246,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 		if (!handleErrorCode(res, error_str, error_type, error_code)) {
 			error_type = 5;
 			error_code = 1;
-			std::string str = Poco::format(",机械手返回的指令未定义：%s.", res);
+			std::string str = Poco::format(",机械手返回的指令未定义：%s", res);
 			error_message += str;
 		}
 		else
@@ -256,9 +266,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 		//等待机械手返回指令
 		//clearRobotMessage();
 		res = recvResponseRobotMessage(timeout);
-
 		auto startTime2 = std::chrono::high_resolution_clock::now();
-		auto timeout3 = std::chrono::seconds(30);
+		auto timeout3 = std::chrono::seconds(60);
 
 		while (true)
 		{
@@ -280,6 +289,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			res = recvResponseRobotMessage(timeout);
 			Sleep(10);
 		}
+		logInform(robot->getName().c_str(), "RPS: res:%s", res.c_str());
 
 		auto found = search(res.begin(), res.end(), VerificationMessage.begin(), VerificationMessage.end());
 		if (found != res.end())
@@ -310,6 +320,9 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
 					Poco::format("%s 机械手通讯错误", robot->getName()), this);
 			}
+
+			robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+
 			return RunResult::RUN_OK;
 		}
 		else
@@ -321,7 +334,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			if (!handleErrorCode(res, error_str, error_type, error_code)) {
 				error_type = 5;
 				error_code = 1;
-				std::string str = Poco::format(",机械手返回的指令未定义：%s.", res);
+				std::string str = Poco::format(",机械手返回的指令未定义：%s", res);
 				error_message += str;
 				logError(robot->getName().c_str(), error_message.c_str());
 			}
@@ -348,10 +361,13 @@ bool SunwayRobotPutWaferCommand::updateAwcData()
 
 
 SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(KernelException){
+
 	FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
 	if (!robot){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 	}
+
+	std::lock_guard<std::mutex> lock(robot->robot_mutex); //加锁
 
 	//check subsystem state
 	if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
@@ -495,11 +511,21 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	}
 	Sleep(200);
 
+	if (d->result_ == RunResult::RUN_OK)
+		return RunResult::RUN_OK;
+	else
+		return RunResult::RUN_FAILD;
+#if 0
 	if(d->result_ == RunResult::RUN_OK)
 	{
 		return performRobotOperation(
 			[this, robot]()->std::string {
-			std::string command = "QRY:AWC_PARAM;";
+			int stationId = getStation()->getStationId(robot->getName());
+
+			std::string command = "QRY:AWC_PARAM/";
+			command.append(std::to_string(stationId));
+			command.append(";");
+
 			return command;
 			},
 
@@ -511,9 +537,9 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		);
 		return RunResult::RUN_OK;
 	}
+#endif
 
-
-	return RunResult::RUN_FAILD;
+	
 }
 
 }
