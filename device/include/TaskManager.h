@@ -168,6 +168,8 @@ namespace FC {
 
         //将字符串转换为Location枚举
         UnifiedWaferTask::Location stringToLocation(const std::string& locStr);
+  public:
+    bool stopped_{ false };
 
     private:
         TaskManager() = default; // 私有构造函数
@@ -181,7 +183,7 @@ namespace FC {
 
         std::mutex mutex_;
         std::condition_variable cv_;
-        std::atomic<bool> stopped_{ false };
+        //std::atomic<bool> stopped_{ false };
         int nextTaskId_ = 0;
 
     };

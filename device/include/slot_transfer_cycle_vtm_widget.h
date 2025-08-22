@@ -16,6 +16,8 @@
 #include  <vector>
 #include  <memory>
 
+#include <mutex>
+
 #define SIM_CYCLE_MODE 1
 class QTableWidget;
 
@@ -88,7 +90,6 @@ namespace  FC {
 		void onProcess();
 		void initPMCavityParamEdieTableWidget();
 		void addAnPMItem(const QString name);
-		
 		//新增
 		void executeEFEMTransfer();
 
@@ -109,6 +110,8 @@ namespace  FC {
 		void executeUpdateTransferStatus();
 
 		void executeTestRobotTransfer();
+
+		bool is_locked(std::mutex &lock);
 		
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)

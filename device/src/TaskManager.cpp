@@ -755,7 +755,7 @@ bool FC::TaskManager::hasTasks()
 
 void FC::TaskManager::stop()
 {
-    stopped_ = true;
+     stopped_ = true;
 }
 
 void FC::TaskManager::start()
@@ -768,7 +768,6 @@ bool FC::TaskManager::isStopped() const
 {
     return stopped_;
 }
-
 FC::UnifiedWaferTask::Location FC::TaskManager::stringToLocation(const std::string& locStr)
 {
     static const std::unordered_map<std::string, UnifiedWaferTask::Location> locMap = {
