@@ -181,6 +181,37 @@ namespace FC{
 
 	}
 
+	class CheckableMutex {
+	private:
+		std::mutex m_mutex;
+		std::atomic<bool> m_locked{ false };
+
+	public:
+		void lock() {
+			m_mutex.lock();
+			m_locked = true;
+		}
+
+		void unlock() {
+			m_locked = false;
+			m_mutex.unlock();
+		}
+
+		bool try_lock() {
+			if (m_mutex.try_lock()) {
+				m_locked = true;
+				return true;
+			}
+			return false;
+		}
+
+		bool is_locked() const {
+			return m_locked;
+		}
+	};
+
+
+
 	/**
 	* QSlotTransferCycleWTMWidgetPrivate
 	*/
@@ -252,7 +283,20 @@ namespace FC{
 
 		void RerunTheFilmCycle();
 
-		bool is_locked(std::mutex &lock);
+		//bool is_locked(std::mutex &lock);
+
+		/************************zzx  add*********************************/
+		//上料互锁条件
+		bool llA_condition = false; //true 满足互锁 ， false不满足没锁
+
+		bool llB_condition = false;//true 满足互锁 ，  false不满足没锁
+
+		//判断当前 LL上料过，但还没下料到位，为了不让另一个LL发送上料请求而设置。。。（此时也可能也没发送下料请求，这个不管）
+		// --> 用于上料请求的互锁条件
+
+		//LLA有料下到位，要等LLB的下料到位，才能上料（LLB上过料是前提）
+		bool isLoadingInterlock(const std::string& LLName);
+
 
 		/************************zzx  add*********************************/
 	private:
@@ -299,8 +343,11 @@ namespace FC{
 		bool tool_allow_put_wafer = false;// true呼叫LP下料，  false LP下料完成
 
 		bool tool_allow_get_wafer_LLA = false; // LLA上料请求   true呼叫LP上料， false LP上料完成
+
 		bool tool_allow_put_wafer_LLA = false; // LLA下料请求   true呼叫LP下料， false LP下料完成
+
 		bool tool_allow_get_wafer_LLB = false; // LLB上料请求
+
 		bool tool_allow_put_wafer_LLB = false; // LLB下料请求
 
 		
@@ -354,7 +401,7 @@ namespace FC{
 
 		std::vector<UnifiedWaferTask> worktasks; //实际工作队列
 
-		std::mutex efem_robot_mutex; //efem 上下料锁
+		CheckableMutex efem_robot_mutex; //efem 上下料锁
 
 		std::mutex feeding_mutex; //上料锁
 
@@ -919,10 +966,20 @@ namespace FC{
 				{
 					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
 					//加互斥锁，当上料完成解锁
-					if (!is_locked(efem_robot_mutex))
+					//try_lock()不会阻塞线程，lock()会阻塞线程
+
+					/*if (!is_locked(efem_robot_mutex))
 					{
 						efem_robot_mutex.lock();
+					}*/
+
+					// 检查是否已上锁
+					if (!efem_robot_mutex.is_locked())
+					{
+						// 执行需要加锁的操作...
+						efem_robot_mutex.lock();
 					}
+
 					logWarn("cycle", "step:100,给%s上料 Lock thread...", current_loadlock.c_str());
 
 					if (efemUnkownStatusTasks.size() > 0)
@@ -1731,7 +1788,7 @@ namespace FC{
 				case 200:
 				{
 					logWarn("cycle", "step:200,current_loadlock:%s 下料 Lock thread...", current_loadlock.c_str());
-					if (!is_locked(efem_robot_mutex))
+					if (!efem_robot_mutex.is_locked())
 					{
 						efem_robot_mutex.lock();
 					}
@@ -2515,6 +2572,12 @@ namespace FC{
 
 					UpdateLLASubTransferDatas();
 
+					bool isInterlock = isLoadingInterlock("LLA");
+					if (isInterlock)
+					{
+						logWarn(lk1->getName().c_str(), "LLA上料互锁");
+					}
+
 					//在LLA槽中，没有传输任务,说明没有上料需求，所有wafer都完成下料到LP中
 					if (loadLockAPendingTasks.size() == 0 && current_lp_cycle)
 					{
@@ -2530,7 +2593,7 @@ namespace FC{
 					}
 
 					//需上料 
-					else if (!tool_allow_put_wafer_LLA && (loadLockAPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size()== 0 ||  0 < efemUnkownStatusTasks.size() <= originTaskSize))
+					else if ((!isInterlock) && (loadLockAPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size()== 0 ||  0 < efemUnkownStatusTasks.size() <= originTaskSize))
 					{
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -3504,6 +3567,17 @@ namespace FC{
 					lp1TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP1).size();
 					lp2TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP2).size();
 					UpdateLLBSubTransferDatas();
+					UpdateLLASubTransferDatas();
+					
+					bool isInterlock = isLoadingInterlock("LLB");
+					if (isInterlock)
+					{
+						logWarn(lk1->getName().c_str(), "LLB上料互锁");
+					}
+					if (tool_allow_put_wafer_LLA || loadLockAReturnPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size()>0)
+					{
+						llA_condition = true; //LLA有待下料
+					}
 
 					//判断是否lp2循环
 					if (loadLockBPendingTasks.size() == 0 && current_lp_cycle)
@@ -3512,13 +3586,15 @@ namespace FC{
 						loadlock2_auto_step = 6000;
 					}
 
+					//走Loadlock流程：自己的上料完成
 					if (!tool_allow_get_wafer_LLB && (loadLockBPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0))
 					{
 						//有wafer，直接抽真空，走取放晶圆流程，下料流程，
 						loadlock2_auto_step = 400;
 					}
-
-					else if ( !tool_allow_put_wafer_LLB && (loadLockBPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize))
+					
+					//上料条件：自己的下料完成且LLA下料完成才行。。。。。
+					else if ((!isInterlock) && (loadLockBPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize))
 					{
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 
@@ -3852,6 +3928,7 @@ namespace FC{
 						//放晶圆
 						loadlock2_auto_step = 2000;//允许放晶圆流程
 					}
+					//下料条件：放回到loadlock，就执行下料吗？
 					else if (loadLockBReturnCompletedTasks.size() > 0)
 					{
 						loadlock2_auto_step = 5000;//出空Cassette流程
@@ -5995,12 +6072,12 @@ namespace FC{
 					&& (!elp1->hasDoorOpend() && !elp2->hasDoorOpend()))
 				{
 					
-					finished_time_lla = 0;
+					//finished_time_lla = 0;
 					cycleFinished_lla = true;
 					onUpdateCycleInfo();
 					lp1_cycle_one_time_finished = false;
 
-					finished_time_llb = 0;
+					//finished_time_llb = 0;
 					cycleFinished_llb = true;
 					onUpdateCycleInfo();
 					lp2_cycle_one_time_finished = false;
@@ -6157,7 +6234,7 @@ namespace FC{
 			}
 		}
 		catch (const std::exception& e) {
-			logError("Cyclelog", "UpdateTransfer thread crashed:", e.what());
+			logError("Cyclelog", "UpdateTransfer thread crashed:%s", e.what());
 			qCritical() << "UpdateTransfer thread crashed:" << e.what();
 			
 		}
@@ -6195,18 +6272,79 @@ namespace FC{
 		//taskManager.start();
 	}
 
-	bool QSlotTransferCycleVTMWidgetPrivate::is_locked(std::mutex& lock)
+	bool QSlotTransferCycleVTMWidgetPrivate::isLoadingInterlock(const std::string &LLName)
 	{
-		// 尝试获取锁，如果成功则表示之前未上锁
-		// 
-		//如果互斥锁是未锁定状态，得到了互斥锁所有权并加锁成功，函数返回true
+		logInform("check Interlock","检查LLName:%s 上料互锁",LLName.c_str());
 
-		if (lock.try_lock())
+		UpdateLLBSubTransferDatas();
+		UpdateLLASubTransferDatas();			
+		lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+		bool downHaswaferlk1 = false;
+		bool downHaswaferlk2 = false;
+		if(lk1!=nullptr && lk2!=nullptr)
 		{
-			return true; // 未上锁
+			auto cass1Manager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
+			auto cass2Manager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
+			downHaswaferlk1 = cass1Manager->getCassette(lk1.get())->getMapping(1) == Cassette::Present; //1层有片
+			downHaswaferlk2 = cass1Manager->getCassette(lk2.get())->getMapping(1) == Cassette::Present; //1层有片
 		}
-		return false; // 已上锁
+		else
+		{
+			logError("Cyclelog", "isLoadingInterlock  crashed!");
+			return false;
+		}
+
+		//获得经过LLA的所有料集合，
+		if(LLName == "LLB")
+		{
+			//true呼叫LP下料， false LP下料完成 
+			if (!tool_allow_put_wafer_LLA)
+			{
+				//LLA下料完成或者初始状态
+				return false;
+			}
+			//1.下料请求，获得经过LLA 的有上料标签，或下层有片
+			else if (tool_allow_put_wafer_LLA || taskManager.CollectionPassedThroughLL(LLName) || downHaswaferlk1)
+			{
+				//或下层有片
+				logWarn("Cyclelog", "isLoadingInterlock is true!");
+				return true; //LLA有待下料或者还没下料
+			}
+		}
+		else if (LLName == "LLA")
+		{
+			//true呼叫LP下料， false LP下料完成 
+			if (!tool_allow_put_wafer_LLB)
+			{
+				//LLA下料完成或者初始状态
+				return false;
+			}
+			else if (tool_allow_put_wafer_LLB || taskManager.CollectionPassedThroughLL(LLName) || downHaswaferlk2)//或下层有片
+			{
+				logWarn("Cyclelog", "isLoadingInterlock is true!");
+				return true; //LLB有待下料或者还没下的料
+			}
+		}
+		else
+		{
+			return false;
+		}
+		return false;
 	}
+
+	//bool QSlotTransferCycleVTMWidgetPrivate::is_locked(std::mutex& lock)
+	//{
+	//	// 尝试获取锁，如果成功则表示之前未上锁
+	//	// 
+	//	//如果互斥锁是未锁定状态，得到了互斥锁所有权并加锁成功，函数返回true
+
+	//	if (lock.try_lock())
+	//	{
+	//		return true; // 未上锁
+	//	}
+	//	return false; // 已上锁
+	//}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::CheckTMVacuumMeetsStandard(int preStep)
 	{
@@ -6373,7 +6511,14 @@ namespace FC{
 			return;
 		}
 		efem_robot_mutex.unlock();
-
+		if (finished_time_lla != 0)
+		{
+			finished_time_lla = 0;
+		}
+		if (finished_time_llb != 0)
+		{
+			finished_time_llb = 0;
+		}
 		while (!vacumm_step_once_finished || !loadlock1_step_once_finished || !loadlock2_step_once_finished)
 		{
 			Sleep(100);
@@ -8560,6 +8705,7 @@ namespace FC{
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
 
+
 		//调试注释
 		if (SIM_CYCLE_MODE == 0)
 		{
@@ -8636,6 +8782,18 @@ namespace FC{
 			}
 
 		}
+
+		//if (d->isLoadingInterlock("LLA")) {
+
+		//	logInform("Cycle", "test成功。");
+		//	return;
+		//}
+		//else
+		//{
+		//	logInform("Cycle", "test成功1111。");
+		//	return;
+		//}
+
 		if (CYCLE_SIM_MODE == 0)
 		{
 			//2025-8-14 默认已经手动处理机台片子，重新把wafer数据刷新到初始状态
@@ -9053,7 +9211,8 @@ namespace FC{
 	bool QSlotTransferCycleVTMWidget::is_locked(std::mutex &lock)
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
-		return d->is_locked(lock);
+		/*return d->is_locked(lock);*/
+		return false;
 	}
 
 

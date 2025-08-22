@@ -56,6 +56,10 @@ namespace FC {
 
         std::array<int, 4> selectPmEnableList;
 
+        //上下料到LOADLOCK 到位标签 ，true：上料到位  false:下料到位(初始状态)
+        bool isLoadingInPlace = false;
+        
+
         // 工艺参数
         bool pm1Enabled;
         bool pm2Enabled;

@@ -113,7 +113,7 @@ namespace FC {
         //获取Loadlock待工艺的任务   （破完真空,casste门开,efem放到LL槽上，待抽真空，待取走的晶圆） QUEUED 
         std::vector<UnifiedWaferTask> getLoadLockPendingTasks(std::string LLName);//5
 
-        //获取Loadlock工艺完成的任务：（抽完真空，开传输门后,待csr取片, 下一步是传到Pm腔待加工的晶圆数量  COMPLETED）
+        //获取Loadlock工艺完成的任务：（抽完真空，开传输门后,csr取到片, 下一步是传到Pm腔待加工的晶圆数量  COMPLETED）
         std::vector<UnifiedWaferTask> getLoadLockCompletedTasks(std::string LLName);//6
 
 
@@ -159,6 +159,15 @@ namespace FC {
         void start();
 
         bool isStopped() const;
+
+        //为该料打上料完成标签，
+        void setLoadingInPlaceFlag(int taskID,bool flag);
+
+        bool getLoadingInPlaceFlag(int taskID);
+
+        //获得经过LLA/LLB 的有上料标签
+        bool CollectionPassedThroughLL(std::string LLName);
+
 
         // 更新任务映射关系 ,根据taskId先移除旧映射
         void updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type, UnifiedWaferTask::Status status);

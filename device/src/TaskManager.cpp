@@ -105,7 +105,8 @@ void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType ne
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    for (auto& task : tasks_) {
+    for (auto& task : tasks_) 
+    {
         if (task.taskId == taskId)
         {
             // 保存旧类型和状态用于更新映射
@@ -125,6 +126,23 @@ void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType ne
             else if (newStatus == UnifiedWaferTask::Status::COMPLETED)
             {
                 task.completedAt = std::chrono::system_clock::now();
+            }
+            //打标签
+            if (task.taskType == UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER)
+            {
+                if (task.status == UnifiedWaferTask::Status::QUEUED)
+                {
+                    logInform("TaskManager", "task：%d 上料到loadlock标签", taskId);
+                    task.isLoadingInPlace = true;
+                }   
+            }
+            else if(task.taskType == UnifiedWaferTask::TaskType::LOADLOCK_RETURN)
+            {
+                if (task.status == UnifiedWaferTask::Status::COMPLETED)
+                {
+                    logInform("TaskManager", "task：%d 下料到loadlock标签", taskId);
+                    task.isLoadingInPlace = false;
+                }
             }
             // 更新映射关系
             updateTaskMaps(taskId, newTaskType, newStatus);
@@ -768,6 +786,36 @@ bool FC::TaskManager::isStopped() const
 {
     return stopped_;
 }
+
+void FC::TaskManager::setLoadingInPlaceFlag(int taskID,bool flag)
+{
+    auto task = getByIDFindTask(taskID);
+    task.isLoadingInPlace = flag; //true: 上料到loadLock完成， false: 下料到loadLock完成
+}
+bool FC::TaskManager::getLoadingInPlaceFlag(int taskID)
+{
+    auto task = getByIDFindTask(taskID);
+    return  task.isLoadingInPlace;
+}
+
+bool FC::TaskManager::CollectionPassedThroughLL(std::string LLName)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<UnifiedWaferTask> result;
+    auto loc = stringToLocation(LLName);
+
+    result = getTasksByLocation(loc); //LLA/LLB
+    for (auto task : result)
+    {
+        if (task.isLoadingInPlace)
+        {
+            return true; 
+            break;
+        }
+    }
+    return false;
+}
+
 FC::UnifiedWaferTask::Location FC::TaskManager::stringToLocation(const std::string& locStr)
 {
     static const std::unordered_map<std::string, UnifiedWaferTask::Location> locMap = {
