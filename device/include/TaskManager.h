@@ -166,7 +166,7 @@ namespace FC {
         bool getLoadingInPlaceFlag(int taskID);
 
         //获得经过LLA/LLB 的有上料标签
-        bool CollectionPassedThroughLL(std::string LLName);
+        bool CollectionPassedThroughLL(const std::string &LLName);
 
 
         // 更新任务映射关系 ,根据taskId先移除旧映射

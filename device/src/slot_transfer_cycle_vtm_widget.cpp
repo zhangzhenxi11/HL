@@ -6298,32 +6298,45 @@ namespace FC{
 		//获得经过LLA的所有料集合，
 		if(LLName == "LLB")
 		{
+
+			//1.下料请求，获得经过LLA 的有上料标签，或下层有片
+			if (tool_allow_put_wafer_LLA || taskManager.CollectionPassedThroughLL("LLA") || downHaswaferlk1)
+			{
+				logWarn("Cyclelog", "LLB feeding isLoadingInterlock is true!");
+				return true; //LLA有待下料或者还没下料
+			}
 			//true呼叫LP下料， false LP下料完成 
-			if (!tool_allow_put_wafer_LLA)
+			else if (!taskManager.CollectionPassedThroughLL("LLA")&& !tool_allow_put_wafer_LLA)
 			{
 				//LLA下料完成或者初始状态
+				logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁");
 				return false;
 			}
-			//1.下料请求，获得经过LLA 的有上料标签，或下层有片
-			else if (tool_allow_put_wafer_LLA || taskManager.CollectionPassedThroughLL(LLName) || downHaswaferlk1)
+			else
 			{
-				//或下层有片
-				logWarn("Cyclelog", "isLoadingInterlock is true!");
-				return true; //LLA有待下料或者还没下料
+				logWarn("Cyclelog", "未知情况,对LLB上料不上锁");
+				return false;
 			}
 		}
 		else if (LLName == "LLA")
 		{
+
+			if (tool_allow_put_wafer_LLB || taskManager.CollectionPassedThroughLL("LLB") || downHaswaferlk2)//或下层有片
+			{
+				logWarn("Cyclelog", "LLA feeding  isLoadingInterlock is true!");
+				return true; //LLB有待下料或者还没下的料
+			}
 			//true呼叫LP下料， false LP下料完成 
-			if (!tool_allow_put_wafer_LLB)
+			else if (!taskManager.CollectionPassedThroughLL("LLB") && !tool_allow_put_wafer_LLB)
 			{
 				//LLA下料完成或者初始状态
+				logWarn("Cyclelog", "LLB下料完成,对LLA上料不上锁");
 				return false;
 			}
-			else if (tool_allow_put_wafer_LLB || taskManager.CollectionPassedThroughLL(LLName) || downHaswaferlk2)//或下层有片
+			else
 			{
-				logWarn("Cyclelog", "isLoadingInterlock is true!");
-				return true; //LLB有待下料或者还没下的料
+				logWarn("Cyclelog", " 未知情况,对LLA上料不上锁");
+				return false;
 			}
 		}
 		else
@@ -8785,10 +8798,9 @@ namespace FC{
 
 		//if (d->isLoadingInterlock("LLA")) {
 
-		//	logInform("Cycle", "test成功。");
-		//	return;
+		//	logInform("Cycle", "test LLA成功。");
 		//}
-		//else
+		//if(d->isLoadingInterlock("LLB"))
 		//{
 		//	logInform("Cycle", "test成功1111。");
 		//	return;

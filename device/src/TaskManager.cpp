@@ -798,9 +798,9 @@ bool FC::TaskManager::getLoadingInPlaceFlag(int taskID)
     return  task.isLoadingInPlace;
 }
 
-bool FC::TaskManager::CollectionPassedThroughLL(std::string LLName)
+bool FC::TaskManager::CollectionPassedThroughLL(const std::string& LLName)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    //std::lock_guard<std::mutex> lock(mutex_);
     std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(LLName);
 
