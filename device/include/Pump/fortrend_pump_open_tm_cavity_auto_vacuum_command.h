@@ -40,6 +40,7 @@ namespace FC{
 			CLOSE_LLB_ANGLE_VALVE = 70,
 			CLOSE_PM_CAVITY_DOOR = 80,
 			JUDGE_COARSE_SUCTION_PRESSURE =90,
+			CLOSE_TM_ANGLE_VALVE = 100,
 			CREATE_END = 10000
 		};
 
@@ -75,6 +76,9 @@ namespace FC{
 		//90 TM是否达到粗抽压力判断
 		SystemState handleStepCoarseSuctionPressure();
 
+		//100 关闭TM腔的角阀
+		SystemState handleStepCloseAngleValve();
+		
 		//退出循环
 		SystemState handleStepEND();
 

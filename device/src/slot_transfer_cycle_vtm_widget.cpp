@@ -11,6 +11,8 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include <iostream>
 #include <Windows.h>
 
@@ -101,7 +103,7 @@
 #include  <QCheckBox>
 #include  <QCoreApplication>
 #include  <QDir>
-#include <atomic>
+
 #include "UnifiedWaferTask.h"
 #include "TaskManager.h"
 #include "ThreadSafeStateMachine.h"
@@ -242,6 +244,8 @@ namespace FC{
 
 		void onUpdateCycleInfo();
 
+		void onStatusChanged();
+
 		void onUpdateProcessControlEnabled(const bool value);
 
 		void onUpdateControlEnabled(const QString control, const bool enabled);
@@ -283,7 +287,11 @@ namespace FC{
 
 		void RerunTheFilmCycle();
 
-		//bool is_locked(std::mutex &lock);
+		void startAllThreads();
+
+		void pauseAllThreads();
+
+		void stopAllThreads();
 
 		/************************zzx  add*********************************/
 		//上料互锁条件
@@ -291,12 +299,10 @@ namespace FC{
 
 		bool llB_condition = false;//true 满足互锁 ，  false不满足没锁
 
-		//判断当前 LL上料过，但还没下料到位，为了不让另一个LL发送上料请求而设置。。。（此时也可能也没发送下料请求，这个不管）
-		// --> 用于上料请求的互锁条件
 
-		//LLA有料下到位，要等LLB的下料到位，才能上料（LLB上过料是前提）
+		//情景：当一个LL的料下到位，另一个没下料时，为了不让另一个LL继续发送上料请求的互锁条件（此时也可能也没发送下料请求）
+		//例如：LLA有料下到位，要等LLB的下料到位，才能上料（LLB上过料是前提）
 		bool isLoadingInterlock(const std::string& LLName);
-
 
 		/************************zzx  add*********************************/
 	private:
@@ -590,8 +596,15 @@ namespace FC{
 		int PMMessagecount = 2;
 		
 
-		bool running = false;
-		bool ispause = false;
+		//bool running = false;
+		//bool ispause = false;
+
+		std::vector<std::thread> threads;
+		std::mutex mtx;
+		std::condition_variable cv;
+		std::atomic<bool> running{ false };       //控制线程是否应该执行工作（true=执行，false=暂停）
+		std::atomic<bool> ispause{ false };       //running = false 暂停
+		std::atomic<bool> stopRequested{ false }; //指示线程是否应该完全退出（true=线程应该结束）
 
 		int robot_auto_step=0;
 		int loadlock1_auto_step = 0;
@@ -604,6 +617,14 @@ namespace FC{
 		std::atomic<int> pm4_auto_step;
 		int efem_auto_step= 0;
 		int update_auto_step= 0;
+		std::atomic<bool> needReset_EFEM{ false };
+		std::atomic<bool> needReset_LLA{ false };
+		std::atomic<bool> needReset_LLB{ false };
+		std::atomic<bool> needReset_PM1{ false };
+		std::atomic<bool> needReset_PM2{ false };
+		std::atomic<bool> needReset_PM3{ false };
+		std::atomic<bool> needReset_PM4{ false };
+		std::atomic<bool> needReset_Update{ false };
 
 		/**
 		是否开始抽LoadLock1真空
@@ -724,14 +745,16 @@ namespace FC{
 
 	QSlotTransferCycleVTMWidgetPrivate::QSlotTransferCycleVTMWidgetPrivate(QSlotTransferCycleVTMWidget*p)
 		:q_ptr(p), pm1_auto_step(10), pm2_auto_step(10), pm3_auto_step(10), pm4_auto_step(10){
-
-		//std::array<int, 4> selectPmEnableList = { 0, 0, 0, 0 }; // 合法
-		//tower = kernel->getKernelModule<FortrendVTMSignalTower>();
-		
+	
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::onUpdateCycleInfo(){
 		QMetaObject::invokeMethod(q_ptr, "update_cycle_data", Qt::AutoConnection);
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::onStatusChanged()
+	{
+		QMetaObject::invokeMethod(q_ptr, "status_Changed", Qt::AutoConnection);
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::onUpdateProcessControlEnabled(const bool enabled){
@@ -800,30 +823,20 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLASubTransferDatas()
 	{
-		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //LP中初始状态的晶圆
-		loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");     // 5上料 破过真空，但没抽真空的
-		loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA"); // 6 上料 抽完真空，并取走的
-		loadLockAReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLA");// 7下料 ，待放到LL的晶圆数量
-		loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");// 8下料 ，放到LL的晶圆数量
-
-		//loadLockPendingTasks = taskManager.getLoadLockPendingTasks();
-		//loadLockCompletedTasks = taskManager.getLoadLockCompletedTasks();
-		//loadLockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-		//loadLockReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks();
+		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();						// LP中初始状态的晶圆
+		loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");				    // 5上料 破过真空，但没抽真空的
+		loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");			    // 6上料 抽完真空，并取走的
+		loadLockAReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLA");     // 7下料 待放到LL的晶圆数量
+		loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA"); // 8下料 放到LL的晶圆数量
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLBSubTransferDatas()
 	{
-		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //LP中初始状态的晶圆
-		loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");     // 5上料 破过真空，但没抽真空的
-		loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB"); // 6 上料 抽完真空，并取走的
-		loadLockBReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLB");// 7下料 ，待放到LL的晶圆数量
-		loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB");// 8下料 ，放到LL的晶圆数量
-
-		//loadLockPendingTasks = taskManager.getLoadLockPendingTasks();
-		//loadLockCompletedTasks = taskManager.getLoadLockCompletedTasks();
-		//loadLockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-		//loadLockReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks();
+		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();						// LP中初始状态的晶圆
+		loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");					// 5上料 破过真空，但没抽真空的
+		loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");				// 6上料 抽完真空，并取走的
+		loadLockBReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLB");		// 7下料 待放到LL的晶圆数量
+		loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB"); // 8下料 放到LL的晶圆数量
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateEfemSubTransferDatas()
@@ -866,17 +879,6 @@ namespace FC{
 	/*
 	*EFEM大气流程
 	*每一片的来源位置，目标位置，在UI中都明确的，分上下料，那么处理时候达到此状态下的晶圆
-	* lp上下料
-	* 上料lp
-	* 1.判断门是否开， 开直接那mapping result,否则，开盒指令
-	* 2.ewtr 从下到上取片，默认双臂，下手臂取下，上手臂取上
-	* 3.先后寻边
-	* 4.再到aliger片子取到手臂上
-	* 5.判断casste是否开着，判断有无晶圆，再去放对应LLA的槽
-	* 
-	* 下料到lp
-	* 6.当LLa中放回了wafer，再ewtr取片
-	* 7.ewtr取到放回lp1的槽上，流程步骤 +1
 	*/
 	
 	void QSlotTransferCycleVTMWidgetPrivate::executeEFEMTransfer()
@@ -893,9 +895,25 @@ namespace FC{
 			ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
 		}
 
-			while (running)
+			while (!stopRequested)
 			{
 				Sleep(500);
+				// Wait until running is true
+				{
+					std::unique_lock<std::mutex> lock(mtx);
+					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });//也判断stopRequested，是为了退出线程时，也能唤醒，退出当前函数
+				}
+
+				if (stopRequested) break;
+
+				// 检查是否需要重置
+				if (needReset_EFEM.load()) {
+					efem_auto_step = 10;
+					needReset_EFEM = false;
+					logWarn("EFEM", "重置，跳过本次循环剩余部分");
+					continue; // 跳过本次循环剩余部分
+				}
+
 				efem_step_once_finished = false;
 				switch (efem_auto_step)
 				{
@@ -906,7 +924,7 @@ namespace FC{
 					// 检查循环完成状态
 					if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize != 0))
 					{
-						if(efemReturnCompletedTasks.size() >0)
+						if(efemReturnCompletedTasks.size() > 0)
 						{
 							if (efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP1)
 							{
@@ -964,23 +982,22 @@ namespace FC{
 				#pragma region 给TOOL上料
 				case 100:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
-					//加互斥锁，当上料完成解锁
-					//try_lock()不会阻塞线程，lock()会阻塞线程
-
-					/*if (!is_locked(efem_robot_mutex))
-					{
-						efem_robot_mutex.lock();
-					}*/
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 
 					// 检查是否已上锁
-					if (!efem_robot_mutex.is_locked())
-					{
-						// 执行需要加锁的操作...
-						efem_robot_mutex.lock();
-					}
+					//if (!efem_robot_mutex.is_locked())
+					//{
+					//	// 执行需要加锁的操作...
+					//	efem_robot_mutex.lock();
+					//}
+					
+					//2025-8-27 由于第二次循环时，
+					// 当llb持有上料锁时，线程执行上次阻塞住的case201：导致----->
+					// 会执行解锁操作，此时时解锁了，让互斥锁不起效果！！ 那么lla也来上料了，lla持有互斥锁了，且修改了临界变量current_loadlock 为LLA,导致逻辑混乱!!!
 
-					logWarn("cycle", "step:100,给%s上料 Lock thread...", current_loadlock.c_str());
+					efem_robot_mutex.lock();
+
+					logWarn("EFEM", "step:100,给%s上料 Lock thread...", current_loadlock.c_str());
 
 					if (efemUnkownStatusTasks.size() > 0)
 					{
@@ -1041,7 +1058,7 @@ namespace FC{
 				break;
 				case 101:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					auto cassManager = lk->getKernel()->getKernelModule<FortrendCassetteManager>();
 					auto station_cass_lk = cassManager->getCassette(lk.get());
 					std::vector<Cassette::Mapping> lkmaps;
@@ -1114,7 +1131,7 @@ namespace FC{
 				
 				case 110:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					efemPendingTasks = taskManager.getEfemPendingTasks();
 					if (efemPendingTasks.size() == 1)
 					{
@@ -1188,13 +1205,13 @@ namespace FC{
 							
 							// 清除当前处理的LoadLock请求标志
 							if (current_loadlock == "LLA") {
-								logWarn("cycle", "step:110,给TOOL上料 LLA unLock  thread...");
+								logWarn("EFEM", "step:110,给TOOL上料 LLA unLock  thread...");
 								efem_robot_mutex.unlock();
 								tool_allow_get_wafer_LLA = false;
 							}
 							else if (current_loadlock == "LLB") {
 								efem_robot_mutex.unlock();
-								logWarn("cycle", "step:110,给TOOL上料 LLB unLock  thread...");
+								logWarn("EFEM", "step:110,给TOOL上料 LLB unLock  thread...");
 								tool_allow_get_wafer_LLB = false;
 							}
 
@@ -1206,7 +1223,7 @@ namespace FC{
 				#pragma region 单取LP单放LK
 				case 115:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					if (elp == nullptr)
 					{
 						logFailedExcuteCommandHasError(elp->getName(), "elp  is nullptr", efem_process_name, efem_auto_step);
@@ -1408,7 +1425,7 @@ namespace FC{
 				#pragma region 双取LP双放LK
 				case 150:
 				{
-					logWarn("cycle", " 双取LP双放LK efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " 双取LP双放LK efem_auto_step:%d", efem_auto_step);
 					elp = efemPendingTasks[0].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
 					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -1437,7 +1454,7 @@ namespace FC{
 				break;
 				case 151:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					elp = efemPendingTasks[1].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
 					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -1466,7 +1483,7 @@ namespace FC{
 				break;
 				case 152:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					elp = efemPendingTasks[0].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -1489,7 +1506,7 @@ namespace FC{
 				break;
 				case 154:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					elp = efemPendingTasks[1].source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -1680,7 +1697,7 @@ namespace FC{
 				break;
 				case 155:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (get_lk && get_lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -1707,7 +1724,7 @@ namespace FC{
 				break;
 				case 156:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (get_lk && get_lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -1734,7 +1751,7 @@ namespace FC{
 				break;
 				case 157:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -1758,7 +1775,7 @@ namespace FC{
 				break;
 				case 158:
 				{
-					logWarn("cycle", " efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -1787,7 +1804,7 @@ namespace FC{
 				#pragma region 给TOOL下料
 				case 200:
 				{
-					logWarn("cycle", "step:200,current_loadlock:%s 下料 Lock thread...", current_loadlock.c_str());
+					logWarn("EFEM", "step:200,current_loadlock:%s 下料 Lock thread...", current_loadlock.c_str());
 					if (!efem_robot_mutex.is_locked())
 					{
 						efem_robot_mutex.lock();
@@ -1820,7 +1837,7 @@ namespace FC{
 
 					if (elp == nullptr || lk == nullptr)
 					{
-						logError("cycle", "elp or lk is empty");
+						logError("EFEM", "elp or lk is empty");
 
 						logFailedExcuteCommandHasError(elp->getName(), "elp or lk is empty", efem_process_name, efem_auto_step);
 						efem_auto_step = 10;
@@ -1866,7 +1883,7 @@ namespace FC{
 				break;
 				case 201:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					UpdateEfemSubTransferDatas();
 
 					if (efemReturnPendingTasks.size() == 1)
@@ -1902,14 +1919,12 @@ namespace FC{
 							//tool_allow_put_wafer = false;//下料到LP完成
 							if (current_loadlock == "LLA") {
 								efem_robot_mutex.unlock();
-								logWarn("cycle", "step:201,给TOOL下料 LLA unLock thread...");
+								logWarn("EFEM", "step:201,给LLA下料,unLock thread...");
 								tool_allow_put_wafer_LLA = false;
-								
-
 							}
 							else if (current_loadlock == "LLB") {
 								efem_robot_mutex.unlock();
-								logWarn("cycle", "step:201,给TOOL下料 LLB unLock thread...");
+								logWarn("EFEM", "step:201,给LLB下料,unLock thread...");
 								tool_allow_put_wafer_LLB = false;
 								
 							}
@@ -1959,12 +1974,12 @@ namespace FC{
 								if (!elp2->hasDoorOpend() && !elp1->hasDoorOpend())
 								{
 									if (current_loadlock == "LLA") {
-										logWarn("cycle", "step:201,给LLA下料 unLock thread...");
+										logWarn("EFEM", "step:201,给LLA下料 LLA unLock thread...");
 										efem_robot_mutex.unlock();
 										tool_allow_put_wafer_LLA = false;
 									}
 									else if (current_loadlock == "LLB") {
-										logWarn("cycle", "step:201,给LLB下料 LLB unLock thread...");
+										logWarn("EFEM", "step:201,给LLB下料 LLB unLock thread...");
 										efem_robot_mutex.unlock();
 										tool_allow_put_wafer_LLB = false;
 									}
@@ -1980,12 +1995,12 @@ namespace FC{
 							{
 
 								if (current_loadlock == "LLA") {
-									logWarn("cycle", "step:201,给LLA下料 LLA unLock thread...");
+									logWarn("EFEM", "step:201,给LLA下料 LLA unLock thread...");
 									efem_robot_mutex.unlock();
 									tool_allow_put_wafer_LLA = false;
 								}
 								else if (current_loadlock == "LLB") {
-									logWarn("cycle", "step:201,给LLB下料 LLB unLock thread...");
+									logWarn("EFEM", "step:201,给LLB下料 LLB unLock thread...");
 									efem_robot_mutex.unlock();
 									tool_allow_put_wafer_LLB = false;
 								}
@@ -2001,7 +2016,7 @@ namespace FC{
 #pragma region 单取LK单放LP
 				case 240:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (!elp->hasDoorOpend()) {
@@ -2027,7 +2042,7 @@ namespace FC{
 				break;
 				case 241:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					if (lk && lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (!lk->getCassetteDoorOpend()) {
@@ -2056,7 +2071,7 @@ namespace FC{
 				break;
 				case 243:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						auto cmd1 = ewtr->createGetCommand(lk, 1, efemReturnPendingTasks.at(0).targetBlankingSlot);
@@ -2078,7 +2093,7 @@ namespace FC{
 				break;
 				case 244:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					UpdateEfemSubTransferDatas();
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -2102,12 +2117,12 @@ namespace FC{
 							//下料到lp，就置位
 							if (current_loadlock == "LLA") {
 								efem_robot_mutex.unlock();
-								logWarn("cycle", "step:244,给LLA下料 LLA unLock thread...");
+								logWarn("EFEM", "step:244,给LLA下料 LLA unLock thread...");
 								tool_allow_put_wafer_LLA = false;
 							}
 							else if (current_loadlock == "LLB") {
 								efem_robot_mutex.unlock();
-								logWarn("cycle", "step:244,给LLB下料 LLB unLock thread...");
+								logWarn("EFEM", "step:244,给LLB下料 LLB unLock thread...");
 								tool_allow_put_wafer_LLB = false;
 							}
 
@@ -2164,7 +2179,7 @@ namespace FC{
 #pragma region 双取LK双放LP
 				case 250:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					UpdateEfemSubTransferDatas();
 					std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 					std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingTasks.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
@@ -2223,7 +2238,7 @@ namespace FC{
 				break;
 				case 251:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
@@ -2287,7 +2302,7 @@ namespace FC{
 				break;
 				case 253:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -2311,7 +2326,7 @@ namespace FC{
 				break;
 				case 254:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -2335,7 +2350,7 @@ namespace FC{
 				break;
 				case 256:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
@@ -2374,7 +2389,7 @@ namespace FC{
 				}
 				case 257:
 				{
-					logWarn("cycle", "efem_auto_step:%d", efem_auto_step);
+					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					UpdateEfemSubTransferDatas();
 					taskManager.updateTaskStatus(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
 					taskManager.updateTaskStatus(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
@@ -2554,10 +2569,25 @@ namespace FC{
 			wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		}
 
-			while (running)
+			while (!stopRequested)
 			{
 
-				Sleep(1000);
+				Sleep(500);
+				{
+					std::unique_lock<std::mutex> lock(mtx);
+					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+				}
+
+				if (stopRequested) break;
+
+				// 检查是否需要重置
+				if (needReset_LLA.load()) {
+					loadlock1_auto_step = 10;
+					needReset_LLA = false;
+					logWarn(lk1->getName().c_str(), "重置，跳过本次循环剩余部分");
+					continue; // 跳过本次循环剩余部分
+				}
+
 				loadlock1_step_once_finished = false;
 				
 				//onGetStep();
@@ -2575,7 +2605,7 @@ namespace FC{
 					bool isInterlock = isLoadingInterlock("LLA");
 					if (isInterlock)
 					{
-						logWarn(lk1->getName().c_str(), "LLA上料互锁");
+						logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLA上料互锁");
 					}
 
 					//在LLA槽中，没有传输任务,说明没有上料需求，所有wafer都完成下料到LP中
@@ -2796,10 +2826,9 @@ namespace FC{
 						//LLA未达到真空设定值且在抽其他腔室
 						if (lk1->getVacuumValueReachesTheSetValue() && loadlock1_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
-							loadlock1_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
+							logInform("Cycle", "step:510, lk1真空值已经达到，真空规读取数值波动或者泵在抽其他腔室");
+							loadlock1_get_vacuum = false;
 						}
-						//注释.否则线程之间会竞争loadlock1_get_vacuum变量，要么加锁
-						//loadlock1_auto_step = 500;  
 						Sleep(1000);
 					}
 				}
@@ -2899,6 +2928,7 @@ namespace FC{
 				{
 					if (loadlock1_get_vacuum == false)
 					{
+						//再检测，由于真空规读取数值波动，还会执行跳到901
 						if (lk1->getVacuumValueUpperLimitReachesTheSetValue())
 						{
 							loadlock1_auto_step = 950;
@@ -2908,9 +2938,11 @@ namespace FC{
 							loadlock1_auto_step = 901;
 						}
 					}
-					else {
+					else
+					{
 						if (lk1->getVacuumValueReachesTheSetValue() && loadlock1_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
+							logInform("Cycle", "step:920, lk1真空值已经达到，真空规读取数值波动或者泵在抽其他腔室");
 							loadlock1_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -3013,17 +3045,25 @@ namespace FC{
 						}
 						else
 						{
-							//LoadLock1 打开传输腔门阀
-							auto cmd = lk1->createOpenTMCavityDoorCommand();
-							lk1->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							if (lk1->getVacuumValueUpperLimitReachesTheSetValue() &&
+								tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 							{
-								logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+								//LoadLock1 打开传输腔门阀
+								auto cmd = lk1->createOpenTMCavityDoorCommand();
+								lk1->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+								}
+								else
+								{
+									loadlock1_auto_step = 1051;
+								}
 							}
 							else
 							{
-								loadlock1_auto_step = 1051;
+								loadlock1_auto_step = 1040;
 							}
 
 						}
@@ -3167,14 +3207,6 @@ namespace FC{
 					
 				}
 				break;
-				case 1053:
-				{
-					//判断取放完成
-				
-				
-				
-				}
-				break;
 #pragma endregion
 
 #pragma region 允许放晶圆流程
@@ -3240,6 +3272,7 @@ namespace FC{
 				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						LLA_start_time = std::chrono::steady_clock::now();
 						// 真空检测和门阀，阀动作，csr取放动作
 						if (CheckLLVacuumMeetsStandard("LLA", 2010))
 						{
@@ -3554,10 +3587,25 @@ namespace FC{
 			lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 			wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		}
-			while (running)
+			while (!stopRequested)
 			{
+				{
+					std::unique_lock<std::mutex> lock(mtx);
+					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+				}
+
+				if (stopRequested) break;
+
+				// 检查是否需要重置
+				if (needReset_LLB.load()) {
+					loadlock2_auto_step = 10;
+					needReset_LLB = false;
+					logWarn(lk2->getName().c_str(), "重置，跳过本次循环剩余部分");
+					continue; // 跳过本次循环剩余部分
+				}
+
 				Sleep(500);
-				//onGetStep();
+
 				loadlock2_step_once_finished = false;
 				switch (loadlock2_auto_step)
 				{
@@ -3572,11 +3620,7 @@ namespace FC{
 					bool isInterlock = isLoadingInterlock("LLB");
 					if (isInterlock)
 					{
-						logWarn(lk1->getName().c_str(), "LLB上料互锁");
-					}
-					if (tool_allow_put_wafer_LLA || loadLockAReturnPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size()>0)
-					{
-						llA_condition = true; //LLA有待下料
+						logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLB上料互锁");
 					}
 
 					//判断是否lp2循环
@@ -3795,6 +3839,7 @@ namespace FC{
 					{
 						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
+							logInform("Cycle", "step:510, lk2真空值已经达到，泵在抽其他腔室");
 							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -3907,6 +3952,7 @@ namespace FC{
 					else {
 						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
+							logInform("Cycle", "step:920, lk2真空值已经达到，泵在抽其他腔室或真空数值波动!");
 							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -3983,7 +4029,7 @@ namespace FC{
 					{
 						LLB_start_time = std::chrono::steady_clock::now();
 						// 选择不加真空机械手线程，直接操作，真空检测和门阀，阀动作，csr取放动作
-						if (CheckLLVacuumMeetsStandard("LLA", 2010))
+						if (CheckLLVacuumMeetsStandard("LLB", 2010))
 						{
 							loadlock2_auto_step = 1050;
 						}
@@ -4009,17 +4055,25 @@ namespace FC{
 						}
 						else
 						{
-							//Loadlock2 打开传输腔门阀
-							auto cmd = lk2->createOpenTMCavityDoorCommand();
-							lk2->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							if (lk2->getVacuumValueUpperLimitReachesTheSetValue() &&
+								tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 							{
-								logFailedExcuteCommandHasError(lk2->getName(), "打开传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+								//Loadlock2 打开传输腔门阀
+								auto cmd = lk2->createOpenTMCavityDoorCommand();
+								lk2->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(lk2->getName(), "打开传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+								}
+								else
+								{
+									loadlock2_auto_step = 1051;
+								}
 							}
 							else
 							{
-								loadlock2_auto_step = 1051;
+								loadlock2_auto_step = 1040;
 							}
 						}
 					}
@@ -4558,8 +4612,23 @@ namespace FC{
 
 		auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 
-			while (running)
+			while (!stopRequested)
 			{
+				// Wait until running is true
+				{
+					std::unique_lock<std::mutex> lock(mtx);
+					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+				}
+
+				if (stopRequested) break;
+
+				// 检查是否需要重置
+				if (needReset_PM1.load()) {
+					pm1_auto_step = 10;
+					needReset_PM1 = false;
+					continue; // 跳过本次循环剩余部分
+				}
+
 				Sleep(500);
 				pm1_step_once_finished = false;
 				
@@ -5040,9 +5109,24 @@ namespace FC{
 			std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 			auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 
-				while (running)
+				while (!stopRequested)
 				{
 					Sleep(500);
+					// Wait until running is true
+					{
+						std::unique_lock<std::mutex> lock(mtx);
+						cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+					}
+
+					if (stopRequested) break;
+
+					// 检查是否需要重置
+					if (needReset_PM2.load()) {
+						pm2_auto_step = 10;
+						needReset_PM2 = false;
+						continue; // 跳过本次循环剩余部分
+					}
+
 					pm_step_once_finished = false;
 					
 
@@ -5306,7 +5390,7 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
 							}
 							else
 							{
@@ -5383,12 +5467,27 @@ namespace FC{
 			std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 			std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
 			auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
-#if 0
-				while (running)
+
+				while (!stopRequested)
 				{
 					Sleep(500);
+					// Wait until running is true
+					{
+						std::unique_lock<std::mutex> lock(mtx);
+						cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+					}
+
+					if (stopRequested) break;
+
+					// 检查是否需要重置
+					if (needReset_PM3.load()) {
+						pm3_auto_step = 10;
+						needReset_PM3 = false;
+						continue; // 跳过本次循环剩余部分
+					}
+
 					pm3_step_once_finished = false;
-					logInform("Cycle", Poco::format("%s = %d", pm3_process_name, pm3_auto_step).c_str());
+					//logInform("Cycle", Poco::format("%s = %d", pm3_process_name, pm3_auto_step.load()).c_str());
 
 					switch (pm3_auto_step.load())
 					{
@@ -5496,28 +5595,28 @@ namespace FC{
 							pm3_auto_step.store(1010);
 #if 0
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
-								pm3_auto_step = 1010;
+								pm3_auto_step.store(1010);
 							}
 							else if (!haswaferpm && haswaferarm2) {//手臂2放料
-								pm3_auto_step = 1030;
+								pm3_auto_step.store(1030);
 							}
 
 							else if (haswaferpm && !haswaferarm1) //手臂1取料
 							{
-								pm3_auto_step = 1040;
+								pm3_auto_step.store(1040);
 							}
 							else if (haswaferpm && !haswaferarm2) //手臂1取料
 							{
-								pm3_auto_step = 1050;
+								pm3_auto_step.store(1050);
 							}
 							else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放
-								pm3_auto_step = 1050;
+								pm3_auto_step.store(1050);
 							}
 							else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放
-								pm3_auto_step = 1070;
+								pm3_auto_step.store(1070);
 							}
 							else if (haswaferpm && !haswaferarm2 && !haswaferarm1) {//两个手臂没料，A手取
-								pm3_auto_step = 1090;
+								pm3_auto_step.store(1090);
 							}
 
 							else {
@@ -5527,7 +5626,7 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step);
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
 						}
 						pm3_auto_step.store(1010);
 
@@ -5585,7 +5684,7 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
 							}
 							else
 							{
@@ -5614,7 +5713,7 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
 							}
 							else
 							{
@@ -5628,7 +5727,7 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step);
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
 						}
 					}
 					break;
@@ -5642,7 +5741,7 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, robot_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
 							}
 							else
 							{
@@ -5655,7 +5754,7 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, robot_auto_step);
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
 						}
 					}
 					break;
@@ -5698,11 +5797,9 @@ namespace FC{
 					default:
 						break;
 					}
-
-				
 					pm3_step_once_finished = true;
 				}
-#endif
+
 		}
 		catch (const std::exception& e) {
 			logError("Cyclelog", "PM3Transfer thread crashed:", e.what());
@@ -5721,12 +5818,26 @@ namespace FC{
 			std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 			std::shared_ptr<FortrendPMCavitySubsystem> pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
 			auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
-#if 0
-				while (running)
+
+				while (!stopRequested)
 				{
 					Sleep(500);
+					{
+						std::unique_lock<std::mutex> lock(mtx);
+						cv.wait(lock, [this] { return running.load() || stopRequested.load(); }); //确保线程在需要停止时能被立即唤醒
+					}
+
+					if (stopRequested) break;
+
+					// 检查是否需要重置
+					if (needReset_PM4.load()) {
+						pm4_auto_step = 10;
+						needReset_PM4 = false;
+						continue; // 跳过本次循环剩余部分
+					}
+
 					pm4_step_once_finished = false;
-					logInform("Cycle", Poco::format("%s = %d", pm4_process_name, pm4_auto_step).c_str());
+					//logInform("Cycle", Poco::format("%s = %d", pm4_process_name, pm4_auto_step.load()).c_str());
 
 					switch (pm4_auto_step.load())
 					{
@@ -5829,19 +5940,19 @@ namespace FC{
 							pm4_auto_step.store(1010);
 #if 0
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
-								pm4_auto_step = 1010;
+								pm4_auto_step.store(1010);
 							}
 							else if (!haswaferpm && haswaferarm2) {//手臂2放料
-								pm4_auto_step = 1030;
+								pm4_auto_step.store(1030);
 							}
 
 							else if (haswaferpm && !haswaferarm1) //手臂1取料
 							{
-								pm4_auto_step = 1040;
+								pm4_auto_step.store(1040);
 							}
 							else if (haswaferpm && !haswaferarm2) //手臂1取料
 							{
-								pm4_auto_step = 1050;
+								pm4_auto_step.store(1050);
 							}
 							//else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放
 							//	pm4_auto_step = 1050;
@@ -6032,7 +6143,6 @@ namespace FC{
 				
 					pm4_step_once_finished = true;
 				}
-#endif
 		}
 		catch (const std::exception& e) {
 			logError("Cyclelog", "PM4Transfer thread crashed:", e.what());
@@ -6059,32 +6169,27 @@ namespace FC{
 			elp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
 			elp2 = kernel->getKernelModule<EFEMLPSubsystem>("ELP2");
 
-			while (running)
+			while (!stopRequested)
 			{
+				update_step_once_finished = false;
 				Sleep(500);
 				onGetStep();
-				//onGetStep();
-				//logInform("Cycle", "finished_time_lla:%d,finished_time_llb:%d", finished_time_lla, finished_time_llb);
-
-				//logInform("Cycle", "cycleFinished_lla:%s,cycleFinished_llb:%s", std::to_string(cycleFinished_lla), std::to_string(cycleFinished_llb));
-
+				
 				if (((finished_time_lla == cycle_times_lla) || (finished_time_llb == cycle_times_llb)) 
 					&& (!elp1->hasDoorOpend() && !elp2->hasDoorOpend()))
 				{
 					
-					//finished_time_lla = 0;
+					//update lla
 					cycleFinished_lla = true;
 					onUpdateCycleInfo();
 					lp1_cycle_one_time_finished = false;
 
-					//finished_time_llb = 0;
+					//update llb
 					cycleFinished_llb = true;
 					onUpdateCycleInfo();
 					lp2_cycle_one_time_finished = false;
-					// ... 重置状态 ...
-					//taskManager.stopped_.store(true); // 使用 atomic store
-					//taskManager.stopped_ = true;
 
+					//update step
 					loadlock1_auto_step = 10;
 					loadlock2_auto_step = 10;
 					vacuum_auto_step = 10;
@@ -6093,13 +6198,22 @@ namespace FC{
 					pm2_auto_step.store(10);
 					pm3_auto_step.store(10);
 					pm4_auto_step.store(10);
-		
 					update_auto_step = 10;
+
+
 					running = false;
+					//pauseAllThreads();
+
 					logInform("Cycle", "整机流程结束！");
 				}
 
-				update_step_once_finished = false;
+				{
+					std::unique_lock<std::mutex> lock(mtx);
+					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+				}
+
+				if (stopRequested) break;
+
 
 				switch (update_auto_step)
 				{
@@ -6151,23 +6265,7 @@ namespace FC{
 					lp1_cycle_one_time_finished = false;
 
 					RerunTheFilmCycle();
-
-					//taskManager.stopped_ = true;
-
-					//loadlock1_auto_step = 10;
-					//loadlock2_auto_step = 10;
-					//vacuum_auto_step = 10;
-					//efem_auto_step = 10;
-					//pm1_auto_step = 10;
-					//pm2_auto_step = 10;
-					//pm3_auto_step = 10;
-					//pm4_auto_step = 10;
-					//update_auto_step = 10;
-
-					//Sleep(5000);
-
-					//taskManager.stopped_ = false;
-
+				
 				}
 				break;
 				case 1040:
@@ -6207,22 +6305,6 @@ namespace FC{
 					lp2_cycle_one_time_finished = false;
 
 					RerunTheFilmCycle();
-
-					//taskManager.stopped_ = true;
-
-					//loadlock1_auto_step = 10;
-					//loadlock2_auto_step = 10;
-					//vacuum_auto_step = 10;
-					//efem_auto_step = 10;
-					//pm1_auto_step = 10;
-					//pm2_auto_step = 10;
-					//pm3_auto_step = 10;
-					//pm4_auto_step = 10;
-					//update_auto_step = 10;
-					//
-					//Sleep(5000);
-
-					//taskManager.stopped_ = false;
 				}
 				break;
 				default:
@@ -6246,14 +6328,8 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::RerunTheFilmCycle()
 	{
-		//1.暂停
-		//2.复位
-		//3.开始
-		//if(!taskManager.isStopped())
-		//{
-		//	taskManager.stop();
-		//}
 		//running = false; //不停
+		pauseAllThreads(); //暂停，只会阻塞所有线程，不退出
 
 		logInform(reset_process_name.c_str(), "重新跑片开始");
 		loadlock1_auto_step = 10;
@@ -6264,17 +6340,75 @@ namespace FC{
 		pm2_auto_step.store(10);
 		pm3_auto_step.store(10);
 		pm4_auto_step.store(10);
-
+		//重置标志
+		needReset_EFEM.store(true);
+		needReset_LLA.store(true);
+		needReset_LLB.store(true);
+		needReset_PM1.store(true);
+		needReset_PM2.store(true);
+		needReset_PM3.store(true);
+		needReset_PM4.store(true);
+		needReset_Update.store(true);
 		update_auto_step = 10;
 		Sleep(1000);
 
-		running = true;
-		//taskManager.start();
+		startAllThreads(); //重新唤醒
+		//running = true;
+
+		
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::startAllThreads()
+	{
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			running = true;
+			ispause = false;//add
+		}
+		cv.notify_all();
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::pauseAllThreads()
+	{
+		std::shared_ptr<FortrendPumpSubsystem> pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			running = false; 
+			ispause = true;//add
+
+
+			//if(pump!=nullptr)
+			//	pump->setProcessAbort(true);
+			
+		}
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::stopAllThreads()
+	{
+		std::shared_ptr<FortrendPumpSubsystem> pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			running = false;
+			stopRequested = true;
+			ispause = true;//add
+		}
+		cv.notify_all();
+		
+		if (pump != nullptr)
+			pump->setProcessAbort(true);//停止所有模组抽真空/破真空流程
+
+		// Wait for threads to finish
+		for (auto& thread : threads) {
+			if (thread.joinable()) {
+				thread.join();
+			}
+		}
+		threads.clear();
 	}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::isLoadingInterlock(const std::string &LLName)
 	{
-		logInform("check Interlock","检查LLName:%s 上料互锁",LLName.c_str());
+		//logInform("check Interlock","检查LLName:%s 上料互锁",LLName.c_str());
 
 		UpdateLLBSubTransferDatas();
 		UpdateLLASubTransferDatas();			
@@ -6298,15 +6432,14 @@ namespace FC{
 		//获得经过LLA的所有料集合，
 		if(LLName == "LLB")
 		{
-
 			//1.下料请求，获得经过LLA 的有上料标签，或下层有片
 			if (tool_allow_put_wafer_LLA || taskManager.CollectionPassedThroughLL("LLA") || downHaswaferlk1)
 			{
-				logWarn("Cyclelog", "LLB feeding isLoadingInterlock is true!");
+				logWarn("Cyclelog", "LLB feeding LoadingInterlock!");
 				return true; //LLA有待下料或者还没下料
 			}
-			//true呼叫LP下料， false LP下料完成 
-			else if (!taskManager.CollectionPassedThroughLL("LLA")&& !tool_allow_put_wafer_LLA)
+			//LLA 下料结束 或 LLA上料完成
+			else if (!taskManager.CollectionPassedThroughLL("LLA") && !tool_allow_put_wafer_LLA)
 			{
 				//LLA下料完成或者初始状态
 				logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁");
@@ -6320,10 +6453,10 @@ namespace FC{
 		}
 		else if (LLName == "LLA")
 		{
-
+			//下料/上料请求,获得经过LLB的有上料标签，或下层有片
 			if (tool_allow_put_wafer_LLB || taskManager.CollectionPassedThroughLL("LLB") || downHaswaferlk2)//或下层有片
 			{
-				logWarn("Cyclelog", "LLA feeding  isLoadingInterlock is true!");
+				logWarn("Cyclelog", "LLA feeding  LoadingInterlock!");
 				return true; //LLB有待下料或者还没下的料
 			}
 			//true呼叫LP下料， false LP下料完成 
@@ -6346,18 +6479,6 @@ namespace FC{
 		return false;
 	}
 
-	//bool QSlotTransferCycleVTMWidgetPrivate::is_locked(std::mutex& lock)
-	//{
-	//	// 尝试获取锁，如果成功则表示之前未上锁
-	//	// 
-	//	//如果互斥锁是未锁定状态，得到了互斥锁所有权并加锁成功，函数返回true
-
-	//	if (lock.try_lock())
-	//	{
-	//		return true; // 未上锁
-	//	}
-	//	return false; // 已上锁
-	//}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::CheckTMVacuumMeetsStandard(int preStep)
 	{
@@ -6401,8 +6522,17 @@ namespace FC{
 		}
 
 		robot_auto_step = preStep;
-		while (running)
+
+		while (!stopRequested)
 		{
+
+			{
+				std::unique_lock<std::mutex> lock(mtx);
+				cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+			}
+
+			if (stopRequested) break;
+
 			auto now_time = std::chrono::steady_clock::now();
 			if (llName == "LLA")
 			{
@@ -6495,7 +6625,8 @@ namespace FC{
 				if (lk->getVacuumValueUpperLimitReachesTheSetValue() &&
 					tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 				{
-					logInform("cycle", "lk和tm腔室都达到了极限真空值!");
+					logInform("cycle", "lk:%s,tm:%s 腔室都达到了极限真空值!", lk->getName().c_str(),tm->getName().c_str());
+					logInform("cycle", Poco::format("当前压力值：%f", lk->getVacuumValue()).c_str());
 					return true;
 				}
 				else
@@ -6515,23 +6646,16 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::resetAction(){
 
-		//if (!taskManager.stopped_)
-		//{
-		//	return;
-		//}
 		if (running)
 		{
 			return;
 		}
 		efem_robot_mutex.unlock();
-		if (finished_time_lla != 0)
-		{
-			finished_time_lla = 0;
-		}
-		if (finished_time_llb != 0)
-		{
-			finished_time_llb = 0;
-		}
+
+		finished_time_lla = 0;
+
+		finished_time_llb = 0;
+		
 		while (!vacumm_step_once_finished || !loadlock1_step_once_finished || !loadlock2_step_once_finished)
 		{
 			Sleep(100);
@@ -6981,8 +7105,16 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 
-		while (running)
+		while (!stopRequested)
 		{
+			
+			{
+				std::unique_lock<std::mutex> lock(mtx);
+				cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+			}
+
+			if (stopRequested) break;
+
 			vacumm_step_once_finished = false;
 			if (tm->getVacuumEnable())
 			{
@@ -7836,6 +7968,7 @@ namespace FC{
 		FortrendCassetteManager::Ptr llbManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 		lk2_cass = llbManager->getCassette(lk2.get());
 
+#if 0
 		QString fileName = QDir::currentPath() + "/config/" + "config.ini";
 		if (fileName.isEmpty())
 		{
@@ -7869,6 +8002,26 @@ namespace FC{
 			logInform("Cycle:", "配方配置错误");
 			return false;
 		}
+#endif
+		if (FormulaName.empty())
+		{
+			logError("Cycle:", "未选择配方!");
+			return false;
+		}
+		if (FormulaName == "Formula_Go_Up_And_Down")
+		{
+			slots_ = 1;
+		}
+		else if (FormulaName == "Formula_Double_Up_And_Down")
+		{
+			slots_ = 2;	
+		}
+		else
+		{
+			logInform("Cycle:", "配方配置错误");
+			return false;
+		}
+
 		// 处理UI中的每一行
 		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i)
 		{
@@ -7974,7 +8127,7 @@ namespace FC{
 					task.target_pm = getSelectPmLocation(task);
 					llaSlot = 2;
 					task.targetFeedingSlot = llaSlot;//上料槽号，上层
-					task.targetBlankingSlot = 1;
+					task.targetBlankingSlot = 1;     //下料槽号，下层
 					if (llaSlot > GROUP_SIZE) llaSlot = 2;// 组内循环
 				}
 				else
@@ -7982,8 +8135,8 @@ namespace FC{
 					task.target = UnifiedWaferTask::Location::LLB;
 					task.target_pm = getSelectPmLocation(task);
 					llbSlot = 2;
-					task.targetFeedingSlot = llbSlot;
-					task.targetBlankingSlot = 1;
+					task.targetFeedingSlot = llbSlot;//上料槽号，上层
+					task.targetBlankingSlot = 1;     //下料槽号，下层
 					if (llbSlot > GROUP_SIZE) llbSlot = 2;// 组内循环
 				}
 			}
@@ -8165,7 +8318,8 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::logFailed(const std::string station_name, const std::string log){
 		Q_Q(QSlotTransferCycleVTMWidget);
-		running = false;
+		//running = false;
+		pauseAllThreads();
 		ispause = true;
 		logError(station_name.c_str(), log.c_str());
 		onUpdateControlEnabled("execute_pbt", true);
@@ -8225,8 +8379,9 @@ namespace FC{
 		connect(d->ui->execute_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onStart);
 		connect(d->ui->pause_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onPause);
 		connect(d->ui->reset_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onReset);
-
 		connect(d->ui->abort_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onAbort);
+		connect(d->ui->continue_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onContinue);
+
 		//connect(d->ui->loadlock1_put_cassette_finished_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onLoadLock1PutCassetteFinished);
 		//connect(d->ui->loadlock2_put_cassette_finished_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onLoadLock2PutCassetteFinished);
 
@@ -8237,6 +8392,8 @@ namespace FC{
 
 		d->ui->enableAtmosphere->setEnabled(true);
 		d->ui->execute_pbt->setEnabled(true);
+		d->ui->continue_pbt->setEnabled(false);
+
 		initPMCavityParamEdieTableWidget();
 
 		//d->ui->gbx_pm_parameter->hide();
@@ -8255,13 +8412,19 @@ namespace FC{
 		//d->ui->enablesmif2->hide();
 
 		//注释
-		std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::onProcess, this);
-		thd_vacuum.detach();
+		//std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::onProcess, this);
+		//thd_vacuum.detach();
+
+		//initialize thread
+		initializeThreads();
 
 	}
 
 	QSlotTransferCycleVTMWidget::~QSlotTransferCycleVTMWidget(){
 		Q_D(QSlotTransferCycleVTMWidget);
+
+		d->stopAllThreads(); //2025-8-25 新增
+
 		delete d->ui;
 		delete d;
 	}
@@ -8322,32 +8485,68 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidget::onUpdateRecipe(int model){
 		Q_D(QSlotTransferCycleVTMWidget);
-		//0=A模式 1=B模式 2=先A后B模式 3=先B后A模式 
+
+
+		//0=单片上下料模式 1=双片上下料模式
 		if (d->running)return;
 		try{
 			QString fileName = "";
 			switch (model)
 			{
 			case 0:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/A.ini";
+				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/Formula_Go_Up_And_Down.ini";
 				break;
 			case 1:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/B.ini";
-				break;
-			case 2:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/AB.ini";
-				break;
-			case 3:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/BA.ini";
+				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/Formula_Double_Up_And_Down.ini";
 				break;
 			default:
 				break;
 			}
 			if (fileName == "")return;
 			onClearSequence();
+
+			std::string fileNamePath = fileName.toStdString(); 
+			size_t slash = fileNamePath.rfind('/');
+			if (slash != std::string::npos)
+			{
+				std::string Formula = fileNamePath.substr(slash + 1);
+				size_t slash_1 = Formula.find('.');
+				if (slash_1 != std::string::npos)
+				{
+					d->FormulaName = Formula.substr(0, slash_1);
+				}
+				else
+				{
+					logError(d->module_name.c_str(), "解析配方错误");
+					return;
+				}
+			}
+			else
+			{
+				logError(d->module_name.c_str(), "解析配方错误");
+				return;
+
+			}
+			if (d->FormulaName == "")
+			{
+				QMessageBox::warning(this, tr("警告信息"), tr("解析配方错误"));
+				logError(d->module_name.c_str(), "解析配方错误");
+				return;
+			}
+			logInform(d->module_name.c_str(), "current FormulaName:%s", d->FormulaName.c_str());
+
+
+
 			QSettings settings(fileName, QSettings::IniFormat);
 			int rowCount = settings.value("rowCount", 0).toInt();
 			int columnCount = settings.value("columnCount", 0).toInt();
+			if (rowCount == 0 || columnCount == 0)
+			{
+				logError(d->module_name.c_str(), "解析配方错误");
+				QMessageBox::warning(this, tr("警告信息"), tr("配方内容错误"));
+				return;
+			}
+
 			for (int i = 0; i < rowCount; ++i) {
 				onAddAnItem();
 				for (int j = 0; j < 4; ++j) {
@@ -8369,20 +8568,47 @@ namespace FC{
 
 			int pm_rowCount = settings.value("pm_rowCount", 0).toInt();
 			int pm_columnCount = settings.value("pm_columnCount", 0).toInt();
+			if (pm_rowCount == 0 || pm_columnCount == 0)
+			{
+				logError(d->module_name.c_str(), "解析配方错误");
+				QMessageBox::warning(this, tr("警告信息"), tr("配方内容错误"));
+				return;
+			}
+
 			for (int i = 0; i < pm_rowCount; ++i) {
 				for (int j = 1; j < pm_columnCount; ++j) {
 					QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
 					QString value = settings.value(key, "").toString();
-					QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-					if (j > 16)
+
+					qDebug() << "KEY:" << key << "value" << value<<"value.toDouble()"<< value.toDouble();
+
+					QWidget* widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
+					if (j == 2)
 					{
-						QComboBox *combox = (QComboBox*)widget;
+						QComboBox* combox = (QComboBox*)widget;
 						combox->setCurrentText(value);
 					}
-					else{
-						QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
+					else if (j == 3)
+					{
+						QSpinBox* spb = (QSpinBox*)widget;
+						spb->setValue(value.toDouble());
+					}
+					else
+					{
+						QDoubleSpinBox* dsb = (QDoubleSpinBox*)widget;
 						dsb->setValue(value.toDouble());
 					}
+
+					//QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
+					//if (j > 16)
+					//{
+					//	QComboBox *combox = (QComboBox*)widget;
+					//	combox->setCurrentText(value);
+					//}
+					//else{
+					//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
+					//	dsb->setValue(value.toDouble());
+					//}
 				}
 			}
 		}
@@ -8656,9 +8882,9 @@ namespace FC{
 		pm3->setIsRunning(false);
 		pm4->setIsRunning(false);
 
-		d->running = false;
-		d->ispause = true;
-		//taskManager.stop();
+		d->pauseAllThreads();
+		//d->running = false;
+		//d->ispause = true;
 
 		d->ui->execute_pbt->setEnabled(true);
 		d->ui->reset_pbt->setEnabled(true);
@@ -8684,6 +8910,12 @@ namespace FC{
 		
 	}
 
+	void QSlotTransferCycleVTMWidget::onContinue()
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		d->startAllThreads();
+	}
+
 	void QSlotTransferCycleVTMWidget::onReset(){
 		Q_D(QSlotTransferCycleVTMWidget);
 		std::shared_ptr<FortrendTMCavitySubsystem> tm = d->kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
@@ -8696,8 +8928,6 @@ namespace FC{
 				return;
 			}
 		}
-		//taskManager.stop();//stopped_ = true;
-
 		d->running = false;
 		d->ispause = false;
 
@@ -8796,16 +9026,6 @@ namespace FC{
 
 		}
 
-		//if (d->isLoadingInterlock("LLA")) {
-
-		//	logInform("Cycle", "test LLA成功。");
-		//}
-		//if(d->isLoadingInterlock("LLB"))
-		//{
-		//	logInform("Cycle", "test成功1111。");
-		//	return;
-		//}
-
 		if (CYCLE_SIM_MODE == 0)
 		{
 			//2025-8-14 默认已经手动处理机台片子，重新把wafer数据刷新到初始状态
@@ -8825,17 +9045,18 @@ namespace FC{
 			}
 		}
 
-		d->running = true;
+		d->startAllThreads();
+		//d->running = true;
+		d->ispause = false;
+
 		pm1->setIsRunning(d->running);
 		pm2->setIsRunning(d->running);
 		pm3->setIsRunning(d->running);
 		pm4->setIsRunning(d->running);
 
-		d->ispause = false;
-		//taskManager.start();
 		Sleep(500);
 		//新流程线程启动
-		startProcessingThreads();
+		//startProcessingThreads();
 
 		d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
 		d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
@@ -8855,6 +9076,10 @@ namespace FC{
 	}
 	void QSlotTransferCycleVTMWidget::clickAbort(){
 		onAbort();
+	}
+	void QSlotTransferCycleVTMWidget::clickContinue()
+	{
+		onContinue();
 	}
 	void QSlotTransferCycleVTMWidget::clickplcAuto(bool isauto){
 		Q_D(QSlotTransferCycleVTMWidget);
@@ -8901,7 +9126,10 @@ namespace FC{
 		std::shared_ptr<FortrendTMCavitySubsystem> tm = d->kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = d->kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = d->kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
 
 		bool  ups = false;
 		bool isCloseInsertingPlateTM = false;
@@ -8915,8 +9143,13 @@ namespace FC{
 
 		while (true)
 		{
-			//d->ui->cycle_finished_times_spx->setValue(d->finished_time_lla);
-			//d->ui->cycle_finished_times_spx_2->setValue(d->finished_time_llb);
+			Sleep(500);
+			//监控LLA/LLB 上料互锁条件
+			//bool isInterlock = d->isLoadingInterlock("LLA");
+			//bool isInterlock = d->isLoadingInterlock("LLB");
+		
+
+
 #if 0
 			pm2->setIsRunning(d->running);
 			tm->readBit("MR35507", ups);
@@ -9113,7 +9346,7 @@ namespace FC{
 			}
 			
 #endif		
-			Sleep(50);
+			
 		}
 	}
 
@@ -9214,20 +9447,6 @@ namespace FC{
 		d->executeUpdateTransferStatus();
 	}
 
-	void FC::QSlotTransferCycleVTMWidget::executeTestRobotTransfer()
-	{
-		//先取后放
-
-	}
-
-	bool QSlotTransferCycleVTMWidget::is_locked(std::mutex &lock)
-	{
-		Q_D(QSlotTransferCycleVTMWidget);
-		/*return d->is_locked(lock);*/
-		return false;
-	}
-
-
 	void QSlotTransferCycleVTMWidget::onGetStep(){
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->onGetStep();
@@ -9237,6 +9456,11 @@ namespace FC{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->ui->cycle_finished_times_spx->setValue(d->finished_time_lla);
 		d->ui->cycle_finished_times_spx_2->setValue(d->finished_time_llb);
+	}
+
+	void QSlotTransferCycleVTMWidget::status_Changed()
+	{
+
 	}
 
 	void QSlotTransferCycleVTMWidget::updateProcessControlEnabled(const bool enabled){
@@ -9347,11 +9571,19 @@ namespace FC{
 
 	}
 
-	bool FC::QSlotTransferCycleVTMWidget::checkTheStatusMachine()
+	void QSlotTransferCycleVTMWidget::initializeThreads()
 	{
-
-
-		return false;
+		Q_D(QSlotTransferCycleVTMWidget);
+		// Create and start threads
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeEFEMTransfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeLLATransfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeLLBTransfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::startVacuumAction, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM1Transfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM2Transfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM3Transfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM4Transfer, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeUpdateTransferStatus, this);
 	}
 
 }

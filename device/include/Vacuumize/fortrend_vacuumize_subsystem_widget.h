@@ -51,11 +51,7 @@ private slots:
 	//³éLLBÕæ¿Õ
 	void onOpenLoadLock2AutoVacuumCommand();
 
-	
-
 	void showMessage(const QString& message);
-
-	
 
 private:
 	void onAttributeUpdate()throw(KernelException);

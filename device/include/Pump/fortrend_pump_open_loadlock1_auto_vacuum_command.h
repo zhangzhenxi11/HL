@@ -55,10 +55,13 @@ namespace FC{
 		//8.loadLock1是否达到粗抽压力判断
 		int handleStep1100();
 
+		//9.关闭loadlock1角阀
+		int handleStep1350();
+
 		//9.转10000
 		int handleStep5210();
 
-		//10.退出循环
+		//11.退出循环
 		int handleStep10000();
 
 

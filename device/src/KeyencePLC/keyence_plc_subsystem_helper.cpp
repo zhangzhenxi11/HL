@@ -115,6 +115,9 @@ private:
 	bool sendMessage(const std::string data);
 	bool sendAndReceiveMessage(const std::string sendData, std::string &recvData);
 	std::vector<std::string> splitData(const std::string& data, char delimiter);
+
+	bool monitorHeartbeats();
+	
 private:
 	bool isConnected = false;
 };
@@ -195,17 +198,33 @@ bool KeyencePlcSubSystemHelperPrivate::initialize()
 	}
 	isConnected = true;
 	setTimeout(1000);
+	bool isconnected = false;
+
 	if (!sendMessage(""))
 	{
-		logError(name.c_str(), "连接到PLC失败");
-		closesocket(*client);
-		return false;
+		if (monitorHeartbeats())
+		{
+			return true;
+		}
+		else
+		{
+			logError(name.c_str(), "连接到PLC失败");
+			closesocket(*client);
+			return false;
+		}
 	}
 	std::string data = "";
 	if (!receiveMessage(data))
 	{
-		logError(name.c_str(), "接收PLC返回数据失败！");
-		return false;
+		if (monitorHeartbeats())
+		{
+			return true;
+		}
+		else
+		{
+			logError(name.c_str(), "接收PLC返回数据失败！");
+			return false;
+		}
 	}
 	return true;
 }
@@ -1116,6 +1135,26 @@ std::vector<std::string> KeyencePlcSubSystemHelperPrivate::splitData(const std::
 		tokens.push_back(token);
 	}
 	return tokens;
+}
+//心跳信号,时间间隔1s，尝试5次
+bool KeyencePlcSubSystemHelperPrivate::monitorHeartbeats()
+{
+	int count = 0;
+	bool isConnected = false;
+	while (count < 4)
+	{
+		readBit("MR9000", isConnected);
+		if (isConnected)
+		{
+			return true;
+		}
+		else
+		{
+			Sleep(500);
+		}
+	}
+
+	return false;
 }
 
 

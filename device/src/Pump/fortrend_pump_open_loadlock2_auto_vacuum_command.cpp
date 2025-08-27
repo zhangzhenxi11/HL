@@ -114,15 +114,16 @@ namespace FC{
 
 		/*
 		loadLockB 抽真空：
-		1.casste门
-		2.tM传输腔门
-		3.快慢隔膜阀
-		4.loadlockA腔体的角阀
-		5.TM角阀是否关闭
+		1.关闭casste门
+		2.关闭tM传输腔门
+		3.关闭快慢隔膜阀
+		4.loadlockA腔体的角阀  handleStep1050  -->去除
+		5.TM角阀是否关闭       handleStep1060  -->去除
 		6.打开干泵
-		7.打开loadLockB腔体的角阀（先慢后快）
+		7.打开loadLockB腔体的角阀（先慢后快） handleStep1310
 		8.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
-		9.最后结束，打印结束日志
+		9.关闭loadlockB腔体的角阀
+		10.最后结束，打印结束日志
 		*/
 
 		stateHandlers = std::unordered_map<int, StateHandler>{
@@ -134,6 +135,7 @@ namespace FC{
 			{10, [this]() { return handleStep10(); }},
 			{1310, [this]() { return handleStep1310(); }},
 			{1100,[this]() {return handleStep1100(); }},
+			{1320,[this]() {return handleStep1320(); }},
 			{5210,[this]() {return handleStep5210(); }},
 			{10000, [this]() { return handleStep10000(); }}
 		};
@@ -194,12 +196,12 @@ namespace FC{
 				}
 				else
 				{
-					step = 1050;
+					step = 10;
 				}
 			}
 			else
 			{
-				step = 1050;
+				step = 10;
 			}
 		}
 		else
@@ -354,7 +356,8 @@ namespace FC{
 		//是否达到真空上限值
 		if (d->lk2->getVacuumValueUpperLimitReachesTheSetValue())
 		{
-			step = 5210;
+			std::this_thread::sleep_for(std::chrono::seconds(10));
+			step = 1320;
 		}
 		else
 		{
@@ -368,7 +371,7 @@ namespace FC{
 					getName(), d->lk2->getVacuumValue()).c_str());
 
 				addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
-				step = 5210;//退出
+				step = 1320;//退出
 			}
 			else
 			{
@@ -387,7 +390,7 @@ namespace FC{
 		std::string errorMessage = "打开角阀";
 		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk2->getAngleValveOpend() == false)
+			if (!d->lk2->getAngleValveOpend())
 			{
 				auto cmd = d->lk2->createOpenAngleValveCommand();
 				d->lk2->startCommand(cmd);
@@ -405,6 +408,41 @@ namespace FC{
 			else
 			{
 				step = 1100;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->lk2->getName());
+			step = 10000;
+		}
+		return step;
+	}
+
+	int PumpOpenLoadLock2AutoVacuumCommand::handleStep1320()
+	{
+
+		int step = 1320;
+		std::string errorMessage = "关闭角阀";
+		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->lk2->getAngleValveOpend())
+			{
+				auto cmd = d->lk2->createCloseAngleValveCommand();
+				d->lk2->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->lk2->getName(), "关闭角阀");
+					step = 10000;
+				}
+				else
+				{
+					step = 5210;
+				}
+			}
+			else
+			{
+				step = 5210; //关闭状态
 			}
 		}
 		else

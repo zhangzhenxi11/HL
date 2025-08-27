@@ -61,6 +61,9 @@ namespace FC{
 		//打开loadlock1角阀
 		int handleStep1310();
 
+		//关闭loadlock1角阀
+		int handleStep1320();
+
 		int handleStep5210();
 
 		//推出循环

@@ -217,7 +217,7 @@ namespace FC{
 		//5.打开干泵
 		//6.打开TM腔体的角阀（先慢后快）
 		//7.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
-		//8.最后结束，打印结束日志
+		//8.最后结束，关闭当前腔体角阀，打印结束日志
 
 		stateHandlers = std::unordered_map<SystemState, StateHandler>{
 			{SystemState::CLOSE_PM_CAVITY_DOOR,[this]() {return handleStepClosePmDoor(); }},
@@ -229,6 +229,7 @@ namespace FC{
 			{SystemState::OPEN_MECHANICAL_PUMP,[this]() {return handleStepOpenMechanicalPump(); }},
 			{SystemState::OPEN_TM_ANGLE_VALVE,[this]() {return handleStepOpenAngleValve(); }},
 			{SystemState::JUDGE_COARSE_SUCTION_PRESSURE,[this]() {return handleStepCoarseSuctionPressure(); }},
+			{SystemState::CLOSE_TM_ANGLE_VALVE,[this]() {return handleStepCloseAngleValve(); } },
 			{SystemState::CREATE_END,[this]() {return handleStepEND(); }}
 		};
 
@@ -393,11 +394,11 @@ namespace FC{
 				}
 				else
 				{
-					step = 60;
+					step = 10;
 				}
 			}
 			else {
-				step = 60;
+				step = 10;
 			}
 		}
 		else
@@ -535,7 +536,8 @@ namespace FC{
 
 		if (d->tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue()) 
 		{
-			step = 10000;
+			std::this_thread::sleep_for(std::chrono::seconds(10));
+			step = 100; //关角阀
 		}
 		else
 		{
@@ -545,12 +547,44 @@ namespace FC{
 				d->tm_loop_count = 0;
 				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待TM腔体压力达到1pa超时,当前压力：%f",getName(), d->tm->getTMCavityVacuumValue()).c_str());
 				addCommandExecutionAlarmMessage(step, d->tm->getName(), errorMessage);
-				step = 10000;
+				step = 100;
 			}
 			else
 			{
 				step = 90;//继续当前步骤
 			}
+		}
+		return SystemState(step);
+	}
+
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCloseAngleValve()
+	{
+		int step = 100;
+		std::string errorMessage = "关闭TM腔的角阀";
+		if (d->tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->tm->getAngleValveOpend())
+			{
+				auto cmd = d->tm->createCloseAngleValveCommand();
+				d->tm->startCommand(cmd);
+				cmd->wait();
+				if (cmd->hasError())
+				{
+					addCommandExecutionAlarmMessage(step, d->tm->getName(), errorMessage);
+					step = 10000;
+				}
+				else {
+					step = 10000;
+				}
+			}
+			else {
+				step = 10000;
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
+			step = 10000;
 		}
 		return SystemState(step);
 	}

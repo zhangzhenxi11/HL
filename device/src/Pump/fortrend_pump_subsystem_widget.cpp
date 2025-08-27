@@ -205,12 +205,12 @@ namespace FC{
 		d->mechanical_pump_Acc_ckb = new QCheckBox(QString("ACC信号"));
 		d->mechanical_pump_Acc_ckb->setObjectName("io_object");
 		d->mechanical_pump_Acc_ckb->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_Acc_ckb, 1, 0);
+		//d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_Acc_ckb, 1, 0);
 
 		d->mechanical_pump_running_ckb = new QCheckBox(QString("干泵运行中"));
 		d->mechanical_pump_running_ckb->setObjectName("io_object");
 		d->mechanical_pump_running_ckb->setEnabled(false);
-		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_running_ckb,1,1);
+		d->ui->operation_state_gridLayout->addWidget(d->mechanical_pump_running_ckb,1,0);
 
 	}
 

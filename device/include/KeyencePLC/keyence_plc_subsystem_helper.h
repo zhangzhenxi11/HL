@@ -32,7 +32,7 @@ public:
 	DECLARE_PTR(KeyencePlcSubSystemHelper)
 	typedef struct{
 		int type;
-		int code;
+		int code;  
 		std::string message;
 		bool needReset;
 	}DefinedError;

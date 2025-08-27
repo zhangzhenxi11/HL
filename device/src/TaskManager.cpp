@@ -161,20 +161,19 @@ void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType ne
 
 const std::pair<FC::UnifiedWaferTask::TaskType, FC::UnifiedWaferTask::Status>& FC::TaskManager::getTaskStatusAndType(int taskId)
 {
-    
-        std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
-        auto it = taskStatusMap_.find(taskId);
-        if (it != taskStatusMap_.end()) {
-            return it->second;
-        }
+    auto it = taskStatusMap_.find(taskId);
+    if (it != taskStatusMap_.end()) {
+        return it->second;
+    }
 
-        // 返回静态默认值
-        static const auto defaultStatus = std::make_pair(
-            UnifiedWaferTask::TaskType::UNKNOWN,
-            UnifiedWaferTask::Status::UNKNOWN_PROGRESS
-        );
-        return defaultStatus;
+    // 返回静态默认值
+    static const auto defaultStatus = std::make_pair(
+        UnifiedWaferTask::TaskType::UNKNOWN,
+        UnifiedWaferTask::Status::UNKNOWN_PROGRESS
+    );
+    return defaultStatus;
     
 }
 

@@ -429,13 +429,14 @@ namespace FC{
 		d->angle_valve_ckb->setChecked(getSubsystem()->getAngleValveOpend());
 
 		//update cassete status
-		Cassette::Mapping mappingData = Cassette::Mapping::Unknown;
+		Cassette::Mapping FirstLayerMappingData = Cassette::Mapping::Unknown;
+		Cassette::Mapping SecondLayerMappingData = Cassette::Mapping::Unknown;
 
-		getSubsystem()->getFirstLayerMapping(mappingData);
-		cass->setMapping(2, mappingData);
+		getSubsystem()->getFirstLayerMapping(FirstLayerMappingData);
+		cass->setMapping(2, FirstLayerMappingData);
 
-		getSubsystem()->getSecondLayerMapping(mappingData);
-		cass->setMapping(1, mappingData);
+		getSubsystem()->getSecondLayerMapping(SecondLayerMappingData);
+		cass->setMapping(1, SecondLayerMappingData);
 	}
 
 }

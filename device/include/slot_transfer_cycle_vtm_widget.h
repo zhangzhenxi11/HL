@@ -35,11 +35,13 @@ namespace  FC {
 			QFortrendStationStatusVTMWidget* ptr,
 			QWidget* parent = NULL);
 		~QSlotTransferCycleVTMWidget();
+		//更新配方
 		void onUpdateRecipe(int model);
 		void clickStart();
 		void clickPause();
 		void clickReset();
 		void clickAbort();
+		void clickContinue();
 		void clickplcAuto(bool isauto);
 		bool isAuto();
 
@@ -60,10 +62,12 @@ namespace  FC {
 		void onPause();
 		void onReset();
 		void onAbort();
+		void onContinue();
 		void onLoadLock1PutCassetteFinished();
 		void onLoadLock2PutCassetteFinished();
 		void onGetStep();
 		void update_cycle_data();
+		void status_Changed();
 		void updateProcessControlEnabled(const bool enabled);
 		void updateControlEnabled(const QString control,const bool enabled);
 
@@ -74,8 +78,7 @@ namespace  FC {
 		//新增 流程启动
 		void startProcessingThreads();
 
-		//检测机制
-		bool checkTheStatusMachine();
+		void initializeThreads();
 
 	private:
 		void startVacuumAction();
@@ -108,10 +111,6 @@ namespace  FC {
 		void executeTMTransfer();
 
 		void executeUpdateTransferStatus();
-
-		void executeTestRobotTransfer();
-
-		bool is_locked(std::mutex &lock);
 		
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)

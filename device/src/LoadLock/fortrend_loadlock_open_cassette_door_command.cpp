@@ -69,7 +69,8 @@ namespace FC{
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
 			}
-			if (sub->getVacuumValue() <= 98800)
+			//2025-8-26 有具体数值改成读压力表信号
+			if (sub->getVacuumPressureGageState() !=1)
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 当前的真空值%d未达到设定值（逻辑错误）", sub->getName(), sub->getVacuumValue()), this);
 			}

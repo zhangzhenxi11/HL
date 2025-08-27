@@ -712,10 +712,10 @@ namespace FC{
 		connect(d->ui->reset_all_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onEfemReset);
 		
 
-		d->ui->recipe_box->addItem("单A模式");
-		d->ui->recipe_box->addItem("单B模式");
-		d->ui->recipe_box->addItem("先A后B模式");
-		d->ui->recipe_box->addItem("先B后A模式");
+		d->ui->recipe_box->addItem("单上下片模式");
+		d->ui->recipe_box->addItem("双上双下模式");
+		//d->ui->recipe_box->addItem("先A后B模式");
+		//d->ui->recipe_box->addItem("先B后A模式");
 		if (d->pm2->getState() == IKernelSubSystem::SUB_NORMAL || d->pm2->getState() == IKernelSubSystem::SUB_IDEL){
 			double AxleLocation = d->pm2->getPMCavityAxleLocation();//PM横移轴位置初始化
 			printf("getPMCavityAxleLocation %d \r\n", AxleLocation);

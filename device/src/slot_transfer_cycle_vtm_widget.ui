@@ -569,7 +569,7 @@
            </widget>
           </item>
           <item row="11" column="0">
-           <widget class="QPushButton" name="continue_btn">
+           <widget class="QPushButton" name="continue_pbt">
             <property name="text">
              <string>继续</string>
             </property>

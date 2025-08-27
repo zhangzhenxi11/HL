@@ -28,7 +28,7 @@
 #include "kernel/Fortrend/fortrend_cassette_manager.h"
 
 #include "SunwayRobot/fortrend_sunwayrobot_subsystem.h" 
-
+#include "QList.h"
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
@@ -49,6 +49,8 @@ namespace FC{
 		// present sensor
 		std::vector<std::string> io_present_sensor_names;
 		std::string io_present_sensor_address = "";
+
+		QList<double> S_EM1_Values;//工艺真空换算集合
 
 		bool *ptr_io_present_sensor_state;
 		std::vector<bool> io_present_sensor_last_value; //左右晶圆检测结果
@@ -96,6 +98,8 @@ namespace FC{
 		double vacuum_extraction_set_value = 1.3;       //真空抽气设定值
 		double vacuum_upper_limit_set_value = 8.0;      //真空上限设定值
 		double vacuum_break_set_value = 99900.0;        //真空破气设定值
+
+		double vacuum_fluctuation_range_value = 5.000; //波动误差
 
 		double vacuum_current_value = 100000.0;		    //真空当前值
 		std::string vacuum_pressure_gage_address = "";  //真空压力表信号地址
@@ -310,6 +314,7 @@ namespace FC{
 
 	//真空值达到真空上限值 
 	bool FortrendLoadLockSubsystem::getVacuumValueUpperLimitReachesTheSetValue()const{
+
 		if (d->vacuum_enable == false)
 		{
 			return true;
@@ -472,43 +477,42 @@ namespace FC{
 		{
 			bool io_changed = false;
 
-			bool signal_value = false;
-			if (d->io_safeSignal_address != "" && readBit(d->io_safeSignal_address, signal_value))
+			bool signal_value = d->io_safeSignal_value;
+			if (d->io_safeSignal_address != "" && readBit(d->io_safeSignal_address, d->io_safeSignal_value))
 			{
 				if (signal_value != d->io_safeSignal_value)
 				{
-					d->io_safeSignal_value = signal_value;
+					//d->io_safeSignal_value = signal_value;
 					io_changed = true;
 				}
 			}
 
-			bool close_door_value = false;
+			bool close_door_value = d->io_closeCassteDoor_value;
 
-			if (d->io_allowd_close_casstedoor_signal_address != "" && readBit(d->io_allowd_close_casstedoor_signal_address, close_door_value))
+			if (d->io_allowd_close_casstedoor_signal_address != "" && readBit(d->io_allowd_close_casstedoor_signal_address, d->io_closeCassteDoor_value))
 			{
 				if (close_door_value != d->io_closeCassteDoor_value)
 				{
-					d->io_closeCassteDoor_value = close_door_value;
+					//d->io_closeCassteDoor_value = close_door_value;
 					io_changed = true;
 				}
 				
 			}
-			bool wafer_prsence = false;		
-			if (d->io_first_layer_detection_sensor_address != "" && readBit(d->io_first_layer_detection_sensor_address, wafer_prsence))
+			bool wafer_prsence = d->io_first_layer_wafer_presence_value;
+			if (d->io_first_layer_detection_sensor_address != "" && readBit(d->io_first_layer_detection_sensor_address, d->io_first_layer_wafer_presence_value))
 			{
 				if (wafer_prsence != d->io_first_layer_wafer_presence_value)
 				{
 					io_changed = true;
-					d->io_first_layer_wafer_presence_value = wafer_prsence;
+					
 				}
 			}
-			bool second_wafer_prsence = false;
-			if (d->io_second_layer_detection_sensor_address != "" && readBit(d->io_second_layer_detection_sensor_address, second_wafer_prsence))
+			bool second_wafer_prsence = d->io_second_layer_wafer_presence_value;
+			if (d->io_second_layer_detection_sensor_address != "" && readBit(d->io_second_layer_detection_sensor_address, d->io_second_layer_wafer_presence_value))
 			{
 				if (second_wafer_prsence != d->io_second_layer_wafer_presence_value)
 				{
 					io_changed = true;
-					d->io_second_layer_wafer_presence_value = second_wafer_prsence;
 				}
 			}
 			
@@ -557,7 +561,20 @@ namespace FC{
 				double buff_vacuum = 0.0;
 				if (readDouble(d->vacuum_read_value_address, buff_vacuum) && d->vacuum_current_value != buff_vacuum)
 				{
-					d->vacuum_current_value = buff_vacuum;
+					//添加真空值到集合中
+					d->S_EM1_Values.append(buff_vacuum);
+
+					//超出n次后删除 第一个元素值
+					if (d->S_EM1_Values.size() >= 100) {
+						d->S_EM1_Values.removeAt(0);
+					}
+					double sum = 0.0;
+					foreach(double itme, d->S_EM1_Values) {
+						sum += itme;
+					}
+					//将计算的平均值结果赋值 
+					d->vacuum_current_value = sum / d->S_EM1_Values.size();// buff_vacuum;
+
 					io_changed = true;
 				}
 			}
@@ -601,7 +618,7 @@ namespace FC{
 			if (count == 100)
 			{
 				count = 0;
-				//logInform1(Poco::format("%s_vacuum", getName()).c_str(), Poco::format("%f", getVacuumValue()).c_str());
+				logInform1(Poco::format("%s_vacuum", getName()).c_str(), Poco::format("%f", getVacuumValue()).c_str());
 			}
 		}
 	}
