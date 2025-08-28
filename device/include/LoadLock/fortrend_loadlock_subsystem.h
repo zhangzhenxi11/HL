@@ -148,6 +148,11 @@ namespace FC{
 		//设置粗抽真空值
 		void setRoughVacuumValue(const double rough_vacuum_set_value);
 
+		//抽真空延时
+		void setVacuumPumpingDelayTime(double tiemValue);
+
+		double getVacuumPumpingDelayTime();
+
 		//达到角阀快抽条件
 		bool getFastAngleValveReachesTheSetValue() const;
 

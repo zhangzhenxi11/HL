@@ -125,6 +125,8 @@ namespace FC{
 
 		bool has_reset_flag = false;	//已复位标志
 
+		double delay_time_value = 0.0;
+
 		bool recard_enabled = false;
 		std::thread thd_recard_vacuum;
 	};
@@ -386,6 +388,16 @@ namespace FC{
 		d->rough_vacuum_set_value = rough_vacuum_set_value;
 		logInform(getName().c_str(), Poco::format("%s 设置粗抽完成真空设定值：%f", getName(),
 			d->rough_vacuum_set_value).c_str());
+	}
+
+	void FortrendLoadLockSubsystem::setVacuumPumpingDelayTime(double tiemValue)
+	{
+		d->delay_time_value = tiemValue;
+	}
+
+	double FortrendLoadLockSubsystem::getVacuumPumpingDelayTime()
+	{
+		return d->delay_time_value;
 	}
 
 	//设置真空上限值和抽真空设定值

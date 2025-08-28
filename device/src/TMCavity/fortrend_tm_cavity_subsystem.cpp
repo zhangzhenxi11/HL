@@ -113,7 +113,7 @@ namespace FC{
 
 		std::string plc_mode_address;
 		int plc_mode_value;
-
+		double delay_time_value = 0.0;
 	};
 
 	/**
@@ -693,6 +693,16 @@ namespace FC{
 	{
 		d->awc_present_siganlMap[index] = state;
 
+	}
+
+	void FortrendTMCavitySubsystem::setVacuumPumpingDelayTime(double tiemValue)
+	{
+		d->delay_time_value = tiemValue;
+	}
+
+	double FortrendTMCavitySubsystem::getVacuumPumpingDelayTime()
+	{
+		return d->delay_time_value;
 	}
 
 	void FortrendTMCavitySubsystem::onConfigure(const std::shared_ptr<KernelConfiguration> & config){

@@ -2781,7 +2781,7 @@ namespace FC{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						//LoadLock1有真空模式，未达到设定值，角阀未打开
-						if (lk1->getVacuumEnable() && (!lk1->getVacuumValueReachesTheSetValue() || !lk1->getAngleValveOpend()))
+						if (lk1->getVacuumEnable() && (!lk1->getVacuumValueReachesTheSetValue()))
 						{
 							loadlock1_auto_step = 500;
 						}
@@ -2845,7 +2845,7 @@ namespace FC{
 						}
 						else
 						{
-							if (lk1->getVacuumEnable() && (!lk1->getVacuumValueReachesTheSetValue() || !lk1->getAngleValveOpend()))
+							if (lk1->getVacuumEnable() && (!lk1->getVacuumValueReachesTheSetValue()))
 							{
 								loadlock1_auto_step = 500;
 							}
@@ -2909,7 +2909,7 @@ namespace FC{
 					{
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							if (lk1->getVacuumEnable() && (!lk1->getVacuumValueReachesTheSetValue() || !lk1->getAngleValveOpend()))
+							if (lk1->getVacuumEnable() && (!lk1->getVacuumValueReachesTheSetValue()))
 							{
 								loadlock1_get_vacuum = true;
 								loadlock1_auto_step = 920;
@@ -3083,17 +3083,26 @@ namespace FC{
 					}
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->hasDoorOpend())
 					{
-						//robot 用手臂A 从loadlock1 取wafer ，
-						auto cmd = wtr->createGetCommand(lk1, loadLockAPendingTasks.at(0).arm, loadlock1_move_slot_index);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						//robot 用手臂A 从loadlock1 取wafer 
+						//互锁条件，TM抽真空会触发关门动作
+						if(lk1->getTMCavityDoorOpend())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
+							auto cmd = wtr->createGetCommand(lk1, loadLockAPendingTasks.at(0).arm, loadlock1_move_slot_index);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
+							}
+							else
+							{
+								loadlock1_auto_step = 1052;
+							}
 						}
 						else
 						{
-							loadlock1_auto_step = 1052;
+							logInform(lk1->getName().c_str(), "此时Tm腔真空波动，导致触发TM自动抽真空流程");
+							loadlock1_auto_step = 1050;
 						}
 					}
 					else
@@ -3316,16 +3325,24 @@ namespace FC{
 				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = lk1->createOpenTMCavityDoorCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						if (lk1->getVacuumValueUpperLimitReachesTheSetValue() &&
+							tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 						{
-							logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+							auto cmd = lk1->createOpenTMCavityDoorCommand();
+							lk1->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(lk1->getName(), "打开传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+							}
+							else
+							{
+								loadlock1_auto_step = 2060;
+							}
 						}
 						else
 						{
-							loadlock1_auto_step = 2060;
+							loadlock1_auto_step = 2030;
 						}
 
 					}
@@ -3339,16 +3356,23 @@ namespace FC{
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->hasDoorOpend())
 					{
-						//robot 把手臂A的放到LoadLock1
-						auto cmd = wtr->createPutCommand(lk1, loadLockAReturnPendingTasks.at(0).arm, loadlock1_move_slot_index);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						if(lk1->getTMCavityDoorOpend())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
+							//robot 把手臂A的放到LoadLock1
+							auto cmd = wtr->createPutCommand(lk1, loadLockAReturnPendingTasks.at(0).arm, loadlock1_move_slot_index);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
+							}
+							else {
+								loadlock1_auto_step = 2070;
+							}
 						}
-						else {
-							loadlock1_auto_step = 2070;
+						else
+						{
+							loadlock1_auto_step = 2050;
 						}
 					}
 					else if (lk1->hasDoorOpend() == false)
@@ -3796,7 +3820,7 @@ namespace FC{
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						//Loadlock2有真空信号，未达到设定值，角阀未打开
-						if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
+						if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue())) //|| !lk2->getAngleValveOpend()
 						{
 							loadlock2_auto_step = 500;
 						}
@@ -3858,7 +3882,7 @@ namespace FC{
 						}
 						else
 						{
-							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
+							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue()))
 							{
 								loadlock2_auto_step = 500;
 							}
@@ -3921,7 +3945,7 @@ namespace FC{
 					{
 						if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue() || !lk2->getAngleValveOpend()))
+							if (lk2->getVacuumEnable() && (!lk2->getVacuumValueReachesTheSetValue()))
 							{
 								loadlock2_get_vacuum = true;
 								loadlock2_auto_step = 920;
@@ -4093,16 +4117,25 @@ namespace FC{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						//robot 用手臂A 从loadlock2 取wafer
-						auto cmd = wtr->createGetCommand(lk2, loadLockBPendingTasks.at(0).arm, loadlock2_move_slot_index);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+
+						if (lk2->getTMCavityDoorOpend())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock2_process_name, loadlock2_auto_step);
+							auto cmd = wtr->createGetCommand(lk2, loadLockBPendingTasks.at(0).arm, loadlock2_move_slot_index);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock2_process_name, loadlock2_auto_step);
+							}
+							else
+							{
+								loadlock2_auto_step = 1052;
+							}
 						}
 						else
 						{
-							loadlock2_auto_step = 1052;
+							logInform(lk2->getName().c_str(), "此时Tm腔真空波动导致触发自动抽真空流程");
+							loadlock2_auto_step = 1050;
 						}
 					}
 					else
@@ -4332,16 +4365,25 @@ namespace FC{
 				{
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = lk2->createOpenTMCavityDoorCommand();
-						lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						if (lk2->getVacuumValueUpperLimitReachesTheSetValue() &&
+							tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 						{
-							logFailedExcuteCommandHasError(lk2->getName(), "打开传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+
+							auto cmd = lk2->createOpenTMCavityDoorCommand();
+							lk2->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(lk2->getName(), "打开传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+							}
+							else
+							{
+								loadlock2_auto_step = 2060;
+							}
 						}
 						else
 						{
-							loadlock2_auto_step = 2060;
+							loadlock2_auto_step = 2030;
 						}
 					}
 					else
@@ -4359,15 +4401,22 @@ namespace FC{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk2->hasDoorOpend())
 					{
 						//robot 把手臂A的放到Loadlock2
-						auto cmd = wtr->createPutCommand(lk2, loadLockBReturnPendingTasks.at(0).arm, loadlock2_move_slot_index);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						if(lk2->getTMCavityDoorOpend())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
+							auto cmd = wtr->createPutCommand(lk2, loadLockBReturnPendingTasks.at(0).arm, loadlock2_move_slot_index);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
+							}
+							else {
+								loadlock2_auto_step = 2070;
+							}
 						}
-						else {
-							loadlock2_auto_step = 2070;
+						else
+						{
+							loadlock2_auto_step = 2050;
 						}
 					}
 					else if (lk2->hasDoorOpend() == false)

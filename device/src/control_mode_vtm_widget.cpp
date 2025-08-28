@@ -78,6 +78,9 @@ namespace FC{
 		double pm3_vacuum_setting = 0.08;					 //PM3真空值
 		double pm3_vacuum_magnitude = 0.1;					 //PM3与传输腔数量级
 		double rough_vacuum_set_value = 6;					 //TM传输腔抽真空上限值
+		double loadlock1_vacuum_delay_time = 20;             //抽真空延迟时间
+		double loadlock2_vacuum_delay_time = 20;
+		double tm_vacuum_delay_time = 20;
 	private:
 		double getVacuumMagnitude(const double magnitude);
 	private:
@@ -93,6 +96,7 @@ namespace FC{
 		ScientificDoubleSpinBox *tm_cavity_vacuum_upper_limit_dsb = 0, *tm_cavity_vacuum_extraction_dsb = 0, *tm_cavity_vacuum_pid_dsb = 0;
 		ScientificDoubleSpinBox *pm1_cavity_vacuum_upper_limit_dsb = 0, *pm2_cavity_vacuum_upper_limit_dsb = 0, *pm3_cavity_vacuum_upper_limit_dsb = 0;
 		ScientificDoubleSpinBox * rough_vacuum_value= 0;
+		ScientificDoubleSpinBox* loadlock1_vacuum_delay_time_dsb = 0, *loadlock2_vacuum_delay_time_dsb = 0, *tm_cavity_vacuum_delay_time_dsb = 0;
 	};
 
 	QControlModeVTMWidgetPrivate::QControlModeVTMWidgetPrivate(QControlModeVTMWidget* p, const std::shared_ptr<IKernel>& kernel)
@@ -201,12 +205,15 @@ namespace FC{
 		double extraction = 0.0;
 		double fast_diaphragm_valve = 0.0;
 		double fast_angle_valve = 0.0;
+		double delay_time = 0.0;
 		if (index == 1)
 		{
 			loadlock1_vacuum_upper_limit = loadlock1_vacuum_upper_limit_dsb->value();
 			loadlock1_vacuum_extraction = loadlock1_vacuum_extraction_dsb->value();
 			loadlock1_vacuum_fast_diaphragm_valve = loadlock1_vacuum_fast_diaphragm_valve_dsb->value();
 			loadlock1_vacuum_fast_angle_valve = loadlock1_vacuum_fast_angle_valve_dsb->value();
+			loadlock1_vacuum_delay_time = loadlock1_vacuum_delay_time_dsb->value();
+			delay_time = loadlock1_vacuum_delay_time;
 			uppper = loadlock1_vacuum_upper_limit;
 			extraction = loadlock1_vacuum_extraction;
 			fast_diaphragm_valve = loadlock1_vacuum_fast_diaphragm_valve;
@@ -217,6 +224,9 @@ namespace FC{
 			loadlock2_vacuum_extraction = loadlock2_vacuum_extraction_dsb->value();
 			loadlock2_vacuum_fast_diaphragm_valve = loadlock2_vacuum_fast_diaphragm_valve_dsb->value();
 			loadlock2_vacuum_fast_angle_valve = loadlock2_vacuum_fast_angle_valve_dsb->value();
+			loadlock2_vacuum_delay_time = loadlock2_vacuum_delay_time_dsb->value();
+			delay_time = loadlock2_vacuum_delay_time;
+
 			uppper = loadlock2_vacuum_upper_limit;
 			extraction = loadlock2_vacuum_extraction;
 			fast_diaphragm_valve = loadlock2_vacuum_fast_diaphragm_valve;
@@ -224,6 +234,7 @@ namespace FC{
 		}
 		lk->setVacuumUpperLimitAndExtractionValue(uppper, extraction);
 		lk->setVacuumFastDiapgragmValueAndAngleValue(fast_diaphragm_valve, fast_angle_valve);
+		lk->setVacuumPumpingDelayTime(delay_time);
 		rough_vacuum_set_value = rough_vacuum_value->value();
 		lk->setRoughVacuumValue(rough_vacuum_set_value);
 	}
@@ -238,11 +249,13 @@ namespace FC{
 			logError("SaveConfig", "子系统未找到");
 			return;
 		}
+		tm_vacuum_delay_time = tm_cavity_vacuum_delay_time_dsb->value();
 		tm_vacuum_upper_limit = tm_cavity_vacuum_upper_limit_dsb->value();
 		tm_vacuum_extraction = tm_cavity_vacuum_extraction_dsb->value();
 		rough_vacuum_set_value = rough_vacuum_value->value();
 		tm->setTMCavityVacuumUpperLimitAndExtractionValue(tm_vacuum_upper_limit, tm_vacuum_extraction);
 		tm->setRoughVacuumValue(rough_vacuum_set_value);
+		tm->setVacuumPumpingDelayTime(tm_vacuum_delay_time);
 		//tm_vaccum_pid = tm_cavity_vacuum_pid_dsb->value();
 		//std::ostringstream oss;
 		//oss << std::fixed << std::setprecision(5) << tm_vaccum_pid;
@@ -449,6 +462,34 @@ namespace FC{
 		d->tm_cavity_vacuum_upper_limit_dsb->setValue(1.0e+1);
 		d->ui->gridLayout_2->addWidget(d->tm_cavity_vacuum_upper_limit_dsb, 3, 2, 1, 1);
 
+		d->loadlock1_vacuum_delay_time_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
+		d->loadlock1_vacuum_delay_time_dsb->setObjectName(QStringLiteral("loadlock1_vacuum_delay_time_dsb"));
+		d->loadlock1_vacuum_delay_time_dsb->setDecimals(6);
+		d->loadlock1_vacuum_delay_time_dsb->setMinimum(1);
+		d->loadlock1_vacuum_delay_time_dsb->setRange(1, 1000);
+		d->loadlock1_vacuum_delay_time_dsb->setSingleStep(1);
+		d->loadlock1_vacuum_delay_time_dsb->setValue(1.0e+1);
+		d->ui->gridLayout_2->addWidget(d->loadlock1_vacuum_delay_time_dsb, 1, 13, 1, 1);
+
+		d->loadlock2_vacuum_delay_time_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
+		d->loadlock2_vacuum_delay_time_dsb->setObjectName(QStringLiteral("loadlock2_vacuum_delay_time_dsb"));
+		d->loadlock2_vacuum_delay_time_dsb->setDecimals(6);
+		d->loadlock2_vacuum_delay_time_dsb->setMinimum(1);
+		d->loadlock2_vacuum_delay_time_dsb->setRange(1, 1000);
+		d->loadlock2_vacuum_delay_time_dsb->setSingleStep(1);
+		d->loadlock2_vacuum_delay_time_dsb->setValue(1.0e+1);
+		d->ui->gridLayout_2->addWidget(d->loadlock2_vacuum_delay_time_dsb, 2, 13, 1, 1);
+
+
+		d->tm_cavity_vacuum_delay_time_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
+		d->tm_cavity_vacuum_delay_time_dsb->setObjectName(QStringLiteral("tm_cavity_vacuum_delay_time_dsb"));
+		d->tm_cavity_vacuum_delay_time_dsb->setDecimals(6);
+		d->tm_cavity_vacuum_delay_time_dsb->setMinimum(1);
+		d->tm_cavity_vacuum_delay_time_dsb->setRange(1, 1000);
+		d->tm_cavity_vacuum_delay_time_dsb->setSingleStep(1);
+		d->tm_cavity_vacuum_delay_time_dsb->setValue(1.0e+1);
+		d->ui->gridLayout_2->addWidget(d->tm_cavity_vacuum_delay_time_dsb, 3, 13, 1, 1);
+
 		d->tm_cavity_vacuum_extraction_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
 		d->tm_cavity_vacuum_extraction_dsb->setObjectName(QStringLiteral("tm_cavity_vacuum_extraction_dsb"));
 		d->tm_cavity_vacuum_extraction_dsb->setDecimals(6);
@@ -466,6 +507,8 @@ namespace FC{
 		d->rough_vacuum_value->setSingleStep(0.1);
 		d->rough_vacuum_value->setValue(6);
 		d->ui->gridLayout_2->addWidget(d->rough_vacuum_value, 3, 8, 1, 1);
+
+		
 
 		//d->tm_cavity_vacuum_pid_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
 		//d->tm_cavity_vacuum_pid_dsb->setObjectName(QStringLiteral("tm_cavity_vacuum_pid_dsb"));
@@ -709,6 +752,9 @@ namespace FC{
 		d->tm_cavity_vacuum_upper_limit_dsb->setValue(d->tm_vacuum_upper_limit);
 		d->tm_cavity_vacuum_extraction_dsb->setValue(d->tm_vacuum_extraction);
 		d->rough_vacuum_value->setValue(d->rough_vacuum_set_value);
+		d->loadlock1_vacuum_delay_time_dsb->setValue(d->loadlock1_vacuum_delay_time);
+		d->loadlock2_vacuum_delay_time_dsb->setValue(d->loadlock2_vacuum_delay_time);
+		d->tm_cavity_vacuum_delay_time_dsb->setValue(d->tm_vacuum_delay_time);
 		//d->tm_cavity_vacuum_pid_dsb->setValue(d->tm_vaccum_pid);
 
 		//d->pm1_cavity_vacuum_upper_limit_dsb->setValue(d->pm1_vacuum_setting);
@@ -768,6 +814,10 @@ namespace FC{
 		d->pm3_vacuum_setting = settings.value("PM3CavityVacuumSetting", true).toDouble();
 		d->pm3_vacuum_magnitude = settings.value("PM3CavityVacuumMagnitude", true).toDouble();
 
+		d->loadlock1_vacuum_delay_time = settings.value("Loadlock1VacuumDelayTime", true).toDouble();
+		d->loadlock2_vacuum_delay_time = settings.value("Loadlock2VacuumDelayTime", true).toDouble();
+		d->tm_vacuum_delay_time = settings.value("TmVacuumDelayTime", true).toDouble();
+
 		updateState();
 
 		d->setLoadLockVacuumParameters(1);
@@ -811,5 +861,9 @@ namespace FC{
 		settings.setValue("PM3CavityVacuumSetting", d->pm3_vacuum_setting);
 		settings.setValue("PM3CavityVacuumMagnitude", d->pm3_vacuum_magnitude);
 		settings.setValue("RoughVacuumSetting", d->rough_vacuum_set_value);
+
+		settings.setValue("Loadlock1VacuumDelayTime", d->loadlock1_vacuum_delay_time);
+		settings.setValue("Loadlock2VacuumDelayTime", d->loadlock2_vacuum_delay_time);
+		settings.setValue("TmVacuumDelayTime", d->tm_vacuum_delay_time);
 	}
 }

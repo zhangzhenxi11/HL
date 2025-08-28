@@ -352,11 +352,11 @@ namespace FC{
 		auto elapsed = now_time - d->start_time;
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
-
+		auto  delay_time = d->lk2->getVacuumPumpingDelayTime();
 		//是否达到真空上限值
 		if (d->lk2->getVacuumValueUpperLimitReachesTheSetValue())
 		{
-			std::this_thread::sleep_for(std::chrono::seconds(10));
+			std::this_thread::sleep_for(std::chrono::seconds(int(delay_time)));
 			step = 1320;
 		}
 		else
@@ -462,7 +462,7 @@ namespace FC{
 
 	int PumpOpenLoadLock2AutoVacuumCommand::handleStep10000()
 	{
-		logInform(d->lk1->getName().c_str(), "循环结束");
+		logInform(d->lk2->getName().c_str(), "抽真空循环结束");
 		d->loop = false;
 		return -1;
 	}
@@ -550,7 +550,7 @@ namespace FC{
 			if (nextState == -1)
 			{
 				//结束
-				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->lk1->getName()).c_str());
+				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->lk2->getName()).c_str());
 				break;
 			}
 

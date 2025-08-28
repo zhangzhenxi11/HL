@@ -221,7 +221,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 		
 			auto startTime = std::chrono::high_resolution_clock::now();
-			auto timeout2 = std::chrono::seconds(60);
+			auto timeout2 = std::chrono::seconds(120); //--->60 改成120
 
 			clearRobotMessage();
 			if (!sendRequest(command))
@@ -293,7 +293,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				res = recvResponseRobotMessage(timeout);
 				//等待机械手返回指令
 				auto startTime2 = std::chrono::high_resolution_clock::now();
-				auto timeout3 = std::chrono::seconds(60);
+				auto timeout3 = std::chrono::seconds(120);
 
 				while (true)
 				{
@@ -400,7 +400,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
 
 			auto startTime = std::chrono::high_resolution_clock::now();
-			auto timeout2 = std::chrono::seconds(60);
+			auto timeout2 = std::chrono::seconds(120);
 
 			while (true)
 			{
@@ -460,7 +460,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			else
 			{
 				auto startTime2 = std::chrono::high_resolution_clock::now();
-				auto timeout3 = std::chrono::seconds(60);
+				auto timeout3 = std::chrono::seconds(120);
 
 				while (true)
 				{

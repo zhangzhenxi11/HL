@@ -152,6 +152,11 @@ namespace FC{
 		bool getAwcPresentSensor(int index) const;
 		void setAwcPresentSensor(int index,bool state);
 
+		//抽真空延时
+		void setVacuumPumpingDelayTime(double tiemValue);
+
+		double getVacuumPumpingDelayTime();
+
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

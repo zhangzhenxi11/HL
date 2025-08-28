@@ -171,7 +171,7 @@ namespace FC{
 			if (it == stateHandlers.end())
 			{
 				logError(d->pump->getName().c_str(), Poco::format("未知的状态码：%d", int(currentState)).c_str());
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行失败", d->pump->getName())));
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("抽%s真空命令执行失败", d->pump->getName())));
 				setAlarm(alarm);
 				d->ret = IKernelCommand::RunResult::RUN_FAILD;
 				break;
@@ -211,9 +211,9 @@ namespace FC{
 	{
 		//TM 抽真空：
 		//1.pM工艺腔门（备用）
-		//2.tm快慢隔膜阀，
-		//3.loadlockb,loadlocka传输腔阀门
-		//4.loadlockb,loadlocka角阀是否关闭
+		//2.关闭tm快慢隔膜阀，
+		//3.关闭loadlockb,loadlocka传输腔阀门
+		//4.关闭loadlockb,loadlocka角阀
 		//5.打开干泵
 		//6.打开TM腔体的角阀（先慢后快）
 		//7.判断是否达到粗抽真空设定值，超时时间1小时，超时报警
@@ -531,12 +531,12 @@ namespace FC{
 		auto now_time = std::chrono::steady_clock::now();
 		auto elapsed = now_time - d->start_time;
 		std::this_thread::sleep_for(std::chrono::seconds(1));
-		
+		auto  delay_time = d->tm->getVacuumPumpingDelayTime();
 		//int successCount = 0; //达到极限值次数
 
 		if (d->tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue()) 
 		{
-			std::this_thread::sleep_for(std::chrono::seconds(10));
+			std::this_thread::sleep_for(std::chrono::seconds(int(delay_time)));
 			step = 100; //关角阀
 		}
 		else
@@ -592,7 +592,7 @@ namespace FC{
 	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepEND()
 	{
 		d->ret = IKernelCommand::RunResult::RUN_OK;
-		logInform(d->lk1->getName().c_str(), "循环结束");
+		logInform(d->tm->getName().c_str(), "抽真空循环结束");
 		d->loop = false;
 
 		int step = 10;

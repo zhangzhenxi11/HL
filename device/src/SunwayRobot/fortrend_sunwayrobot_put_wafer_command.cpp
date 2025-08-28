@@ -212,7 +212,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 	sendRequest(command);
 
 	auto startTime = std::chrono::high_resolution_clock::now();
-	auto timeout2 = std::chrono::seconds(60);
+	auto timeout2 = std::chrono::seconds(120);
 
 	res = recvResponseRobotMessage(timeout);
 	while (true)
@@ -267,7 +267,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 		//clearRobotMessage();
 		res = recvResponseRobotMessage(timeout);
 		auto startTime2 = std::chrono::high_resolution_clock::now();
-		auto timeout3 = std::chrono::seconds(60);
+		auto timeout3 = std::chrono::seconds(120);
 
 		while (true)
 		{
@@ -515,7 +515,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		return RunResult::RUN_OK;
 	else
 		return RunResult::RUN_FAILD;
-#if 0
+
 	if(d->result_ == RunResult::RUN_OK)
 	{
 		return performRobotOperation(
@@ -537,9 +537,6 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		);
 		return RunResult::RUN_OK;
 	}
-#endif
-
-	
 }
 
 }

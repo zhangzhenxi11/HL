@@ -200,7 +200,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 
 		}
 
-
+		logInform(sub->getName().c_str(), "机械手HOME命令结束");
 		return RunResult::RUN_OK;
 	}
 

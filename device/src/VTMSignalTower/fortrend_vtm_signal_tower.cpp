@@ -49,7 +49,7 @@ public:
 	void onProcess();
 	void setBuzzerEnabled(bool enabled);
 	bool isBuzzerEnabled();
-	bool writeSignal(std::string address, bool value);
+	bool writeSignal(std::string address, bool value); 
 	void controlTowerSignal(FortrendVTMSignalTower::Output type, bool value);
 	bool EfemResetAll();
 	
@@ -306,38 +306,41 @@ void FortrendVTMSignalTowerPrivate::onProcess(){
 		controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal);
 		changed = true;
 	}
-	//if (output_bind[FortrendVTMSignalTower::Output::BUZZER]->curVal)
-	//{
-	//	if (buzzer_first_time)
-	//	{
-	//		output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal = output_bind[FortrendVTMSignalTower::Output::BUZZER]->curVal;
-	//		controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, true);
-	//		last_handle_time = std::chrono::system_clock::now();
-	//		buzzer_last_state = true;
-	//		buzzer_first_time = false;
-	//		changed = true;
-	//	}
-	//	else
-	//	{
-	//		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - last_handle_time).count();
-	//		if (duration >= 1000)
-	//		{
-	//			last_handle_time = std::chrono::system_clock::now();
-	//			buzzer_last_state = !buzzer_last_state;
-	//			output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal = buzzer_last_state;
-	//			controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, buzzer_last_state);
-	//			changed = true;
-	//		}
-	//	}
-	//	
-	//}
-	//else
-	//{
-	//	buzzer_first_time = true;
-	//	output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal = false;
-	//	controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, false);
-	//	last_handle_time = std::chrono::system_clock::now();
-	//}
+#if 0
+	//2025-8-28 放开
+	if (output_bind[FortrendVTMSignalTower::Output::BUZZER]->curVal)
+	{
+		if (buzzer_first_time)
+		{
+			output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal = output_bind[FortrendVTMSignalTower::Output::BUZZER]->curVal;
+			controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, true);
+			last_handle_time = std::chrono::system_clock::now();
+			buzzer_last_state = true;
+			buzzer_first_time = false;
+			changed = true;
+		}
+		else
+		{
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - last_handle_time).count();
+			if (duration >= 1000)
+			{
+				last_handle_time = std::chrono::system_clock::now();
+				buzzer_last_state = !buzzer_last_state;
+				output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal = buzzer_last_state;
+				controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, buzzer_last_state);
+				changed = true;
+			}
+		}
+		
+	}
+	else
+	{
+		buzzer_first_time = true;
+		output_bind[FortrendVTMSignalTower::Output::BUZZER]->lastVal = false;
+		controlTowerSignal(FortrendVTMSignalTower::Output::BUZZER, false);
+		last_handle_time = std::chrono::system_clock::now();
+	}
+#endif
 	if (changed){
 		pParent->emitAttributeChanged(pParent);
 	}
