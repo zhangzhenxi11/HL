@@ -52,7 +52,7 @@ namespace FC{
 		//}
 		if (sub->getVacuumEnable())
 		{
-			logInform(sub->getName().c_str(), "真空模式下，检测到传输腔门阀已打开");
+			logInform(sub->getName().c_str(), "真空模式下，检测互锁条件");
 			if (sub->getTMCavityDoorOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 真空模式下,传输腔门阀已打开（逻辑错误）", sub->getName()), this);

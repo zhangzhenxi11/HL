@@ -382,6 +382,7 @@
 				<finish_address>MR29508</finish_address>
 				<failed_address>MR29509</failed_address>
 				<error_code_address>DM5506</error_code_address>
+				<!-- LLA-机械手抓放料完成信号 -->
 				<safe_Interlock_signal_address>MR30300</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
@@ -472,6 +473,8 @@
 			<Update>
 				<!-- LLA腔安全信号+_门阀开启to机械手 -->
 				<LLCavitySafetySignal>MR30600</LLCavitySafetySignal>
+				<!-- LLA-机械手抓放料完成信号 -->
+				<WtrActionCompletionSignalAddress>MR30300</WtrActionCompletionSignalAddress>
 				<!--EFEM 允许关_LLA上料门互锁 -->
 				<EFEMAlloweCloseCassteDoorSignal> MR30210</EFEMAlloweCloseCassteDoorSignal>
 				<!--LL1上下料门阀_开到位 -->
@@ -591,6 +594,7 @@
 				<failed_address>MR29614</failed_address>
 				<finish_address>MR29613</finish_address>
 				<error_code_address>DM5540</error_code_address>
+				<!-- LLB-机械手抓放料完成信号  -->
 				<safe_Interlock_signal_address> MR30301</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
@@ -677,6 +681,8 @@
 			<Update>
 			    <!-- LLB腔安全信号+_门阀开启to机械手 -->
 				<LLCavitySafetySignal>MR30601</LLCavitySafetySignal>
+				<!-- LLB-机械手抓放料完成信号 -->
+				<WtrActionCompletionSignalAddress>MR30301</WtrActionCompletionSignalAddress>
 				<!--EFEM 允许关_LLB上料门互锁 -->
 				<EFEMAlloweCloseCassteDoorSignal>MR30211</EFEMAlloweCloseCassteDoorSignal>
 				<!--LL2上下料门阀_开到位 -->
@@ -1069,6 +1075,8 @@
 				<close_tm_cavity_door_address>MR30201</close_tm_cavity_door_address>
 				<!-- PM1腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30602</PMCavitySafetySignal>
+				<!--PM1腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30212</WtrActionCompletionSignalAddress>
 				
 			</Update>
 			<Reset>
@@ -1261,6 +1269,8 @@
 				<close_tm_cavity_door_address>MR30203</close_tm_cavity_door_address>
 				<!-- PM2腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30603</PMCavitySafetySignal>
+				<!--PM2腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30213</WtrActionCompletionSignalAddress>
 			</Update>
 			<Reset>
 				<start_address>MR35100</start_address>
@@ -1436,6 +1446,8 @@
 				<close_tm_cavity_door_address>MR30205</close_tm_cavity_door_address>
 				<!-- PM3腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30604</PMCavitySafetySignal>
+				<!--PM3腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30214</WtrActionCompletionSignalAddress>				
 			</Update>
 			<Reset>
 				<start_address>DM25029</start_address>
@@ -1610,8 +1622,10 @@
 			<Update>
 				<open_tm_cavity_door_address>MR30206</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30207</close_tm_cavity_door_address>
-				<!-- PM4腔安全信号+_门阀开启to机械手 -->
+				<!--PM4腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30605</PMCavitySafetySignal>
+				<!--PM4腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30215</WtrActionCompletionSignalAddress>				
 			</Update>
 			<Reset>
 				<start_address>DM25029</start_address>

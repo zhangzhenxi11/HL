@@ -69,6 +69,7 @@ std::vector<IKernelResources* > SunwayRobotGetWaferCommand::resources() const{
 	ret.push_back(getStation().get());
 	return ret;
 }
+
 bool SunwayRobotGetWaferCommand::IsBusy(){
 	return d->busy;
 }

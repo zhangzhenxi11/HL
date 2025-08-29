@@ -18,9 +18,7 @@
 
 #include "kernel/Fortrend/fortrend_cassette_manager.h"
 
-#include "Pump/fortrend_pump_open_loadlock2_auto_vacuum_command.h"
 
-#include "Pump/fortrend_pump_mechanical_open_command.h"
 
 #include "LoadLock/fortrend_loadlock_subsystem.h"
 #include "LoadLock/fortrend_loadlock_close_angle_valve_command.h"
@@ -32,8 +30,10 @@
 #include "LoadLock/fortrend_loadlock_cavity_open_inserting_plate_valve_command.h"
 
 #include "Pump/fortrend_pump_subsystem.h"
-#include "Pump/fortrend_pump_open_tm_cavity_auto_vacuum_command.h"
 #include "Pump/fortrend_pump_molecular_open_command.h"
+#include "Pump/fortrend_pump_open_loadlock2_auto_vacuum_command.h"
+#include "Pump/fortrend_pump_open_tm_cavity_auto_vacuum_command.h"
+#include "Pump/fortrend_pump_mechanical_open_command.h"
 
 #include "TMCavity/fortrend_tm_cavity_subsystem.h"
 #include "TMCavity/fortrend_tm_cavity_defined.h"
@@ -45,6 +45,7 @@
 #include "TMCavity/fortrend_tm_cavity_open_height_vacuum_baffle_valve_command.h"
 #include "TMCavity/fortrend_tm_cavity_open_inserting_plate_valve_command.h"
 
+#include  "SunwayRobot/fortrend_sunwayrobot_subsystem.h"
 #include <windows.h>
 
 #include <chrono>
@@ -68,6 +69,7 @@ namespace FC{
 		std::shared_ptr<FortrendTMCavitySubsystem> tm;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
+		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr;
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 
 		std::chrono::steady_clock::time_point start_time;//开始时间点
@@ -202,6 +204,7 @@ namespace FC{
 		d->tm = getSubsystem()->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		d->lk1 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		d->lk2 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+		d->wtr = getSubsystem()->getKernel()->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		if (!d->tm)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "TM子系统类型错误", this);
@@ -225,6 +228,14 @@ namespace FC{
 		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->lk2->getName()), this);
+		}
+		if (!d->wtr)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "wtr子系统类型错误", this);
+		}
+		if (d->wtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->wtr->getName()), this);
 		}
 
 		/*if (d->lk1->getCassetteDoorOpend())
@@ -453,21 +464,40 @@ namespace FC{
 		std::string errorMessage = "关闭传输腔门阀";
 		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk1->getTMCavityDoorOpend())
+			if (d->lk1->getWtrOriginSafeSignal())
 			{
-				//关闭传输腔门
-				auto cmd = d->lk1->createCloseTMCavityDoorCommand();
-				if (!executeCommand(d->lk1, cmd, step, errorMessage)) {
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-					step = 10000;
+				//得到安全信号后，最低延迟2s，才能关门阀，否则报Resources : LLA   has be lock by WTR.
+				Sleep(3000);
+
+				if (d->wtr->getState() == IKernelSubSystem::State::SUB_NORMAL ||
+					d->wtr->getState() == IKernelSubSystem::State::SUB_IDEL)
+				{
+					if (d->lk1->getTMCavityDoorOpend())
+					{
+						//关闭传输腔门
+						auto cmd = d->lk1->createCloseTMCavityDoorCommand();
+						if (!executeCommand(d->lk1, cmd, step, errorMessage)) {
+							addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
+							step = 10000;
+						}
+						else
+						{
+							step = 1030;
+						}
+					}
+					else {
+						step = 1030;
+					}
 				}
 				else
 				{
-					step = 1030;
+					step = 1040;
 				}
 			}
-			else {
-				step = 1030;
+			else
+			{
+				logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成", d->lk1->getName()).c_str());
+				step = 1040;
 			}
 		}
 		else

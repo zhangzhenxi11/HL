@@ -177,6 +177,11 @@ namespace FC {
 
         //将字符串转换为Location枚举
         UnifiedWaferTask::Location stringToLocation(const std::string& locStr);
+
+        //taskId排序
+        void lessTaskIdSortAlgorithm();
+
+        void largeTaskIdSortAlgorithm();
   public:
     bool stopped_{ false };
 

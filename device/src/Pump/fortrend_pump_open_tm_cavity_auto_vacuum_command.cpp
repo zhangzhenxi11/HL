@@ -42,6 +42,9 @@
 #include "PMCavity/fortrend_pm_cavity_close_tm_cavity_door_command.h"
 #include "PMCavity/fortrend_pm_cavity_defined.h"
 
+#include  "SunwayRobot/fortrend_sunwayrobot_subsystem.h"
+
+
 #include <windows.h>
 #include <vector>
 
@@ -68,6 +71,7 @@ namespace FC{
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4;
+		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr;
 
 		std::vector<std::shared_ptr<FortrendPMCavitySubsystem>> Pm_list;
 
@@ -104,18 +108,19 @@ namespace FC{
 	*/
 	PumpOpenTMCavityAutoVacuumCommand::RunResult PumpOpenTMCavityAutoVacuumCommand::onRun() throw(KernelException){
 		d->pump = getSubsystem()->getKernel()->getKernelModule<FortrendPumpSubsystem>("PUMP");
-		//
 		if (!d->pump){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
 		d->tm = getSubsystem()->getKernel()->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		d->lk1 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		d->lk2 = getSubsystem()->getKernel()->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+		d->wtr = getSubsystem()->getKernel()->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 
 		d->pm1 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		d->pm2 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 		d->pm3 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM3");
 		d->pm4 = getSubsystem()->getKernel()->getKernelModule<FortrendPMCavitySubsystem>("PM4");
+
 		d->Pm_list.push_back(d->pm1);
 		d->Pm_list.push_back(d->pm2);
 		d->Pm_list.push_back(d->pm3);
@@ -140,9 +145,18 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "LoadLock2子系统类型错误", this);
 		}
+
 		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->lk2->getName()), this);
+		}
+		if (!d->wtr)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "wtr子系统类型错误", this);
+		}
+		if (d->wtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->wtr->getName()), this);
 		}
 
 		std::shared_ptr<KernelConfiguration> command_config = d->pump->getConfigure()->createView(getName());
@@ -347,24 +361,45 @@ namespace FC{
 		std::string errorMessage = "关闭LLA_TM传输腔门阀";
 		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk1->getTMCavityDoorOpend())
+			
+			//检测机械手是否在原点的互锁条件，并等待条件完成
+			if (d->lk1->getWtrOriginSafeSignal()) //true 在原点 
 			{
-				//关闭传输腔门
-				auto cmd = d->lk1->createCloseTMCavityDoorCommand();
-				d->lk1->startCommand(cmd);
-				cmd->wait();
-				if (cmd->hasError())
+				//得到安全信号后，最低延迟2s，等待机械手模组状态是正常状态， 
+				// 才能关门阀，否则报Resources : LLA  has be lock by WTR.
+				Sleep(3000);
+
+				if (d->wtr->getState() == IKernelSubSystem::State::SUB_NORMAL ||
+					d->wtr->getState() == IKernelSubSystem::State::SUB_IDEL)
 				{
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-					step = 10000;
+					if (d->lk1->getTMCavityDoorOpend())
+					{
+						//关闭传输腔门
+						auto cmd = d->lk1->createCloseTMCavityDoorCommand();
+						d->lk1->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
+							step = 10000;
+						}
+						else
+						{
+							step = 50;
+						}
+					}
+					else {
+						step = 50;
+					}
 				}
-				else
-				{
-					step = 50;
+				else {
+					step = 40;
 				}
 			}
 			else {
-				step = 50;
+				logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成", d->lk1->getName()).c_str());
+				step = 40; 
+			
 			}
 		}
 		else
@@ -381,24 +416,42 @@ namespace FC{
 		std::string errorMessage = "关闭LLB_TM传输腔门阀";
 		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk2->getTMCavityDoorOpend())
+			if (d->lk2->getWtrOriginSafeSignal()) 
 			{
-				//关闭传输腔门
-				auto cmd = d->lk2->createCloseTMCavityDoorCommand();
-				d->lk2->startCommand(cmd);
-				cmd->wait();
-				if (cmd->hasError())
+				//得到安全信号后，最低延迟2s，才能关门阀，否则报Resources : LLB  has be lock by WTR.
+				Sleep(3000);
+				if (d->wtr->getState() == IKernelSubSystem::State::SUB_NORMAL ||
+					d->wtr->getState() == IKernelSubSystem::State::SUB_IDEL)
 				{
-					addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
-					step = 10000;
+					if (d->lk2->getTMCavityDoorOpend())
+					{
+						//关闭传输腔门
+						auto cmd = d->lk2->createCloseTMCavityDoorCommand();
+						d->lk2->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
+							step = 10000;
+						}
+						else
+						{
+							step = 10;
+						}
+					}
+					else {
+						step = 10;
+					}
 				}
 				else
 				{
-					step = 10;
+					step = 50;
 				}
 			}
-			else {
-				step = 10;
+			else
+			{
+				logInform(d->lk2->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成", d->lk2->getName()).c_str());
+				step = 50;
 			}
 		}
 		else

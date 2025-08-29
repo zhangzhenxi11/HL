@@ -67,11 +67,14 @@ namespace FC{
 		std::string io_second_layer_detection_sensor_address = "";
 		bool io_second_layer_wafer_presence_value = false;
 
-		std::string io_safeSignal_address = "";
+		std::string io_safeSignal_address = ""; //LLA腔安全信号+_门阀开启to机械手
 		bool  io_safeSignal_value = false;
 
 		std::string io_allowd_close_casstedoor_signal_address = ""; //EFEM 允许关_LLA上料门互锁
 		bool io_closeCassteDoor_value = false;
+
+		std::string io_completionSignal_address = ""; //机械手抓放料完成信号
+		bool  io_completionSignal_value = false;
 
 		
 		bool box_placement = false;
@@ -450,6 +453,19 @@ namespace FC{
 		}
 	}
 
+	bool FortrendLoadLockSubsystem::getWtrOriginSafeSignal()
+	{
+		return d->io_completionSignal_value;
+	}
+
+	void FortrendLoadLockSubsystem::setWtrOriginSafeSignal(const bool value)
+	{
+		if (d->io_completionSignal_value != value)
+		{
+			d->io_completionSignal_value = value;
+		}
+	}
+
 	void FortrendLoadLockSubsystem::onInitialize()throw(KernelException){
 		
 		if (SIM_MODE == 1)
@@ -495,6 +511,16 @@ namespace FC{
 				if (signal_value != d->io_safeSignal_value)
 				{
 					//d->io_safeSignal_value = signal_value;
+					io_changed = true;
+				}
+			}
+
+			bool signal_origin_value = d->io_completionSignal_value;
+
+			if (d->io_completionSignal_address != "" && readBit(d->io_completionSignal_address, d->io_completionSignal_value))
+			{
+				if (signal_origin_value != d->io_completionSignal_value)
+				{
 					io_changed = true;
 				}
 			}
@@ -779,6 +805,8 @@ namespace FC{
 			d->io_safeSignal_address = config->getString("Update.LLCavitySafetySignal",""); //LLA腔安全信号+_门阀开启to机械手
 
 			d->io_allowd_close_casstedoor_signal_address = config->getString("Update.EFEMAlloweCloseCassteDoorSignal","");
+
+			d->io_completionSignal_address = config->getString("Update.WtrActionCompletionSignalAddress", "");
 		}
 	}
 

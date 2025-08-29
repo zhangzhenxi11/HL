@@ -832,6 +832,22 @@ FC::UnifiedWaferTask::Location FC::TaskManager::stringToLocation(const std::stri
     return (it != locMap.end()) ? it->second : UnifiedWaferTask::Location::LP1;
 }
 
+void FC::TaskManager::lessTaskIdSortAlgorithm()
+{
+    std::sort(tasks_.begin(), tasks_.end(),[](const UnifiedWaferTask& a, const UnifiedWaferTask& b) {
+        return a.taskId < b.taskId;
+    });
+}
+
+void FC::TaskManager::largeTaskIdSortAlgorithm()
+{
+    std::sort(tasks_.begin(), tasks_.end(), [](const UnifiedWaferTask& a, const UnifiedWaferTask& b) {
+        return a.taskId > b.taskId;
+    });
+
+}
+
+
 void FC::TaskManager::updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type, UnifiedWaferTask::Status status)
 {
     // “∆≥˝æ…”≥…‰
@@ -875,6 +891,9 @@ void FC::TaskManager::updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type
             it->status = status;
             logInform("TaskManager", "TaskID:%d, taskType:%s,taskStatus:%s", taskId, (*it).typeToString(type).c_str(), (*it).statusToString(status).c_str());
         }
+
+        //≈≈–ÚÀ„∑®
+        lessTaskIdSortAlgorithm();
     }
 }   
 

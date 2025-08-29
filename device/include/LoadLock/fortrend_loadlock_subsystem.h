@@ -180,13 +180,17 @@ namespace FC{
 		//单槽mapping
 		Cassette::Mapping handleSingleSlotMapping(short mapRes);
 
-		//LLA腔安全信号+_门阀开启to机械手的互锁
+		//LLA腔安全信号+_门阀开启to机械手  --->true，机械手可动,  检测腔门是打开状态
 		bool getLoadLockCavitySafeSignal();
 		void setLoadLockCavitySafeSignal(const bool value);
 
 		//EFEM 允许关_LLA上料门互锁
 		bool getLoadLockCassetteCloseSafeSignal();
 		void setLoadLockCassetteCloseSafeSignal(const bool value);
+
+		//LLA-机械手抓放料完成信号
+		bool getWtrOriginSafeSignal();
+		void setWtrOriginSafeSignal(const bool value);
 
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
