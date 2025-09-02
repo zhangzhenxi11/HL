@@ -9,7 +9,6 @@
 #include <Dbghelp.h>
 #include <iostream>
 #include <QDebug.h>
-
 #include "CCreateDump.h"
 #endif
 

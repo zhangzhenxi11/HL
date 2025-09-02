@@ -37,6 +37,10 @@ namespace FC{
 		:KeyencePlcCommandExecuter(hexHelper){
 		//setMessageName("MechanicalOpen");
 		//setDescription("align the pump");
+	}
+	std::vector<IKernelResources*> PumpMechanicalOpenCommand::resources() const
+	{
+		return std::vector<IKernelResources*>();
 	};
 
 	

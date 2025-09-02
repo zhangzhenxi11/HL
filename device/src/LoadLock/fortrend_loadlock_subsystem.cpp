@@ -603,7 +603,7 @@ namespace FC{
 					d->S_EM1_Values.append(buff_vacuum);
 
 					//超出n次后删除 第一个元素值
-					if (d->S_EM1_Values.size() >= 100) {
+					if (d->S_EM1_Values.size() >= 200) {
 						d->S_EM1_Values.removeAt(0);
 					}
 					double sum = 0.0;

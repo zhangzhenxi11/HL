@@ -15,10 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <property name="topMargin">
-      <number>5</number>
-     </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QGroupBox" name="station_group">
        <property name="title">
@@ -39,6 +36,30 @@
         </property>
         <property name="bottomMargin">
          <number>10</number>
+        </property>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="slots_group">
+       <property name="title">
+        <string>槽号选择</string>
+       </property>
+       <layout class="QVBoxLayout" name="slots_layout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>5</number>
+        </property>
+        <property name="topMargin">
+         <number>5</number>
+        </property>
+        <property name="rightMargin">
+         <number>5</number>
+        </property>
+        <property name="bottomMargin">
+         <number>5</number>
         </property>
        </layout>
       </widget>

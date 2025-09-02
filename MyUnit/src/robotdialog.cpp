@@ -1,17 +1,16 @@
 #include "robotdialog.h"
 #include "MyUnit/ui_robotdialog.h"
 
-RobotDialog::RobotDialog(QWidget *parent) :
-    QDialog(parent),
+
+RobotDialog::RobotDialog(QWidget* parent) :
+	QDialog(parent),
     ui(new Ui::RobotDialog)
 {
     ui->setupUi(this);
-	
 	connect(ui->setspeed_btn, &QAbstractButton::clicked, this, &RobotDialog::onSetSpeed);
 	connect(ui->set_speed_btn_z, &QAbstractButton::clicked, this, &RobotDialog::onSetZSpeed);
 	connect(ui->put_btn, &QAbstractButton::clicked, this, &RobotDialog::onPut);
 	connect(ui->get_btn, &QAbstractButton::clicked, this, &RobotDialog::onGet);
-
 	/*ui->speed_combo->addItem(QString::number(1));
 	ui->speed_combo->addItem(QString::number(5));*/
 	//speed
@@ -25,12 +24,19 @@ RobotDialog::RobotDialog(QWidget *parent) :
 	ui->put_btn->setStyleSheet(style);
 	ui->get_btn->setStyleSheet(style);
 	//ui->widget->setStyleSheet("background-color: #FFFFFF;");
+
 }
 void RobotDialog::AddStation(QRadioButton* selectBtn){
 	ui->station_layout->addWidget(selectBtn);
 }
 void RobotDialog::AddArm(QRadioButton* armBtn){
 	ui->arm_layout->addWidget(armBtn);
+}
+
+void RobotDialog::AddSlot(QRadioButton* selectSlot)
+{
+	ui->slots_layout->addWidget(selectSlot);
+	ui->slots_layout->addStretch();
 }
 
 RobotDialog::~RobotDialog()
@@ -57,6 +63,20 @@ int  RobotDialog::getSelectArm()const{
 		QLayoutItem *child = ui->arm_layout->itemAt(i);
 		QRadioButton* radio_child = qobject_cast<QRadioButton*>(child->widget());
 		if (radio_child && radio_child->isChecked()){
+			index = radio_child->property("index").toInt();
+			return index;
+		}
+	}
+	return -1;
+}
+
+int RobotDialog::getSelectSlotId() const
+{
+	int index = -1;
+	for (int i = 0; i < ui->arm_layout->count(); i++) {
+		QLayoutItem* child = ui->arm_layout->itemAt(i);
+		QRadioButton* radio_child = qobject_cast<QRadioButton*>(child->widget());
+		if (radio_child && radio_child->isChecked()) {
 			index = radio_child->property("index").toInt();
 			return index;
 		}

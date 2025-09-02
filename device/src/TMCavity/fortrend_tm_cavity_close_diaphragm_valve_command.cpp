@@ -32,20 +32,19 @@ namespace FC{
 		TMCavityValveOpening opening = TMCavityValveOpening::TMCavity_Both;
 	};
 
-	/**
-	* TMCavityCloseDiaphragmValveCommand
-	*/
 	TMCavityCloseDiaphragmValveCommand::TMCavityCloseDiaphragmValveCommand(const TMCavityValveOpening opening, KeyencePlcSubSystemHelper* helper)
 		:KeyencePlcCommandExecuter(helper)
 		, d(new TMCavityCloseDiaphragmValveCommandPrivate){
 		d->opening = opening;
 		//setMessageName("CloseTMCavityDoor");
 		//setDescription("close diaphragm the laodlock");
+	}
+
+	std::vector<IKernelResources*> TMCavityCloseDiaphragmValveCommand::resources() const
+	{
+		return std::vector<IKernelResources*>();
 	};
 	
-	/**
-	* return true if success else false.
-	*/
 	TMCavityCloseDiaphragmValveCommand::RunResult TMCavityCloseDiaphragmValveCommand::onRun() throw(KernelException){
 		FortrendTMCavitySubsystem* sub = dynamic_cast<FortrendTMCavitySubsystem*>(getSubsystem());
 		//

@@ -104,6 +104,20 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 		logError(aligner->getName().c_str(), "%s获取MAP命令发送失败，请检查通讯！", aligner->getName());
 		return ret;
 	}
+	aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
+	aligner->timestamp = std::chrono::system_clock::now();
+	aligner->wait();
+	if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", aligner->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+	}
+	else if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", aligner->getName(), getName())));
+		setAlarm(alarm);
+		ret = RunResult::RUN_FAILD;
+	}
+
 
 	//std::string strifInf = "GET";
 	////INF:MAPDT/EALIGNER/E;

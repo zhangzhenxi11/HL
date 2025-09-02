@@ -28,7 +28,7 @@ namespace FC{
 		DECLARE_PTR(TMCavityCloseDiaphragmValveCommand)
 		TMCavityCloseDiaphragmValveCommand(const TMCavityValveOpening opening, KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "CloseDiaphragmValve"; }
-
+		std::vector<IKernelResources* > resources() const override;
 	protected:
 		virtual RunResult onRun() throw(KernelException);		
 	private:

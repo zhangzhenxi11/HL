@@ -312,7 +312,7 @@ namespace FC{
 		std::shared_ptr<FortrendVTMSignalTower> tower = 0;
 		std::shared_ptr<FortrendTMCavitySubsystem> tmplc;
 		bool plcauto = false;
-
+		bool reset_finish = false;
 		std::chrono::steady_clock::time_point LLA_start_time; //检测真空
 		std::chrono::steady_clock::time_point LLB_start_time; //检测真空
 
@@ -2794,7 +2794,7 @@ namespace FC{
 							{
 								logFailedExcuteCommandHasError(lk1->getName(), "关闭放晶圆盒门阀", loadlock1_process_name, loadlock1_auto_step);
 							}
-							else 
+							else
 							{
 
 								loadlock1_auto_step = 410;
@@ -6253,7 +6253,7 @@ namespace FC{
 			{
 				update_step_once_finished = false;
 				Sleep(500);
-				onGetStep();
+				//onGetStep();
 				
 				if (((finished_time_lla == cycle_times_lla) || (finished_time_llb == cycle_times_llb)) 
 					&& (!elp1->hasDoorOpend() && !elp2->hasDoorOpend()))
@@ -6756,18 +6756,15 @@ namespace FC{
 
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
-
 		std::shared_ptr<EFEMLPSubsystem> elp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
-
 		std::shared_ptr<EFEMLPSubsystem> elp2 = kernel->getKernelModule<EFEMLPSubsystem>("ELP2");
-
 		std::shared_ptr<FortrendPumpSubsystem> pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
 
 		//check modules
 		auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 
 		bool reset_loop = true;
-		bool reset_finish = false;
+		reset_finish = false;
 		int rest_step = 0;
 		tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, false);
 		while (reset_loop)
@@ -7160,6 +7157,8 @@ namespace FC{
 
 			onUpdateControlEnabled("loadlock1_put_cassette_finished_pbt", false);
 			onUpdateControlEnabled("loadlock2_put_cassette_finished_pbt", false);
+
+			//reset_finish = false;
 
 			if(CYCLE_SIM_MODE == 0)
 			{
@@ -9031,6 +9030,11 @@ namespace FC{
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
 
 
+		//if (!d->reset_finish)
+		//{
+		//	QMessageBox::warning(this, "警告", "未执行整机复位.");
+		//	return;
+		//}
 		//调试注释
 		if (SIM_CYCLE_MODE == 0)
 		{

@@ -50,6 +50,7 @@ namespace FC{
 		}
 		
 		return ret;
+		//return std::vector<IKernelResources* >();
 	}
 	
 	/**

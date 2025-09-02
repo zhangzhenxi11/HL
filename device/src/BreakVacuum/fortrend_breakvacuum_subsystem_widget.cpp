@@ -118,6 +118,7 @@ namespace FC{
 		connect(status_widget_llb, &QKernelSubsystemStatusWidget::onStatusUpdate, this, [=](){
 			onAttributeUpdate();
 		});
+		d->ui->open_tm_cavity_break_vacuum_btn->hide();
 
 		//QObject::connect(d->ui->gmfk_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFKClicked);
 		QObject::connect(d->ui->gmfm_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFMClicked);

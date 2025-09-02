@@ -116,7 +116,6 @@ namespace FC{
 
 	private:
 		Ui::FortrendStationStatusVTMWidget* ui;
-
 		//stackedWidget显示，就是模组手动界面
 		QMainLoadLockSubsystemWidget* mainLoadlock1Widget;
 		QMainLoadLockSubsystemWidget* mainLoadlock2Widget;
@@ -141,7 +140,7 @@ namespace FC{
 		//模组指针
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
-		//pM
+		//PM
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3;
@@ -229,18 +228,47 @@ namespace FC{
 		//添加工位和手爪配置
 #pragma region 添加工位和手爪配置
 		//create station select
-		for (int i = 0; i < wtr->getWorkStations().size(); i++){
+		for (int i = 0; i < wtr->getWorkStations().size(); i++)
+		{
 			auto station = wtr->getWorkStations().at(i);
 			QRadioButton* radioButton = new QRadioButton;
 			radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(wtr->getName())));
 			radioButton->setProperty("index", i); //index
 			robotdialog->AddStation(radioButton);
 			if (i == 0)
+			{
 				radioButton->setChecked(true);
+			}
+
+			
+			if (station->getStationId(wtr->getName()) == 1)
+			{
+				QRadioButton* radioButton = new QRadioButton;
+				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg("1"));
+				radioButton->setProperty("index", i); //index
+				robotdialog->AddSlot(radioButton);
+				
+			}
+			else if (station->getStationId(wtr->getName()) == 6)
+			{
+				QRadioButton* radioButton = new QRadioButton;
+				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg("2"));
+				radioButton->setProperty("index", 2); //index
+				robotdialog->AddSlot(radioButton);
+			}
+			else {
+			
+				QRadioButton* radioButton = new QRadioButton;
+				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg("1"));
+				radioButton->setProperty("index", 1); //index
+				robotdialog->AddSlot(radioButton);
+			}
 		}
+		
 
 		//create arm select
-		for (int i = 0; i < wtr->armCount(); i++){
+		for (int i = 0; i < wtr->armCount(); i++)
+		{
 			//select
 			std::string name = wtr->getArmName(i);
 			QRadioButton* selectBtn = new QRadioButton(QString::fromStdString(name));
@@ -637,6 +665,11 @@ namespace FC{
 		auto  casspm3 = d->cassManager->getCassette(d->pm3.get());
 		if (casspm3){
 			QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm3, d->cassManager, true, true, 25, this); //max row count = 25
+			d->ui->center_layout->addWidget(cassette_Widget);
+		}
+		auto  casspm4 = d->cassManager->getCassette(d->pm4.get());
+		if (casspm4) {
+			QWidget* cassette_Widget = new QFortrendCassetteWidget(casspm4, d->cassManager, true, true, 25, this); //max row count = 25
 			d->ui->center_layout->addWidget(cassette_Widget);
 		}
 

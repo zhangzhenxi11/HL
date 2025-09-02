@@ -18,13 +18,8 @@
 #include  "Kernel/kernel_subsystem_reset_command.h"
 #include  "Kernel/kernel_subsystem_update_command.h"
 #include  "Kernel/Fortrend/abstract_output_command.h"
-
 #include  "device/ui_fortrend_sunwayrobot_subsystem_widget.h" 
-
-
 #include  "SunwayRobot/fortrend_sunwayrobot_subsystem_widget.h"
-
-
 #include <QRadioButton>
 #include <QSpacerItem>
 #include <QMessageBox>
