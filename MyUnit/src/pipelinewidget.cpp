@@ -23,9 +23,9 @@ pipeLineWidget::pipeLineWidget(QWidget *parent,int width,int pipeDiameter,int an
 //    std::thread T(&pipeLineWidget::updateWaterPosition,this);
 //    T.detach();
 
-    QTimer * timer1 = new QTimer(this);
-    connect(timer1, &QTimer::timeout, this, &pipeLineWidget::updateWaterPosition);
-    timer1->start(30); // 每30毫秒更新一次位置
+    timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &pipeLineWidget::updateWaterPosition);
+    start(30);
 }
 
 pipeLineWidget::~pipeLineWidget()
@@ -52,6 +52,19 @@ void pipeLineWidget::updateWaterPosition(){
 // 设置水流方向
 void pipeLineWidget::setWaterDirection(int direction) {
       currentWaterDirection=direction;
+}
+pipeLineWidget& pipeLineWidget::getInstance()
+{
+    static pipeLineWidget instance;
+    return instance;
+}
+void pipeLineWidget::stop()
+{
+    timer->stop(); // 每30毫秒更新一次位置
+}
+void pipeLineWidget::start(int timeOut)
+{
+    timer->start(30); // 每30毫秒更新一次位置
 }
 // 设置旋转角度
     void pipeLineWidget::setRotationAngle(int angle) {

@@ -19,7 +19,7 @@ pipeLine90Widget::pipeLine90Widget(QWidget *parent) :
     ui->setupUi(this);
         timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, &pipeLine90Widget::updateWaterPosition);
-        timer->start(20); // 每30毫秒更新一次位置
+        timer->start(20);
 
 //    std::thread T(&pipeLine90Widget::updateWaterPosition,this);
 //    T.detach();
@@ -48,6 +48,22 @@ void pipeLine90Widget::updateWaterPosition(){
 // 设置水流方向,0是从上往下，1是从下往上
 void pipeLine90Widget::setWaterDirection(int direction) {
      currentWaterDirection=direction;
+}
+
+pipeLine90Widget& pipeLine90Widget::getInstance()
+{
+    static pipeLine90Widget instance;
+    return instance;
+}
+
+void pipeLine90Widget::start(int timeOut)
+{
+    timer->start(20); // 每30毫秒更新一次位置
+}
+
+void pipeLine90Widget::stop()
+{
+    timer->stop(); 
 }
 
 void pipeLine90Widget::paintEvent(QPaintEvent * event)

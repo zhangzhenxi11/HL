@@ -65,45 +65,26 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_buzzer_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
+         <widget class="SwitchButton" name="enable_buzzer_btn" native="true">
+          <property name="enabled">
+           <bool>true</bool>
           </property>
          </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_buzzer_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_7">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
         </item>
        </layout>
+      </item>
+      <item row="0" column="1">
+       <spacer name="horizontalSpacer_7">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
       </item>
       <item row="1" column="0">
        <layout class="QHBoxLayout" name="vacuum_hlyt">
@@ -135,48 +116,25 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_vacuum_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_vacuum_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <widget class="SwitchButton" name="enable_vacuum_btn" native="true"/>
         </item>
        </layout>
       </item>
+      <item row="1" column="1">
+       <spacer name="horizontalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
       <item row="2" column="0">
-       <layout class="QHBoxLayout" name="pm_hlyt_1">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QLabel" name="label_6">
           <property name="minimumSize">
@@ -205,48 +163,25 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_pm1_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_pm1_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <widget class="SwitchButton" name="enable_pm1_btn" native="true"/>
         </item>
        </layout>
       </item>
+      <item row="2" column="1">
+       <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
       <item row="3" column="0">
-       <layout class="QHBoxLayout" name="pm_hlyt">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
          <widget class="QLabel" name="label_5">
           <property name="minimumSize">
@@ -275,48 +210,25 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_pm2_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_pm2_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <widget class="SwitchButton" name="enable_pm2_btn" native="true"/>
         </item>
        </layout>
       </item>
+      <item row="3" column="1">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
       <item row="4" column="0">
-       <layout class="QHBoxLayout" name="pm_hlyt_2">
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
          <widget class="QLabel" name="label_17">
           <property name="minimumSize">
@@ -345,48 +257,25 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_pm3_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_pm3_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_6">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <widget class="SwitchButton" name="enable_pm3_btn" native="true"/>
         </item>
        </layout>
       </item>
+      <item row="4" column="1">
+       <spacer name="horizontalSpacer_6">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
       <item row="5" column="0">
-       <layout class="QHBoxLayout" name="pm_hlyt_3">
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
          <widget class="QLabel" name="label_18">
           <property name="minimumSize">
@@ -415,45 +304,22 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_pm4_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_pm4_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_8">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <widget class="SwitchButton" name="enable_pm4_btn" native="true"/>
         </item>
        </layout>
+      </item>
+      <item row="5" column="1">
+       <spacer name="horizontalSpacer_8">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
       </item>
       <item row="6" column="0">
        <layout class="QHBoxLayout" name="wafer_hlyt">
@@ -485,51 +351,35 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="enable_with_wafer_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="disable_with_wafer_btn">
-          <property name="minimumSize">
-           <size>
-            <width>70</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>不启用</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_5">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         <widget class="SwitchButton" name="enable_with_wafer_btn" native="true"/>
         </item>
        </layout>
+      </item>
+      <item row="6" column="1">
+       <spacer name="horizontalSpacer_5">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>992</width>
+          <height>39</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
      <zorder></zorder>
      <zorder></zorder>
      <zorder></zorder>
      <zorder></zorder>
+     <zorder>enable_buzzer_btn</zorder>
+     <zorder>enable_vacuum_btn</zorder>
+     <zorder>enable_pm1_btn</zorder>
+     <zorder>enable_pm2_btn</zorder>
+     <zorder>enable_pm3_btn</zorder>
+     <zorder>enable_pm4_btn</zorder>
+     <zorder>enable_with_wafer_btn</zorder>
     </widget>
    </item>
    <item row="1" column="0" colspan="2">
@@ -1163,6 +1013,14 @@
   <zorder>vacuum_setting_gbx</zorder>
   <zorder>verticalSpacer</zorder>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SwitchButton</class>
+   <extends>QWidget</extends>
+   <header location="global">switchbutton.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

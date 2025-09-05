@@ -49,8 +49,8 @@ void LoadLockB::mousePressEvent(QMouseEvent *event){
 		QAction *action1 = menu.addAction("打开盒门");
         QAction *action2 = menu.addAction("关闭盒门");
 		QAction *action3 = menu.addAction("扫描晶圆");
-		QAction *action4 = menu.addAction("移动到达选定槽号");//到,状态
-		QAction *action21 = menu.addAction("移动到达取放盒位");//到,状态移动至SMIF取放位
+		//QAction *action4 = menu.addAction("移动到达选定槽号");//到,状态
+		//QAction *action21 = menu.addAction("移动到达取放盒位");//到,状态移动至SMIF取放位
 		QAction *action5 = menu.addAction("打开传输腔门阀");
 		QAction *action6 = menu.addAction("关闭传输腔门阀");
 		QAction *action7 = menu.addAction("打开隔膜阀");
@@ -59,10 +59,10 @@ void LoadLockB::mousePressEvent(QMouseEvent *event){
 		QAction *action10 = menu.addAction("关闭排气阀");*/
 		QAction *action11 = menu.addAction("打开角阀");
 		QAction *action12 = menu.addAction("关闭角阀");
-		QAction *action16 = menu.addAction("打开插板阀");
-		QAction *action17 = menu.addAction("关闭插板阀");
-		QAction *action18 = menu.addAction("打开高真空挡板阀");
-		QAction *action19 = menu.addAction("关闭高真空挡板阀");
+		//QAction *action16 = menu.addAction("打开插板阀");
+		//QAction *action17 = menu.addAction("关闭插板阀");
+		//QAction *action18 = menu.addAction("打开高真空挡板阀");
+		//QAction *action19 = menu.addAction("关闭高真空挡板阀");
 		QAction *action13 = menu.addAction("获取模组状况");
 		QAction *action14 = menu.addAction("复位");
 		QAction *action15 = menu.addAction("清除错误");
@@ -76,9 +76,9 @@ void LoadLockB::mousePressEvent(QMouseEvent *event){
 		connect(action3, &QAction::triggered, this, [this]() {
 			emit signalLoadLockBMapping(name);
 		});
-		connect(action4, &QAction::triggered, this, [this]() {
-			emit signalLoadLockBMoveToSlot(name,this);
-		});
+		//connect(action4, &QAction::triggered, this, [this]() {
+		//	emit signalLoadLockBMoveToSlot(name,this);
+		//});
 		connect(action5, &QAction::triggered, this, [this]() {
 			emit signalLoadLockBOpenTMCavityDoor(name);
 		});
@@ -113,7 +113,7 @@ void LoadLockB::mousePressEvent(QMouseEvent *event){
 			emit signalLoadLockBClearError(name);
 		});
 
-		connect(action16, &QAction::triggered, this, [this]() {
+		/*connect(action16, &QAction::triggered, this, [this]() {
 			emit signalLoaLockBOpenInsertingPlateValve(name);
 		});
 		connect(action17, &QAction::triggered, this, [this]() {
@@ -127,7 +127,7 @@ void LoadLockB::mousePressEvent(QMouseEvent *event){
 		});
 		connect(action21, &QAction::triggered, this, [this]() {
 			emit signalLoadLockAMoveToOrigin(name);
-		});
+		});*/
 		// 在鼠标点击的位置显示菜单
 		menu.exec(event->globalPos());
 	}

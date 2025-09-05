@@ -60,11 +60,11 @@
 #include <QMessageBox>
 #include <QCheckBox>
 #include <qdebug.h>
-
+#include <cmath> 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
- 
+
 namespace FC{
 /**
 * QVacuumizeSubsystemWidgetPrivate
@@ -123,6 +123,8 @@ public:
 	//pump->addEventListener(d_ptr);
     d->ui = new Ui::VacuumizeSubsystemWidget;
     d->ui->setupUi(this);
+	//pipeLineWidget::getInstance().start(30);
+	//pipeLine90Widget::getInstance().start(20);
 
 	//d->ui->widget_18->angle = 90;//90度旋转
 	//d->ui->widget_pbv_llb->angle = 90;//90度旋转
@@ -134,6 +136,19 @@ public:
     //init samethong
 	//d->ui->widget_13->setWaterDirection(0);//设置从下往上流动
 	//d->ui->widget_53->setWaterDirection(1);//设置从右往左流动
+
+	d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
+	d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
+	d->ui->gmfm_lla_progress->setRange(0, 100);
+
+	d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
+	d->ui->gmfm_llb_progress->setPrecision(1);
+	d->ui->gmfm_llb_progress->setRange(0, 100);
+
+	d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
+	d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
+	d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
+	d->ui->gmfm_tm_progress->setRange(0, 100);
 
 	QKernelSubsystemStatusWidget* status_widget_tm = new QKernelSubsystemStatusWidget(d->tm);
 
@@ -430,6 +445,10 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 
 
+	d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
+	d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
+	d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumValue()));
+
 
 	if (d->lk1->getAngleValveOpend()) {
 		d->ui->widget_pav_lla->open();
@@ -490,6 +509,30 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	if (d->ui->widget_10) d->ui->widget_10->setWaterDirection(2);
 	if (d->ui->widget_13) d->ui->widget_13->setWaterDirection(2);
 	if (d->ui->widget_53) d->ui->widget_53->setWaterDirection(2);
+}
+
+int QVacuumizeSubsystemWidget::convertRange(double vacuumValue)
+{
+	int progressValue;
+
+	// 真空值≤100Pa时，进度条满值100
+	if (vacuumValue <= 100.0) {
+		progressValue = 100;
+	}
+	// 真空值≥100000Pa时，进度条0值
+	else if (vacuumValue >= 100000.0) {
+		progressValue = 0;
+	}
+	// 中间范围反向映射：真空值越小，进度条值越大
+	else
+	{
+		// 计算相对值（100~100000范围中的位置）
+		double relative = (vacuumValue - 100.0) / (100000.0 - 100.0);
+		// 反向映射到0~100
+		progressValue = static_cast<int>(round(100.0 - relative * 100.0));
+	}
+
+	return progressValue;
 }
 
 void QVacuumizeSubsystemWidget::onGetStatus(){

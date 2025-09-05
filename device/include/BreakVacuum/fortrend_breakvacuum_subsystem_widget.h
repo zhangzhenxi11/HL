@@ -3,7 +3,7 @@
 
 #include "Kernel/kernel.h"
 #include <QWidget>
-
+#include <cmath> 
 
 /*ÆÆÕæ¿Õ*/
 namespace FC{
@@ -32,6 +32,7 @@ private slots:
 	
 private:
 	void onAttributeUpdate()throw(KernelException);
+	int convertRange(double vacuumValue);
 private:
 	Q_DECLARE_PRIVATE(QBreakVacuumSubsystemWidget)
 	QBreakVacuumSubsystemWidgetPrivate *d_ptr;

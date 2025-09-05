@@ -30,6 +30,14 @@ public:
     void setRotationAngle(int angle);
     void setWaterDirection(int direction);
 
+    static pipeLineWidget& getInstance();
+    // 删除拷贝构造函数和赋值操作符
+    pipeLineWidget(const pipeLineWidget&) = delete;
+    pipeLineWidget& operator=(const pipeLineWidget&) = delete;
+
+    void start(int timeOut);
+    void stop();
+
 private slots:
     void updateWaterPosition();
 

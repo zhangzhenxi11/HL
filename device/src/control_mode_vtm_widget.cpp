@@ -26,10 +26,17 @@
 #include <sstream>
 #include <iomanip>
 
+#include <QDateTime>
+#include <qdebug.h>
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
+
+#define color1 QColor(34, 163, 169)
+#define color2 QColor(162, 121, 197)
+#define color3 QColor(255, 107, 107)
+#define color4 QColor(72, 103, 149)
 
 namespace FC{
 	static QMap<int, QString> enable_stat_map = {
@@ -112,9 +119,12 @@ namespace FC{
 
 	void QControlModeVTMWidgetPrivate::setBuzzerEnable(const bool value){
 		buzzer_enable = value;
-		for (auto& tower : kernel->getKernelModules<FortrendVTMSignalTower>()){
-			tower->setEnabled(buzzer_enable);
-		}
+		std::thread   thread_buzzer([=]() {
+			for (auto& tower : kernel->getKernelModules<FortrendVTMSignalTower>()) {
+				tower->setEnabled(buzzer_enable);
+			}
+		});
+		thread_buzzer.detach();
 	}
 
 	void QControlModeVTMWidgetPrivate::setVacuumEnable(const bool value)
@@ -372,9 +382,6 @@ namespace FC{
 			}
 		}*/
 
-		
-
-
 
 		d->loadlock1_vacuum_upper_limit_dsb = new ScientificDoubleSpinBox(d->ui->vacuum_setting_gbx);
 		d->loadlock1_vacuum_upper_limit_dsb->setObjectName(QStringLiteral("loadlock1_vacuum_upper_limit_dsb"));
@@ -552,20 +559,25 @@ namespace FC{
 		
 		loadConfigFile();
 
-		connect(d->ui->enable_buzzer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetBuzzerEnable);
-		connect(d->ui->disable_buzzer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetBuzzerDisable);
-		connect(d->ui->enable_vacuum_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetVacuumEnable);
-		connect(d->ui->disable_vacuum_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetVacuumDisable);
-		connect(d->ui->enable_with_wafer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetWithWaferModeEnable);
-		connect(d->ui->disable_with_wafer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetWithWaferModeDisable);
-		connect(d->ui->enable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Enable);
-		connect(d->ui->disable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Disable);
-		connect(d->ui->enable_pm2_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM2Enable);
-		connect(d->ui->disable_pm2_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM2Disable);
-		connect(d->ui->enable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Enable);
-		connect(d->ui->disable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Disable);
-		connect(d->ui->enable_pm4_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM4Enable);
-		connect(d->ui->disable_pm4_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM4Disable);
+		connect(d->ui->enable_buzzer_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetBuzzerEnableStatus,Qt::QueuedConnection);
+		//connect(d->ui->disable_buzzer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetBuzzerDisable);
+
+		connect(d->ui->enable_vacuum_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetVacuumEnableStatus, Qt::QueuedConnection);
+		//connect(d->ui->disable_vacuum_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetVacuumDisable);
+
+		//connect(d->ui->enable_buzzer_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetVacuumEnableStatus);
+
+		connect(d->ui->enable_with_wafer_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetWithWaferModeStatus, Qt::QueuedConnection);
+		//connect(d->ui->disable_with_wafer_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetWithWaferModeDisable);
+
+		connect(d->ui->enable_pm1_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetPM1Enabletatus, Qt::QueuedConnection);
+		//connect(d->ui->disable_pm1_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM1Disable);
+		connect(d->ui->enable_pm2_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetPM2Enabletatus, Qt::QueuedConnection);
+		//connect(d->ui->disable_pm2_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM2Disable);
+		connect(d->ui->enable_pm3_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetPM3Enabletatus, Qt::QueuedConnection);
+		//connect(d->ui->disable_pm3_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM3Disable);
+		connect(d->ui->enable_pm4_btn, &SwitchButton::checkedChanged, this, &QControlModeVTMWidget::onSetPM4Enabletatus, Qt::QueuedConnection);
+		//connect(d->ui->disable_pm4_btn, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetPM4Disable);
 		//d->kernel->addListener(d);
 
 		connect(d->ui->loadlock1_vacuum_set_pbt, &QAbstractButton::clicked, this, &QControlModeVTMWidget::onSetLoadLock1VacuumParameters);
@@ -612,12 +624,37 @@ namespace FC{
 		saveConfigFile();
 	}
 
+	void QControlModeVTMWidget::onSetBuzzerEnableStatus(bool checked)
+	{
+		//qint64 start = QDateTime::currentMSecsSinceEpoch(); // 开始时间
+		Q_D(QControlModeVTMWidget);
+		if (checked)
+		{
+			d->setBuzzerEnable(true);
+			updateState();
+			saveConfigFile();
+		}
+		else
+		{
+			d->setBuzzerEnable(false);
+			updateState();
+			saveConfigFile();
+		}
+		//qint64 end = QDateTime::currentMSecsSinceEpoch(); // 结束时间
+		//qDebug() << "槽函数执行耗时：" << (end - start) << "ms"; // 打印耗时
+	}
+
 	void QControlModeVTMWidget::onSetVacuumEnable(){
+
+		qint64 start = QDateTime::currentMSecsSinceEpoch(); // 开始时间
 		Q_D(QControlModeVTMWidget);
 
 		d->setVacuumEnable(true);
 		updateState();
 		saveConfigFile();
+
+		qint64 end = QDateTime::currentMSecsSinceEpoch(); // 结束时间
+		qDebug() << "槽函数执行耗时：" << (end - start) << "ms"; // 打印耗时
 	}
 	void QControlModeVTMWidget::onSetVacuumDisable(){
 		Q_D(QControlModeVTMWidget);
@@ -625,6 +662,25 @@ namespace FC{
 		d->setVacuumEnable(false);
 		updateState();
 		saveConfigFile();
+	}
+
+	void QControlModeVTMWidget::onSetVacuumEnableStatus(bool checked)
+	{
+		Q_D(QControlModeVTMWidget);
+
+		if (checked)
+		{
+			d->setVacuumEnable(true);
+			updateState();
+			saveConfigFile();
+		}
+		else
+		{
+			d->setVacuumEnable(false);
+			updateState();
+			saveConfigFile();
+		}
+		
 	}
 
 	void QControlModeVTMWidget::onSetWithWaferModeEnable(){
@@ -641,6 +697,24 @@ namespace FC{
 		saveConfigFile();
 	}
 
+	void QControlModeVTMWidget::onSetWithWaferModeStatus(bool checked)
+	{
+		Q_D(QControlModeVTMWidget);
+		if (checked)
+		{
+			d->setWithWaferMode(true);
+			updateState();
+			saveConfigFile();
+		}
+		else
+		{
+			d->setWithWaferMode(false);
+			updateState();
+			saveConfigFile();
+		}
+
+	}
+
 	void QControlModeVTMWidget::onSetPM1Enable(){
 		Q_D(QControlModeVTMWidget);
 		d->setPMCavity(1, true);
@@ -652,6 +726,22 @@ namespace FC{
 		d->setPMCavity(1, false);
 		updateState();
 		saveConfigFile();
+	}
+	void QControlModeVTMWidget::onSetPM1Enabletatus(bool checked)
+	{
+		Q_D(QControlModeVTMWidget);
+		if (checked)
+		{
+			d->setPMCavity(1, true);
+			updateState();
+			saveConfigFile();
+		}
+		else
+		{
+			d->setPMCavity(1, false);
+			updateState();
+			saveConfigFile();
+		}
 	}
 	void QControlModeVTMWidget::onSetPM2Enable(){
 		Q_D(QControlModeVTMWidget);
@@ -665,6 +755,22 @@ namespace FC{
 		updateState();
 		saveConfigFile();
 	}
+	void QControlModeVTMWidget::onSetPM2Enabletatus(bool checked)
+	{
+		Q_D(QControlModeVTMWidget);
+		if (checked)
+		{
+			d->setPMCavity(2, true);
+			updateState();
+			saveConfigFile();
+		}
+		else
+		{
+			d->setPMCavity(2, false);
+			updateState();
+			saveConfigFile();
+		}
+	}
 	void QControlModeVTMWidget::onSetPM3Enable(){
 		Q_D(QControlModeVTMWidget);
 		d->setPMCavity(3, true);
@@ -676,6 +782,23 @@ namespace FC{
 		d->setPMCavity(3, false);
 		updateState();
 		saveConfigFile();
+	}
+
+	void QControlModeVTMWidget::onSetPM3Enabletatus(bool checked)
+	{
+		Q_D(QControlModeVTMWidget);
+		if (checked)
+		{
+			d->setPMCavity(3, true);
+			updateState();
+			saveConfigFile();
+		}
+		else {
+			d->setPMCavity(3, false);
+			updateState();
+			saveConfigFile();
+		}
+
 	}
 
 	void QControlModeVTMWidget::onSetPM4Enable()
@@ -692,6 +815,24 @@ namespace FC{
 		d->setPMCavity(4, false);
 		updateState();
 		saveConfigFile();
+	}
+
+	void QControlModeVTMWidget::onSetPM4Enabletatus(bool checked)
+	{
+		Q_D(QControlModeVTMWidget);
+		if (checked)
+		{
+			d->setPMCavity(4, true);
+			updateState();
+			saveConfigFile();
+		}
+		else
+		{
+			d->setPMCavity(4, false);
+			updateState();
+			saveConfigFile();
+		}
+
 	}
 
 	void QControlModeVTMWidget::onSetLoadLock1VacuumParameters(){
@@ -738,7 +879,7 @@ namespace FC{
 		d->ui->pm2_enable_label->setText(enable_stat_map[d->pm2_enable]);
 		d->ui->pm3_enable_label->setText(enable_stat_map[d->pm3_enable]);
 		d->ui->pm4_enable_label->setText(enable_stat_map[d->pm4_enable]);
-
+		
 		d->loadlock1_vacuum_upper_limit_dsb->setValue(d->loadlock1_vacuum_upper_limit);
 		d->loadlock1_vacuum_extraction_dsb->setValue(d->loadlock1_vacuum_extraction);
 		d->loadlock1_vacuum_fast_diaphragm_valve_dsb->setValue(d->loadlock1_vacuum_fast_diaphragm_valve);
@@ -755,17 +896,49 @@ namespace FC{
 		d->loadlock1_vacuum_delay_time_dsb->setValue(d->loadlock1_vacuum_delay_time);
 		d->loadlock2_vacuum_delay_time_dsb->setValue(d->loadlock2_vacuum_delay_time);
 		d->tm_cavity_vacuum_delay_time_dsb->setValue(d->tm_vacuum_delay_time);
-		//d->tm_cavity_vacuum_pid_dsb->setValue(d->tm_vaccum_pid);
 
-		//d->pm1_cavity_vacuum_upper_limit_dsb->setValue(d->pm1_vacuum_setting);
-	//	d->ui->pm1_vacuum_magnitude_dsb->setValue(d->pm1_vacuum_magnitude);
+	}
 
-		//d->pm2_cavity_vacuum_upper_limit_dsb->setValue(d->pm2_vacuum_setting);
-		//d->ui->pm2_vacuum_magnitude_dsb->setValue(d->pm2_vacuum_magnitude);
+	void QControlModeVTMWidget::InitUi()
+	{
+		Q_D(QControlModeVTMWidget);
+		d->ui->enable_buzzer_btn->setBgColorOn(color1);
+		d->ui->enable_buzzer_btn->setShowText(true);
+		d->ui->enable_buzzer_btn->setTextOff("禁用");
+		d->ui->enable_buzzer_btn->setTextOn("启用");
 
-	//	d->pm3_cavity_vacuum_upper_limit_dsb->setValue(d->pm3_vacuum_setting);
-		//d->ui->pm3_vacuum_magnitude_dsb->setValue(d->pm3_vacuum_magnitude);
+		d->ui->enable_vacuum_btn->setShowText(true);
+		d->ui->enable_vacuum_btn->setBgColorOn(color2);
+		d->ui->enable_vacuum_btn->setTextOff("禁用");
+		d->ui->enable_vacuum_btn->setTextOn("启用");
 
+		d->ui->enable_pm1_btn->setShowText(true);
+		d->ui->enable_pm1_btn->setBgColorOn(color2);
+		d->ui->enable_pm1_btn->setTextOff("禁用");
+		d->ui->enable_pm1_btn->setTextOn("启用");
+
+
+		d->ui->enable_pm2_btn->setShowText(true);
+		d->ui->enable_pm2_btn->setBgColorOn(color3);
+		d->ui->enable_pm2_btn->setTextOff("禁用");
+		d->ui->enable_pm2_btn->setTextOn("启用");
+
+
+		d->ui->enable_pm3_btn->setShowText(true);
+		d->ui->enable_pm3_btn->setBgColorOn(color4);
+		d->ui->enable_pm3_btn->setTextOff("禁用");
+		d->ui->enable_pm3_btn->setTextOn("启用");
+						
+		d->ui->enable_pm4_btn->setShowText(true);
+		d->ui->enable_pm4_btn->setBgColorOn(color1);
+		d->ui->enable_pm4_btn->setTextOff("禁用");
+		d->ui->enable_pm4_btn->setTextOn("启用");
+
+		d->ui->enable_with_wafer_btn->setShowText(true);
+
+		d->ui->enable_with_wafer_btn->setBgColorOn(color1);
+		d->ui->enable_with_wafer_btn->setTextOff("禁用");
+		d->ui->enable_with_wafer_btn->setTextOn("启用");
 	}
 
 	void QControlModeVTMWidget::loadConfigFile(){

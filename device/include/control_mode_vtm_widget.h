@@ -31,18 +31,34 @@ namespace FC {
 	private slots:
 		void onSetBuzzerEnable();
 		void onSetBuzzerDisable();
+		void onSetBuzzerEnableStatus(bool checked);
+
 		void onSetVacuumEnable();
 		void onSetVacuumDisable();
+
+		void onSetVacuumEnableStatus(bool checked);
+
 		void onSetWithWaferModeEnable();
 		void onSetWithWaferModeDisable();
+
+		void onSetWithWaferModeStatus(bool checked);
+
 		void onSetPM1Enable();
 		void onSetPM1Disable();
+
+		void onSetPM1Enabletatus(bool checked);
+
 		void onSetPM2Enable();
 		void onSetPM2Disable();
+		void onSetPM2Enabletatus(bool checked);
+
 		void onSetPM3Enable();
 		void onSetPM3Disable();
+		void onSetPM3Enabletatus(bool checked);
+
 		void onSetPM4Enable();
 		void onSetPM4Disable();
+		void onSetPM4Enabletatus(bool checked);
 
 		void onSetLoadLock1VacuumParameters();
 		void onSetLoadLock2VacuumParameters();
@@ -53,7 +69,7 @@ namespace FC {
 
 		void updateState();
 
-
+		void InitUi();
 
 	private:
 		void loadConfigFile();

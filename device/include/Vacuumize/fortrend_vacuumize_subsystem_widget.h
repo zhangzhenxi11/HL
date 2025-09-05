@@ -55,7 +55,7 @@ private slots:
 
 private:
 	void onAttributeUpdate()throw(KernelException);
-
+	int convertRange(double vacuumValue);
 private:
     Q_DECLARE_PRIVATE(QVacuumizeSubsystemWidget)
     QVacuumizeSubsystemWidgetPrivate *d_ptr;

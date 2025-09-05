@@ -33,14 +33,14 @@ public:
     ~RobotDialog();
 	void AddStation(QRadioButton* selectBtn);
 	void AddArm(QRadioButton* selectBtn);
-	void AddSlot(QRadioButton* selectSlot);
+	void AddSlot(FC::QFortrendSlotWidget* selectSlot);
 
 	int  getSelectStation()const;
 	int  getSelectArm()const;
 	int  getSelectSlotId()const;
 signals:
-	void signalget(int arm, int stationid); // 定义一个信号
-	void signalput(int arm, int stationid); // 定义一个信号
+	void signalget(int arm, int stationid,int slot); // 定义一个信号
+	void signalput(int arm, int stationid, int slot); // 定义一个信号
 	void signalspeed(int speed); // 定义一个信号
 	void signalzspeed(int speed); // 定义一个信号
 

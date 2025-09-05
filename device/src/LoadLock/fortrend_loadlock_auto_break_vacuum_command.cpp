@@ -46,6 +46,7 @@
 #include "TMCavity/fortrend_tm_cavity_open_inserting_plate_valve_command.h"
 
 #include <windows.h>
+#include <pipelinewidget.h>
 
 
 #if _MSC_VER >= 1600
@@ -175,8 +176,10 @@ namespace FC{
 				break;
 			}
 			auto nextState = it->second();//执行回调函数
+
 			if (nextState == SystemState::CREATE_END)
 			{
+				pipeLineWidget::getInstance().stop();
 				d->ret == IKernelCommand::RunResult::RUN_OK;
 				//结束
 				logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成", d->sub->getName()).c_str());

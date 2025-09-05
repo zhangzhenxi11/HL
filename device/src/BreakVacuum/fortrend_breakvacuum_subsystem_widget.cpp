@@ -102,6 +102,8 @@ namespace FC{
 		Q_D(QBreakVacuumSubsystemWidget);
 		d->ui = new Ui::BreakVacuumSubsystemWidget;
 		d->ui->setupUi(this);
+		
+	
 
 		QKernelSubsystemStatusWidget* status_widget_tm = new QKernelSubsystemStatusWidget(d->tm);
 
@@ -231,6 +233,20 @@ namespace FC{
 		d->ui->tm__lla_door->setWaterDirection(2);
 		d->ui->tm__llb_door->setWaterDirection(2);
 
+		d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
+		d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
+		d->ui->gmfm_lla_progress->setPrecision(1);
+		d->ui->gmfm_lla_progress->setRange(0, 100);
+
+		d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
+		d->ui->gmfm_llb_progress->setPrecision(1);
+		d->ui->gmfm_llb_progress->setRange(0, 100);
+
+		d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
+		d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
+		d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
+		d->ui->gmfm_tm_progress->setPrecision(1);
+		d->ui->gmfm_tm_progress->setRange(0, 100);
 
 		//ui->widget_14->setWaterDirection(1);//设置从下往上流动
 		//ui->widget_15->setWaterDirection(1);//设置从下往上流动
@@ -386,6 +402,11 @@ namespace FC{
 		d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(d->tm->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
 		d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 		d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
+		
+		d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
+		d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
+		d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumValue()));
+		
 
 		if (d->tm->getFastDiaphragmValveOpend()){
 //			d->ui->gmfk_tm_w_1->setWaterDirection(1);//流动方向,0从左往右，1从右往左，其他停止流动
@@ -411,9 +432,6 @@ namespace FC{
 			d->ui->gmfm_tm->close();
 			d->gmfm_tm_ckb->setChecked(false);
 		}
-
-		
-
 
 		if (d->lk1->getFastDiaphragmValveOpend()){
 			d->ui->gmfk_lla_w_1->setWaterDirection(1);
@@ -466,6 +484,23 @@ namespace FC{
 			d->gmfm_llb_ckb->setChecked(false);
 		}
 		
+	}
+
+	int QBreakVacuumSubsystemWidget::convertRange(double vacuumValue)
+	{
+		// 边界处理：确保输入值在有效范围内
+		if (vacuumValue < 0.0) {
+			vacuumValue = 0.0;
+		}
+		else if (vacuumValue >= 99900) {
+			vacuumValue = 99900;
+		}
+
+		// 线性映射：将0~99900转换为0~100
+		double progress = (vacuumValue / 99900) * 100.0;
+
+		// 四舍五入为整数并设置到进度条
+		return (static_cast<int>(round(progress)));
 	}
 
 	void QBreakVacuumSubsystemWidget::showMessage(const QString& message){

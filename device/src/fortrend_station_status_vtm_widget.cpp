@@ -16,12 +16,8 @@
 #include "SunwayRobot/fortrend_sunwayrobot_subsystem.h"
 #include "kernel/FortrendUI/mapper_status_widget.h"
 #include "kernel/kernel_abstract_subsystem.h"
-
 #include "Kernel/kernel_event_module.h"
 #include "Kernel/kernel_event_paramters.h"
-
-#include "SunwayRobot/fortrend_sunwayrobot_get_wafer_command.h"
-#include "SunwayRobot/fortrend_sunwayrobot_put_wafer_command.h"
 
 #include "Kernel/FortrendUI/slot_widget.h"
 #include  "Kernel/FortrendUI/cassette_widget.h"
@@ -30,8 +26,6 @@
 #include  "TMCavity/fortrend_main_tm_cavity_subsystem_widget.h"
 #include  "PMCavity/fortrend_main_pm_cavity_subsystem_widget.h"
 #include  "LoadLock/fortrend_main_loadlock_subsystem_widget.h"
-
-#include "SunwayRobot/fortrend_sunwayrobot_subsystem.h" 
 #include "SunwayRobot/fortrend_sunwayrobot_output_command.h"
 #include "SunwayRobot/fortrend_sunwayrobot_reset_command.h"
 #include "SunwayRobot/fortrend_sunwayrobot_update_command.h"
@@ -91,10 +85,13 @@
 #include <QString>
 #include <qdebug.h>
 #include "QMessageBox"
+
+
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
 
+using namespace Qt;
 
 namespace FC{
 
@@ -134,6 +131,7 @@ namespace FC{
 		QFortrendSlotWidget* slot_widgetB;
 		//vtmrobot *robot;
 
+
 		std::shared_ptr<IKernel> kernel;
 		QFortrendStationStatusVTMWidget* q_ptr;
 
@@ -166,11 +164,12 @@ namespace FC{
 		QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem> *wtrwidget;
 
 
-		int stationidlk1=0;
-		int stationidlk2=4;
-		int stationidpm1 = 1;
-		int stationidpm2=2;
-		int stationidpm3 = 3;
+		int stationidlk1 = 1;
+		int stationidpm1 = 2;
+		int stationidpm2 = 3;
+		int stationidpm3 = 4;
+		int stationidpm4 = 5;
+		int stationidlk2 = 6;
 		int stationidaligner=5;
 	
 	};
@@ -227,6 +226,8 @@ namespace FC{
 		}
 		//添加工位和手爪配置
 #pragma region 添加工位和手爪配置
+#if 0
+		QButtonGroup* stationGroup = new QButtonGroup;
 		//create station select
 		for (int i = 0; i < wtr->getWorkStations().size(); i++)
 		{
@@ -235,36 +236,43 @@ namespace FC{
 			radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(wtr->getName())));
 			radioButton->setProperty("index", i); //index
 			robotdialog->AddStation(radioButton);
+			stationGroup->addButton(radioButton, i);
 			if (i == 0)
 			{
 				radioButton->setChecked(true);
 			}
 
+			// static_cast<void(QButtonGroup::*)(QAbstractButton*)>(&QButtonGroup::buttonClicked)
+
+			QObject::connect(stationGroup, static_cast<void(QButtonGroup::*)(QAbstractButton*)>(&QButtonGroup::buttonClicked), this, [=]() {
 			
-			if (station->getStationId(wtr->getName()) == 1)
-			{
-				QRadioButton* radioButton = new QRadioButton;
-				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg("1"));
-				radioButton->setProperty("index", i); //index
-				robotdialog->AddSlot(radioButton);
 				
-			}
-			else if (station->getStationId(wtr->getName()) == 6)
-			{
-				QRadioButton* radioButton = new QRadioButton;
-				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg("2"));
-				radioButton->setProperty("index", 2); //index
-				robotdialog->AddSlot(radioButton);
-			}
-			else {
-			
-				QRadioButton* radioButton = new QRadioButton;
-				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg("1"));
-				radioButton->setProperty("index", 1); //index
-				robotdialog->AddSlot(radioButton);
-			}
+				// 获取对话框的布局
+				QLayout* slotsLayout = robotdialog->findChild<QLayout*>("slots_layout"); // 假设布局有对象名
+
+				// 清除布局中的所有内容
+				if (slotsLayout) {
+					QLayoutItem* child;
+					while ((child = slotsLayout->takeAt(0)) != nullptr) {
+						if (child->widget()) {
+							delete child->widget();
+						}
+						delete child;
+					}
+				}
+				//recreate
+				Cassette::Ptr cass = cassManager->getCassette(station.get());
+				if (cass) {
+					QFortrendSlotWidget* w = new QFortrendSlotWidget(cass, 15, 20); //max row count = 5
+					w->canSelected(true, false);
+					//d->ui->slots_layout->addWidget(w);
+					//d->ui->slots_layout->addStretch();
+				}
+				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(wtr->getName())));
+			});
+
 		}
-		
+#endif		
 
 		//create arm select
 		for (int i = 0; i < wtr->armCount(); i++)
@@ -583,6 +591,7 @@ namespace FC{
 		, d_ptr(new QFortrendStationStatusVTMWidgetPrivate(this, kernel)){
 		Q_D(QFortrendStationStatusVTMWidget);
 
+		
 		d->ui = new Ui::FortrendStationStatusVTMWidget;
 		d->ui->setupUi(this);
 		d->ui->pm1_widget->setRotationAngle(0);
@@ -637,6 +646,8 @@ namespace FC{
 		d->ui->stackedWidget->addWidget(d->mainLoadlock2Widget);
 		d->ui->stackedWidget->addWidget(d->mainTMWidget);
 		d->ui->stackedWidget->addWidget(d->mainRobotWidget);
+		initTipsUI();
+		
 
 		auto  casslk1 = d->cassManager->getCassette(d->lk1.get());
 		if (casslk1){
@@ -645,7 +656,7 @@ namespace FC{
 			d->slot_widgetA->canSelected(true, false);
 			d->slot_widgetA->setName(QString::fromStdString("LLA"));
 			d->ui->gridLayoutA->addWidget(d->slot_widgetA, 0, 0, Qt::AlignLeft);
-			QObject::connect(d->slot_widgetA, SIGNAL(clickd(int)), this, SLOT(_onSelectASlot(int)));
+			
 			QWidget* cassette_Widget = new QFortrendCassetteWidget(casslk1, d->cassManager, true, true, 25, this); //max row count = 25
 			d->ui->center_layout->addWidget(cassette_Widget);
 		}
@@ -720,7 +731,47 @@ namespace FC{
 			d->ui->center_layout->addWidget(cassette_Widget);
 		}
 
-		
+		//create station select
+		for (int i = 0; i < d->wtr->getWorkStations().size(); i++)
+		{
+			auto station = d->wtr->getWorkStations().at(i);
+			QRadioButton* radioButton = new QRadioButton;
+			radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(d->wtr->getName())));
+			radioButton->setProperty("index", i); //index
+			d->robotdialog->AddStation(radioButton);
+			//stationGroup->addButton(radioButton, i);
+			if (i == 0)
+			{
+				radioButton->setChecked(true);
+			}
+			
+			//不能加在private类中，因为私有类不是Qt的作用域，找不到Qt
+			QObject::connect(radioButton, &QRadioButton::clicked, this, [=]() {
+
+				// 获取对话框的布局
+				QLayout* slotsLayout = d->robotdialog->findChild<QLayout*>("slots_layout"); // 假设布局有对象名
+
+				// 清除布局中的所有内容
+				if (slotsLayout) {
+					QLayoutItem* child;
+					while ((child = slotsLayout->takeAt(0)) != nullptr) {
+						if (child->widget()) {
+							delete child->widget();
+						}
+						delete child;
+					}
+				}
+				//recreate
+				Cassette::Ptr cass = d->cassManager->getCassette(station.get());
+				if (cass) {
+					QFortrendSlotWidget* w = new QFortrendSlotWidget(cass, 15, 20); //max row count = 5
+					w->canSelected(true, false);
+					d->robotdialog->AddSlot(w);
+				}
+				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(d->wtr->getName())));
+			});
+		}
+
 		
 		//lambada 表达式做槽函数
 		d->ui->stackedWidget->setCurrentIndex(7);
@@ -792,18 +843,18 @@ namespace FC{
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenbox, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenbox);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAClosebox, this, &QFortrendStationStatusVTMWidget::onLoadLockClosebox);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAMapping, this, &QFortrendStationStatusVTMWidget::onLoadLockMapping);
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAMoveToSlot, this, &QFortrendStationStatusVTMWidget::onLoadLockMoveToSlot);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAMoveToSlot, this, &QFortrendStationStatusVTMWidget::onLoadLockMoveToSlot);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenTMCavityDoor);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockACloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseTMCavityDoor);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenDiaphragmValve);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockACloseDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseDiaphragmValve);
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenExhaustValve);
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockACloseExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseExhaustValve);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenExhaustValve);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockACloseExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseExhaustValve);
 
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockAOpenInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onOpenInsertingPlateValve);
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockACloseInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onCloseInsertingPlateValve);
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockAOpenHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onOpenHeightVacuumBaffleValve);
-		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockACloseHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onCloseHeightVacuumBaffleValve);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockAOpenInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onOpenInsertingPlateValve);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockACloseInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onCloseInsertingPlateValve);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockAOpenHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onOpenHeightVacuumBaffleValve);
+		//QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoaLockACloseHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onCloseHeightVacuumBaffleValve);
 
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenAngleValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenAngleValve);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockACloseAngleValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseAngleValve);
@@ -816,18 +867,18 @@ namespace FC{
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBOpenbox, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenbox);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBClosebox, this, &QFortrendStationStatusVTMWidget::onLoadLockClosebox);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBMapping, this, &QFortrendStationStatusVTMWidget::onLoadLockMapping);
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBMoveToSlot, this, &QFortrendStationStatusVTMWidget::onLoadLockMoveToSlot);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBMoveToSlot, this, &QFortrendStationStatusVTMWidget::onLoadLockMoveToSlot);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenTMCavityDoor);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBCloseTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseTMCavityDoor);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBOpenDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenDiaphragmValve);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBCloseDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseDiaphragmValve);
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBOpenExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenExhaustValve);
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBCloseExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseExhaustValve);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBOpenExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenExhaustValve);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBCloseExhaustValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseExhaustValve);
 
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBOpenInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onOpenInsertingPlateValve);
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBCloseInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onCloseInsertingPlateValve);
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBOpenHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onOpenHeightVacuumBaffleValve);
-		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBCloseHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onCloseHeightVacuumBaffleValve);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBOpenInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onOpenInsertingPlateValve);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBCloseInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onCloseInsertingPlateValve);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBOpenHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onOpenHeightVacuumBaffleValve);
+		//QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoaLockBCloseHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onCloseHeightVacuumBaffleValve);
 
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBOpenAngleValve, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenAngleValve);
 		QObject::connect(d->ui->loadlockB_widget, &LoadLockB::signalLoadLockBCloseAngleValve, this, &QFortrendStationStatusVTMWidget::onLoadLockCloseAngleValve);
@@ -840,12 +891,12 @@ namespace FC{
 #pragma region TM模块信号槽绑定
 		QObject::connect(d->ui->tm_widget, &TM::signalTMOpenDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onTMOpenDiaphragmValve);
 		QObject::connect(d->ui->tm_widget, &TM::signalTMCloseDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onTMCloseDiaphragmValve);
-		QObject::connect(d->ui->tm_widget, &TM::signalTMOpenHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onTMOpenHeightVacuumBaffleValve);
-		QObject::connect(d->ui->tm_widget, &TM::signalTMCloseHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onTMCloseHeightVacuumBaffleValve);
+		//QObject::connect(d->ui->tm_widget, &TM::signalTMOpenHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onTMOpenHeightVacuumBaffleValve);
+		//QObject::connect(d->ui->tm_widget, &TM::signalTMCloseHeightVacuumBaffleValve, this, &QFortrendStationStatusVTMWidget::onTMCloseHeightVacuumBaffleValve);
 		QObject::connect(d->ui->tm_widget, &TM::signalTMOpenAngleValve, this, &QFortrendStationStatusVTMWidget::onTMOpenAngleValve);
 		QObject::connect(d->ui->tm_widget, &TM::signalTMCloseAngleValve, this, &QFortrendStationStatusVTMWidget::onTMCloseAngleValve);
-		QObject::connect(d->ui->tm_widget, &TM::signalTMOpenInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onTMOpenInsertingPlateValve);
-		QObject::connect(d->ui->tm_widget, &TM::signalTMCloseInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onTMCloseInsertingPlateValve);
+		//QObject::connect(d->ui->tm_widget, &TM::signalTMOpenInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onTMOpenInsertingPlateValve);
+		//QObject::connect(d->ui->tm_widget, &TM::signalTMCloseInsertingPlateValve, this, &QFortrendStationStatusVTMWidget::onTMCloseInsertingPlateValve);
 		QObject::connect(d->ui->tm_widget, &TM::signalTMOpenFlowmeterDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onTMOpenFlowmeterDiaphragmValve);
 		QObject::connect(d->ui->tm_widget, &TM::signalTMCloseFlowmeterDiaphragmValve, this, &QFortrendStationStatusVTMWidget::onTMCloseFlowmeterDiaphragmValve);
 		QObject::connect(d->ui->tm_widget, &TM::signalTMReset, this, &QFortrendStationStatusVTMWidget::onTMReset);
@@ -1063,7 +1114,7 @@ namespace FC{
 		KernelSubsystemCommand::Ptr cmd = d->wtr->createClearErrorCommand();
 		d->wtrwidget->executeCommand(d->wtr, cmd);
 	};
-	void QFortrendStationStatusVTMWidget::onRobotGet(int station,int arm){
+	void QFortrendStationStatusVTMWidget::onRobotGet(int station,int arm, int slot){
 		Q_D(QFortrendStationStatusVTMWidget);
 		if (station == -1){
 			//QMessageBox::information(d->robotdialog, "warn", "请选择取料工位");
@@ -1092,13 +1143,13 @@ namespace FC{
 			stationIsWafer = stationcass->getMapping(d->ui->loadlockA_widget->GetCurrentSlot()) == Cassette::Present;
 			station = d->stationidlk1;
 		}
-		else if (station == 2){
+		else if (station == 6){
 			stationIsWafer = stationcass->getMapping(d->ui->loadlockB_widget->GetCurrentSlot()) == Cassette::Present;
 			station = d->stationidlk2;
 		}
 		else{
 			stationIsWafer = stationcass->getMapping(1) == Cassette::Present;
-			station == 1 ? station = d->stationidpm2 : station = d->stationidaligner;
+			//station == 1 ? station = d->stationidpm2 : station = d->stationidaligner;
 		}
 		if (!stationIsWafer){
 			//QMessageBox::information(d->robotdialog, "warn", QString("工位%1没有料，禁止取料，请重新检查!").arg(stationptr->getName().c_str()));
@@ -1107,12 +1158,12 @@ namespace FC{
 		}
 		d->ui->robot_widget->setCurrentStation(station);
 		d->ui->robot_widget->setCurrentArm(arm);
-		KernelSubsystemCommand::Ptr cmd = d->wtr->createGetCommand(stationptr, arm, 1);
+		KernelSubsystemCommand::Ptr cmd = d->wtr->createGetCommand(stationptr, arm, slot);
 		d->wtrwidget->executeCommand(d->wtr, cmd);
 		//Animation(station,arm,"get");
 		
 	};
-	void QFortrendStationStatusVTMWidget::onRobotPut(int station, int arm){
+	void QFortrendStationStatusVTMWidget::onRobotPut(int station, int arm, int slot){
 		Q_D(QFortrendStationStatusVTMWidget);
 		if (station == -1){
 			//QMessageBox::information(d->robotdialog, "warn", "请选择放料工位!");
@@ -1147,7 +1198,7 @@ namespace FC{
 		}
 		else{
 			stationIsWafer = stationcass->getMapping(1) == Cassette::Present;//Mapping从1开始算
-			station == 1 ? station = d->stationidpm2 : station = d->stationidaligner;
+			//station == 1 ? station = d->stationidpm2 : station = d->stationidaligner;
 		}
 		if (stationIsWafer){
 			//QMessageBox::information(d->robotdialog, "warn", QString("工位%1有料，禁止放料，请重新检查!").arg(stationptr->getName().c_str()));
@@ -1157,47 +1208,48 @@ namespace FC{
 
 		d->ui->robot_widget->setCurrentStation(station);
 		d->ui->robot_widget->setCurrentArm(arm);
-		KernelSubsystemCommand::Ptr cmd = d->wtr->createPutCommand(stationptr, arm, 1);
+		KernelSubsystemCommand::Ptr cmd = d->wtr->createPutCommand(stationptr, arm, slot);
 		d->wtrwidget->executeCommand(d->wtr, cmd);
 		//d->Animation(station, arm,"put");
 		
 	};
 	void QFortrendStationStatusVTMWidget::onRobotGetFinished(){
 		Q_D(QFortrendStationStatusVTMWidget);
-		/*int arm = d->ui->robot_widget->getCurrentArm();
-		auto robotcass = d->cassManager->getCassette(d->wtr.get());
-		robotcass->setMapping(arm + 1, Cassette::Present);
-*/
+		//int arm = d->ui->robot_widget->getCurrentArm();
+		//auto robotcass = d->cassManager->getCassette(d->wtr.get());
+		//robotcass->setMapping(arm + 1, Cassette::Present);
+
 		int station = d->ui->robot_widget->getCurrentStation();
 		if (station == d->stationidlk1){
-			/*int slot=d->ui->loadlockA_widget->GetCurrentSlot();
+		/*int slot = d->ui->loadlockA_widget->GetCurrentSlot();
 			auto cassA = d->cassManager->getCassette(d->lk1.get());
 			cassA->setMapping(slot, Cassette::Empty);*/
 		}
-		/*else if (station == 1){
+		else if (station == d->stationidpm1){
 			d->ui->pm1_widget->setWafer(false);
 			auto pm1cass = d->cassManager->getCassette(d->pm1.get());
 			pm1cass->setMapping(1, Cassette::Empty);
-		}*/
+		}
 		else if (station == d->stationidpm2){
 			d->ui->pm2_widget->setWafer(false);
-			/*auto pm2cass = d->cassManager->getCassette(d->pm2.get());
-			pm2cass->setMapping(1, Cassette::Empty);*/
+			auto pm2cass = d->cassManager->getCassette(d->pm2.get());
+			pm2cass->setMapping(1, Cassette::Empty);
 		}
-		/*else if (station == 3){
+		else if (station == d->stationidpm3){
 			d->ui->pm3_widget->setWafer(false);
 			auto pm3cass = d->cassManager->getCassette(d->pm3.get());
 			pm3cass->setMapping(1, Cassette::Empty);
-		}*/
+		}
+		else if (station == d->stationidpm4)
+		{
+			d->ui->pm4_widget->setWafer(false);
+			auto pm4cass = d->cassManager->getCassette(d->pm4.get());
+			pm4cass->setMapping(1, Cassette::Empty);
+		}
 		else if (station == d->stationidlk2){
-			/*int slot = d->ui->loadlockB_widget->GetCurrentSlot();
+		/*int slot = d->ui->loadlockB_widget->GetCurrentSlot();
 			auto cassB = d->cassManager->getCassette(d->lk2.get());
 			cassB->setMapping(slot, Cassette::Empty);*/
-		}
-		else if (station == d->stationidaligner){
-			d->ui->tm_widget->setIsWaferAligner(false);
-			/*auto aligner = d->cassManager->getCassette(d->aligner.get());
-			aligner->setMapping(1, Cassette::Empty);*/
 		}
 
 	}
@@ -1212,30 +1264,31 @@ namespace FC{
 			auto cassA = d->cassManager->getCassette(d->lk1.get());
 			cassA->setMapping(slot, Cassette::Present);*/
 		}
-		/*else if (station == 1){
+		else if (station == d->stationidpm1){
 			d->ui->pm1_widget->setWafer(true);
 			auto pm1cass = d->cassManager->getCassette(d->pm1.get());
 			pm1cass->setMapping(1, Cassette::Present);
-		}*/
+		}
 		else if (station == d->stationidpm2){
 			d->ui->pm2_widget->setWafer(true);
-			/*auto pm2cass = d->cassManager->getCassette(d->pm2.get());
-			pm2cass->setMapping(1, Cassette::Present);*/
+			auto pm2cass = d->cassManager->getCassette(d->pm2.get());
+			pm2cass->setMapping(1, Cassette::Present);
 		}
-		/*else if (station == 3){
+		else if (station == d->stationidpm3){
 			d->ui->pm3_widget->setWafer(true);
 			auto pm3cass = d->cassManager->getCassette(d->pm3.get());
 			pm3cass->setMapping(1, Cassette::Present);
-		}*/
+		}
+		else if (station == d->stationidpm4)
+		{
+			d->ui->pm4_widget->setWafer(true);
+			auto pm4cass = d->cassManager->getCassette(d->pm4.get());
+			pm4cass->setMapping(1, Cassette::Present);
+		}
 		else if (station == d->stationidlk2){
 			/*int slot = d->ui->loadlockB_widget->GetCurrentSlot();
 			auto cassB = d->cassManager->getCassette(d->lk2.get());
 			cassB->setMapping(slot, Cassette::Present);*/
-		}
-		else if (station == d->stationidaligner){
-			d->ui->tm_widget->setIsWaferAligner(true);
-			/*auto aligner = d->cassManager->getCassette(d->aligner.get());
-			aligner->setMapping(1, Cassette::Present);*/
 		}
 	}
 
@@ -1543,7 +1596,18 @@ namespace FC{
 
 	void QFortrendStationStatusVTMWidget::initTipsUI(){
 		Q_D(QFortrendStationStatusVTMWidget);
+		//d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
+		//d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
+		//d->ui->gmfm_lla_progress->setRange(0, 100);
 
+		//d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
+		//d->ui->gmfm_llb_progress->setPrecision(1);
+		//d->ui->gmfm_llb_progress->setRange(0, 100);
+
+		//d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
+		//d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
+		//d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
+		//d->ui->gmfm_tm_progress->setRange(0, 100);
 	}
 
 	void QFortrendStationStatusVTMWidget::updateState(){

@@ -21,6 +21,7 @@
 #include "chamberwidget.h"
 #include "gdt_pmwidget.h"
 
+#include "ProgressColor.h" //½ø¶ÈÌõ
 #include <QWidget>
 #include "qcoreapplication.h"
 #include "qimage.h"
@@ -61,8 +62,8 @@ namespace FC {
 		void onRobotClearError();
 		//void onRobotData();
 		//void onRobotStatusDialog();
-		void onRobotGet(int station, int arm);
-		void onRobotPut(int station, int arm);
+		void onRobotGet(int station, int arm, int slot);
+		void onRobotPut(int station, int arm, int slot);
 		void onRobotSpeed(int speed);
 		void onRobotZSpeed(int speed);
 		void onRobotGetFinished();

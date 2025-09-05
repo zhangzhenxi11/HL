@@ -33,7 +33,7 @@ void RobotDialog::AddArm(QRadioButton* armBtn){
 	ui->arm_layout->addWidget(armBtn);
 }
 
-void RobotDialog::AddSlot(QRadioButton* selectSlot)
+void RobotDialog::AddSlot(FC::QFortrendSlotWidget* selectSlot)
 {
 	ui->slots_layout->addWidget(selectSlot);
 	ui->slots_layout->addStretch();
@@ -72,13 +72,12 @@ int  RobotDialog::getSelectArm()const{
 
 int RobotDialog::getSelectSlotId() const
 {
-	int index = -1;
-	for (int i = 0; i < ui->arm_layout->count(); i++) {
-		QLayoutItem* child = ui->arm_layout->itemAt(i);
-		QRadioButton* radio_child = qobject_cast<QRadioButton*>(child->widget());
-		if (radio_child && radio_child->isChecked()) {
-			index = radio_child->property("index").toInt();
-			return index;
+	for (int i = 0; i <ui->slots_layout->count(); i++)
+	{
+		QLayoutItem* child = ui->slots_layout->itemAt(i);
+		FC::QFortrendSlotWidget* w = qobject_cast<FC::QFortrendSlotWidget*>(child->widget());
+		if (w) {
+			return w->selected().size() > 0 ? w->selected().at(0) : -1;
 		}
 	}
 	return -1;
@@ -87,13 +86,15 @@ int RobotDialog::getSelectSlotId() const
 void RobotDialog::onGet(){
 	int station = getSelectStation();
 	int arm = getSelectArm();
-	emit signalget(station,arm);
+	int slot = getSelectSlotId();
+	emit signalget(station,arm, slot);
 }
 
 void RobotDialog::onPut(){
 	int station = getSelectStation();
 	int arm = getSelectArm();
-	emit signalput(station, arm);
+	int slot = getSelectSlotId();
+	emit signalput(station, arm, slot);
 }
 
 void RobotDialog::onSetSpeed(){
