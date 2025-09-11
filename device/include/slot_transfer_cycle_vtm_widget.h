@@ -70,6 +70,7 @@ namespace  FC {
 		void status_Changed();
 		void updateProcessControlEnabled(const bool enabled);
 		void updateControlEnabled(const QString control,const bool enabled);
+		void updateLightButtonStatus(const QString control, const int color);
 
 		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 
 			double max_value, double single_step, double value, int decimals_value = 3);

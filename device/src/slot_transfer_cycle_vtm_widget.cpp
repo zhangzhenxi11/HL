@@ -106,8 +106,8 @@
 
 #include "UnifiedWaferTask.h"
 #include "TaskManager.h"
-#include "ThreadSafeStateMachine.h"
 
+#include "ThreadSafeStateMachine.h"
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
@@ -249,6 +249,8 @@ namespace FC{
 		void onUpdateProcessControlEnabled(const bool value);
 
 		void onUpdateControlEnabled(const QString control, const bool enabled);
+
+		void onUpdateLightButtonStatus(const QString control, const int color);
 
 		virtual void onAttributeChange(const IKernelCommand* cmd);
 
@@ -766,6 +768,12 @@ namespace FC{
 	void QSlotTransferCycleVTMWidgetPrivate::onUpdateControlEnabled(const QString control, const bool enabled){
 		QMetaObject::invokeMethod(q_ptr, "updateControlEnabled", Qt::AutoConnection,
 			Q_ARG(QString, control), Q_ARG(bool, enabled));
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::onUpdateLightButtonStatus(const QString control, const int color)
+	{
+		QMetaObject::invokeMethod(q_ptr, "updateLightButtonStatus", Qt::AutoConnection,
+			Q_ARG(QString, control), Q_ARG(int, color));
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::onAttributeChange(const IKernelCommand* cmd){
@@ -6745,6 +6753,8 @@ namespace FC{
 		onUpdateControlEnabled("reset_pbt", false);
 		onUpdateControlEnabled("execute_pbt", false);
 		onUpdateControlEnabled("pause_pbt", false);
+		onUpdateLightButtonStatus("light_reset_pbt",0);
+		onUpdateLightButtonStatus("light_running_pbt", 1);
 
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
@@ -7133,7 +7143,7 @@ namespace FC{
 				reset_loop = false;
 				reset_finish = true;
 				rest_step = -1;
-
+				
 			}
 			break;
 			case 15000:
@@ -7157,6 +7167,9 @@ namespace FC{
 
 			onUpdateControlEnabled("loadlock1_put_cassette_finished_pbt", false);
 			onUpdateControlEnabled("loadlock2_put_cassette_finished_pbt", false);
+
+			onUpdateLightButtonStatus("light_reset_pbt", 1);
+			onUpdateLightButtonStatus("light_running_pbt", 2);
 
 			//reset_finish = false;
 
@@ -8404,6 +8417,7 @@ namespace FC{
 		ispause = true;
 		logError(station_name.c_str(), log.c_str());
 		onUpdateControlEnabled("execute_pbt", true);
+		onUpdateLightButtonStatus("light_running_pbt", 3);
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::logFailedNotNormal(const std::string station_name, const std::string process_name, const int step){
@@ -8479,8 +8493,8 @@ namespace FC{
 
 		//d->ui->gbx_pm_parameter->hide();
 
-		//d->ui->loadlock1_put_cassette_finished_pbt->hide();
-		//d->ui->loadlock2_put_cassette_finished_pbt->hide();
+		d->ui->loadlock1_put_cassette_finished_pbt->hide();
+		d->ui->loadlock2_put_cassette_finished_pbt->hide();
 
 		d->ui->spb_min->hide();
 		d->ui->spb_max->hide();
@@ -8491,7 +8505,6 @@ namespace FC{
 		d->ui->abort_pbt->hide();
 		//d->ui->enablesmif1->hide();
 		//d->ui->enablesmif2->hide();
-
 		//注释
 		//std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::onProcess, this);
 		//thd_vacuum.detach();
@@ -8973,12 +8986,14 @@ namespace FC{
 
 		//2025-8-06
 		d->onUpdateProcessControlEnabled(true);
+		d->onUpdateLightButtonStatus("light_running_pbt", 2);
 	}
 
 	void QSlotTransferCycleVTMWidget::onAbort(){
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->setTransferSequence();
 		d->onUpdateProcessControlEnabled(true);
+
 		/*if (!d->abortCycle){
 			d->abortCycle = true;
 			d->ui->reset_pbt->setEnabled(true);
@@ -8995,6 +9010,7 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->startAllThreads();
+		d->onUpdateLightButtonStatus("light_running_pbt", 1);
 	}
 
 	void QSlotTransferCycleVTMWidget::onReset(){
@@ -9028,7 +9044,6 @@ namespace FC{
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
-
 
 		//if (!d->reset_finish)
 		//{
@@ -9151,6 +9166,8 @@ namespace FC{
 		Sleep(500);
 		//新流程线程启动
 		//startProcessingThreads();
+
+		d->onUpdateLightButtonStatus("light_running_pbt", 1);
 
 		d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
 		d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
@@ -9598,6 +9615,54 @@ namespace FC{
 
 		}
 		
+	}
+
+	void QSlotTransferCycleVTMWidget::updateLightButtonStatus(const QString control, const int color)
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		if (control == "light_reset_pbt")
+		{
+			if(color == 1)
+			{
+				//复位完成
+				d->ui->light_running_pbt->setLightGreen();
+				d->ui->reset_status->setText("复位完成");
+			}
+			else
+			{
+				d->ui->light_running_pbt->setLightBlue();
+				d->ui->reset_status->setText("待复位");
+			}
+		}
+		else if (control == "light_running_btn")
+		{
+			if (color == 1)
+			{
+				d->ui->light_running_pbt->stopAlarm();
+				//运行
+				d->ui->light_running_pbt->setLightGreen();
+				d->ui->run_status->setText("运行中");
+			}
+			else if (color == 2)
+			{
+				//空闲
+				d->ui->light_running_pbt->stopAlarm();
+				d->ui->light_running_pbt->setYellow();
+				d->ui->run_status->setText("空闲");
+			}
+			else if (color == 3)
+			{
+				//报警
+				d->ui->light_running_pbt->setAlarmColor(QColor(255, 0, 0));
+				d->ui->light_running_pbt->setNormalColor(QColor(0, 0, 0));
+				d->ui->light_running_pbt->startAlarm();
+				d->ui->run_status->setText("报警");
+			}
+			else {
+				//初始
+
+			}
+		}
 	}
 
 	void QSlotTransferCycleVTMWidget::addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value){

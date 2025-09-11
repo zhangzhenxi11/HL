@@ -610,45 +610,25 @@
          <string>流程状态</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="LightButton" name="light_reset_btn" native="true"/>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>复位</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="LightButton" name="light_running_btn" native="true"/>
-         </item>
          <item row="1" column="1">
-          <widget class="QLabel" name="label_8">
+          <widget class="QLabel" name="run_status">
            <property name="text">
             <string>运行</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="LightButton" name="light_alarm_btn" native="true"/>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLabel" name="label_9">
+         <item row="0" column="1">
+          <widget class="QLabel" name="reset_status">
            <property name="text">
-            <string>报警</string>
+            <string>复位</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
-          <widget class="LightButton" name="light_idle_btn" native="true"/>
+         <item row="0" column="0">
+          <widget class="LightButton" name="light_reset_pbt" native="true"/>
          </item>
-         <item row="3" column="1">
-          <widget class="QLabel" name="label_10">
-           <property name="text">
-            <string>空闲</string>
-           </property>
-          </widget>
+         <item row="1" column="0">
+          <widget class="LightButton" name="light_running_pbt" native="true"/>
          </item>
         </layout>
        </widget>
