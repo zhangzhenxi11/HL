@@ -62,7 +62,7 @@ namespace FC{
 		double backing_pipeline_vacuum_current_value = 100000.0;	   //前级泵管路当前真空值
 
 		std::string Axial_pressure_gage_address = "";                  //轴向压力表-1 NL/真空
-		bool axial_pressure_gage_state = false;                            //轴向压力表信号
+		bool axial_pressure_gage_state = false;                        //轴向压力表信号
 
 		std::string CDA_pressure_address = "";                         //总气源空压三联件信号
 		bool cda_signal_state = false;
@@ -277,6 +277,11 @@ namespace FC{
 		return d->tm_cavity_vacuum_pressure_gage_state;
 	}
 
+	double FortrendTMCavitySubsystem::getTMCavityVacuumUpperlimitValue()
+	{
+		return d->tm_cavity_vacuum_upper_limit_set_value;
+	}
+
 	/*
 	*达到粗抽压力
 	*/
@@ -306,6 +311,11 @@ namespace FC{
 	{
 		d->pm_cavity_door_Opend[number] = state;
 		AbstractIOSubsystem::emitAttributeChanged(this);
+	}
+
+	double FortrendTMCavitySubsystem::getTMCavityVacuumExtractionSetValue()
+	{
+		return d->tm_cavity_vacuum_upper_limit_set_value;
 	}
 
 	/*

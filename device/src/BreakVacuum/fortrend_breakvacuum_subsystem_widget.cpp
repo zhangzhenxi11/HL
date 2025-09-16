@@ -403,10 +403,10 @@ namespace FC{
 		d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 		d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 		
+		//进度条
 		d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
-		d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
 		d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumValue()));
-		
+		d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
 
 		if (d->tm->getFastDiaphragmValveOpend()){
 //			d->ui->gmfk_tm_w_1->setWaterDirection(1);//流动方向,0从左往右，1从右往左，其他停止流动
@@ -492,12 +492,12 @@ namespace FC{
 		if (vacuumValue < 0.0) {
 			vacuumValue = 0.0;
 		}
-		else if (vacuumValue >= 99900) {
-			vacuumValue = 99900;
+		else if (vacuumValue >= 100000) {
+			vacuumValue = 100000;
 		}
 
-		// 线性映射：将0~99900转换为0~100
-		double progress = (vacuumValue / 99900) * 100.0;
+		// 线性映射：将0~100000转换为0~100
+		double progress = (vacuumValue / 100000) * 100.0;
 
 		// 四舍五入为整数并设置到进度条
 		return (static_cast<int>(round(progress)));

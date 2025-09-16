@@ -358,21 +358,10 @@ namespace FC{
 
 		bool tool_allow_put_wafer_LLB = false; // LLB下料请求
 
-		
-
-		// 为每个变量添加互斥锁
-		//std::mutex get_wafer_mutex_LLA;
-		//std::mutex put_wafer_mutex_LLA;
-		//std::mutex get_wafer_mutex_LLB;
-		//std::mutex put_wafer_mutex_LLB;
-
+	
 		std::mutex current_loadlock_mux;
 		// 添加当前处理的LoadLock标识
 		std::string current_loadlock; // "LLA" 或 "LLB"
-
-		//std::mutex get_wafer_mutex;
-		//std::mutex put_wafer_mutex;
-
 
 		bool tool_allow_pm1_get_wafer = false;//true呼叫pm1上料，  false pm1上料完成
 		bool tool_allow_pm1_put_wafer = false; //true呼叫pm1下料，  false pm1下料完成
@@ -1008,22 +997,7 @@ namespace FC{
 				#pragma region 给TOOL上料
 				case 100:
 				{
-					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
-
-					// 检查是否已上锁
-					//if (!efem_robot_mutex.is_locked())
-					//{
-					//	// 执行需要加锁的操作...
-					//	efem_robot_mutex.lock();
-					//}
-					
-					//2025-8-27 由于第二次循环时，
-					// 当llb持有上料锁时，线程执行上次阻塞住在case201：导致----->
-					// 会执行解锁操作，此时时解锁了，让互斥锁不起效果！！ 那么lla也来上料了，lla持有互斥锁了，且修改了临界变量current_loadlock 为LLA,导致逻辑混乱!!!
-					//efem_robot_mutex.lock();
-					
-
-					logWarn("EFEM", "step:100,给%s上料 Lock thread...", current_loadlock.c_str());
+					logWarn("EFEM", "efem_auto_step:100,给%s上料 Lock thread...", current_loadlock.c_str());
 
 					if (efemUnkownStatusTasks.size() > 0)
 					{
@@ -1212,7 +1186,7 @@ namespace FC{
 									tool_allow_get_wafer_LLA = false;
 								}
 								else if (current_loadlock == "LLB") {
-									logWarn("cycle", "step:110,给TOOL上料 LLA unLock  thread...");
+									logWarn("cycle", "step:110,给TOOL上料 LLB unLock  thread...");
 									efem_robot_mutex.unlock();
 									tool_allow_get_wafer_LLB = false;
 								}
@@ -5956,7 +5930,7 @@ namespace FC{
 							}
 
 							UpdatePmSubTransferDatas("PM4");
-							pm4_auto_step.store(10);
+							pm4_auto_step.store(100); //改成100,不然下不去
 						}
 						else
 						{
@@ -6061,7 +6035,8 @@ namespace FC{
 						{
 							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step);
 						}
-						
+						//没加，导致出错
+						pm4_auto_step.store(1010);
 
 					}
 					break;
@@ -6525,14 +6500,14 @@ namespace FC{
 			//1.下料请求，获得经过LLA 的有上料标签，或下层有片
 			if (tool_allow_put_wafer_LLA || taskManager.CollectionPassedThroughLL("LLA") || downHaswaferlk1)
 			{
-				logWarn("Cyclelog", "LLA有待下料或者还没下料,LLB上料 LoadingInterlock!");
+				//logWarn("Cyclelog", "LLA有待下料或者还没下料,LLB上料 LoadingInterlock!");
 				return true; //LLA有待下料或者还没下料
 			}
 			//LLA 下料结束 或 LLA上料完成
 			else if (!taskManager.CollectionPassedThroughLL("LLA") && !tool_allow_put_wafer_LLA)
 			{
 				//LLA下料完成或者初始状态
-				logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁");
+				//logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁");
 				return false;
 			}
 			else
@@ -6546,14 +6521,14 @@ namespace FC{
 			//下料请求,获得经过LLB的有上料标签，或下层有片
 			if (tool_allow_put_wafer_LLB || taskManager.CollectionPassedThroughLL("LLB") || downHaswaferlk2)//或下层有片
 			{
-				logWarn("Cyclelog", "LLB有待下料或者还没下料,LLA 上料 LoadingInterlock!");
+				//logWarn("Cyclelog", "LLB有待下料或者还没下料,LLA 上料 LoadingInterlock!");
 				return true; //LLB有待下料或者还没下的料
 			}
 			//true呼叫LP下料， false LP下料完成 
 			else if (!taskManager.CollectionPassedThroughLL("LLB") && !tool_allow_put_wafer_LLB)
 			{
 				//LLA下料完成或者初始状态
-				logWarn("Cyclelog", "LLB下料完成,对LLA上料不上锁");
+				//logWarn("Cyclelog", "LLB下料完成,对LLA上料不上锁");
 				return false;
 			}
 			else
@@ -6753,7 +6728,7 @@ namespace FC{
 		onUpdateControlEnabled("reset_pbt", false);
 		onUpdateControlEnabled("execute_pbt", false);
 		onUpdateControlEnabled("pause_pbt", false);
-		onUpdateLightButtonStatus("light_reset_pbt",0);
+		onUpdateLightButtonStatus("light_reset_pbt",2);
 		onUpdateLightButtonStatus("light_running_pbt", 1);
 
 		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
@@ -6772,6 +6747,12 @@ namespace FC{
 
 		//check modules
 		auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+
+		//把真空流程置位
+		if (pump->getProcessAbort())
+		{
+			pump->setProcessAbort(false);
+		}
 
 		bool reset_loop = true;
 		reset_finish = false;
@@ -7168,8 +7149,8 @@ namespace FC{
 			onUpdateControlEnabled("loadlock1_put_cassette_finished_pbt", false);
 			onUpdateControlEnabled("loadlock2_put_cassette_finished_pbt", false);
 
-			onUpdateLightButtonStatus("light_reset_pbt", 1);
-			onUpdateLightButtonStatus("light_running_pbt", 2);
+			onUpdateLightButtonStatus("light_reset_pbt", 3);
+			onUpdateLightButtonStatus("light_running_pbt", 1);
 
 			//reset_finish = false;
 
@@ -8505,9 +8486,9 @@ namespace FC{
 		d->ui->abort_pbt->hide();
 		//d->ui->enablesmif1->hide();
 		//d->ui->enablesmif2->hide();
-		//注释
-		//std::thread thd_vacuum(&QSlotTransferCycleVTMWidget::onProcess, this);
-		//thd_vacuum.detach();
+
+		d->onUpdateLightButtonStatus("light_reset_pbt", 1); 
+		d->onUpdateLightButtonStatus("light_running_pbt", 1);
 
 		//initialize thread
 		initializeThreads();
@@ -8628,8 +8609,6 @@ namespace FC{
 				return;
 			}
 			logInform(d->module_name.c_str(), "current FormulaName:%s", d->FormulaName.c_str());
-
-
 
 			QSettings settings(fileName, QSettings::IniFormat);
 			int rowCount = settings.value("rowCount", 0).toInt();
@@ -8986,7 +8965,7 @@ namespace FC{
 
 		//2025-8-06
 		d->onUpdateProcessControlEnabled(true);
-		d->onUpdateLightButtonStatus("light_running_pbt", 2);
+		d->onUpdateLightButtonStatus("light_running_pbt", 4);
 	}
 
 	void QSlotTransferCycleVTMWidget::onAbort(){
@@ -9010,7 +8989,7 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->startAllThreads();
-		d->onUpdateLightButtonStatus("light_running_pbt", 1);
+		d->onUpdateLightButtonStatus("light_running_pbt", 2);
 	}
 
 	void QSlotTransferCycleVTMWidget::onReset(){
@@ -9167,7 +9146,7 @@ namespace FC{
 		//新流程线程启动
 		//startProcessingThreads();
 
-		d->onUpdateLightButtonStatus("light_running_pbt", 1);
+		d->onUpdateLightButtonStatus("light_running_pbt", 2);
 
 		d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
 		d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
@@ -9625,30 +9604,36 @@ namespace FC{
 			if(color == 1)
 			{
 				//复位完成
-				d->ui->light_running_pbt->setLightGreen();
-				d->ui->reset_status->setText("复位完成");
+				d->ui->light_running_pbt->setYellow();
+				d->ui->reset_status->setText("待复位");
+			}
+			else if(color == 2)
+			{
+				d->ui->light_running_pbt->setLightBlue();
+				d->ui->reset_status->setText("复位中");
 			}
 			else
 			{
-				d->ui->light_running_pbt->setLightBlue();
-				d->ui->reset_status->setText("待复位");
+				//复位完成
+				d->ui->light_running_pbt->setLightGreen();
+				d->ui->reset_status->setText("复位完成");
 			}
 		}
-		else if (control == "light_running_btn")
+		else if (control == "light_running_pbt")
 		{
 			if (color == 1)
+			{
+				//空闲或者暂停
+				d->ui->light_running_pbt->stopAlarm();
+				d->ui->light_running_pbt->setYellow();
+				d->ui->run_status->setText("空闲");
+			}
+			else if (color == 2)
 			{
 				d->ui->light_running_pbt->stopAlarm();
 				//运行
 				d->ui->light_running_pbt->setLightGreen();
 				d->ui->run_status->setText("运行中");
-			}
-			else if (color == 2)
-			{
-				//空闲
-				d->ui->light_running_pbt->stopAlarm();
-				d->ui->light_running_pbt->setYellow();
-				d->ui->run_status->setText("空闲");
 			}
 			else if (color == 3)
 			{
@@ -9658,8 +9643,11 @@ namespace FC{
 				d->ui->light_running_pbt->startAlarm();
 				d->ui->run_status->setText("报警");
 			}
-			else {
-				//初始
+			else if(color == 4) 
+			{
+				d->ui->light_running_pbt->stopAlarm();
+				d->ui->light_running_pbt->setYellow();
+				d->ui->run_status->setText("暂停");
 
 			}
 		}

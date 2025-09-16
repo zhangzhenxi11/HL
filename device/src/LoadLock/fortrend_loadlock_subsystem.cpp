@@ -403,6 +403,16 @@ namespace FC{
 		return d->delay_time_value;
 	}
 
+	double FortrendLoadLockSubsystem::getVacuumUpperlimitValue()
+	{
+		return d->vacuum_upper_limit_set_value;
+	}
+
+	double FortrendLoadLockSubsystem::getVacuumExtractionSetValue()
+	{
+		return d->vacuum_extraction_set_value;
+	}
+
 	//设置真空上限值和抽真空设定值
 	void FortrendLoadLockSubsystem::setVacuumUpperLimitAndExtractionValue(const double upper_limit_value, const double extraction_value){
 		d->vacuum_upper_limit_set_value = upper_limit_value;

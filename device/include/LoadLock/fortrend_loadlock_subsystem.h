@@ -153,6 +153,12 @@ namespace FC{
 
 		double getVacuumPumpingDelayTime();
 
+		//真空上限值
+		double getVacuumUpperlimitValue();
+
+		//抽真空设定值
+		double getVacuumExtractionSetValue();
+
 		//达到角阀快抽条件
 		bool getFastAngleValveReachesTheSetValue() const;
 

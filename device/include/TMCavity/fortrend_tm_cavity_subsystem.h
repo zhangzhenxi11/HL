@@ -122,6 +122,12 @@ namespace FC{
 		//获取tm腔真空压力表状态
 		int getTMCavityVacuumPressureGageState()const;
 
+		//获取真空上限值
+		double getTMCavityVacuumUpperlimitValue();
+
+		//获取抽真空设定值
+		double getTMCavityVacuumExtractionSetValue();
+
 		bool getTMCavityVacuumValueReachesTheSetValue() const;
 
 		//TM真空上限达到设定值

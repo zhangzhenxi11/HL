@@ -119,49 +119,10 @@ namespace FC{
 	{
 
 		//Note:这里必须显式指定 std::unordered_map 的模板参数，否则报operate= 不明确错误！！！
-		stateHandlers = std::unordered_map<int, StateHandler>{
-		{10, [this]() { return handleStep10(); }},
-		{100, [this]() { return handleStep100(); }},
-		{1000, [this]() { return handleStep1000(); }},
-		{1010, [this]() { return handleStep1010(); }},
-		{1030 , [this]() { return handleStep1030(); }},
-		{1040 , [this]() { return handleStep1040(); }},
-		{1045 , [this]() { return handleStep1045(); }},
-		{1050 , [this]() { return handleStep1050(); }},
-		{1055 , [this]() { return handleStep1055(); }},
-		{1060 , [this]() { return handleStep1060(); }},
-		{1065 , [this]() { return handleStep1065(); }},
-		{1100 , [this]() { return handleStep1100(); }},
-		{1120 , [this]() { return handleStep1120(); }},
-		{1140 , [this]() { return handleStep1140(); }},
-		{1200 , [this]() { return handleStep1200(); }},
-		{1210 , [this]() { return handleStep1210(); }},
-		{1300 , [this]() { return handleStep1300(); }},
-		{1305 , [this]() { return handleStep1305(); }},
-		{1310 , [this]() { return handleStep1310(); }},
-		{1320 , [this]() { return handleStep1320(); }},
-		{1340 , [this]() { return handleStep1340(); }},
-		{1345 , [this]() { return handleStep1345(); }},
-		{1355 , [this]() { return handleStep1355(); }},
-		{1360 , [this]() { return handleStep1360(); }},
-		{1380 , [this]() { return handleStep1380(); }},
-		{5000 , [this]() { return handleStep5000(); }},
-		{5210 , [this]() { return handleStep5210(); }},
-		{10000, [this]() { return handleStep10000(); }}
-		};
 	}
 
 	void PumpOpenLoadLock1AutoVacuumCommand::initializeHLStateHandlers()
 	{
-		/*
-		* 前提：例如loadLockA 抽真空：casste门，tM传输腔门，快慢隔膜阀，其他腔体的角阀是否关闭
-		1.打开干泵							 handleStep10  
-		2.打开对应的角阀						 handleStep1310：判断是否达到粗抽真空设定值，超时时间1小时，超时报警。最后结束
-		3.关闭当前腔体的隔膜阀				 handleStep1030
-		4.检查casste门和LL-TM腔体门是否关闭    handleStep1045 ,handleStep1040
-		5.关闭其他腔体的角阀					 handleStep1050, handleStep1060
-		6.抽到达标真空值结束                   handleStep1100  handleStep5210
-		*/
 
 		/*
 		loadLockA 抽真空：
@@ -267,13 +228,16 @@ namespace FC{
 		//查表调用状态处理函数
 		while (loop)
 		{
-			if (d->pump->getProcessAbort()) {d->pump->setProcessAbort(false);
+			if (d->pump->getProcessAbort()) 
+			{
+				d->pump->setProcessAbort(false);
 				
-				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止", d->lk1->getName()).c_str());
+				logWarn(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止", d->lk1->getName()).c_str());
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
 
 				return IKernelCommand::RunResult::RUN_OK;
 			};
+
 			auto it = stateHandlers.find(robot_auto_step);
 			if (it == stateHandlers.end())
 			{
@@ -305,7 +269,6 @@ namespace FC{
 				break;
 			}
 		}
-
 		if (d->ret == IKernelCommand::RunResult::RUN_OK)
 		{
 			logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->lk1->getName()).c_str());
@@ -363,67 +326,9 @@ namespace FC{
 		return step;
 	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep100()
-	{
-		int step = 100;
-		//分子泵没有达到转速或腔没有达到粗抽设定值
-		if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue() == false || d->pump->getMolecularPumpReachSpeedLLA() == false)// || 
-		{
-			step = 1000;
-		}
-		else if (d->lk1->getFastDiaphragmValveOpend() || d->lk1->getSlowDiaphragmValveOpend())//隔膜阀打开或PID打开 d->lk1->getPIDOpend() || 
-		{
-			step = 1010;
-		}
-		else if (d->lk1->getInsertingPlateValveOpend() == false)//插板阀关闭
-		{
-			step = 1300;
-		}
-		else
-		{
-			step = 5000;
-		}
+	
 
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1000()
-	{
-		int step = 1000;
-		std::string errorMessage = "关闭插板阀";
-		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			//关闭插板阀
-			if (d->lk1->getInsertingPlateValveOpend())
-			{
-				auto cmd = d->lk1->createCloseInsertingPlateValveCommand();
-				if(!executeCommand(d->lk1, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-					step = 10000;
-				}
-				else
-				{
-					step = 1010;
-				}
-			}
-			else {
-				step = 1010;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->lk1->getName());
-			step = 10000;
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1010()
-	{
-		int step = 1030;
-		return step;
-	}
+	
 
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1030()
 	{
@@ -573,38 +478,7 @@ namespace FC{
 		return step;
 	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1055()
-	{
-		int step = 1055;
-		std::string errorMessage = "关闭高真空挡板阀";
-
-		if (d->tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			if (d->tm->getHeightVacuumBaffleValveOpend() && d->lk1->getVacuumValue() > 300)
-			{
-				auto cmd = d->tm->createCloseHeightVacuumBaffleValveCommand();
-				if (!executeCommand(d->tm, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->tm->getName(), "关闭高真空挡板阀");
-					step = 10000;
-				}
-				else {
-
-					isColseBaffleValvetm = true;
-					step = 1060;
-				}
-			}
-			else {
-				step = 1060;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
-			step = 10000;
-		}
-		return 0;
-	}
+	
 
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1060()
 	{
@@ -640,38 +514,6 @@ namespace FC{
 		return step;
 	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1065()
-	{
-		int step = 1065;
-		std::string errorMessage = "关闭loadLock2高真空挡板阀";
-
-		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			if (d->lk2->getHeightVacuumBaffleValveOpend() && d->lk1->getVacuumValue() > 300)
-			{
-				auto cmd = d->lk2->createCloseHeightVacuumBaffleValveCommand();
-				if (!executeCommand(d->lk2, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->lk2->getName(), "关闭loadLock2高真空挡板阀");
-					step = 10000;
-				}
-				else
-				{
-					isColseBaffleValvellb = true;
-					step = 1100;
-				}
-			}
-			else {
-				step = 1100;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->lk2->getName());
-			step = 10000;
-		}
-		return 0;
-	}
 
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1100()
 	{
@@ -748,180 +590,9 @@ namespace FC{
 		return step;
 	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1120()
-	{
-		int step = 10;
-		//分子泵打开或者运行状态
-		if (d->pump->getMolecularPumpOpenedLLA() || (d->pump->getMolecularPumpRunningStateLLA() == 1))
-		{
-			step = 1140;
-		}
-		else
-		{
-			step = 1140;
-		}
-		return step;
-	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1140()
-	{
-		int step = 1140;
-		std::string errorMessage = "关闭loadlock1的角阀";
-		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			if (d->lk1->getAngleValveOpend())
-			{
-				//关闭角阀
-				auto cmd = d->lk1->createCloseAngleValveCommand();
-				if (!executeCommand(d->lk1, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-					step = 10000;
-				}
-				else {
-					step = 1200;
-				}
-			}
-			else {
-				step = 1200;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->lk1->getName());
-			step = 10000;
-		}
-		return step;
-	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1200()
-	{
-		int step = 1200;
-		std::string errorMessage = "打开loadlock1的高真空挡板阀";
-		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			//打开高真空挡板阀
-			if (d->lk1->getHeightVacuumBaffleValveOpend() == false)
-			{
-				auto cmd = d->lk1->createOpenHeightVacuumBaffleValveCommand();
-				if (!executeCommand(d->lk1, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-					step = 10000;
-				}
-				else
-				{
-					step = 1210;
-				}
-			}
-			else
-			{
-				step = 1210;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->lk1->getName());
-			step = 10000;
-		}
-		return step;
-	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1210()
-	{
-		int step = 10000;
-		//达到粗抽压力
-		if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue())
-		{
-			Sleep(1000);
-			step = 1300;
-		}
-		else
-		{
-			Sleep(100);
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1300()
-	{
-		int step = 1300;
-		std::string errorMessage = "重新打开角阀";
-		if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue(10)) {
-			if (isColseAngleValvetm) {
-				auto cmd = d->tm->createOpenAngleValveCommand();
-				if (!executeCommand(d->tm, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->tm->getName(), "重新打开角阀");
-				}
-				else {
-					isColseAngleValvetm = false;
-				}
-			}
-			if (isColseAngleValvellb) {
-				auto cmd = d->lk2->createOpenAngleValveCommand();
-				if (!executeCommand(d->lk2, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->lk2->getName(), "重新打开角阀");
-				}
-				else {
-					isColseAngleValvellb = false;
-				}
-			}
-		}
-
-		if (d->tm->getMoleculePipelineVacuumValue() < 5.0)//三个腔室共用一个皮拉尼规
-		{
-			lla_loop_count = 0;
-			Sleep(1000);
-			step = 1305;
-		}
-		else
-		{
-			Sleep(100);
-			++lla_loop_count;
-			if (lla_loop_count > 30)
-			{
-				lla_loop_count = 0;
-				logInform(d->pump->getName().c_str(), Poco::format("%s: 等待前级管路压力小于5Pa,当前压力：%f", 
-					getName(), d->tm->getMoleculePipelineVacuumValue()).c_str());
-			}
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1305()
-	{
-		int step = 1305;
-		std::string errorMessage = "关闭高真空挡板阀";
-		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			//关闭高真空挡板阀
-			if (d->lk1->getHeightVacuumBaffleValveOpend())
-			{
-				auto cmd = d->lk1->createCloseHeightVacuumBaffleValveCommand();
-				if (!executeCommand(d->lk1, cmd, step, errorMessage))
-				{
-					addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-					step = 10000;
-				}
-				else
-				{
-					step = 1310;
-				}
-			}
-			else {
-				step = 1310;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->lk1->getName());
-			step = 10000;
-		}
-
-		return step;
-	}
 
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1310()
 	{
@@ -957,155 +628,7 @@ namespace FC{
 		return step;
 	}
 
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1320()
-	{
-
-		int step = 1320;
-		std::string errorMessage = "打开分子泵";
-		if (d->tm->getMoleculePipelineVacuumValue() < 10.0)
-		{
-			if (d->pump->getMolecularPumpOpenedLLA() == false)
-			{
-				if (d->pump->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					//打开分子泵
-					auto cmd = d->pump->createMolecularOpenCommand("LLA");
-					d->pump->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						addCommandExecutionAlarmMessage(step, d->pump->getName(), "打开分子泵");
-						step = 10000;
-					}
-					else
-					{
-						step = 1330;
-					}
-				}
-				else
-				{
-					addSubsystemNotNormalAlarmMessage(step, d->pump->getName());
-					step = 10000;
-				}
-			}
-			else
-			{
-				step = 1330;
-			}
-		}
-		else
-		{
-			step = 1000;
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1340()
-	{
-		int step = 10;
-		if (d->tm->getMoleculePipelineVacuumValue() < 5.0 && d->lk1->getAngleValveOpend())
-		{
-			if (d->pump->getMolecularPumpReachSpeedLLA())
-			{
-				step = 1345;
-			}
-			else
-			{
-				step = 1100;
-			}
-		}
-		else
-		{
-			Sleep(100);
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1345()
-	{
-		int step = 1345;
-		Sleep(2000);
-		if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue(6))
-		{
-			step = 1355;
-		}
-		else
-		{
-			step = 1100;
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1355()
-	{
-		return 1360;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1360()
-	{
-		int step = 1360;
-		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
-		{
-			if (d->lk1->getInsertingPlateValveOpend() == false)
-			{
-				if (d->lk1->getLoadLockRoughVacuumReachesTheSetValue(10)) {
-					//打开插板阀
-					auto cmd = d->lk1->createOpenInsertingPlateValveCommand();
-					d->lk1->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						if (!d->lk1->getLoadLockRoughVacuumReachesTheSetValue(10)) {
-							auto cmd2 = d->pump->createResetCommand();
-							d->pump->startCommand(cmd2);
-							cmd2->wait();
-							step = 1000;
-						}
-						else {
-							addCommandExecutionAlarmMessage(step, d->lk1->getName(), "打开插板阀");
-							step = 10000;
-						}
-					}
-					else {
-						step = 1380;
-					}
-				}
-				else {
-					step = 1000;
-				}
-
-			}
-			else {
-				step = 1380;
-			}
-		}
-		else
-		{
-			addSubsystemNotNormalAlarmMessage(step, d->lk1->getName());
-			step = 10000;
-		}
-		return step;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep1380()
-	{
-		return 10;
-	}
-
-	int PumpOpenLoadLock1AutoVacuumCommand::handleStep5000()
-	{
-		int step = 5000;
-		if (d->lk1->getVacuumValueReachesTheSetValue())
-		{
-			Sleep(1000);
-			step = 5210;
-		}
-		else
-		{
-			Sleep(100);
-		}
-		return step;
-	}
+	
 
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep5210()
 	{

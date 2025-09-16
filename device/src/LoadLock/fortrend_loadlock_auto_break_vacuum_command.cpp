@@ -200,7 +200,6 @@ namespace FC{
 				break;
 			}
 		}
-
 		AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName().c_str())));
 		setAlarm(alarm);
 	

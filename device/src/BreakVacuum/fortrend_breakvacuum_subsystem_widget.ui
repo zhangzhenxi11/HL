@@ -963,7 +963,7 @@
    <property name="geometry">
     <rect>
      <x>1490</x>
-     <y>427</y>
+     <y>357</y>
      <width>171</width>
      <height>71</height>
     </rect>
@@ -982,7 +982,7 @@
    <property name="geometry">
     <rect>
      <x>1490</x>
-     <y>317</y>
+     <y>247</y>
      <width>171</width>
      <height>71</height>
     </rect>
@@ -1001,7 +1001,7 @@
    <property name="geometry">
     <rect>
      <x>1490</x>
-     <y>210</y>
+     <y>140</y>
      <width>171</width>
      <height>71</height>
     </rect>
@@ -1075,7 +1075,7 @@
    <property name="geometry">
     <rect>
      <x>1490</x>
-     <y>540</y>
+     <y>470</y>
      <width>171</width>
      <height>71</height>
     </rect>
@@ -1084,34 +1084,20 @@
     <string>终止流程</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>1381</x>
-     <y>750</y>
-     <width>451</width>
-     <height>141</height>
+     <x>1400</x>
+     <y>580</y>
+     <width>401</width>
+     <height>121</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="0">
-     <widget class="QLabel" name="label_7">
-      <property name="text">
-       <string>loadlockB破真空</string>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0">
      <widget class="QLabel" name="label_9">
       <property name="text">
        <string>loadlockA破真空</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_8">
-      <property name="text">
-       <string>TM破真空</string>
       </property>
      </widget>
     </item>
@@ -1122,10 +1108,24 @@
       </property>
      </widget>
     </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_7">
+      <property name="text">
+       <string>loadlockB破真空</string>
+      </property>
+     </widget>
+    </item>
     <item row="1" column="1">
      <widget class="ProgressColor" name="gmfm_tm_progress" native="true">
       <property name="styleSheet">
        <string notr="true"/>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_8">
+      <property name="text">
+       <string>TM破真空</string>
       </property>
      </widget>
     </item>
@@ -1138,6 +1138,7 @@
     </item>
    </layout>
   </widget>
+  <zorder>layoutWidget</zorder>
   <zorder>widget_35</zorder>
   <zorder>widget_36</zorder>
   <zorder>widget_37</zorder>
@@ -1229,12 +1230,6 @@
   <zorder>gridLayoutWidget_5</zorder>
   <zorder>gridLayoutWidget_6</zorder>
   <zorder>abort_process_btn</zorder>
-  <zorder>gmfm_lla_progress</zorder>
-  <zorder>label_7</zorder>
-  <zorder>gmfm_llb_progress</zorder>
-  <zorder>label_8</zorder>
-  <zorder>label_9</zorder>
-  <zorder>gmfm_tm_progress</zorder>
  </widget>
  <customwidgets>
   <customwidget>

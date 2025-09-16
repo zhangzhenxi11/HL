@@ -444,11 +444,10 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 
-
-	d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
-	d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
-	d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumValue()));
-
+	//进度条
+	d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumUpperlimitValue(),d->lk1->getVacuumValue()));
+	d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumUpperlimitValue(),d->tm->getTMCavityVacuumValue()));
+	d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumUpperlimitValue(), d->lk2->getVacuumValue()));
 
 	if (d->lk1->getAngleValveOpend()) {
 		d->ui->widget_pav_lla->open();
@@ -511,23 +510,23 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	if (d->ui->widget_53) d->ui->widget_53->setWaterDirection(2);
 }
 
-int QVacuumizeSubsystemWidget::convertRange(double vacuumValue)
+int QVacuumizeSubsystemWidget::convertRange(double targetValue, double vacuumValue)
 {
 	int progressValue;
 
 	// 真空值≤100Pa时，进度条满值100
-	if (vacuumValue <= 100.0) {
-		progressValue = 100;
+	if (vacuumValue <= targetValue) {
+		progressValue = targetValue;
 	}
-	// 真空值≥100000Pa时，进度条0值
-	else if (vacuumValue >= 100000.0) {
+	// 真空值≥99999.0时，进度条0值
+	else if (vacuumValue >= 99999.0) {
 		progressValue = 0;
 	}
 	// 中间范围反向映射：真空值越小，进度条值越大
 	else
 	{
-		// 计算相对值（100~100000范围中的位置）
-		double relative = (vacuumValue - 100.0) / (100000.0 - 100.0);
+		// 计算相对值（100~99999.0范围中的位置）
+		double relative = (vacuumValue - targetValue) / (99999.0 - 100.0);
 		// 反向映射到0~100
 		progressValue = static_cast<int>(round(100.0 - relative * 100.0));
 	}

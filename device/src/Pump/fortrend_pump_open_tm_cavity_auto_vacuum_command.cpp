@@ -204,6 +204,7 @@ namespace FC{
 				break;
 			}
 		}
+
 		if (d->ret == IKernelCommand::RunResult::RUN_OK)
 		{
 			logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->tm->getName()).c_str());
