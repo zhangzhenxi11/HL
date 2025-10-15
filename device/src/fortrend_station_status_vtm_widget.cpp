@@ -202,7 +202,7 @@ namespace FC{
 		stationidpm2 = pm2->getStationId(wtr->getName());
 		//stationidaligner = aligner->getStationId(wtr->getName());
 		
-		//  订阅者是this：当前界面,界面触发信号，模组就执行指令
+		// 注册UI监听器
 		lk1->addEventListener(this);
 		lk2->addEventListener(this);
 		pm1->addEventListener(this);

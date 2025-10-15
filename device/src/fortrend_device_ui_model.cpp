@@ -311,14 +311,6 @@ void FortrendDeviceModel::addManualCompoments(){
 		module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
 	}
 
-
-
-	////mode 
-	//for (auto& sub : kernel->getKernelModules<FortrendSTATIONMODESubsystem>()) {
-	//	QWidget* w = new QSTATIONMODESubsystemWidget(sub);
-	//	module_tabWidget->addTab(w, QString::fromStdString(sub->getName()));
-	//}
-
 	//cooling
 	//for (auto& sub : kernel->getKernelModules<FortrendCoolingCavitySubsystem>()){
 	//	QWidget* w = new QCoolingCavitySubsystemWidget(sub);

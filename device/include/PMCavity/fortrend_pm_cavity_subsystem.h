@@ -66,11 +66,11 @@ namespace FC{
 		std::shared_ptr<PMCavityOpenTMCavityDoorCommand> createOpenTMCavityDoorCommand()const;
 		std::shared_ptr<PMCavityCloseTMCavityDoorCommand> createCloseTMCavityDoorCommand()const;
 
-		std::shared_ptr<PMCavityGetFinishedCommand> createGetFinishedCommand()const;
-		std::shared_ptr<PMCavityUploadFinishedCommand> createUploadFinishedCommand()const;
+		std::shared_ptr<PMCavityGetFinishedCommand> createGetFinishedCommand()const; //取片完成
+		std::shared_ptr<PMCavityUploadFinishedCommand> createUploadFinishedCommand()const; //上片完成
 
-		std::shared_ptr<PMCavityToGetStationCommand> createToGetStationCommand()const;
-		std::shared_ptr<PMCavityToPutStationCommand> createToPutStationCommand(int stationid=1)const;
+		std::shared_ptr<PMCavityToGetStationCommand> createToGetStationCommand()const; //去取料位命令
+		std::shared_ptr<PMCavityToPutStationCommand> createToPutStationCommand(int stationid=1)const; //去工艺位命令 （004项目只用一个pm，默认工位1）
 
 		std::shared_ptr<PMCavityReadProcessParametersCommand> createReadProcessParametersCommand()const;
 		std::shared_ptr<PMCavityWriteProcessParametersCommand> createWriteProcessParametersCommand(const PMCavityProcessParameters process_parame)const;

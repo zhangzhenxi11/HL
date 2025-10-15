@@ -34,8 +34,9 @@
 		</SMIF>
 		
 		<EFEMClient>
-			<port>8000</port>
-			<ip>192.168.127.253</ip>
+			<port>13001</port>
+			<!-- 192.168.127.123 -->
+			<ip>192.168.127.1</ip>
 			<!--自动通讯使能192.168.0.200-->			
 			<auto_enable>true</auto_enable>
 			<!--初始控制模式 0： offline  1： local online  2：remote online-->			
@@ -252,9 +253,10 @@
 		</EWTR>	
 		<!--aligner配置项-->				
 		<EALIGNER>
-			<!--ALIGNER 的类型 RND/LOGOSOL-->
-			<port>8000</port>
-			<ip>192.168.127.253</ip>
+			<!--ALIGNER 的类型 RND/LOGOSOL
+			<port>13001</port>
+			<ip>192.168.127.200</ip>-->
+			
 			<type>LOGOSOL</type>
 			<!--COM号-->
 			<com>COM17</com>
@@ -283,6 +285,9 @@
 			<Rotate>
 				<timeout>20000</timeout>
 			</Rotate>
+			<OCR>
+				<timeout>20000</timeout>
+			</OCR>
 			<!-- 复位 -->
 			<Reset>
 				<timeout>20000</timeout>
@@ -300,8 +305,8 @@
 		<LLA>
 			<!--PLC端口号-->	
 			<port>8501</port>
-			<!--PLCIP地址-->	
-			<ip>192.168.127.1</ip>
+			<!--PLCIP地址 192.168.127.20-->	
+			<ip>127.0.0.1</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -319,12 +324,12 @@
 			<Vacuum>
 				<!--读取真空度地址-->
 				<ReadValueAddress>DM5501</ReadValueAddress>
-				<!--读取真空压力表地址-->
-				<PressureGageAddress>MR30409</PressureGageAddress>
+				<!--读取真空压力表地址 true:大气，false:真空-->
+				<PressureGageAddress>MR30415</PressureGageAddress>
 				<!--抽真空设定值-->
 				<ExtractionSetValue>1.1</ExtractionSetValue>
 				<!--破真空设定值-->
-				<BreakSetValue>9960</BreakSetValue>
+				<BreakSetValue>99900</BreakSetValue>
 			</Vacuum>
 			<!-- IO配置-->
 			<IO>	
@@ -377,6 +382,8 @@
 				<finish_address>MR29508</finish_address>
 				<failed_address>MR29509</failed_address>
 				<error_code_address>DM5506</error_code_address>
+				<!-- LLA-机械手抓放料完成信号 -->
+				<safe_Interlock_signal_address>MR30300</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
 			<MoveToSlot>
@@ -388,13 +395,6 @@
 				<timeout>30000</timeout>
 			</MoveToSlot>	
 			<Mapping>
-			<!-- 
-				<start_address>MR29006</start_address>
-				<finish_address>MR29512</finish_address>
-				<failed_address>MR29513</failed_address>
-				<error_code_address>DM5532</error_code_address>
-				<mapping_result_address>DM5507</mapping_result_address>
-			-->
 				<!-- LoadLock1/第一层检测感应器 -->
 				<first_layer_detection_sensor>MR30008</first_layer_detection_sensor>
 				<!-- LoadLock1/第二层检测感应器 -->
@@ -405,11 +405,15 @@
 			</Mapping>
 			<!-- 隔膜阀 -->
 			<OpenDiaphragmValve>
+				<!-- 慢充 -->
 				<address1>MR29009</address1>
+				<!-- 快充 -->
 				<address2>MR29007</address2>
 			</OpenDiaphragmValve>
 			<CloseDiaphragmValve>
+				<!-- 慢充 -->
 				<address1>MR29010</address1>
+				<!-- 快充 -->
 				<address2>MR29008</address2>
 			</CloseDiaphragmValve>
 			<!-- 高真空挡板阀-->
@@ -467,7 +471,12 @@
 				<timeout>30000</timeout>
 			</Reset>
 			<Update>
+				<!-- LLA腔安全信号+_门阀开启to机械手 -->
 				<LLCavitySafetySignal>MR30600</LLCavitySafetySignal>
+				<!-- LLA-机械手抓放料完成信号 -->
+				<WtrActionCompletionSignalAddress>MR30300</WtrActionCompletionSignalAddress>
+				<!--EFEM 允许关_LLA上料门互锁 -->
+				<EFEMAlloweCloseCassteDoorSignal> MR30210</EFEMAlloweCloseCassteDoorSignal>
 				<!--LL1上下料门阀_开到位 -->
 				<open_cassette_door_address>MR30000</open_cassette_door_address>
 				<!--LL1上下料门阀_关到位-->
@@ -477,9 +486,9 @@
 				<!--LL1传输腔门阀_关到位 -->
 				<close_tm_cavity_door_address>MR30003</close_tm_cavity_door_address>
 				<!--慢充隔膜阀 -->
-                <diaphragm_valve_address1>MR30804</diaphragm_valve_address1>
+                <diaphragm_valve_address1>MR30805</diaphragm_valve_address1>
 				<!--快充隔膜阀 -->
-				<diaphragm_valve_address2>MR30805</diaphragm_valve_address2>
+				<diaphragm_valve_address2>MR30804</diaphragm_valve_address2>
 				<!-- LoadLock1/第一层检测感应器 -->
 				<first_layer_detection_sensor>MR30008</first_layer_detection_sensor>
 				<!-- LoadLock1/第二层检测感应器 -->
@@ -490,10 +499,8 @@
 				<open_angle_valve_address>MR30004</open_angle_valve_address>
 				<!-- LoadLock1/角阀-关信号 -->
 				<close_angle_valve_address>MR30005</close_angle_valve_address>
-				
 				<open_inserting_plate_valve_address>MR30200</open_inserting_plate_valve_address>
 				<close_inserting_plate_valve_address>MR30201</close_inserting_plate_valve_address>
-				
 				<in_place_sonser1_address>MR30006</in_place_sonser1_address>
 				<in_place_sonser2_address>MR30007</in_place_sonser2_address>
 				<mapping_sonser1_address>MR30008</mapping_sonser1_address>
@@ -508,9 +515,9 @@
 		<!--LoadLock 配置项 名称为LoadLock2-->			
 		<LLB>
 			<!--PLC端口号-->	
-			<port>8502</port>
+			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>192.168.127.1</ip>
+			<ip>127.0.0.1</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -528,12 +535,12 @@
 			<Vacuum>
 				<!--读取真空度地址-->
 				<ReadValueAddress>DM5535</ReadValueAddress>
-				<!--读取真空压力表地址-->
-				<PressureGageAddress>MR30411</PressureGageAddress>
+				<!--读取真空压力表地址 true:大气，false:真空-->
+				<PressureGageAddress>MR30503</PressureGageAddress>
 				<!--抽真空设定值-->
 				<ExtractionSetValue>1.3</ExtractionSetValue>
 				<!--破真空设定值-->
-				<BreakSetValue>9960</BreakSetValue>
+				<BreakSetValue>99900</BreakSetValue>
 			</Vacuum>
 			<!-- IO配置-->
 			<IO>	
@@ -587,6 +594,8 @@
 				<failed_address>MR29614</failed_address>
 				<finish_address>MR29613</finish_address>
 				<error_code_address>DM5540</error_code_address>
+				<!-- LLB-机械手抓放料完成信号  -->
+				<safe_Interlock_signal_address> MR30301</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
 			<MoveToSlot>
@@ -598,13 +607,6 @@
 				<timeout>30000</timeout>
 			</MoveToSlot>
 			<Mapping>
-				<!-- 
-				<start_address>MR29106</start_address>
-				<finish_address>MR29701</finish_address>
-				<failed_address>MR29702</failed_address>
-				<error_code_address>DM5566</error_code_address>
-				<mapping_result_address>DM5541</mapping_result_address>
-				-->
 				<!-- LoadLock2/第一层检测感应器 -->
 				<first_layer_detection_sensor>MR30108</first_layer_detection_sensor>
 				<!-- LoadLock2/第二层检测感应器 -->
@@ -613,11 +615,15 @@
 			</Mapping>
 			<!-- 隔膜阀 -->
 			<OpenDiaphragmValve>
+				<!-- 慢充 -->
 				<address1>MR29109</address1>
+				<!-- 快充 -->
 				<address2>MR29107</address2>
 			</OpenDiaphragmValve>
 			<CloseDiaphragmValve>
+				<!-- 慢充 -->
 				<address1>MR29110</address1>
+				<!-- 快充 -->
 				<address2>MR29108</address2>
 			</CloseDiaphragmValve>
             <OpenHeightVacuumBaffleValve>
@@ -675,16 +681,20 @@
 			<Update>
 			    <!-- LLB腔安全信号+_门阀开启to机械手 -->
 				<LLCavitySafetySignal>MR30601</LLCavitySafetySignal>
+				<!-- LLB-机械手抓放料完成信号 -->
+				<WtrActionCompletionSignalAddress>MR30301</WtrActionCompletionSignalAddress>
+				<!--EFEM 允许关_LLB上料门互锁 -->
+				<EFEMAlloweCloseCassteDoorSignal>MR30211</EFEMAlloweCloseCassteDoorSignal>
 				<!--LL2上下料门阀_开到位 -->
 				<open_cassette_door_address>MR30100</open_cassette_door_address>
 				<close_cassette_door_address>MR30101</close_cassette_door_address>
 				<!--LL2传输腔门阀_开到位 -->
 				<open_tm_cavity_door_address>MR30102</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30103</close_tm_cavity_door_address>
-				
-				<diaphragm_valve_address1>MR30814</diaphragm_valve_address1>
-				<diaphragm_valve_address2>MR30815</diaphragm_valve_address2>
-				
+				<!--慢充隔膜阀 -->
+                <diaphragm_valve_address1>MR30807</diaphragm_valve_address1>
+				<!--快充隔膜阀 -->
+				<diaphragm_valve_address2>MR30806</diaphragm_valve_address2>
 				<high_vacuum_baffle_value_address>MR30208</high_vacuum_baffle_value_address>
 				<open_angle_valve_address>MR30104</open_angle_valve_address>
 				<close_angle_valve_address>MR30105</close_angle_valve_address>
@@ -706,14 +716,14 @@
 
 		<WTR>
 			<!--端口号  13000-->
-			<port>8501</port>	
-			<!--ip地址 127.0.0.1-->
+			<port>13000</port>	
+			<!--ip地址 192.168.10.111-->
 			<ip>192.168.47.1</ip>
 			<!--可单独运动的手臂数量-->
 			<ArmCount>2</ArmCount>
 			<!--可以工作的Station列表-->	
 			<Stations>LLA,PM1,PM2,PM3,PM4,LLB</Stations>
-			<!--手臂数量和名称-->	
+			<!--手臂数量和名称-->
 			<Arms>armA,armB</Arms>			
 			<!--错误代码关联-->
 			<ErrorTxt>./Error Code Definition/Error_Sunway_Robot.txt</ErrorTxt>
@@ -741,6 +751,9 @@
 			<RQLoad>
 				<timeout>100000</timeout>
 			</RQLoad>
+			<Home>
+				<timeout>100000</timeout>
+			</Home>
 			<Reset>
 				<timeout>200000</timeout>
 			</Reset>
@@ -749,7 +762,7 @@
 		<!--TM腔 配置项 名称为TM-->			
 		<TM>
 			<!--PLC端口号-->	
-			<port>8503</port>
+			<port>8501</port>
 			<!--PLCIP地址-->	
 			<ip>127.0.0.1</ip>
 			<!--PLC通讯超时时间(ms)-->	
@@ -760,7 +773,7 @@
 			<Vacuum>
 				<!--传输腔读取真空度地址-->
 				<TMCavityReadValueAddress>DM5636</TMCavityReadValueAddress>
-				<!--读取真空压力表地址-->
+				<!--读取真空压力表地址 true:大气，false:真空 -->
 				<TMCavityPressureGageAddress>MR30413</TMCavityPressureGageAddress>
 				<!-- 轴向压力表-1 NL/真空 -->
 				<AxialPressureGageAddress>MR30501</AxialPressureGageAddress>
@@ -769,7 +782,7 @@
 				<!-- 分子泵管路读取真空度地址-->
 				<MoleculePipelineReadValueAddress>DM30302</MoleculePipelineReadValueAddress>
 				<!-- 前级泵管道读取真空度地址 -->
-				<BackingPipelineReadValueAddress>DM5560</BackingPipelineReadValueAddress>
+				<BackingPipelineReadValueAddress>DM5644</BackingPipelineReadValueAddress>
 			</Vacuum>
 			<SignalAddress>
 				<!--腔盖安全锁-->
@@ -826,15 +839,15 @@
 			</CloseInsertingPlateValve>
 			<!-- 角阀-->
 			<OpenAngleValve>
-				<address_1>MR29302</address_1>
-				<address_2>MR29302</address_2>
+				<address_1>MR29310</address_1>
+				<address_2>MR29312</address_2>
 				<finish_address>MR29906</finish_address>
 				<failed_address>MR29907 </failed_address>
 				<timeout>5000</timeout>
 			</OpenAngleValve>
 			<CloseAngleValve>
-				<address_1>MR29303</address_1>
-				<address_2>MR29303</address_2>
+				<address_1>MR29311</address_1>
+				<address_2>MR29313</address_2>
 				<finish_address>MR29908</finish_address>
 				<failed_address> MR29909 </failed_address>
 				<timeout>5000</timeout>
@@ -859,11 +872,18 @@
 				<close_address>MR504</close_address>
 			</ClosePID>
 			<Update>
-				<diaphragm_valve_address1>MR30900</diaphragm_valve_address1>
-				<diaphragm_valve_address2>MR30901</diaphragm_valve_address2>
+				<!--PLC模式-->
+				<PLC_Mode_address>MR50001</PLC_Mode_address> 
+
 				<high_vacuum_baffle_value_address>MR20014</high_vacuum_baffle_value_address>
-				<open_angle_valve_address>MR30405</open_angle_valve_address>
-				<close_angle_valve_address>MR30406</close_angle_valve_address>
+				<!-- TM腔打开角阀完成 -->
+				<open_angle_valve_address>MR30411</open_angle_valve_address>
+				<!-- TM腔关闭角阀完成 -->
+				<close_angle_valve_address>MR30412</close_angle_valve_address>
+				<!--TM慢充隔膜阀 -->
+                <diaphragm_valve_address1>MR30809</diaphragm_valve_address1>
+				<!--TM快充隔膜阀 -->
+				<diaphragm_valve_address2>MR30808</diaphragm_valve_address2>
 				<open_inserting_plate_valve_address>MR30204</open_inserting_plate_valve_address>
 				<close_inserting_plate_valve_address>MR30205</close_inserting_plate_valve_address>
 				<open_pid_address>MR503</open_pid_address>
@@ -888,25 +908,14 @@
 				<pm3_awc_inplace_sensor>MR30308</pm3_awc_inplace_sensor>
 				<!-- PM4腔/AWC(在位)感应器1 -->
 				<pm4_awc_inplace_sensor>MR30310</pm4_awc_inplace_sensor>
-				
 			</Update>
 		</TM>
 
 		<!--PM腔1 配置项 名称为PM1-->			
 		<PM1>
-			<!--PM腔汇川PLC端口号-->	
-			<inovance_port>503</inovance_port>
-			<!--PM腔汇川PLC网络号-->	
-			<inovance_net_id>1</inovance_net_id>
-			<!--PM腔汇川ip-->	
-			<inovance_ip>127.0.0.1</inovance_ip>
-			<!--PM腔汇川超时-->
-			<inovance_plc_timeout>2000</inovance_plc_timeout>
-			<!--PM腔汇川类型-->
-			<inovance_plc_type>H5U</inovance_plc_type>
 			<!--PLC端口号-->	
 			<port>8501</port>
-			<!--PLCIP地址-->	
+			<!--PLCIP地址  192.168.1.10-->	
 			<ip>127.0.0.1</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
@@ -1000,6 +1009,7 @@
 				<finish_address>MR35102</finish_address>
 				<failed_address>MR35103</failed_address>
 				<error_code_address>DM5568</error_code_address>
+				<safe_Interlock_signal_address> MR30212</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
 			<!--控制PM腔分子泵插板阀开度-->
@@ -1065,6 +1075,9 @@
 				<close_tm_cavity_door_address>MR30201</close_tm_cavity_door_address>
 				<!-- PM1腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30602</PMCavitySafetySignal>
+				<!--PM1腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30212</WtrActionCompletionSignalAddress>
+				
 			</Update>
 			<Reset>
 				<start_address>DM25027</start_address>
@@ -1077,18 +1090,8 @@
 		</PM1>
 		<!--PM腔2 配置项 名称为PM2-->			
 		<PM2>
-			<!--PM腔汇川PLC端口号-->	
-			<inovance_port>502</inovance_port>
-			<!--PM腔汇川PLC网络号-->	
-			<inovance_net_id>0</inovance_net_id>
-			<!--PM腔汇川ip-->	
-			<inovance_ip>127.0.0.1</inovance_ip>
-			<!--PM腔汇川超时-->
-			<inovance_plc_timeout>2000</inovance_plc_timeout>
-			<!--PM腔汇川类型-->
-			<inovance_plc_type>H5U</inovance_plc_type>
 			<!--PLC端口号-->	
-			<port>8504</port>
+			<port>8501</port>
 			<!--PLCIP地址-->	
 			<ip>127.0.0.1</ip>
 			<!--PLC通讯超时时间(ms)-->	
@@ -1184,6 +1187,7 @@
 				<finish_address>MR35106</finish_address>
 				<failed_address>MR35107</failed_address>
 				<error_code_address>DM5569</error_code_address>
+				<safe_Interlock_signal_address> MR30213</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
 			
@@ -1263,8 +1267,10 @@
 			<Update>
 				<open_tm_cavity_door_address>MR30202</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30203</close_tm_cavity_door_address>
-				<!-- PM腔安全信号+_门阀开启to机械手 -->
+				<!-- PM2腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30603</PMCavitySafetySignal>
+				<!--PM2腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30213</WtrActionCompletionSignalAddress>
 			</Update>
 			<Reset>
 				<start_address>MR35100</start_address>
@@ -1277,16 +1283,6 @@
 		
 		<!--PM腔3 配置项 名称为PM3-->			
 		<PM3>
-			<!--PM腔汇川PLC端口号-->	
-			<inovance_port>504</inovance_port>
-			<!--PM腔汇川PLC网络号-->	
-			<inovance_net_id>2</inovance_net_id>
-			<!--PM腔汇川ip-->	
-			<inovance_ip>127.0.0.1</inovance_ip>
-			<!--PM腔汇川超时-->
-			<inovance_plc_timeout>2000</inovance_plc_timeout>
-			<!--PM腔汇川类型-->
-			<inovance_plc_type>H5U</inovance_plc_type>
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
@@ -1384,6 +1380,7 @@
 				<finish_address>MR35110</finish_address>
 				<failed_address>MR35111</failed_address>
 				<error_code_address>DM5570</error_code_address>
+				<safe_Interlock_signal_address> MR30214</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>	
 			<!--控制PM腔分子泵插板阀开度-->
@@ -1447,8 +1444,10 @@
 			<Update>
 				<open_tm_cavity_door_address>MR30204</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30205</close_tm_cavity_door_address>
-				<!-- PM腔安全信号+_门阀开启to机械手 -->
+				<!-- PM3腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30604</PMCavitySafetySignal>
+				<!--PM3腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30214</WtrActionCompletionSignalAddress>				
 			</Update>
 			<Reset>
 				<start_address>DM25029</start_address>
@@ -1461,16 +1460,6 @@
 		
 		<!--PM腔4 配置项 名称为PM4-->
 		<PM4>
-			<!--PM腔汇川PLC端口号-->	
-			<inovance_port>504</inovance_port>
-			<!--PM腔汇川PLC网络号-->	
-			<inovance_net_id>2</inovance_net_id>
-			<!--PM腔汇川ip-->	
-			<inovance_ip>127.0.0.1</inovance_ip>
-			<!--PM腔汇川超时-->
-			<inovance_plc_timeout>2000</inovance_plc_timeout>
-			<!--PM腔汇川类型-->
-			<inovance_plc_type>H5U</inovance_plc_type>
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
@@ -1568,6 +1557,8 @@
 				<finish_address>MR35114</finish_address>
 				<failed_address>MR35115</failed_address>
 				<error_code_address>DM5571</error_code_address>
+				<!--PM4腔-机械手抓放料完成信号 -->
+				<safe_Interlock_signal_address> MR30215</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>	
 			<!--控制PM腔分子泵插板阀开度-->
@@ -1629,10 +1620,12 @@
 				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
 			</WriteProcessParameters>
 			<Update>
-				<open_tm_cavity_door_address>MR30204</open_tm_cavity_door_address>
-				<close_tm_cavity_door_address>MR30205</close_tm_cavity_door_address>
-				<!-- PM腔安全信号+_门阀开启to机械手 -->
+				<open_tm_cavity_door_address>MR30206</open_tm_cavity_door_address>
+				<close_tm_cavity_door_address>MR30207</close_tm_cavity_door_address>
+				<!--PM4腔安全信号+_门阀开启to机械手 -->
 				<PMCavitySafetySignal>MR30605</PMCavitySafetySignal>
+				<!--PM4腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30215</WtrActionCompletionSignalAddress>				
 			</Update>
 			<Reset>
 				<start_address>DM25029</start_address>
@@ -1645,8 +1638,8 @@
 		
 		<Aligner>
 			<!--PLC端口号-->	
-			<port>1102</port>
-			<!--PLCIP地址192.168.0.50-->	
+			<port>8501</port>
+			<!--PLCIP地址-->	
 			<ip>127.0.0.1</ip>
 			<!--PLC通讯超时时间-->	
 			<plc_timeout>1000</plc_timeout>
@@ -1742,7 +1735,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>192.168.127.1</ip>
+			<ip>127.0.0.1</ip>
 			<IsVacuum>true</IsVacuum>
 			<!-- 分子泵ACC信号 -->
 			<acc_tm>MR35408</acc_tm>
@@ -1761,20 +1754,19 @@
 			<!--错误代码关联-->
 			<ErrorTxt>./Error Code Definition/Error_KYKY_Molecular_Pump.txt</ErrorTxt>
 			<Update>
-				<!-- 前级泵故障信号 -->
-			    <MechanicalPumpAlarmAddress>MR35312</MechanicalPumpAlarmAddress>
 				<!-- 前级泵警告信号 -->
-				<MechanicalPumpWarnAddress> MR30402 </MechanicalPumpWarnAddress>
+				<MechanicalPumpWarnAddress>MR35312</MechanicalPumpWarnAddress>
 				<!-- 前级泵运行中 -->
 				<MechanicalPumpRunningAddress>MR35313</MechanicalPumpRunningAddress>
-				<mechanical_pump_address>MR4210</mechanical_pump_address>
 				<timeout>30000</timeout>
 			</Update>
 			<!-- 打开前级泵-->
 			<OpenMechanical>
+				<!--前级泵开启指令 -->
 				<start_address>MR35305</start_address>
 				<finish_address>MR35307</finish_address>
 				<failed_address>MR35309</failed_address>
+				<!-- 前级泵警告信号 -->
 				<error_code_address>MR35312</error_code_address>
 				<timeout>4500</timeout>
 			</OpenMechanical>
@@ -1782,6 +1774,7 @@
 				<start_address>MR35306</start_address>
 				<finish_address>MR35308</finish_address>
 				<failed_address>MR35310</failed_address>
+				<!-- 前级泵警告信号 -->
 				<error_code_address>MR35312</error_code_address>
 				<timeout>4500</timeout>
 			</CloseMechanical>
