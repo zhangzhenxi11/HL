@@ -101,10 +101,83 @@ namespace FC{
 		bool pm_update_process_parameters = false;
 		PMCavityProcessParameters pm_process_parameters;   //PM腔工艺参数
 
+		bool pm_axis_setting_parameters = false;
+		PMCavityAxisSettingParameters  axis_setting_parameters; //PM腔电机设置参数
+
 		std::string open_tm_cavity_door_address = "";
 		std::string close_tm_cavity_door_address = "";
 
-		
+
+		std::string lifting_axis_return_original_completion_address = "";
+		bool axis_origin_done;
+
+		std::string lifting_axis_clear_error_completion_address = "";
+		bool lifting_axis_clear_done;
+
+		std::string lifting_axis_jog_running_address;
+		bool lifting_axis_jog_running;
+
+		std::string lifting_axis_return_original_running_address;
+		bool lifting_axis_return_original_running;
+
+		std::string lifting_axis_enable_address;
+		bool lifting_axis_enable_done;
+
+		std::string lifting_axis_moving_address;
+		bool ifting_axis_moving;
+
+		std::string lifting_axis_move_end_address;
+		bool ifting_axis_move_done;
+
+		std::string lifting_axis_feedback_position_addresss;
+		int ifting_axis_feedback_position;
+
+		std::string lifting_axis_current_coordinate_addresss;
+		float lifting_axis_current_coordinate = 0.0F;
+
+		std::string lifting_axis_current_speed_addresss;
+		float lifting_axis_current_speed;
+
+		std::string lifting_axis_current_control_mode_addresss;
+		uint16_t current_control_mode;
+
+		std::string lifting_axis_feedback_torque_monitor_address;
+		float lifting_axis_feedback_torque_monitor;
+
+		std::string rotating_axis_return_original_completion_address;
+		bool rotating_axis_return_original_done;
+
+
+		std::string rotating_axis_clear_error_completion_address;
+		bool rotating_axis_clear_error_done;
+
+		std::string rotating_axis_stop_completion_address;
+		bool rotating_axis_stop_done;
+
+		std::string rotating_axis_jog_running_address;
+		bool rotating_axis_jog_running;
+
+		std::string rotating_axis_return_original_running_address;
+		bool rotating_axis_return_original_done;
+
+		std::string rotating_axis_enable_address;
+		bool rotating_axis_enable_done;
+
+		std::string rotating_axis_moving_address;
+		bool  rotating_axis_moving;
+
+		std::string rotating_axis_move_end_address;
+		bool  rotating_axis_move_end;
+
+		std::string rotating_axis_feedback_position_addresss;
+		int  rotating_axis_feedback_position;
+
+		std::string rotating_axis_current_coordinate_addresss;
+		double rotating_axis_current_coordinate;
+
+		std::string rotating_axis_current_speed_addresss;
+		double rotating_axis_current_speed;
+
 
 	};
 
@@ -399,6 +472,104 @@ namespace FC{
 			AbstractIOSubsystem::emitAttributeChanged(this);
 		}
 	}
+
+	//PM腔伺服电机参数
+	void FortrendPMCavitySubsystem::setPMCavityAxisParameters(const PMCavityAxisSettingParameters pm_param)
+	{
+		bool change = false;
+		if (d->axis_setting_parameters.lifting_axis_acce != pm_param.lifting_axis_acce)
+		{
+			d->axis_setting_parameters.lifting_axis_acce = pm_param.lifting_axis_acce;
+			change = true;
+		}
+		if (d->axis_setting_parameters.lifting_axis_startup_speed != pm_param.lifting_axis_startup_speed)
+		{
+			d->axis_setting_parameters.lifting_axis_startup_speed = pm_param.lifting_axis_startup_speed;
+			change = true;
+		}
+		if (d->axis_setting_parameters.lifting_axis_target_position != pm_param.lifting_axis_target_position)
+		{
+			d->axis_setting_parameters.lifting_axis_target_position = pm_param.lifting_axis_target_position;
+			change = true;
+		}
+		if (d->axis_setting_parameters.lifting_axis_target_pressure != pm_param.lifting_axis_target_pressure)
+		{
+			d->axis_setting_parameters.lifting_axis_target_pressure = pm_param.lifting_axis_target_pressure;
+			change = true;
+		}
+		
+		if (d->axis_setting_parameters.lifting_axis_target1_position != pm_param.lifting_axis_target1_position)
+		{
+			d->axis_setting_parameters.lifting_axis_target1_position = pm_param.lifting_axis_target1_position;
+			change = true;
+		}
+
+		if (d->axis_setting_parameters.lifting_axis_target2_position != pm_param.lifting_axis_target2_position)
+		{
+			d->axis_setting_parameters.lifting_axis_target2_position = pm_param.lifting_axis_target2_position;
+			change = true;
+		}
+		if (d->axis_setting_parameters.lifting_axis_target3_position != pm_param.lifting_axis_target3_position)
+		{
+			d->axis_setting_parameters.lifting_axis_target3_position = pm_param.lifting_axis_target3_position;
+			change = true;
+		}
+
+		if (d->axis_setting_parameters.lifting_axis_jog_speed != pm_param.lifting_axis_jog_speed)
+		{
+			d->axis_setting_parameters.lifting_axis_jog_speed = pm_param.lifting_axis_jog_speed;
+			change = true;
+		}
+
+		if (d->axis_setting_parameters.lifting_axis_inch_movement != pm_param.lifting_axis_inch_movement)
+		{
+			d->axis_setting_parameters.lifting_axis_inch_movement = pm_param.lifting_axis_inch_movement;
+			change = true;
+		}
+
+		if (d->axis_setting_parameters.rotating_axis_acce != pm_param.rotating_axis_acce)
+		{
+			d->axis_setting_parameters.rotating_axis_acce = pm_param.rotating_axis_acce;
+			change = true;
+		}
+
+
+		if (d->axis_setting_parameters.rotating_axis_dece != pm_param.rotating_axis_dece)
+		{
+			d->axis_setting_parameters.rotating_axis_dece = pm_param.rotating_axis_dece;
+			change = true;
+		}
+		if (d->axis_setting_parameters.rotating_axis_startup_speed != pm_param.rotating_axis_startup_speed)
+		{
+			d->axis_setting_parameters.rotating_axis_startup_speed = pm_param.rotating_axis_startup_speed;
+			change = true;
+		}
+
+		if (d->axis_setting_parameters.rotating_axis_target_position != pm_param.rotating_axis_target_position)
+		{
+			d->axis_setting_parameters.rotating_axis_target_position = pm_param.rotating_axis_target_position;
+			change = true;
+		}
+
+		if (d->axis_setting_parameters.rotating_axis_jog_speed != pm_param.rotating_axis_jog_speed)
+		{
+			d->axis_setting_parameters.rotating_axis_jog_speed = pm_param.rotating_axis_jog_speed;
+			change = true;
+		}
+
+
+		if (d->axis_setting_parameters.rotating_axis_inch_movement != pm_param.rotating_axis_inch_movement)
+		{
+			d->axis_setting_parameters.rotating_axis_inch_movement = pm_param.rotating_axis_inch_movement;
+			change = true;
+		}
+
+		if (change)
+		{
+			d->pm_update_process_parameters = true;
+			AbstractIOSubsystem::emitAttributeChanged(this);
+		}
+	}
 	/**
 
 	* 获取镀膜时间
@@ -426,16 +597,124 @@ namespace FC{
 		return result;
 	}
 
-	/**
-	* 获取晶圆槽号
-	*/
+	bool FortrendPMCavitySubsystem::getLiftingAxisPowerDone() const
+	{
+		return false;
+	}
+
+	void FortrendPMCavitySubsystem::setLiftingAxisPower()
+	{
+
+	}
+
+	bool FortrendPMCavitySubsystem::getLiftingJogHomeDone() const
+	{
+		return false;
+	}
+
+	void FortrendPMCavitySubsystem::setLiftingJogHome()
+	{
+	}
+
+	bool FortrendPMCavitySubsystem::getZAxisClearErrorDone() const
+	{
+		return false;
+	}
+
+	void FortrendPMCavitySubsystem::setZAxisClearError()
+	{
+	}
+
+	bool FortrendPMCavitySubsystem::getRAxisClearErrorDone() const
+	{
+		return false;
+	}
+
+	void FortrendPMCavitySubsystem::setRAxisClearError()
+	{
+	}
+
+
+	bool FortrendPMCavitySubsystem::getRotationAxisPowerDone() const
+	{
+		return false;
+	}
+	void FortrendPMCavitySubsystem::setRotationAxisPower()
+	{
+	}
+
+	bool FortrendPMCavitySubsystem::getRotationJogHomeDone() const
+	{
+		return false;
+	}
+
+	void FortrendPMCavitySubsystem::setRotationJogHome()
+	{
+	}
+
+	double FortrendPMCavitySubsystem::getPMCavityZAxleSpeed() const
+	{
+		return 0.0;
+	}
+
+	double FortrendPMCavitySubsystem::getPMCavityZAxleLocation() const
+	{
+		return 0.0;
+	}
+
+	double FortrendPMCavitySubsystem::getPMCavityRAxleSpeed() const
+	{
+		return 0.0;
+	}
+
+	double FortrendPMCavitySubsystem::getPMCavityRAxleLocation() const
+	{
+		return 0.0;
+	}
+
+	bool FortrendPMCavitySubsystem::getZAxleJogRunning() const
+	{
+		return false;
+	}
+
+	bool FortrendPMCavitySubsystem::getZAxleAutoDone() const
+	{
+		return false;
+	}
+
+	bool FortrendPMCavitySubsystem::getZAxleAutoRunning() const
+	{
+		return false;
+	}
+
+	bool FortrendPMCavitySubsystem::getRAxleStopDone() const
+	{
+		return false;
+	}
+
+	bool FortrendPMCavitySubsystem::getRAxleJogRunning() const
+	{
+		return false;
+	}
+
+	bool FortrendPMCavitySubsystem::getRAxleAutoDone() const
+	{
+		return false;
+	}
+
+	bool FortrendPMCavitySubsystem::getRAxleAutoRunning() const
+	{
+		return false;
+	}
+
+
+	//获取晶圆槽号
 	int FortrendPMCavitySubsystem::getWaferSlot()const{
 		return d->wafer_slot;
 	}
 
-	/**
-	* 设置晶圆槽号
-	*/
+
+	//设置晶圆槽号
 	void FortrendPMCavitySubsystem::setWaferSlot(const int slot){
 		d->wafer_slot = slot;
 	}
@@ -553,6 +832,7 @@ namespace FC{
 		return d->vacuum_magnitude_value;
 	}
 
+	//轴速度 
 	double FortrendPMCavitySubsystem::getPMCavityAxleSpeed()const{
 		return d->speed;
 	}
@@ -590,27 +870,32 @@ namespace FC{
 		return d->axlelocation;
 	}
 
+	//电机的自动速度
 	void FortrendPMCavitySubsystem::setPMCavityAxleSpeed(double speed){
 		//KeyencePlcSubSystemHelper::writeDouble("DM15070", speed);
 		float sp = speed;
 		//logInform("Test", "PM腔速度设置，地址：DM15070  值%.2f", sp);
 		KeyencePlcSubSystemHelper::writeFloat("DM15070", sp);
 	}
+
+	//电机的手动速度(jog+ ,jog-)
 	void FortrendPMCavitySubsystem::setPMCavityTurnSpeed(double speed){
 		float sp = speed;
 		//logInform("Test", "PM腔步进电机速度设置，地址：DM15080  值%.2f", sp);
 		KeyencePlcSubSystemHelper::writeFloat("DM15080", sp);
 	}
+	//jog+
 	void FortrendPMCavitySubsystem::setPMCavityForward(bool forward){
 		//logInform("Test", "PM腔步进电机前进，地址：MR35213  值%d", forward);
 		if (getIsRunning()){
-			logWarn(getName().c_str(), "自动模式下无法控制电机前进！");
+			logWarn(getName().c_str(), "自动模式下无法控制电机前进！"); //在pm在配方运行中
 		}
 		else{
 			KeyencePlcSubSystemHelper::writeBit("MR35213", forward);
 		}
 		
 	}
+	//jog-
 	void FortrendPMCavitySubsystem::setPMCavityBackward(bool backward){
 		//logInform("Test", "PM腔步进电机后退，地址：MR35214  值%d", backward);
 		KeyencePlcSubSystemHelper::writeBit("MR35214", backward);
@@ -782,10 +1067,13 @@ namespace FC{
 				}
 			}
 #endif
-			//if (io_changed)
-			//{
-			//	AbstractIOSubsystem::emitAttributeChanged(this);
-			//}
+
+
+
+			if (io_changed)
+			{
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
 			Sleep(100);
 
 		}
@@ -912,6 +1200,40 @@ namespace FC{
 		if (config->has("Update"))
 		{
 			d->pm_cavity_safe_address = config->getString("Update.PMCavitySafetySignal", "");//PM腔安全信号+_门阀开启to机械手
+
+			d->lifting_axis_return_original_completion_address = config->getString("Update.lifting_axis_return_original_completion_address", "");
+			d->lifting_axis_clear_error_completion_address = config->getString("Update.lifting_axis_clear_error_completion_address","");
+			d->lifting_axis_jog_running_address = config->getString("Update.lifting_axis_jog_running_address", "");
+			d->lifting_axis_return_original_running_address = config->getString("Update.lifting_axis_return_original_running_address", "");
+			d->lifting_axis_enable_address = config->getString("Update.lifting_axis_enable_address", "");
+
+			d->lifting_axis_moving_address = config->getString("Update.lifting_axis_moving_address", "");
+			d->lifting_axis_move_end_address = config->getString("Update.lifting_axis_move_end_address", "");
+
+			d->lifting_axis_feedback_position_addresss = config->getString("Update.lifting_axis_feedback_position_addresss", "");
+			d->lifting_axis_current_coordinate_addresss = config->getString("Update.lifting_axis_current_coordinate_addresss", "");
+
+			d->lifting_axis_current_speed_addresss = config->getString("Update.lifting_axis_current_speed_addresss", "");
+			d->lifting_axis_current_control_mode_addresss = config->getString("Update.lifting_axis_current_control_mode_addresss", "");
+
+			d->lifting_axis_feedback_torque_monitor_address = config->getString("Update.lifting_axis_feedback_torque_monitor_address", "");
+			d->rotating_axis_return_original_completion_address = config->getString("Update.rotating_axis_return_original_completion_address", "");
+
+			d->rotating_axis_clear_error_completion_address = config->getString("Update.rotating_axis_clear_error_completion_address", "");
+			d->rotating_axis_stop_completion_address = config->getString("Update.rotating_axis_stop_completion_address", "");
+
+			d->rotating_axis_jog_running_address = config->getString("Update.rotating_axis_jog_running_address", "");
+			d->rotating_axis_return_original_running_address = config->getString("Update.rotating_axis_return_original_running_address", "");
+
+			d->rotating_axis_enable_address = config->getString("Update.rotating_axis_enable_address", "");
+			d->rotating_axis_moving_address = config->getString("Update.rotating_axis_moving_address", "");
+
+			d->rotating_axis_move_end_address = config->getString("Update.rotating_axis_move_end_address", "");
+			d->rotating_axis_feedback_position_addresss = config->getString("Update.rotating_axis_feedback_position_addresss", "");
+
+			d->rotating_axis_current_coordinate_addresss = config->getString("Update.rotating_axis_current_coordinate_addresss", "");
+			d->rotating_axis_current_speed_addresss = config->getString("Update.rotating_axis_current_speed_addresss", "");
+
 		}
 
 	}
@@ -959,6 +1281,13 @@ namespace FC{
 	}
 
 
+	std::shared_ptr<PMCavityLiftingActionCommand> FortrendPMCavitySubsystem::createLiftingActionCommand(double targetPos) const
+	{
+		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
+		PMCavityLiftingActionCommand::Ptr ret(new PMCavityLiftingActionCommand(self,targetPos));
+		return ret;
+	}
+
 	std::shared_ptr<PMCavityToGetStationCommand> FortrendPMCavitySubsystem::createToGetStationCommand()const{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
 		PMCavityToGetStationCommand::Ptr ret(new PMCavityToGetStationCommand(self));
@@ -970,15 +1299,29 @@ namespace FC{
 		return ret;
 	}
 
+	std::shared_ptr<PMCavityToRotatingStationCommand> FortrendPMCavitySubsystem::createToRotatingStationCommand() const
+	{
+		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
+		PMCavityToRotatingStationCommand::Ptr ret(new PMCavityToRotatingStationCommand(self));
+		return ret;
+	}
+
+	std::shared_ptr<PMCavityRotatingActionCommand> FortrendPMCavitySubsystem::createRotatingActionCommand(double degree) const
+	{
+		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
+		PMCavityRotatingActionCommand::Ptr ret(new PMCavityRotatingActionCommand(self, degree));
+		return ret;
+	}
+
 	std::shared_ptr<PMCavityReadProcessParametersCommand>  FortrendPMCavitySubsystem::createReadProcessParametersCommand()const{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
 		PMCavityReadProcessParametersCommand::Ptr ret(new PMCavityReadProcessParametersCommand(self));
 		return ret;
 	}
 
-	std::shared_ptr<PMCavityWriteProcessParametersCommand>  FortrendPMCavitySubsystem::createWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters)const{
+	std::shared_ptr<PMCavityWriteProcessParametersCommand>  FortrendPMCavitySubsystem::createWriteProcessParametersCommand(const PMCavityAxisSettingParameters axis_parames)const{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
-		PMCavityWriteProcessParametersCommand::Ptr ret(new PMCavityWriteProcessParametersCommand(process_parameters, self));
+		PMCavityWriteProcessParametersCommand::Ptr ret(new PMCavityWriteProcessParametersCommand(axis_parames, self));
 		return ret;
 	}
 

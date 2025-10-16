@@ -28,7 +28,7 @@ namespace FC{
 	public:
 		DECLARE_PTR(PMCavityReadProcessParametersCommand)
 		PMCavityReadProcessParametersCommand(KeyencePlcSubSystemHelper* helper);
-		virtual std::string getName()const override { return "ReadProcessParameters"; }
+		virtual std::string getName()const override { return "AxisReadParameters"; }
 
 	protected:
 		virtual RunResult onRun() throw(KernelException);		

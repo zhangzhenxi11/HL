@@ -2431,7 +2431,7 @@ namespace FC{
 					{
 						if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							auto cmd = pm2->createWriteProcessParametersCommand(sequence_robot_transfer_wafer[0].pm_parameter);
+							/*auto cmd = pm2->createWriteProcessParametersCommand(sequence_robot_transfer_wafer[0].pm_parameter);
 							pm2->startCommand(cmd);
 							cmd->wait();
 							if (cmd->hasError())
@@ -2441,7 +2441,7 @@ namespace FC{
 							else
 							{
 								robot_auto_step = 10110;
-							}
+							}*/
 						}
 						else
 						{

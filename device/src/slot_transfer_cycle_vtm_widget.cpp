@@ -8560,8 +8560,6 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidget::onUpdateRecipe(int model){
 		Q_D(QSlotTransferCycleVTMWidget);
-
-
 		//0=单片上下料模式 1=双片上下料模式
 		if (d->running)return;
 		try{
@@ -9466,14 +9464,14 @@ namespace FC{
 		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
 		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机升降开始位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 2, 60.0, 100.0, 1, 100);//电机旋转位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 3, 60.0, 120.0, 1, 120);//电机升降结束位置/mm
-		addEditTableWidgetItemComboBox(row_count, 4,1);//电机旋转角度/°
+		addEditTableWidgetItemComboBox(row_count, 2, 1);//电机旋转角度/°
 		QSpinBox* Rotation_count_spx = new QSpinBox();
 		Rotation_count_spx->setMinimum(0);
 		Rotation_count_spx->setMaximum(6);
 		Rotation_count_spx->setSingleStep(1);
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 5, Rotation_count_spx);//旋转次数
+		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
+		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机升降结束位置/mm
 		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
 	}
 

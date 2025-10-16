@@ -92,7 +92,9 @@ namespace  FC {
 		void startEFEMAction();
 		void resetAction();
 		void onProcess();
+
 		void initPMCavityParamEdieTableWidget();
+		//增加pm项
 		void addAnPMItem(const QString name);
 		//新增
 		void executeEFEMTransfer();

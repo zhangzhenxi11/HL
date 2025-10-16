@@ -21,7 +21,6 @@
 #include "PMCavity/fortrend_pm_cavity_subsystem.h"
 
 #include "LoadLock/fortrend_loadlock_cavity_close_height_vacuum_baffle_valve_command.h"
-#include "LoadLock/fortrend_loadlock_subsystem.h"
 
 
 #if _MSC_VER >= 1600

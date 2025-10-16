@@ -33,21 +33,21 @@ namespace FC{
 	*/
 	class PMCavityWriteProcessParametersCommandPrivate{
 	public:
-		PMCavityProcessParameters process_parameters;
+		PMCavityAxisSettingParameters axis_parames;
+		std::vector<ParameterMapping> _mapping_table;
+
 	};
 
 	/**
 	* PMCavityWriteProcessParametersCommand
 	*/
-	PMCavityWriteProcessParametersCommand::PMCavityWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters, KeyencePlcSubSystemHelper* hexHelper)
+	PMCavityWriteProcessParametersCommand::PMCavityWriteProcessParametersCommand(const PMCavityAxisSettingParameters axis_parames, KeyencePlcSubSystemHelper* hexHelper)
 		:KeyencePlcCommandExecuter(hexHelper)
 		, d(new PMCavityWriteProcessParametersCommandPrivate){
-		d->process_parameters = process_parameters;
-		//setMessageName("WriteProcessParameters");
-		//setDescription("write process parameters the pm cavity");
-	};
+		d->axis_parames = axis_parames;
+		d->_mapping_table = getMappingTable();
+	}
 
-	
 	/**
 	* return true if success else false.
 	*/
@@ -64,119 +64,32 @@ namespace FC{
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
+		logInform(sub->getName().c_str(), "读取参数命令开始执行");
 
-		//fill params
-		std::string heating_temperature_address = command_config->getString("heating_temperature_address", "");
-		std::string initial_extraction_pressure_address = command_config->getString("initial_extraction_pressure_address", "");
-		std::string purified_extraction_pressure_address = command_config->getString("purified_extraction_pressure_address", "");
-		std::string sputtering_pressure_address = command_config->getString("sputtering_pressure_address", "");
-		std::string sputtering_flow_rate1_address = command_config->getString("sputtering_flow_rate1_address", "");
-		std::string sputtering_flow_rate2_address = command_config->getString("sputtering_flow_rate2_address", "");
-		std::string sputtering_flow_rate3_address = command_config->getString("sputtering_flow_rate3_address", "");
-		std::string sputtering_power1_address = command_config->getString("sputtering_power1_address", "");
-		std::string sputtering_power_gear_up1_address = command_config->getString("sputtering_power_gear_up1_address", "");
-		std::string sputtering_power2_address = command_config->getString("sputtering_power2_address", "");
-		std::string sputtering_power_gear_up2_address = command_config->getString("sputtering_power_gear_up2_address", "");
-		std::string sputtering_power3_address = command_config->getString("sputtering_power3_address", "");
-		std::string sputtering_power_gear_up3_address = command_config->getString("sputtering_power_gear_up3_address", "");
-		std::string pre_sputtering_time_address = command_config->getString("pre_sputtering_time_address", "");
-		std::string substrate_speed_address = command_config->getString("substrate_speed_address", "");
-		std::string process_sputtering_time_address = command_config->getString("process_sputtering_time_address", "");
-		std::string cathode_power_selection_1_address = command_config->getString("cathode_power_selection_1_address", "");
-		std::string cathode_power_selection_2_address = command_config->getString("cathode_power_selection_2_address", "");
-		std::string cathode_power_selection_3_address = command_config->getString("cathode_power_selection_3_address", "");
+		// 使用循环读取所有参数
+		for (const auto& mapping : d->_mapping_table)
+		{
+			std::string address = command_config->getString(mapping.config_key, "");
 
+			if (address.empty())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
+					Poco::format("address: %s not defined", sub->getName()), this);
+			}
 
-		if ((heating_temperature_address == "") || (initial_extraction_pressure_address == "") || (purified_extraction_pressure_address == "") || (sputtering_pressure_address == "") ||
-			(sputtering_flow_rate1_address == "") || (sputtering_flow_rate2_address == "") || (sputtering_flow_rate3_address == "") || (sputtering_power1_address == "") || 
-			(sputtering_power_gear_up1_address == "") || (sputtering_power2_address == "") || (sputtering_power_gear_up2_address == "") || (sputtering_power3_address == "") || 
-			(sputtering_power_gear_up3_address == "") || (pre_sputtering_time_address == "") || (substrate_speed_address == "") || (process_sputtering_time_address == "") || 
-			(cathode_power_selection_1_address == "") || (cathode_power_selection_2_address == "") || (cathode_power_selection_3_address == ""))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("address: %s not defined", getName()), this);
+			double& value = d->axis_parames.*(mapping.member_ptr);
+
+			if (!readDouble(address, value)) 
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+					Poco::format(" %s读取%s错误", sub->getName(), mapping.description), this);
+			}	
 		}
-		logInform(sub->getName().c_str(), "写入工艺参数命令开始执行");
-		if (!writeFloat(heating_temperature_address, d->process_parameters.heating_temperature))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到温度设定地址错误", sub->getName(), d->process_parameters.heating_temperature), this);
-		}
-		if (!writeFloat(initial_extraction_pressure_address, d->process_parameters.initial_extraction_pressure))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到粗抽压力地址错误", sub->getName(), d->process_parameters.initial_extraction_pressure), this);
-		}
-		if (!writeFloat(purified_extraction_pressure_address, d->process_parameters.purified_extraction_pressure))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到精抽压力地址错误", sub->getName(), d->process_parameters.purified_extraction_pressure), this);
-		}
-		if (!writeFloat(sputtering_pressure_address, d->process_parameters.sputtering_pressure))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射压力地址错误", sub->getName(), d->process_parameters.sputtering_pressure), this);
-		}
-		if (!writeFloat(sputtering_flow_rate1_address, d->process_parameters.sputtering_flow_rate1))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射流量1地址错误", sub->getName(), d->process_parameters.sputtering_flow_rate1), this);
-		}
-		if (!writeFloat(sputtering_flow_rate2_address, d->process_parameters.sputtering_flow_rate2))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射流量2地址错误", sub->getName(), d->process_parameters.sputtering_flow_rate2), this);
-		}
-		if (!writeFloat(sputtering_flow_rate3_address, d->process_parameters.sputtering_flow_rate3))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射流量3地址错误", sub->getName(), d->process_parameters.sputtering_flow_rate3), this);
-		}
-		if (!writeFloat(sputtering_power1_address, d->process_parameters.sputtering_power1))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射功率1地址错误", sub->getName(), d->process_parameters.sputtering_power1), this);
-		}
-		if (!writeFloat(sputtering_power_gear_up1_address, d->process_parameters.sputtering_power_gear_up1))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射功率1增速地址错误", sub->getName(), d->process_parameters.sputtering_power_gear_up1), this);
-		}
-		if (!writeFloat(sputtering_power2_address, d->process_parameters.sputtering_power2))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射功率2地址错误", sub->getName(), d->process_parameters.sputtering_power2), this);
-		}
-		if (!writeFloat(sputtering_power_gear_up2_address, d->process_parameters.sputtering_power_gear_up2))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射功率2增速地址错误", sub->getName(), d->process_parameters.sputtering_power_gear_up2), this);
-		}
-		if (!writeFloat(sputtering_power3_address, d->process_parameters.sputtering_power3))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射功率3地址错误", sub->getName(), d->process_parameters.sputtering_power3), this);
-		}
-		if (!writeFloat(sputtering_power_gear_up3_address, d->process_parameters.sputtering_power_gear_up3))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到溅射功率3增速地址错误", sub->getName(), d->process_parameters.sputtering_power_gear_up3), this);
-		}
-		if (!writeFloat(pre_sputtering_time_address, d->process_parameters.pre_sputtering_time))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到预溅射时间地址错误", sub->getName(), d->process_parameters.pre_sputtering_time), this);
-		}
-		if (!writeFloat(substrate_speed_address, d->process_parameters.substrate_speed))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到工艺溅射旋转速度地址错误", sub->getName(), d->process_parameters.substrate_speed), this);
-		}
-		if (!writeFloat(process_sputtering_time_address, d->process_parameters.process_sputtering_time))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %f 到工艺溅射时间地址错误", sub->getName(), d->process_parameters.process_sputtering_time), this);
-		}
-		if (!writeInt(cathode_power_selection_1_address, d->process_parameters.cathode_power_selection_1))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %d 到1#阴极电源选择地址错误", sub->getName(), d->process_parameters.cathode_power_selection_1), this);
-		}
-		if (!writeInt(cathode_power_selection_2_address, d->process_parameters.cathode_power_selection_2))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %d 到2#阴极电源选择地址错误", sub->getName(), d->process_parameters.cathode_power_selection_2), this);
-		}
-		if (!writeInt(cathode_power_selection_3_address, d->process_parameters.cathode_power_selection_3))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %d 到3#阴极电源选择地址错误", sub->getName(), d->process_parameters.cathode_power_selection_3), this);
-		}
+
+		// 设置参数到子系统
+		sub->setPMCavityAxisParameters(d->axis_parames);
 		logInform(sub->getName().c_str(), "写工艺参数命令执行结束");
 		return IKernelCommand::RunResult::RUN_OK;
 
 	}
-
-
-
 }

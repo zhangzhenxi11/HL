@@ -27,11 +27,13 @@ namespace FC{
 	class  PMCavityWriteProcessParametersCommand : public  KernelSubsystemCommand, public KeyencePlcCommandExecuter {
 	public:
 		DECLARE_PTR(PMCavityWriteProcessParametersCommand)
-		PMCavityWriteProcessParametersCommand(const PMCavityProcessParameters process_parameters, KeyencePlcSubSystemHelper* helper);
-		virtual std::string getName()const override { return "WriteProcessParameters"; }
+		PMCavityWriteProcessParametersCommand(const PMCavityAxisSettingParameters process_parameters, KeyencePlcSubSystemHelper* helper);
+		virtual std::string getName()const override { return "AxisWriteParameters"; }
 
+		
 	protected:
-		virtual RunResult onRun() throw(KernelException);		
+		virtual RunResult onRun() throw(KernelException);	
+
 	private:
 		DECLARE_PRIVATE(PMCavityWriteProcessParametersCommand)
 	};
