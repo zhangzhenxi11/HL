@@ -107,75 +107,81 @@ namespace FC{
 		std::string open_tm_cavity_door_address = "";
 		std::string close_tm_cavity_door_address = "";
 
+		std::string lifting_axis_clear_error_address = ""; //清除Z轴错误
 
-		std::string lifting_axis_return_original_completion_address = "";
+		std::string rotating_axis_clear_error_address = ""; //清除R轴错误
+
+		std::string lifting_axis_rest_address = ""; //Z轴回原
+
+		std::string rotating_axis_rest_address = "";//R轴回原
+
+		std::string lifting_axis_return_original_completion_address = "";//Z轴回原完成
 		bool axis_origin_done;
 
-		std::string lifting_axis_clear_error_completion_address = "";
+		std::string lifting_axis_clear_error_completion_address = ""; //升降轴清除轴错误完成
 		bool lifting_axis_clear_done;
 
-		std::string lifting_axis_jog_running_address;
+		std::string lifting_axis_jog_running_address; //升降轴JOG运行中
 		bool lifting_axis_jog_running;
 
-		std::string lifting_axis_return_original_running_address;
+		std::string lifting_axis_return_original_running_address; //升降轴回原中
 		bool lifting_axis_return_original_running;
 
-		std::string lifting_axis_enable_address;
+		std::string lifting_axis_enable_address;//升降轴使能ON
 		bool lifting_axis_enable_done;
 
-		std::string lifting_axis_moving_address;
-		bool ifting_axis_moving;
+		std::string lifting_axis_moving_address;//升降轴移动中
+		bool lifting_axis_moving;
 
-		std::string lifting_axis_move_end_address;
-		bool ifting_axis_move_done;
+		std::string lifting_axis_move_end_address;//升降轴移动结束
+		bool lifting_axis_move_done;
 
-		std::string lifting_axis_feedback_position_addresss;
-		int ifting_axis_feedback_position;
+		std::string lifting_axis_feedback_position_addresss;//升降轴反馈位置
+		int lifting_axis_feedback_position;
 
-		std::string lifting_axis_current_coordinate_addresss;
+		std::string lifting_axis_current_coordinate_addresss;//升降轴当前坐标
 		float lifting_axis_current_coordinate = 0.0F;
 
-		std::string lifting_axis_current_speed_addresss;
+		std::string lifting_axis_current_speed_addresss;//升降轴当前速度
 		float lifting_axis_current_speed;
 
-		std::string lifting_axis_current_control_mode_addresss;
+		std::string lifting_axis_current_control_mode_addresss;//升降轴当前控制模式
 		uint16_t current_control_mode;
 
-		std::string lifting_axis_feedback_torque_monitor_address;
+		std::string lifting_axis_feedback_torque_monitor_address;//升降轴反馈转矩监视器
 		float lifting_axis_feedback_torque_monitor;
 
-		std::string rotating_axis_return_original_completion_address;
+		std::string rotating_axis_return_original_completion_address; //R轴回原完成
 		bool rotating_axis_return_original_done;
 
-
-		std::string rotating_axis_clear_error_completion_address;
+		std::string rotating_axis_clear_error_completion_address;//旋转轴清除轴错误完成
 		bool rotating_axis_clear_error_done;
 
-		std::string rotating_axis_stop_completion_address;
+		std::string rotating_axis_stop_completion_address;//旋转轴轴停止完成
 		bool rotating_axis_stop_done;
 
-		std::string rotating_axis_jog_running_address;
+		std::string rotating_axis_jog_running_address;//旋转轴JOG运行中
 		bool rotating_axis_jog_running;
 
-		std::string rotating_axis_return_original_running_address;
-		bool rotating_axis_return_original_done;
+		std::string rotating_axis_return_original_running_address;//旋转轴回原中
+		bool rotating_axis_return_original_running;
 
-		std::string rotating_axis_enable_address;
+		std::string rotating_axis_enable_address;//旋转轴使能ON
 		bool rotating_axis_enable_done;
 
-		std::string rotating_axis_moving_address;
+		std::string rotating_axis_moving_address;//旋转轴移动中
 		bool  rotating_axis_moving;
 
-		std::string rotating_axis_move_end_address;
+		std::string rotating_axis_move_end_address;//旋转轴移动结束
 		bool  rotating_axis_move_end;
 
-		std::string rotating_axis_feedback_position_addresss;
+		std::string rotating_axis_feedback_position_addresss;//旋转轴反馈位置
 		int  rotating_axis_feedback_position;
 
-		std::string rotating_axis_current_coordinate_addresss;
+		std::string rotating_axis_current_coordinate_addresss;//旋转轴当前坐标
 		double rotating_axis_current_coordinate;
 
-		std::string rotating_axis_current_speed_addresss;
+		std::string rotating_axis_current_speed_addresss;//旋转轴当前速度
 		double rotating_axis_current_speed;
 
 
@@ -566,9 +572,14 @@ namespace FC{
 
 		if (change)
 		{
-			d->pm_update_process_parameters = true;
+			d->pm_axis_setting_parameters = true;
 			AbstractIOSubsystem::emitAttributeChanged(this);
 		}
+	}
+	PMCavityAxisSettingParameters FortrendPMCavitySubsystem::getPMCavityAxisParameters()
+	{
+		d->pm_axis_setting_parameters = false;
+		return d->axis_setting_parameters;
 	}
 	/**
 
@@ -599,112 +610,181 @@ namespace FC{
 
 	bool FortrendPMCavitySubsystem::getLiftingAxisPowerDone() const
 	{
-		return false;
+		return d->lifting_axis_enable_done;
 	}
 
-	void FortrendPMCavitySubsystem::setLiftingAxisPower()
+	void FortrendPMCavitySubsystem::setLiftingAxisPower(bool enable)
 	{
-
+		if(!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_enable_address, enable)) 
+		{
+			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_rest_address).c_str());
+		}else
+		{
+			if (d->lifting_axis_enable_done != enable)
+			{
+				d->lifting_axis_enable_done = enable;
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+		}
 	}
 
-	bool FortrendPMCavitySubsystem::getLiftingJogHomeDone() const
+	bool FortrendPMCavitySubsystem::getLiftingHomeDone() const
 	{
-		return false;
+		return d->axis_origin_done;
 	}
 
-	void FortrendPMCavitySubsystem::setLiftingJogHome()
+	void FortrendPMCavitySubsystem::setLiftingHome(bool enable)
 	{
+		if (!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_rest_address, enable))
+		{
+			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_rest_address).c_str());
+		}
+		else
+		{
+			if (d->axis_origin_done != enable)
+			{
+				d->axis_origin_done = enable;
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+		}
 	}
 
 	bool FortrendPMCavitySubsystem::getZAxisClearErrorDone() const
 	{
-		return false;
+		return d->lifting_axis_clear_done;
 	}
 
-	void FortrendPMCavitySubsystem::setZAxisClearError()
+	void FortrendPMCavitySubsystem::setZAxisClearError(bool enable)
 	{
+		if (!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_clear_error_address, enable)) {
+		
+			logError(getName().c_str(), Poco::format("写清除Z轴控报警address = %s 失败!", d->lifting_axis_clear_error_address).c_str());
+		}
+		else
+		{
+			if (d->lifting_axis_clear_done != enable)
+			{
+				d->lifting_axis_clear_done = enable;
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+		}
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxisClearErrorDone() const
 	{
-		return false;
+		return d->rotating_axis_clear_error_done;
 	}
 
-	void FortrendPMCavitySubsystem::setRAxisClearError()
+	void FortrendPMCavitySubsystem::setRAxisClearError(bool enable)
 	{
+		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_clear_error_address, enable))
+		{
+			logError(getName().c_str(), Poco::format("写清除R轴控报警address = %s 失败!", d->rotating_axis_clear_error_address).c_str());
+		}
+		else
+		{
+			if (d->rotating_axis_clear_error_done != enable)
+			{
+				d->rotating_axis_clear_error_done = enable;
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+		}
 	}
-
 
 	bool FortrendPMCavitySubsystem::getRotationAxisPowerDone() const
 	{
-		return false;
+		return d->rotating_axis_enable_done;
 	}
-	void FortrendPMCavitySubsystem::setRotationAxisPower()
+	void FortrendPMCavitySubsystem::setRotationAxisPower(bool enable)
 	{
-	}
-
-	bool FortrendPMCavitySubsystem::getRotationJogHomeDone() const
-	{
-		return false;
-	}
-
-	void FortrendPMCavitySubsystem::setRotationJogHome()
-	{
-	}
-
-	double FortrendPMCavitySubsystem::getPMCavityZAxleSpeed() const
-	{
-		return 0.0;
+		if (KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_enable_address, enable))
+		{
+			logError(getName().c_str(), Poco::format("写R轴控使能address = %s 失败!", d->rotating_axis_enable_address).c_str());
+		}
+		else
+		{
+			if (d->rotating_axis_enable_done != enable)
+			{
+				d->rotating_axis_enable_done = enable;
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+		};
 	}
 
-	double FortrendPMCavitySubsystem::getPMCavityZAxleLocation() const
+	bool FortrendPMCavitySubsystem::getRotationHomeDone() const
 	{
-		return 0.0;
+		return d->rotating_axis_return_original_done;
+	}
+
+	void FortrendPMCavitySubsystem::setRotationHome(bool enable)
+	{
+		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
+		{
+			logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
+		}
+		else
+		{
+			if (d->rotating_axis_return_original_done != enable)
+			{
+				d->rotating_axis_return_original_done = enable;
+				AbstractIOSubsystem::emitAttributeChanged(this);
+			}
+		};
+	}
+
+	float FortrendPMCavitySubsystem::getPMCavityZAxleSpeed() const
+	{
+		return d->lifting_axis_current_speed;
+	}
+
+	float FortrendPMCavitySubsystem::getPMCavityZAxleLocation() const
+	{
+		return d->lifting_axis_current_coordinate;
 	}
 
 	double FortrendPMCavitySubsystem::getPMCavityRAxleSpeed() const
 	{
-		return 0.0;
+		return d->rotating_axis_current_speed;
 	}
 
 	double FortrendPMCavitySubsystem::getPMCavityRAxleLocation() const
 	{
-		return 0.0;
+		return d->rotating_axis_current_coordinate;
 	}
 
 	bool FortrendPMCavitySubsystem::getZAxleJogRunning() const
 	{
-		return false;
+		return d->lifting_axis_jog_running;
 	}
 
-	bool FortrendPMCavitySubsystem::getZAxleAutoDone() const
+	bool FortrendPMCavitySubsystem::getZAxleAutoRunDone() const
 	{
-		return false;
+		return d->lifting_axis_move_done;
 	}
 
 	bool FortrendPMCavitySubsystem::getZAxleAutoRunning() const
 	{
-		return false;
+		return d->lifting_axis_moving;
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxleStopDone() const
 	{
-		return false;
+		return d->rotating_axis_stop_done;
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxleJogRunning() const
 	{
-		return false;
+		return d->rotating_axis_jog_running;
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxleAutoDone() const
 	{
-		return false;
+		return d->rotating_axis_move_end;
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxleAutoRunning() const
 	{
-		return false;
+		return  d->rotating_axis_moving;
 	}
 
 
@@ -855,6 +935,7 @@ namespace FC{
 		auto  cass = cassManager->getCassette(lk1.get());
 		cass->setPodSize(count);
 	}
+
 	void FortrendPMCavitySubsystem::setPMCavityCrftCountLLB(int count){
 		d->crft_count_llb = count;
 		std::shared_ptr<FortrendCassetteManager> cassManager = getKernel()->getKernelModule<FortrendCassetteManager>();
@@ -965,109 +1046,42 @@ namespace FC{
 					io_changed = true;
 			}
 
-#if 0
 
-			bool result2 = d->pm_cavity_motor_home;
-			if (d->pm_cavity_motor_home_address != "" &&KeyencePlcSubSystemHelper::readBit(d->pm_cavity_motor_home_address, d->pm_cavity_motor_home))
+			float _speed = d->lifting_axis_current_speed;
+			if (d->lifting_axis_current_speed_addresss != "" && readFloat(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed))
 			{
-				if (result2 != d->pm_cavity_motor_home){
-					io_changed = true;
-				}
-			}
-
-			bool result3 = d->pm_cavity_motor_forward;
-			if (d->pm_cavity_motor_forward_address != "" &&KeyencePlcSubSystemHelper::readBit(d->pm_cavity_motor_forward_address, d->pm_cavity_motor_forward))
-			{
-				if (result3 != d->pm_cavity_motor_forward){
-					io_changed = true;
-				}
-			}
-			bool result4 = d->pm_cavity_motor_run;
-			if (KeyencePlcSubSystemHelper::readBit("MR35106", d->pm_cavity_motor_run))
-			{
-				if (result4 != d->pm_cavity_motor_run){
-					io_changed = true;
-				}
-			}
-			float resultspeed = d->speed;
-			if (KeyencePlcSubSystemHelper::readFloat("DM15070", resultspeed)){
-				if (resultspeed != d->speed){
-					d->speed = resultspeed;
-					logInform("Test", "PM腔速度读取，地址：DM15074  值%.2f", d->speed);
-					io_changed = true;
-				}
-			}
-
-			float resultspeed2 = d->motorspeed;
-			if (KeyencePlcSubSystemHelper::readFloat("DM15080", resultspeed2)){
-				if (resultspeed2 != d->motorspeed){
-					d->motorspeed = resultspeed2;
-					logInform("Test", "PM腔电机速度读取，地址：DM15080  值%.2f", d->motorspeed);
-					io_changed = true;
-				}
-			}
-
-			double resultlocation = d->axlelocation;
-			if (KeyencePlcSubSystemHelper::readDouble("DM15040", d->axlelocation)){
-				if (resultlocation != d->axlelocation){
-					io_changed = true;
-				}
-			}	
-
-			if (d->io_input_count > 0)
-			{
-				if (KeyencePlcSubSystemHelper::readBits(d->io_input_address, d->io_input_count, d->ptr_io_input_state))
+				if (_speed != d->lifting_axis_current_speed)
 				{
-					for (size_t i = 0; i < d->io_input_count; i++)
-					{
-						if (d->ptr_io_input_state[i] != d->io_input_last_value[i])
-						{
-							d->io_input_last_value[i] = d->ptr_io_input_state[i];
-							io_changed = true;
-						}
-					}
-				}
-			}
-			for (size_t i = 0; i < d->pm_cavity_motiner_float_state.size(); i++)
-			{
-				if (KeyencePlcSubSystemHelper::readFloat(d->pm_cavity_motiner_float_state[i].address, d->pm_cavity_motiner_float_state[i].current_value)
-					&& d->pm_cavity_motiner_float_state[i].last_value != d->pm_cavity_motiner_float_state[i].current_value){
-					d->pm_cavity_motiner_float_state[i].last_value = d->pm_cavity_motiner_float_state[i].current_value;
 					io_changed = true;
 				}
 			}
-			for (size_t i = 0; i < d->pm_cavity_motiner_short_state.size(); i++)
+
+			float _location = d->lifting_axis_current_coordinate;
+			if (d->lifting_axis_current_coordinate_addresss != "" && readFloat(d->lifting_axis_current_coordinate_addresss, d->lifting_axis_current_coordinate))
 			{
-				if (KeyencePlcSubSystemHelper::readShort(d->pm_cavity_motiner_short_state[i].address, d->pm_cavity_motiner_short_state[i].current_value)
-					&& d->pm_cavity_motiner_short_state[i].last_value != d->pm_cavity_motiner_short_state[i].current_value){
-					d->pm_cavity_motiner_short_state[i].last_value = d->pm_cavity_motiner_short_state[i].current_value;
-					io_changed = true;
-				}
-			}
-			if (d->dc_power_initial_address != "" &&
-				KeyencePlcSubSystemHelper::readShorts(d->dc_power_initial_address, d->dc_power_address_length, dc_power_current_value))
-			{
-				for (size_t i = 0; i < d->dc_power_address_length; i++)
+				if (_location != d->lifting_axis_current_coordinate)
 				{
-					d->pm_cavity_motiner_dc_power_state[i].current_value = dc_power_current_value[i];
-					if (dc_power_current_value[i] != d->pm_cavity_motiner_dc_power_state[i].last_value)
-					{
-						d->pm_cavity_motiner_dc_power_state[i].last_value = dc_power_current_value[i];
-						io_changed = true;
-					}
-				}
-			}
-
-			for (size_t i = 0; i < d->pm_cavity_film_state.size(); i++)
-			{
-				if (KeyencePlcSubSystemHelper::readInt(d->pm_cavity_film_state[i].address, d->pm_cavity_film_state[i].current_value)
-					&& d->pm_cavity_film_state[i].last_value != d->pm_cavity_film_state[i].current_value){
-					d->pm_cavity_film_state[i].last_value = d->pm_cavity_film_state[i].current_value;
 					io_changed = true;
 				}
 			}
-#endif
 
+			double r_axis_speed = d->rotating_axis_current_speed;
+			if (d->rotating_axis_current_speed_addresss != "" && readDouble(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed))
+			{
+				if (r_axis_speed != d->rotating_axis_current_speed)
+				{
+					io_changed = true;
+				}
+			}
+
+			double r_location = d->rotating_axis_current_coordinate;
+			if (d->rotating_axis_current_coordinate_addresss != "" && readDouble(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate))
+			{
+				if (r_location != d->rotating_axis_current_coordinate)
+				{
+					io_changed = true;
+				}
+			}
 
 
 			if (io_changed)
@@ -1117,6 +1131,20 @@ namespace FC{
 			d->vacuum_break_set_value = config->getDouble("PM_Parameter.BreakSetValue", 99600.0);
 			d->temperature_set_value = config->getDouble("PM_Parameter.TemperatureSetValue", 300);
 		}
+		if (config->has("LiftingAxisHome"))
+		{
+			d->lifting_axis_rest_address = config->getString("LiftingAxisHome.start_address","");
+		}
+		if (config->has("RotatingAxisHome"))
+		{
+			d->rotating_axis_rest_address = config->getString("RotatingAxisHome.start_address","");
+		}
+
+		if (config->has("ClearLiftingAxisError"))
+		{
+		
+		}
+
 		if (config->has("PMCavityStateAddress"))
 		{
 			if (d->pm_cavity_motiner_short_state.size() > 0)

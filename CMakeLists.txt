@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(VTM)
+project(HL_VTM)
 ############################工程设置############################
 foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )

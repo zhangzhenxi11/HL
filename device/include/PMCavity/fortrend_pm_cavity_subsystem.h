@@ -109,10 +109,13 @@ namespace FC{
 		//PM腔安全信号+_门阀开启to机械手 互锁
 		bool getPMCavitySafeSignal();
 		void setPMCavitySafeSignal(bool value);
+
 		bool getPMCavityMotorHomeSignal();
 		bool getPMCavityMotorForwardSignal();
+
 		bool getPMCavityMotorRunSignal();
 		bool getPMCavityRemoteMode();
+
 		//Pm使能
 		bool getPMCavityEnable()const;
 		void setPMCavityEnable(const bool value);
@@ -129,6 +132,7 @@ namespace FC{
 		void setPMCavityProcessParameters(const PMCavityProcessParameters pm_param);
 
 		void setPMCavityAxisParameters(const PMCavityAxisSettingParameters pm_param);
+		PMCavityAxisSettingParameters getPMCavityAxisParameters();
 
 		/**
 		* 获取镀膜时间
@@ -141,31 +145,31 @@ namespace FC{
 		
 		//Z轴控使能
 		bool getLiftingAxisPowerDone()const;
-		void setLiftingAxisPower();
+		void setLiftingAxisPower(bool enable);
 
 		//Z轴回原
-		bool getLiftingJogHomeDone()const;
-		void setLiftingJogHome();
+		bool getLiftingHomeDone()const;
+		void setLiftingHome(bool enable);
 
 		//清除Z轴控报警
 		bool getZAxisClearErrorDone()const;
-		void setZAxisClearError();
+		void setZAxisClearError(bool enable);
 
 		//清除R轴控报警
 		bool getRAxisClearErrorDone()const;
-		void setRAxisClearError();
+		void setRAxisClearError(bool enable);
 
 		//R轴控使能
 		bool getRotationAxisPowerDone()const;
-		void setRotationAxisPower();
+		void setRotationAxisPower(bool enable);
 		//R轴回原
-		bool getRotationJogHomeDone()const;
-		void setRotationJogHome();
+		bool getRotationHomeDone()const;
+		void setRotationHome(bool enable);
 
 		//Z轴速度
-		double getPMCavityZAxleSpeed()const;
+		float getPMCavityZAxleSpeed()const;
 		//Z轴位置
-		double getPMCavityZAxleLocation()const;
+		float getPMCavityZAxleLocation()const;
 
 		//R轴速度
 		double getPMCavityRAxleSpeed()const;
@@ -175,21 +179,20 @@ namespace FC{
 		//JOG运行中
 		bool getZAxleJogRunning()const; 
 
-		//移动结束  
-		bool getZAxleAutoDone()const;
-		//移动中
+		//Z轴移动结束  
+		bool getZAxleAutoRunDone()const;
+		//Z轴移动中
 		bool getZAxleAutoRunning()const;
 
-		//轴停止完成
-
+		//R轴停止完成
 		bool getRAxleStopDone() const;
 
 		//JOG运行中
 		bool getRAxleJogRunning()const;
 
-		//移动结束  
+		//R轴移动结束  
 		bool getRAxleAutoDone()const;
-		//移动中
+		//R轴移动中
 		bool getRAxleAutoRunning()const;
 
 		double getPMCavityMagnitude()const;
@@ -201,8 +204,9 @@ namespace FC{
 
 		void setPMCavityTurnSpeed(double speed);
 
+		//JOG+
 		void setPMCavityForward(bool forward);
-
+		//JOG-
 		void setPMCavityBackward(bool backward);
 
 		int  getPMCavityCrftCountLLA()const;
