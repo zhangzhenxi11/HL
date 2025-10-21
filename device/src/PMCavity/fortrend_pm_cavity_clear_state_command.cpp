@@ -50,13 +50,13 @@ namespace FC{
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 		std::string clear_state_address = command_config->getString("clear_state_address", "");
-		if (clear_state_address == "" )
+		if (clear_state_address == "")
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 清除状态地址未定义", getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_OK;
 		logInform(sub->getName().c_str(), "清除状态命令执行开始");
-		if (!writeBit(clear_state_address,false))
+		if (!writeBit(clear_state_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到清除状态地址错误", sub->getName()), this);
 		}
@@ -64,7 +64,7 @@ namespace FC{
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass
 		auto station_cass = cassManager->getCassette(sub);
-		if (!station_cass){
+		if (!station_cass) {
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
 		}
 		std::vector<int> all_slot;
@@ -74,6 +74,7 @@ namespace FC{
 		station_cass->setMapping(all_slot, all_mapping);
 		logInform(sub->getName().c_str(), "清除状态命令执行结束");
 		return ret;
+
 
 	}
 

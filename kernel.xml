@@ -1063,11 +1063,6 @@
 				<abs_position_address>DM6608</abs_position_address>
 				<timeout>60000</timeout>
 			</ToPutStation>
-			<!--清除升降轴错误-->
-			<ClearLiftingAxisError> 
-				<start_address>MR8104</start_address>
-				<finish_address>MR8002</finish_address>
-			</ClearLiftingAxisError>
 			<!--旋转轴动作-->
 			<RotatingAxisAction>
 				<start_address>MR8505</start_address>
@@ -1083,11 +1078,6 @@
 				<running_address>MR8405</running_address>
 				<finish_address>MR8401</finish_address>
 			</RotatingAxisHome>
-			<!--清除旋转轴错误-->
-			<ClearRotatingAxisError> 
-				<start_address>MR8504</start_address>
-				<finish_address>MR8402</finish_address>
-			</ClearRotatingAxisError>
 			<!-- 轴的可读参数-->
 			<AxisReadParameters>
 				<!--升降轴加速度-->
@@ -1267,10 +1257,16 @@
 				<rotating_axis_current_speed_addresss>DM6706</rotating_axis_current_speed_addresss>
 			</Update>
 			<Reset>
-				<start_address>DM25027</start_address>
-				<finish_address>MR26104</finish_address>
-				<failed_address>MR26105</failed_address>
-				<error_code_address>DM26011</error_code_address>
+				<!--清除升降轴错误-->
+				<lifting_axis_start_address>MR8104</lifting_axis_start_address>
+				<lifting_axis_finish_address>MR8002</lifting_axis_finish_address>
+				<!--清除旋转轴错误-->
+				<rotating_axis_start_address>MR8504</rotating_axis_start_address>
+				<rotating_axis_finish_address>MR8402</rotating_axis_finish_address>
+				<!--Z轴报警-->
+				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
+				<!--R轴报警-->
+				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
 				<timeout>30000</timeout>
 			</Reset>
 		</PM1>

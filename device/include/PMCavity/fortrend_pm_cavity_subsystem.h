@@ -81,6 +81,7 @@ namespace FC{
 		std::shared_ptr<PMCavityToRotatingStationCommand> createToRotatingStationCommand()const;	    //去旋转位命令
 		//旋转轴动作
 		std::shared_ptr<PMCavityRotatingActionCommand> createRotatingActionCommand(double degree)const;
+
 		std::shared_ptr<PMCavityReadProcessParametersCommand> createReadProcessParametersCommand()const;
 		std::shared_ptr<PMCavityWriteProcessParametersCommand> createWriteProcessParametersCommand(const PMCavityAxisSettingParameters axis_parames)const;
 		std::shared_ptr<PMCavityClearStateCommand> createClearStateCommand()const;
@@ -219,7 +220,10 @@ namespace FC{
 
 		void recardVacuum() const;
 
-
+		bool safe_read_bit(const std::string& tag, bool& output);
+		bool safe_read_float(const std::string& tag, float& output);
+		bool safe_read_double(const std::string& tag, double& output);
+		bool safe_read_int(const std::string&tag,int&output);
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

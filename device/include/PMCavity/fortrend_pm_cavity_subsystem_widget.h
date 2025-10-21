@@ -40,6 +40,11 @@ private slots:
 	void onAttributeUpdate() throw (KernelException);
 	void onToGetStation();
 	void onToPutStation();
+	void onToRotatingStation();
+	void onToTargetPos();
+	void onToRotatingDegreeStation();
+	void onLiftingAxisRest();
+	void onRotaingAxisRest();
 private:
 	void init();
 	

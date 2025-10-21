@@ -137,7 +137,7 @@ namespace FC{
 		bool lifting_axis_move_done;
 
 		std::string lifting_axis_feedback_position_addresss;//升降轴反馈位置
-		int lifting_axis_feedback_position;
+		float lifting_axis_feedback_position = 0.0F;
 
 		std::string lifting_axis_current_coordinate_addresss;//升降轴当前坐标
 		float lifting_axis_current_coordinate = 0.0F;
@@ -185,6 +185,9 @@ namespace FC{
 		double rotating_axis_current_speed;
 
 
+		
+	
+
 	};
 
 	/**
@@ -194,6 +197,82 @@ namespace FC{
 		:p(p){
 
 
+	}
+
+	bool FortrendPMCavitySubsystem::safe_read_bit(const std::string& tag, bool& output)
+	{
+		if (tag.empty()) return false;
+		bool value;
+		if (KeyencePlcSubSystemHelper::readBit(tag, value))
+		{
+			if (output != value)
+			{
+				output = value;
+				return true;
+			}
+			return false;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool FortrendPMCavitySubsystem::safe_read_float(const std::string& tag, float& output)
+	{
+		if (tag.empty()) return false;
+		float value;
+		if (KeyencePlcSubSystemHelper::readFloat(tag, value))
+		{
+			if (output != value)
+			{
+				output = value;
+				return true;
+			}
+			return false;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool FortrendPMCavitySubsystem::safe_read_double(const std::string& tag, double& output)
+	{
+		if (tag.empty()) return false;
+		double value;
+		if (KeyencePlcSubSystemHelper::readDouble(tag, value))
+		{
+			if (output != value)
+			{
+				output = value;
+				return true;
+			}
+			return false;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool FortrendPMCavitySubsystem::safe_read_int(const std::string& tag, int& output)
+	{
+		if (tag.empty()) return false;
+		int value;
+		if (KeyencePlcSubSystemHelper::readInt(tag, value))
+		{
+			if (output != value)
+			{
+				output = value;
+				return true;
+			}
+			return false;
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 	/**
@@ -617,7 +696,7 @@ namespace FC{
 	{
 		if(!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_enable_address, enable)) 
 		{
-			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_rest_address).c_str());
+			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_enable_address).c_str());
 		}else
 		{
 			if (d->lifting_axis_enable_done != enable)
@@ -1030,59 +1109,70 @@ namespace FC{
 		{
 
 			bool io_changed = false;
-			bool result = d->pm_cavity_safe;
-			if (d->pm_cavity_safe_address != "" && KeyencePlcSubSystemHelper::readBit(d->pm_cavity_safe_address, d->pm_cavity_safe))
-			{
-				if (result != d->pm_cavity_safe)
-				{
-					io_changed = true;
-				}
-			}
 
-			bool flag = d->tm_cavity_door_opend;
-			if (d->open_tm_cavity_door_address != "" && readBit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend))
-			{
-				if (flag != d->tm_cavity_door_opend)
-					io_changed = true;
-			}
+			//PM腔安全信号
+			io_changed |= safe_read_bit(d->pm_cavity_safe_address, d->pm_cavity_safe);
 
+			//TM腔门
+			io_changed |= safe_read_bit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend);
 
-			float _speed = d->lifting_axis_current_speed;
-			if (d->lifting_axis_current_speed_addresss != "" && readFloat(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed))
-			{
-				if (_speed != d->lifting_axis_current_speed)
-				{
-					io_changed = true;
-				}
-			}
+			//升降轴当前速度
+			io_changed |= safe_read_float(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed);
+			//升降轴当前坐标
+			io_changed |= safe_read_float(d->lifting_axis_current_coordinate_addresss, d->lifting_axis_current_coordinate);
 
-			float _location = d->lifting_axis_current_coordinate;
-			if (d->lifting_axis_current_coordinate_addresss != "" && readFloat(d->lifting_axis_current_coordinate_addresss, d->lifting_axis_current_coordinate))
-			{
-				if (_location != d->lifting_axis_current_coordinate)
-				{
-					io_changed = true;
-				}
-			}
+			//旋转轴当前速度
+			io_changed |= safe_read_double(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);
+			//旋转轴当前坐标
+			io_changed |= safe_read_double(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate);
+	
+			//清除轴错误完成
+			io_changed |= safe_read_bit(d->lifting_axis_clear_error_completion_address, d->lifting_axis_clear_done);
 
-			double r_axis_speed = d->rotating_axis_current_speed;
-			if (d->rotating_axis_current_speed_addresss != "" && readDouble(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed))
-			{
-				if (r_axis_speed != d->rotating_axis_current_speed)
-				{
-					io_changed = true;
-				}
-			}
+			//回原完成
+			io_changed |= safe_read_bit(d->lifting_axis_return_original_completion_address, d->axis_origin_done);
 
-			double r_location = d->rotating_axis_current_coordinate;
-			if (d->rotating_axis_current_coordinate_addresss != "" && readDouble(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate))
-			{
-				if (r_location != d->rotating_axis_current_coordinate)
-				{
-					io_changed = true;
-				}
-			}
+			//回原中
+			io_changed |= safe_read_bit(d->lifting_axis_return_original_running_address, d->lifting_axis_return_original_running);
 
+			//JOG运行中
+			io_changed |= safe_read_bit(d->lifting_axis_jog_running_address, d->lifting_axis_jog_running);
+
+			//使能ON
+			io_changed |= safe_read_bit(d->lifting_axis_enable_address, d->lifting_axis_enable_done);
+
+			//升降轴移动中
+			io_changed |= safe_read_bit(d->lifting_axis_moving_address, d->lifting_axis_moving);
+
+			//升降轴移动结束
+			io_changed |= safe_read_bit(d->lifting_axis_move_end_address, d->lifting_axis_move_done);
+
+			//升降轴反馈位置
+			io_changed |= safe_read_float(d->lifting_axis_feedback_position_addresss, d->lifting_axis_feedback_position);
+
+			//升降轴当前坐标
+			io_changed |= safe_read_float(d->lifting_axis_current_coordinate_addresss, d->lifting_axis_current_coordinate);
+
+			//升降轴当前速度
+			io_changed |= safe_read_float(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed);
+
+			io_changed |= safe_read_bit(d->rotating_axis_clear_error_completion_address, d->rotating_axis_clear_error_done);
+
+			io_changed |= safe_read_bit(d->rotating_axis_stop_completion_address, d->rotating_axis_stop_done);
+
+			io_changed |= safe_read_bit(d->rotating_axis_jog_running_address, d->rotating_axis_jog_running);
+
+			io_changed |= safe_read_bit(d->rotating_axis_enable_address, d->rotating_axis_enable_done);
+
+			io_changed |= safe_read_bit(d->rotating_axis_moving_address, d->rotating_axis_moving);
+
+			io_changed |= safe_read_bit(d->rotating_axis_move_end_address, d->rotating_axis_move_end);
+
+			io_changed |= safe_read_double(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate);
+
+			io_changed |= safe_read_double(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);
+
+			io_changed |= safe_read_double(d->rotating_axis_feedback_position_addresss, d->rotating_axis_feedback_position);
 
 			if (io_changed)
 			{
@@ -1104,8 +1194,6 @@ namespace FC{
 				count = 0;
 				//logInform1(Poco::format("%s_vacuum", getName()).c_str(), Poco::format("%f", getVacuumValue()).c_str());
 			}
-
-
 		}
 	}
 
@@ -1139,12 +1227,6 @@ namespace FC{
 		{
 			d->rotating_axis_rest_address = config->getString("RotatingAxisHome.start_address","");
 		}
-
-		if (config->has("ClearLiftingAxisError"))
-		{
-		
-		}
-
 		if (config->has("PMCavityStateAddress"))
 		{
 			if (d->pm_cavity_motiner_short_state.size() > 0)

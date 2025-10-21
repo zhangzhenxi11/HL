@@ -56,7 +56,7 @@ namespace FC{
 
 		if (!sub) throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		
-		return IKernelCommand::RunResult::RUN_OK;
+		//return IKernelCommand::RunResult::RUN_OK;
 		for (auto robot : sub->getRobots()){
 			if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("机械手: %s 状态未处于正常状态.", robot->getName()), this);
@@ -64,74 +64,95 @@ namespace FC{
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-		/*return IKernelCommand::RunResult::RUN_OK;*/
 
 		//fill params
-		std::string start_address = command_config->getString("start_address", "");
-		std::string finish_address = command_config->getString("finish_address", "");
-		std::string failed_address = command_config->getString("failed_address", "");
-		std::string error_code_address = command_config->getString("error_code_address", "");
+		std::string lifting_axis_start_address = command_config->getString("lifting_axis_start_address", "");
+		std::string lifting_axis_finish_address = command_config->getString("lifting_axis_finish_address", "");
+		std::string rotating_axis_start_address = command_config->getString("rotating_axis_start_address", "");
+		std::string rotating_axis_finish_address = command_config->getString("rotating_axis_finish_address", "");
+		std::string lifting_axis_alarm_address = command_config->getString("lifting_axis_alarm_address", "");
+		std::string rotating_axis_alarm_address = command_config->getString("rotating_axis_alarm_address", "");
+
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位命令超时参数设置错误", sub->getName()), this);
 		}
 
-		if ((start_address == "") || (finish_address == "") || (failed_address == "") || (error_code_address == ""))
+		if ((lifting_axis_start_address == "") || (lifting_axis_finish_address == "") || (rotating_axis_start_address == "") || (rotating_axis_finish_address == "")
+			||(lifting_axis_alarm_address =="") ||(rotating_axis_alarm_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 复位命令地址未定义", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "复位命令开始");
 		sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
-		if (!writeBit(start_address, true))
+		int32_t lifting_axis_alarm_code = 0;
+		int32_t rotating_axis_alarm_code = 0;
+		if (!writeBit(lifting_axis_start_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到复位命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到清除升降轴错误命令地址错误", sub->getName()), this);
 		}
+		if (!writeBit(rotating_axis_start_address, true))
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到清除旋转轴错误命令地址错误", sub->getName()), this);
+		}
+
 		Sleep(100);
 		int loopCount = timeout / 20;
 		int count = 0;
-		bool readRes[2];
+		bool readRes;
+		bool readRataRes;
 		while (count <= loopCount)
 		{
 			Sleep(20);
-			readBits(finish_address, 2, readRes);
-			if (readRes[0] || readRes[1])
+			readBit(lifting_axis_finish_address, readRes);
+			readBit(rotating_axis_finish_address, readRataRes);
+			if (readRes && readRataRes)
 			{
 				break;
 			}
 			count++;
 		}
-		/*if (!writeBit(start_address, false))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写0到复位命令地址错误", sub->getName()), this);
-		}*/
-		//readRes[0] = true;//屏蔽
+
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
-		if (readRes[0])
+		if (readRes && readRataRes)
 		{
 			//sub->setDoorOpen(false);
 			ret = IKernelCommand::RunResult::RUN_OK;
 			logInform(sub->getName().c_str(), "复位命令执行结束");
 
 		}
-		else if (readRes[1])
+		else 
 		{
-			short code = 0;
-			readShort(error_code_address, code);
-			auto code_message = getErrorCode(1, code);
-			AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
-			setAlarm(alarm);
+			int code = 0;
+	
+			if (!readInt(lifting_axis_alarm_address, lifting_axis_alarm_code))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读升降轴报警地址错误", sub->getName()), this);
+
+			}
+			if (!readInt(rotating_axis_alarm_address, rotating_axis_alarm_code))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读旋转轴报警地址错误", sub->getName()), this);
+
+			}
+			if (lifting_axis_alarm_code != 0)
+			{
+				auto code_message = getErrorCode(1, lifting_axis_alarm_code); //待定
+				AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
+				setAlarm(alarm);
+			}
+
+			else if(rotating_axis_alarm_code!=0)
+			{
+
+				auto code_message = getErrorCode(2, rotating_axis_alarm_code); //待定
+				AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
+				setAlarm(alarm);
+			}
+
 			logError(sub->getName().c_str(), "复位命令执行失败");
 		}
-		else
-		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "复位命令通讯超时"));
-			setAlarm(alarm);
-			logError(sub->getName().c_str(), "复位命令通讯超时");
-		}
 		return ret;
-		
-		return ret;
-
 	}
 
 

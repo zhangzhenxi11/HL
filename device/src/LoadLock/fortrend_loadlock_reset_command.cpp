@@ -89,10 +89,6 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到复位命令地址错误", sub->getName()), this);
 		}
 	
-
-
-
-
 		return IKernelCommand::RunResult::RUN_OK;
 	}
 

@@ -161,7 +161,6 @@ namespace FC {
 		{ "lifting_axis_target3_position_address", &PMCavityAxisSettingParameters::lifting_axis_target3_position, "升降轴位置3" },
 		{ "lifting_axis_jog_speed_address", &PMCavityAxisSettingParameters::lifting_axis_jog_speed, "升降轴Jog速度" },
 		{ "lifting_axis_inch_movement_address", &PMCavityAxisSettingParameters::lifting_axis_inch_movement, "升降轴寸动移动量" },
-
 		// 旋转轴参数映射
 		{ "rotating_axis_acce_address", &PMCavityAxisSettingParameters::rotating_axis_acce, "旋转轴加速度" },
 		{ "rotating_axis_dece_address", &PMCavityAxisSettingParameters::rotating_axis_dece, "旋转轴减速度" },

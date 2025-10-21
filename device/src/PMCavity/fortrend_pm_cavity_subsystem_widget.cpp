@@ -82,18 +82,24 @@ namespace FC{
 		connect(d->ui->get_finished_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onGetFinished);
 		connect(d->ui->upload_finished_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onUplaodFinished);
 		connect(d->ui->clear_pm_state_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onClearState);
-		//connect(d->ui->read_process_parameters_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onReadProcessParameters);
-		//connect(d->ui->write_process_parameters_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onWriteProcessParameters);
+		connect(d->ui->read_process_parameters_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onReadProcessParameters);
+		connect(d->ui->write_process_parameters_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onWriteProcessParameters);
 		//connect(d->ui->control_inserting_plate_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onInsertingPlateOpeningController);
 		connect(d->ui->to_get_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToGetStation);
 		connect(d->ui->to_put_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToPutStation);
+		connect(d->ui->to_rotating_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToRotatingStation);
+		connect(d->ui->to_target_pos_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToTargetPos);
+		connect(d->ui->to_rotating_degree_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToRotatingDegreeStation);
+
+		//connect(d->ui->lifting_axis_reset_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onLiftingAxisRest);
+		//connect(d->ui->rotating_axis_reset_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onRotaingAxisRest);
 
 		//d->ui->open_tm_cavity_door_btn->hide();
 		//d->ui->close_tm_cavity_door_btn->hide();
 		d->ui->upload_finished_btn->hide();
 		d->ui->get_finished_btn->hide();
-		d->ui->to_get_btn->hide();
-		d->ui->to_put_btn->hide();
+		//d->ui->to_get_btn->hide();
+		//d->ui->to_put_btn->hide();
 		d->ui->get_finished_btn->hide();
 		d->ui->upload_finished_btn->hide();
 		d->ui->label_50->hide();
@@ -196,6 +202,42 @@ namespace FC{
 		executeCommand(getSubsystem(), cmd);
 	}
 
+	void QPMCavitySubsystemWidget::onToRotatingStation()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createToRotatingStationCommand();
+		executeCommand(getSubsystem(), cmd);
+	}
+
+	void QPMCavitySubsystemWidget::onToTargetPos()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		double target_position = d->ui->lifting_axis_target_position_dsp->value();
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createLiftingActionCommand(target_position);
+		executeCommand(getSubsystem(), cmd);
+		
+	}
+
+	void QPMCavitySubsystemWidget::onToRotatingDegreeStation()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		double  target_position =  d->ui->rotating_axis_target_position_dsp->value();
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createRotatingActionCommand(target_position);
+		executeCommand(getSubsystem(), cmd);
+	}
+
+	void QPMCavitySubsystemWidget::onLiftingAxisRest()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		getSubsystem()->setRotationHome(true);
+	}
+
+	void QPMCavitySubsystemWidget::onRotaingAxisRest()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		getSubsystem()->setLiftingHome(true);
+	}
+
 	void QPMCavitySubsystemWidget::onReadProcessParameters(){
 		Q_D(QPMCavitySubsystemWidget);
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createReadProcessParametersCommand();
@@ -204,29 +246,27 @@ namespace FC{
 
 	void QPMCavitySubsystemWidget::onWriteProcessParameters(){
 		Q_D(QPMCavitySubsystemWidget);
-		/*PMCavityProcessParameters param;
-		param.heating_temperature = d->ui->heating_temperature_dsb->value();
-		param.initial_extraction_pressure = d->ui->initial_extraction_pressure_dsb->value();
-		param.purified_extraction_pressure = d->ui->purified_extraction_pressure_dsb->value();
-		param.sputtering_pressure = d->ui->sputtering_pressure_dsb->value();
-		param.sputtering_flow_rate1 = d->ui->sputtering_flow_rate1_dsb->value();
-		param.sputtering_flow_rate2 = d->ui->sputtering_flow_rate2_dsb->value();
-		param.sputtering_flow_rate3 = d->ui->sputtering_flow_rate3_dsb->value();
-		param.sputtering_power1 = d->ui->sputtering_power1_dsb->value();
-		param.sputtering_power_gear_up1 = d->ui->sputtering_power_gear_up1_dsb->value();
-		param.sputtering_power2 = d->ui->sputtering_power2_dsb->value();
-		param.sputtering_power_gear_up2 = d->ui->sputtering_power_gear_up2_dsb->value();
-		param.sputtering_power3 = d->ui->sputtering_power3_dsb->value();
-		param.sputtering_power_gear_up3 = d->ui->sputtering_power_gear_up3_dsb->value();
-		param.pre_sputtering_time = d->ui->pre_sputtering_time_dsb->value();
-		param.substrate_speed = d->ui->substrate_speed_dsb->value();
-		param.process_sputtering_time = d->ui->process_sputtering_time_dsb->value();
-		param.cathode_power_selection_1 = d->ui->cathode_power_selection_1_cbx->currentIndex();
-		param.cathode_power_selection_2 = d->ui->cathode_power_selection_2_cbx->currentIndex();
-		param.cathode_power_selection_3 = d->ui->cathode_power_selection_3_cbx->currentIndex();
+	
+		PMCavityAxisSettingParameters param;
+		param.lifting_axis_acce = d->ui->lifting_axis_acce_dsp->value();
+		param.lifting_axis_dece = d->ui->lifting_axis_dece_dsp->value();
+		param.lifting_axis_startup_speed = d->ui->lifting_axis_startup_speed_dsp->value();
+		param.lifting_axis_inch_movement = d->ui->lifting_axis_inch_movement_dsp->value();
+		param.lifting_axis_jog_speed = d->ui->lifting_axis_jog_speed_dsp->value();
+		param.lifting_axis_target1_position = d->ui->lifting_axis_target1_position_dsp->value();
+		param.lifting_axis_target2_position = d->ui->lifting_axis_target2_position_dsp->value();
+		param.lifting_axis_target3_position = d->ui->lifting_axis_target3_position_dsp->value();
+		param.lifting_axis_target_position = d->ui->lifting_axis_target_position_dsp->value();
+
+		param.rotating_axis_acce = d->ui->rotating_axis_acce_dsp->value();
+		param.rotating_axis_dece = d->ui->rotating_axis_dece_dsp->value();
+		param.rotating_axis_inch_movement = d->ui->rotating_axis_inch_movement_dsp->value();
+		param.rotating_axis_jog_speed = d->ui->rotating_axis_jog_speed_dsp->value();
+		param.rotating_axis_startup_speed = d->ui->rotating_axis_startup_speed_dsp->value();
+		param.rotating_axis_target_position = d->ui->rotating_axis_target_position_dsp->value();
 
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createWriteProcessParametersCommand(param);
-		executeCommand(getSubsystem(), cmd);*/
+		executeCommand(getSubsystem(), cmd);
 	}
 
 	void QPMCavitySubsystemWidget::onClearState(){
