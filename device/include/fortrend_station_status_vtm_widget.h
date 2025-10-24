@@ -111,6 +111,13 @@ namespace FC {
 		void onPMCloseTMCavityDoor(std::string name);
 		void onPMGetFinished(std::string name);
 		void onPMUplaodFinished(std::string name);
+		void onPMRotatePosFinished(std::string name);
+		void onPMRotatingDegreeFinished(std::string name);
+		void onPMZaxisReset(std::string name);
+		void onPMRaxisReset(std::string name);
+		void onPMClearZaxisError(std::string name);
+		void onPMClearRaxisError(std::string name);
+
 		void onPMGetStatus(std::string name);
 		void onPMReset(std::string name);
 

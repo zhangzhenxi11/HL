@@ -1,4 +1,4 @@
-/**
+ï»¿/**
 * @file     fortrend_pm_cavity_to_rotating_station_command.h
 * @brief    to_rotating_station command for PMCavity
 * @author   xielonghua
@@ -49,14 +49,14 @@ PMCavityToRotatingStationCommand::RunResult PMCavityToRotatingStationCommand::on
     KernelCommandParameter parameter(shared_from_this());
 
     if (!sub) {
-        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "×ÓÏµÍ³ÀàĞÍ´íÎó", this);
+        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "å­ç³»ç»Ÿç±»å‹é”™è¯¯", this);
     }
     //check modules
     auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
     //get cass
     auto station_cass = cassManager->getCassette(sub);
     if (!station_cass) {
-        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("¹¤Î»: %s ¾§Ô²ºĞÎª¿Õ.", sub->getName()), this);
+        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("å·¥ä½: %s æ™¶åœ†ç›’ä¸ºç©º.", sub->getName()), this);
     }
 
 	std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
@@ -66,35 +66,35 @@ PMCavityToRotatingStationCommand::RunResult PMCavityToRotatingStationCommand::on
 	std::string finish_address = command_config->getString("finish_address", "");
 	std::string failed_address = command_config->getString("failed_address", "");
 	std::string abs_position_address = command_config->getString("abs_position_address", "");
-	std::string axis_target3_position_address = command_config->getString("axis_target3_position_address", "");
+	std::string axis_target2_position_address = command_config->getString("axis_target2_position_address", "");
 
 	int timeout = command_config->getInt("timeout", -1);
 	if (timeout < 10) {
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("³¬Ê±: È¥Ğı×ªÎ»ÃüÁî³¬Ê±²ÎÊıÉèÖÃ´íÎó", sub->getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("è¶…æ—¶: å»æ—‹è½¬ä½å‘½ä»¤è¶…æ—¶å‚æ•°è®¾ç½®é”™è¯¯", sub->getName()), this);
 	}
 
-	if ((start_address == "") || (finish_address == "") || (failed_address == "") || (abs_position_address == "") || (axis_target3_position_address == ""))
+	if ((start_address == "") || (finish_address == "") || (failed_address == "") || (abs_position_address == "") || (axis_target2_position_address == ""))
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("µØÖ·: È¥Ğı×ªÎ»ÃüÁîµØÖ·Î´¶¨Òå", getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("åœ°å€: å»æ—‹è½¬ä½å‘½ä»¤åœ°å€æœªå®šä¹‰", getName()), this);
 	}
 
-	logInform(sub->getName().c_str(), "È¥Ğı×ªÎ»ÃüÁî¿ªÊ¼Ö´ĞĞ");
+	logInform(sub->getName().c_str(), "å»æ—‹è½¬ä½å‘½ä»¤å¼€å§‹æ‰§è¡Œ");
 	sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
-	float axis_target3_pos = 0.0F;
+	float axis_target2_pos = 0.0F;
 
-	if (!readFloat(axis_target3_position_address, axis_target3_pos))
+	if (!readFloat(axis_target2_position_address, axis_target2_pos))
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s ¶ÁÉèÖÃµÄĞı×ªÎ»ÃüÁîµØÖ·´íÎó£¬µØÖ·%s", sub->getName(), axis_target3_position_address), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s è¯»è®¾ç½®çš„æ—‹è½¬ä½å‘½ä»¤åœ°å€é”™è¯¯ï¼Œåœ°å€%s", sub->getName(), axis_target2_position_address), this);
 	}
 
-	if (!writeFloat(abs_position_address, axis_target3_pos))
+	if (!writeFloat(abs_position_address, axis_target2_pos))
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s Ğ´È¥Ğı×ªÎ»Î»ÖÃÃüÁîµØÖ·´íÎó£¬µØÖ·%s", sub->getName(), abs_position_address), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s å†™å»æ—‹è½¬ä½ä½ç½®å‘½ä»¤åœ°å€é”™è¯¯ï¼Œåœ°å€%s", sub->getName(), abs_position_address), this);
 	}
 
 	if (!writeBit(start_address, true))
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s Ğ´1µ½Ğı×ªÎ»ÃüÁîµØÖ·´íÎó£¬µØÖ·%s", sub->getName(), start_address), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s å†™1åˆ°æ—‹è½¬ä½å‘½ä»¤åœ°å€é”™è¯¯ï¼Œåœ°å€%s", sub->getName(), start_address), this);
 	}
 
 	Sleep(100);
@@ -115,24 +115,24 @@ PMCavityToRotatingStationCommand::RunResult PMCavityToRotatingStationCommand::on
 	}
 	if (!writeBit(start_address, false))
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s Ğ´0µ½Ğı×ªÎ»ÃüÁîµØÖ·´íÎó", sub->getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s å†™0åˆ°æ—‹è½¬ä½å‘½ä»¤åœ°å€é”™è¯¯", sub->getName()), this);
 	}
 	IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 	if (readRes)
 	{
 		sub->setPMCavitySafeSignal(true);
 		ret = IKernelCommand::RunResult::RUN_OK;
-		logInform(sub->getName().c_str(), "È¥Ğı×ªÎ»ÃüÁîÖ´ĞĞÍê³É");
+		logInform(sub->getName().c_str(), "å»æ—‹è½¬ä½å‘½ä»¤æ‰§è¡Œå®Œæˆ");
 
 	}
 	else if (!readRes || failedRes)
 	{
-		AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "È¥Ğı×ªÎ»ÃüÁîÖ´ĞĞÊ§°Ü"));
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "å»æ—‹è½¬ä½å‘½ä»¤æ‰§è¡Œå¤±è´¥"));
 		setAlarm(alarm);
 	}
 	else
 	{
-		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "Ö´ĞĞÈ¥Ğı×ªÎ»ÃüÁîĞÅºÅ³¬Ê±"));
+		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "æ‰§è¡Œå»æ—‹è½¬ä½å‘½ä»¤ä¿¡å·è¶…æ—¶"));
 		setAlarm(alarm);
 	}
 

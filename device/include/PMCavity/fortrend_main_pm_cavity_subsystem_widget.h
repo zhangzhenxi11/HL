@@ -35,12 +35,19 @@ private slots:
 	void onReadProcessParameters();
 	void onWriteProcessParameters();
 	void onSetSpeed();
+	void onSetRAxisSpeed();
 	void onSetCrft();
 	void onSetTurnSpeed();
+	void onSetRAxisTurnSpeed();
 	void onStartForward();
 	void onStopForward();
 	void onStartBackward();
 	void onStopBackward();
+	void onStartPositive();
+	void onStopPositive();
+	void onStartNegative();
+	void onStopNegative();
+
 private:
 	void init();
 	void onAttributeUpdate();

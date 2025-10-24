@@ -43,8 +43,10 @@ private slots:
 	void onToRotatingStation();
 	void onToTargetPos();
 	void onToRotatingDegreeStation();
-	void onLiftingAxisRest();
-	void onRotaingAxisRest();
+	void onLiftingAxisHome();
+	void onRotaingAxisHome();
+	void onClearLiftingAxisAlarm();
+	void onClearRotaingAxisAlarm();
 private:
 	void init();
 	

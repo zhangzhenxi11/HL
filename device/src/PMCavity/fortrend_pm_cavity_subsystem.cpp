@@ -101,8 +101,15 @@ namespace FC{
 		bool pm_update_process_parameters = false;
 		PMCavityProcessParameters pm_process_parameters;   //PM腔工艺参数
 
-		bool pm_axis_setting_parameters = false;
+		bool pm_update_axis_setting_parameters = false;
 		PMCavityAxisSettingParameters  axis_setting_parameters; //PM腔电机设置参数
+
+		std::string minimum_plane_level_detection_address = "MR34000"; //最低面位检测
+		std::string rotating_plane_level_detection_address= "MR34001"; //中间旋转面位检测
+		std::string maximum_plane_level_detection_address = "MR34002"; //最高面位检测
+		bool pm_cavity_motor_minimum_plane_signal = false;
+		bool pm_cavity_motor_rotating_plane_signal = false;
+		bool pm_cavity_motor_maximum_plane_signal = false;
 
 		std::string open_tm_cavity_door_address = "";
 		std::string close_tm_cavity_door_address = "";
@@ -179,15 +186,18 @@ namespace FC{
 		int  rotating_axis_feedback_position;
 
 		std::string rotating_axis_current_coordinate_addresss;//旋转轴当前坐标
-		double rotating_axis_current_coordinate;
+		float rotating_axis_current_coordinate;
 
 		std::string rotating_axis_current_speed_addresss;//旋转轴当前速度
-		double rotating_axis_current_speed;
+		float rotating_axis_current_speed;
 
+		int pm_craft_count = 0; //工艺次数
 
+		std::string lifting_axis_motor_speed_address; //Z轴 jog 速度
+		float lifting_motor_speed;
 		
-	
-
+		std::string rotating_axis_motor_speed_address;//R轴 jog 速度
+		float rotating_motor_speed;
 	};
 
 	/**
@@ -567,6 +577,13 @@ namespace FC{
 			d->axis_setting_parameters.lifting_axis_acce = pm_param.lifting_axis_acce;
 			change = true;
 		}
+
+		if (d->axis_setting_parameters.lifting_axis_dece != pm_param.lifting_axis_dece)
+		{
+			d->axis_setting_parameters.lifting_axis_dece = pm_param.lifting_axis_dece;
+
+		}
+
 		if (d->axis_setting_parameters.lifting_axis_startup_speed != pm_param.lifting_axis_startup_speed)
 		{
 			d->axis_setting_parameters.lifting_axis_startup_speed = pm_param.lifting_axis_startup_speed;
@@ -651,14 +668,38 @@ namespace FC{
 
 		if (change)
 		{
-			d->pm_axis_setting_parameters = true;
+			d->pm_update_axis_setting_parameters = true;
 			AbstractIOSubsystem::emitAttributeChanged(this);
 		}
 	}
 	PMCavityAxisSettingParameters FortrendPMCavitySubsystem::getPMCavityAxisParameters()
 	{
-		d->pm_axis_setting_parameters = false;
+		d->pm_update_axis_setting_parameters = false;
 		return d->axis_setting_parameters;
+	}
+	bool FortrendPMCavitySubsystem::getPMCavityUpdatAxisParameters()
+	{
+		return d->pm_update_axis_setting_parameters;
+	}
+	bool FortrendPMCavitySubsystem::getMinimumPlaneLevelSignal() const
+	{
+		return d->pm_cavity_motor_minimum_plane_signal;
+	}
+	bool FortrendPMCavitySubsystem::getMaximumPlaneLevelSignal() const
+	{
+		return d->pm_cavity_motor_rotating_plane_signal;
+	}
+	bool FortrendPMCavitySubsystem::getRotatingimumPlaneLevelSignal() const
+	{
+		return d->pm_cavity_motor_maximum_plane_signal;
+	}
+	float FortrendPMCavitySubsystem::getPmLiftingTargetPos() const
+	{
+		return d->axis_setting_parameters.lifting_axis_target_position;
+	}
+	float FortrendPMCavitySubsystem::getPmRotatingTargetPos() const
+	{
+		return d->axis_setting_parameters.rotating_axis_target_position;
 	}
 	/**
 
@@ -687,6 +728,16 @@ namespace FC{
 		return result;
 	}
 
+	void FortrendPMCavitySubsystem::setPMCavityCraftCount(int count)
+	{
+		d->pm_craft_count = count;
+	}
+
+	int FortrendPMCavitySubsystem::getPMCavityCraftCount()
+	{
+		return d->pm_craft_count;
+	}
+
 	bool FortrendPMCavitySubsystem::getLiftingAxisPowerDone() const
 	{
 		return d->lifting_axis_enable_done;
@@ -694,17 +745,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setLiftingAxisPower(bool enable)
 	{
+		logInform(getName().c_str(), "写Z轴使能开始");
 		if(!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_enable_address, enable)) 
 		{
-			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_enable_address).c_str());
-		}else
-		{
-			if (d->lifting_axis_enable_done != enable)
-			{
-				d->lifting_axis_enable_done = enable;
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
+			logError(getName().c_str(), Poco::format("写Z轴使能address = %s 失败!", d->lifting_axis_enable_address).c_str());
 		}
+		logInform(getName().c_str(), "触发Z轴使能结束");
 	}
 
 	bool FortrendPMCavitySubsystem::getLiftingHomeDone() const
@@ -714,18 +760,13 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setLiftingHome(bool enable)
 	{
+		logInform(getName().c_str(),"Z轴回原开始");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_rest_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_rest_address).c_str());
 		}
-		else
-		{
-			if (d->axis_origin_done != enable)
-			{
-				d->axis_origin_done = enable;
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
-		}
+		logInform(getName().c_str(), "触发Z轴回原结束");
+
 	}
 
 	bool FortrendPMCavitySubsystem::getZAxisClearErrorDone() const
@@ -735,18 +776,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setZAxisClearError(bool enable)
 	{
+		logInform(getName().c_str(), "写清除Z轴控报警开始");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_clear_error_address, enable)) {
 		
 			logError(getName().c_str(), Poco::format("写清除Z轴控报警address = %s 失败!", d->lifting_axis_clear_error_address).c_str());
 		}
-		else
-		{
-			if (d->lifting_axis_clear_done != enable)
-			{
-				d->lifting_axis_clear_done = enable;
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
-		}
+		logInform(getName().c_str(), "触发清除Z轴控报警完成");
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxisClearErrorDone() const
@@ -756,18 +791,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setRAxisClearError(bool enable)
 	{
+		logInform(getName().c_str(), "写清除R轴控报警开始");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_clear_error_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写清除R轴控报警address = %s 失败!", d->rotating_axis_clear_error_address).c_str());
 		}
-		else
-		{
-			if (d->rotating_axis_clear_error_done != enable)
-			{
-				d->rotating_axis_clear_error_done = enable;
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
-		}
+		logInform(getName().c_str(), "触发清除R轴控报警完成");
 	}
 
 	bool FortrendPMCavitySubsystem::getRotationAxisPowerDone() const
@@ -776,18 +805,12 @@ namespace FC{
 	}
 	void FortrendPMCavitySubsystem::setRotationAxisPower(bool enable)
 	{
+		logInform(getName().c_str(), "触发R轴使能开始");
 		if (KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_enable_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写R轴控使能address = %s 失败!", d->rotating_axis_enable_address).c_str());
 		}
-		else
-		{
-			if (d->rotating_axis_enable_done != enable)
-			{
-				d->rotating_axis_enable_done = enable;
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
-		};
+		logInform(getName().c_str(), "触发R轴使能结束");
 	}
 
 	bool FortrendPMCavitySubsystem::getRotationHomeDone() const
@@ -797,18 +820,11 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setRotationHome(bool enable)
 	{
+		logInform(getName().c_str(), "写R轴回原开始");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
 		}
-		else
-		{
-			if (d->rotating_axis_return_original_done != enable)
-			{
-				d->rotating_axis_return_original_done = enable;
-				AbstractIOSubsystem::emitAttributeChanged(this);
-			}
-		};
 	}
 
 	float FortrendPMCavitySubsystem::getPMCavityZAxleSpeed() const
@@ -828,6 +844,8 @@ namespace FC{
 
 	double FortrendPMCavitySubsystem::getPMCavityRAxleLocation() const
 	{
+		//logInform(getName().c_str(), Poco::format("获取r轴位置：address = %s, result = %f", d->rotating_axis_current_coordinate_addresss, 
+		// d->rotating_axis_current_coordinate).c_str());
 		return d->rotating_axis_current_coordinate;
 	}
 
@@ -916,6 +934,7 @@ namespace FC{
 	bool FortrendPMCavitySubsystem::getPMCavityMotorRunSignal(){
 		return d->pm_cavity_motor_run;
 	}
+
 	//获取PM腔是否处于远程模式
 	bool FortrendPMCavitySubsystem::getPMCavityRemoteMode(){
 		bool result = false;
@@ -996,9 +1015,15 @@ namespace FC{
 		return d->speed;
 	}
 
-	double FortrendPMCavitySubsystem::getPMCavityMotorSpeed()const{
-		return d->motorspeed;
+	float FortrendPMCavitySubsystem::getPMCavityMotorSpeed()const{
+		return d->lifting_motor_speed;
 	}
+
+	float FortrendPMCavitySubsystem::getPMCavityRAxisMotorSpeed() const
+	{
+		return d->rotating_motor_speed;
+	}
+
 	int FortrendPMCavitySubsystem::getPMCavityCrftCountLLA()const{
 		return d->crft_count_lla;
 	}
@@ -1031,34 +1056,52 @@ namespace FC{
 	}
 
 	//电机的自动速度
-	void FortrendPMCavitySubsystem::setPMCavityAxleSpeed(double speed){
-		//KeyencePlcSubSystemHelper::writeDouble("DM15070", speed);
-		float sp = speed;
-		//logInform("Test", "PM腔速度设置，地址：DM15070  值%.2f", sp);
-		KeyencePlcSubSystemHelper::writeFloat("DM15070", sp);
+	void FortrendPMCavitySubsystem::setPMCavityAxleSpeed(float speed){
+		KeyencePlcSubSystemHelper::writeFloat("DM6620", speed);
 	}
 
 	//电机的手动速度(jog+ ,jog-)
-	void FortrendPMCavitySubsystem::setPMCavityTurnSpeed(double speed){
-		float sp = speed;
-		//logInform("Test", "PM腔步进电机速度设置，地址：DM15080  值%.2f", sp);
-		KeyencePlcSubSystemHelper::writeFloat("DM15080", sp);
+	void FortrendPMCavitySubsystem::setPMCavityTurnSpeed(float speed){
+		//logInform("Test", "PM腔步进电机速度设置，地址：DM15080  值%.2f", speed);
+		KeyencePlcSubSystemHelper::writeFloat("DM6632", speed);
 	}
+
+	void FortrendPMCavitySubsystem::setPMCavityRAxleSpeed(float speed)
+	{
+		KeyencePlcSubSystemHelper::writeFloat("DM6808", speed);
+	}
+	void FortrendPMCavitySubsystem::setsetPMCavityRAxleTurnSpeed(float speed)
+	{
+		KeyencePlcSubSystemHelper::writeFloat("DM6816", speed);
+	}
+
 	//jog+
 	void FortrendPMCavitySubsystem::setPMCavityForward(bool forward){
-		//logInform("Test", "PM腔步进电机前进，地址：MR35213  值%d", forward);
+		//logInform("Test", "PM腔步进电机前进，地址：MR8101  值%d", forward);
 		if (getIsRunning()){
-			logWarn(getName().c_str(), "自动模式下无法控制电机前进！"); //在pm在配方运行中
+			logWarn(getName().c_str(), "自动模式下无法控制电机前进！");
 		}
 		else{
-			KeyencePlcSubSystemHelper::writeBit("MR35213", forward);
-		}
-		
+			KeyencePlcSubSystemHelper::writeBit("MR8101", forward);
+		}		
 	}
 	//jog-
 	void FortrendPMCavitySubsystem::setPMCavityBackward(bool backward){
-		//logInform("Test", "PM腔步进电机后退，地址：MR35214  值%d", backward);
-		KeyencePlcSubSystemHelper::writeBit("MR35214", backward);
+		//logInform("Test", "PM腔步进电机后退，地址：MR8102  值%d", backward);
+		KeyencePlcSubSystemHelper::writeBit("MR8102", backward);
+	}
+	void FortrendPMCavitySubsystem::setPMCavityRAxlePositive(bool Positive)
+	{
+		if (getIsRunning()) {
+			logWarn(getName().c_str(), "自动模式下无法控制电机前进！");
+		}
+		else {
+			KeyencePlcSubSystemHelper::writeBit("MR8501", Positive);
+		}
+	}
+	void FortrendPMCavitySubsystem::setPMCavityRAxleNegative(bool Negative)
+	{
+		KeyencePlcSubSystemHelper::writeBit("MR8502", Negative);
 	}
 	//设定真空值以及真空数量级
 	void FortrendPMCavitySubsystem::setVacuumSettingAndMagnitudeValue(const double setting_value, const double magnitude_value){
@@ -1121,11 +1164,6 @@ namespace FC{
 			//升降轴当前坐标
 			io_changed |= safe_read_float(d->lifting_axis_current_coordinate_addresss, d->lifting_axis_current_coordinate);
 
-			//旋转轴当前速度
-			io_changed |= safe_read_double(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);
-			//旋转轴当前坐标
-			io_changed |= safe_read_double(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate);
-	
 			//清除轴错误完成
 			io_changed |= safe_read_bit(d->lifting_axis_clear_error_completion_address, d->lifting_axis_clear_done);
 
@@ -1150,29 +1188,39 @@ namespace FC{
 			//升降轴反馈位置
 			io_changed |= safe_read_float(d->lifting_axis_feedback_position_addresss, d->lifting_axis_feedback_position);
 
-			//升降轴当前坐标
-			io_changed |= safe_read_float(d->lifting_axis_current_coordinate_addresss, d->lifting_axis_current_coordinate);
+			//升降轴JOG速度
+			io_changed |= safe_read_float(d->lifting_axis_motor_speed_address, d->lifting_motor_speed);
 
-			//升降轴当前速度
-			io_changed |= safe_read_float(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed);
-
+			//最低面位检测
+			io_changed |= safe_read_bit(d->minimum_plane_level_detection_address,d->pm_cavity_motor_minimum_plane_signal);
+			//中间旋转面位检测
+			io_changed |= safe_read_bit(d->rotating_plane_level_detection_address, d->pm_cavity_motor_rotating_plane_signal);
+			//最高面位检测
+			io_changed |= safe_read_bit(d->maximum_plane_level_detection_address, d->pm_cavity_motor_maximum_plane_signal);
+			//清除轴错误完成
 			io_changed |= safe_read_bit(d->rotating_axis_clear_error_completion_address, d->rotating_axis_clear_error_done);
-
+			//轴停止完成
 			io_changed |= safe_read_bit(d->rotating_axis_stop_completion_address, d->rotating_axis_stop_done);
-
+			//JOG运行中
 			io_changed |= safe_read_bit(d->rotating_axis_jog_running_address, d->rotating_axis_jog_running);
-
+			//使能ON
 			io_changed |= safe_read_bit(d->rotating_axis_enable_address, d->rotating_axis_enable_done);
-
+			//移动中
 			io_changed |= safe_read_bit(d->rotating_axis_moving_address, d->rotating_axis_moving);
-
+			//移动结束
 			io_changed |= safe_read_bit(d->rotating_axis_move_end_address, d->rotating_axis_move_end);
 
-			io_changed |= safe_read_double(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate);
+			//旋转轴运行速度
+			io_changed |= safe_read_float(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);
 
-			io_changed |= safe_read_double(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);
+			//旋转轴当前坐标
+			io_changed |= safe_read_float(d->rotating_axis_current_coordinate_addresss, d->rotating_axis_current_coordinate);
 
-			io_changed |= safe_read_double(d->rotating_axis_feedback_position_addresss, d->rotating_axis_feedback_position);
+			//旋转轴反馈位置
+			io_changed |= safe_read_int(d->rotating_axis_feedback_position_addresss, d->rotating_axis_feedback_position);
+
+			//旋转轴JOG速度
+			io_changed |= safe_read_float(d->rotating_axis_motor_speed_address, d->rotating_motor_speed);
 
 			if (io_changed)
 			{
@@ -1345,6 +1393,11 @@ namespace FC{
 			d->rotating_axis_current_speed_addresss = config->getString("Update.rotating_axis_current_speed_addresss", "");
 
 		}
+		if (config->has("AxisReadParameters"))
+		{
+			d->lifting_axis_motor_speed_address = config->getString("AxisReadParameters.lifting_axis_jog_speed_address","");
+			d->rotating_axis_motor_speed_address = config->getString("AxisReadParameters.rotating_axis_jog_speed_address","");
+		}
 
 	}
 
@@ -1403,9 +1456,9 @@ namespace FC{
 		PMCavityToGetStationCommand::Ptr ret(new PMCavityToGetStationCommand(self));
 		return ret;
 	}
-	std::shared_ptr<PMCavityToPutStationCommand> FortrendPMCavitySubsystem::createToPutStationCommand(int stationid)const{
+	std::shared_ptr<PMCavityToPutStationCommand> FortrendPMCavitySubsystem::createToPutStationCommand()const{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
-		PMCavityToPutStationCommand::Ptr ret(new PMCavityToPutStationCommand(self, stationid));
+		PMCavityToPutStationCommand::Ptr ret(new PMCavityToPutStationCommand(self));
 		return ret;
 	}
 
@@ -1444,6 +1497,18 @@ namespace FC{
 	std::shared_ptr<PMCavityInsertingPlateOpeningControllerCommand>  FortrendPMCavitySubsystem::createInsertingPlateOpeningControllerCommand(const float percentage) const{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
 		PMCavityInsertingPlateOpeningControllerCommand::Ptr ret(new PMCavityInsertingPlateOpeningControllerCommand(percentage, self));
+		return ret;
+	}
+	std::shared_ptr<PMCavityLiftingAxisHomeCommand> FortrendPMCavitySubsystem::createPMCavityLiftingAxisHomeCommand() const
+	{
+		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
+		PMCavityLiftingAxisHomeCommand::Ptr ret(new PMCavityLiftingAxisHomeCommand(self));
+		return ret;
+	}
+	std::shared_ptr<PMCavityRotatingAxisHomeCommand> FortrendPMCavitySubsystem::createPMCavityRotatingAxisHomeCommand() const
+	{
+		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
+		PMCavityRotatingAxisHomeCommand::Ptr ret(new PMCavityRotatingAxisHomeCommand(self));
 		return ret;
 	}
 }

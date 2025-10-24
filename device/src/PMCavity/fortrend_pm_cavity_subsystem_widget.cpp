@@ -90,9 +90,10 @@ namespace FC{
 		connect(d->ui->to_rotating_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToRotatingStation);
 		connect(d->ui->to_target_pos_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToTargetPos);
 		connect(d->ui->to_rotating_degree_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onToRotatingDegreeStation);
-
-		//connect(d->ui->lifting_axis_reset_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onLiftingAxisRest);
-		//connect(d->ui->rotating_axis_reset_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onRotaingAxisRest);
+		connect(d->ui->lifting_axis_reset_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onLiftingAxisHome);
+		connect(d->ui->rotating_axis_reset_btn, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onRotaingAxisHome);
+		connect(d->ui->clear_z_axis_alarm, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onClearLiftingAxisAlarm);
+		connect(d->ui->clear_r_axis_alarm, &QAbstractButton::clicked, this, &QPMCavitySubsystemWidget::onClearRotaingAxisAlarm);
 
 		//d->ui->open_tm_cavity_door_btn->hide();
 		//d->ui->close_tm_cavity_door_btn->hide();
@@ -226,16 +227,31 @@ namespace FC{
 		executeCommand(getSubsystem(), cmd);
 	}
 
-	void QPMCavitySubsystemWidget::onLiftingAxisRest()
+
+	void QPMCavitySubsystemWidget::onLiftingAxisHome()
 	{
 		Q_D(QPMCavitySubsystemWidget);
-		getSubsystem()->setRotationHome(true);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createPMCavityLiftingAxisHomeCommand();
+		executeCommand(getSubsystem(), cmd);
 	}
 
-	void QPMCavitySubsystemWidget::onRotaingAxisRest()
+	void QPMCavitySubsystemWidget::onRotaingAxisHome()
 	{
 		Q_D(QPMCavitySubsystemWidget);
-		getSubsystem()->setLiftingHome(true);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createPMCavityRotatingAxisHomeCommand();
+		executeCommand(getSubsystem(), cmd);
+	}
+
+	void QPMCavitySubsystemWidget::onClearLiftingAxisAlarm()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		getSubsystem()->setZAxisClearError(true);
+	}
+
+	void QPMCavitySubsystemWidget::onClearRotaingAxisAlarm()
+	{
+		Q_D(QPMCavitySubsystemWidget);
+		getSubsystem()->setRAxisClearError(true);
 	}
 
 	void QPMCavitySubsystemWidget::onReadProcessParameters(){
@@ -295,10 +311,10 @@ namespace FC{
 			d->tm_cavity_door_ckb->setChecked(getSubsystem()->getPMCavitySafeSignal());
 
 			//update input
-		/*	for (int i = 0; i < d->input_checkboxs.size(); i++){
-				d->input_checkboxs.at(i)->setChecked(getSubsystem()->getInput(i));
+			//for (int i = 0; i < d->input_checkboxs.size(); i++){
+			//	d->input_checkboxs.at(i)->setChecked(getSubsystem()->getInput(i));
 
-			}*/
+			//}
 
 			//update object stat
 			/*for (int i = 0; i < d->arm_stat.size(); i++){
@@ -306,65 +322,29 @@ namespace FC{
 				}*/
 
 			//update door state
-			//d->tm_cavity_door_ckb->setChecked(getSubsystem()->hasDoorOpend());
+			d->tm_cavity_door_ckb->setChecked(getSubsystem()->hasDoorOpend());
 
-			////update pm cavity moniter value
-			//auto moniter_state = getSubsystem()->getPMCavityMonityValue();
-			//d->ui->cavity_temperature_let->setText(QString::number(getSubsystem()->getTemperatureValue(), 'f', 2).append("℃"));
-			////d->ui->cavity_vacuum_value_let->setText(std::to_string(moniter_state.vacuum_value).c_str());
-			////d->ui->pre_stage_pippeline_vacuum_value_let->setText(std::to_string(moniter_state.pre_stage_pippeline_vacuum).c_str());
+			if (getSubsystem()->getPMCavityUpdatAxisParameters())
+			{
+				auto process_param = getSubsystem()->getPMCavityAxisParameters();
+				d->ui->rotating_axis_dece_dsp->setValue(process_param.rotating_axis_dece);
+				d->ui->rotating_axis_acce_dsp->setValue(process_param.rotating_axis_acce);
+				d->ui->rotating_axis_startup_speed_dsp->setValue(process_param.rotating_axis_startup_speed);
+				d->ui->rotating_axis_target_position_dsp->setValue(process_param.rotating_axis_target_position);
+				d->ui->rotating_axis_jog_speed_dsp->setValue(process_param.rotating_axis_jog_speed);
+				d->ui->rotating_axis_inch_movement_dsp->setValue(process_param.rotating_axis_inch_movement);
+				d->ui->lifting_axis_dece_dsp->setValue(process_param.lifting_axis_dece);
+				d->ui->lifting_axis_startup_speed_dsp->setValue(process_param.lifting_axis_startup_speed);
+				d->ui->lifting_axis_acce_dsp->setValue(process_param.lifting_axis_acce);
+				d->ui->lifting_axis_target1_position_dsp->setValue(process_param.lifting_axis_target1_position);
+				d->ui->lifting_axis_target_position_dsp->setValue(process_param.lifting_axis_target_position);
+				d->ui->lifting_axis_target2_position_dsp->setValue(process_param.lifting_axis_target2_position);
+				d->ui->lifting_axis_target3_position_dsp->setValue(process_param.lifting_axis_target3_position);
+				d->ui->lifting_axis_target_pressure_dsp->setValue(process_param.lifting_axis_target_pressure);
+				d->ui->lifting_axis_inch_movement_dsp->setValue(process_param.lifting_axis_inch_movement);
+				d->ui->lifting_axis_jog_speed_dsp->setValue(process_param.lifting_axis_jog_speed);
 
-			////d->ui->cavity_vacuum_value_let->setText(QString::number(moniter_state.vacuum_value, 'e', 3).replace("e", "x10^(").append(")"));
-			////d->ui->pre_stage_pippeline_vacuum_value_let->setText(QString::number(moniter_state.pre_stage_pippeline_vacuum, 'e', 3).replace("e", "x10^(").append(")"));
-
-			//d->ui->cavity_vacuum_value_let->setText(QString::number(moniter_state.vacuum_value, 'e', 3).append("Pa"));
-			//d->ui->pre_stage_pippeline_vacuum_value_let->setText(QString::number(moniter_state.pre_stage_pippeline_vacuum, 'e', 3).append("Pa"));
-			//d->ui->sample_rotation_speed_let->setText(QString::number(moniter_state.sample_rotation_speed, 'f', 3).append("°/S"));
-			//d->ui->flow_meter_1_let->setText(QString::number(moniter_state.flow_meter_1, 'f', 3).append("sccm"));
-			//d->ui->flow_meter_2_let->setText(QString::number(moniter_state.flow_meter_2, 'f', 3).append("sccm"));
-			//d->ui->flow_meter_3_let->setText(QString::number(moniter_state.flow_meter_3, 'f', 3).append("sccm"));
-			//d->ui->voltage_1_let->setText(std::to_string(moniter_state.dc_vlotage_1).c_str());
-			//d->ui->voltage_2_let->setText(std::to_string(moniter_state.dc_vlotage_2).c_str());
-			//d->ui->voltage_3_let->setText(std::to_string(moniter_state.dc_vlotage_3).c_str());
-			//d->ui->current_1_let->setText(std::to_string(moniter_state.dc_current_1).c_str());
-			//d->ui->current_2_let->setText(std::to_string(moniter_state.dc_current_2).c_str());
-			//d->ui->current_3_let->setText(std::to_string(moniter_state.dc_current_3).c_str());
-			//d->ui->power_1_let->setText(std::to_string(moniter_state.dc_power_1).c_str());
-			//d->ui->power_2_let->setText(std::to_string(moniter_state.dc_power_2).c_str());
-			//d->ui->power_3_let->setText(std::to_string(moniter_state.dc_power_3).c_str());
-
-			//auto film = getSubsystem()->getPMCavityFilmValue();
-			//d->ui->film_frequency_let->setText(QString::number(film.frequency).append("Hz"));
-			//d->ui->film_rate_let->setText(QString::number(film.rate).append("A/s"));
-			//d->ui->film_accumulative_total_let->setText(QString::number(film.accumulative_total).append("A"));
-			//d->ui->film_lifetime_let->setText(QString::number(film.lifetime).append("%"));
-
-
-			//if (getSubsystem()->getPMCavityUpdateProcessParameters())
-			//{
-			//	auto process_param = getSubsystem()->getPMCavityProcessParameters();
-			//	d->ui->heating_temperature_dsb->setValue(process_param.heating_temperature);
-			//	d->ui->initial_extraction_pressure_dsb->setValue(process_param.initial_extraction_pressure);
-			//	d->ui->purified_extraction_pressure_dsb->setValue(process_param.purified_extraction_pressure);
-			//	d->ui->sputtering_pressure_dsb->setValue(process_param.sputtering_pressure);
-			//	d->ui->sputtering_flow_rate1_dsb->setValue(process_param.sputtering_flow_rate1);
-			//	d->ui->sputtering_flow_rate2_dsb->setValue(process_param.sputtering_flow_rate2);
-			//	d->ui->sputtering_flow_rate3_dsb->setValue(process_param.sputtering_flow_rate3);
-
-			//	d->ui->sputtering_power1_dsb->setValue(process_param.sputtering_power1);
-			//	d->ui->sputtering_power_gear_up1_dsb->setValue(process_param.sputtering_power_gear_up1);
-			//	d->ui->sputtering_power2_dsb->setValue(process_param.sputtering_power2);
-			//	d->ui->sputtering_power_gear_up2_dsb->setValue(process_param.sputtering_power_gear_up2);
-			//	d->ui->sputtering_power3_dsb->setValue(process_param.sputtering_power3);
-			//	d->ui->sputtering_power_gear_up3_dsb->setValue(process_param.sputtering_power_gear_up3);
-			//	d->ui->pre_sputtering_time_dsb->setValue(process_param.pre_sputtering_time);
-			//	d->ui->substrate_speed_dsb->setValue(process_param.substrate_speed);
-			//	d->ui->process_sputtering_time_dsb->setValue(process_param.process_sputtering_time);
-
-			//	d->ui->cathode_power_selection_1_cbx->setCurrentIndex(process_param.cathode_power_selection_1);
-			//	d->ui->cathode_power_selection_2_cbx->setCurrentIndex(process_param.cathode_power_selection_2);
-			//	d->ui->cathode_power_selection_3_cbx->setCurrentIndex(process_param.cathode_power_selection_3);
-			//}
+			}
 
 		}
 		catch (KernelException& e){

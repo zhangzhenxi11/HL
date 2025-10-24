@@ -42,9 +42,14 @@ void PMGDTWidget::mousePressEvent(QMouseEvent *event){
 		//QAction *action1 = menu.addAction("打开传输腔门阀");
 		//QAction *action2 = menu.addAction("关闭传输腔门阀");
 		QAction *action3 = menu.addAction("移动到上下料位 ");
-		QAction *action4 = menu.addAction("移动到工艺位1");
-		QAction *action5 = menu.addAction("移动到工艺位2");
-		QAction *action6 = menu.addAction("复位");
+		QAction *action4 = menu.addAction("移动到工艺位");
+		QAction *action5 = menu.addAction("移动到旋转位");
+		QAction *action6 = menu.addAction("旋转到目标角度");
+		QAction* action7 = menu.addAction("复位");
+		QAction* action8 = menu.addAction("Z轴回原");
+		QAction* action9 = menu.addAction("R轴回原");
+		QAction* action10 = menu.addAction("清除Z轴报警");
+		QAction* action11 = menu.addAction("清除R轴报警");
 
 		/*connect(action1, &QAction::triggered, this, [this](){
 			emit signalPMOpenTMCavityDoor(name);
@@ -59,11 +64,29 @@ void PMGDTWidget::mousePressEvent(QMouseEvent *event){
 			emit signalPMUplaodFinished(name);
 		});
 		connect(action5, &QAction::triggered, this, [this]() {
-			emit signalPMGetStatus(name);
+			emit signalPMRotatePosFinished(name);
+			//emit signalPMGetStatus(name);
 		});
 		connect(action6, &QAction::triggered, this, [this]() {
+			emit signalPMRotatingDegreeFinished(name);
+			});
+		connect(action7, &QAction::triggered, this, [this]() {
 			emit signalPMReset(name);
 		});
+
+		connect(action8, &QAction::triggered, this, [this]() {
+			emit signalPMZaxisReset(name);
+			});
+		connect(action9, &QAction::triggered, this, [this]() {
+			emit signalPMRaxisReset(name);
+			});
+		connect(action10, &QAction::triggered, this, [this]() {
+			emit signalPMClearZaxisError(name);
+			});
+		connect(action11, &QAction::triggered, this, [this]() {
+			emit signalPMClearRaxisError(name);
+			});
+
 		// 在鼠标点击的位置显示菜单
 		menu.exec(event->globalPos());
 	}

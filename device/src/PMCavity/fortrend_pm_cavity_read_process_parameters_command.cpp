@@ -28,13 +28,23 @@
 
 namespace FC{
 
-	
+	/**
+* PMCavityReadProcessParametersCommandPrivate
+*/
+	class PMCavityReadProcessParametersCommandPrivate {
+	public:
+		
+		std::vector<ParameterMapping> _mapping_table;
+
+	};
 
 	/**
 	* PMCavityReadProcessParametersCommand
 	*/
 	PMCavityReadProcessParametersCommand::PMCavityReadProcessParametersCommand(KeyencePlcSubSystemHelper* helper)
 		:KeyencePlcCommandExecuter(helper){
+
+		d->_mapping_table = getMappingTable();
 
 	};
 
@@ -50,121 +60,31 @@ namespace FC{
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
+		logInform(sub->getName().c_str(), "读参数命令开始执行");
+		PMCavityAxisSettingParameters axis_parames;
 
-		std::vector<std::string> adddress_list;
-		//fill params
-		std::string lifting_axis_acce_address = command_config->getString("lifting_axis_acce_address", "");
-		std::string lifting_axis_dece_address = command_config->getString("lifting_axis_dece_address", "");
-		std::string lifting_axis_startup_speed_address = command_config->getString("lifting_axis_startup_speed_address", "");
-		std::string lifting_axis_target_position_address = command_config->getString("lifting_axis_target_position_address", "");
-		std::string lifting_axis_target_pressure_address = command_config->getString("lifting_axis_target_pressure_address", "");
-		std::string lifting_axis_target1_position_address = command_config->getString("lifting_axis_target2_position_address", "");
-		std::string lifting_axis_target2_position_address = command_config->getString("sputtering_flow_rate3_address", "");
-		std::string lifting_axis_target3_position_address = command_config->getString("lifting_axis_target3_position_address", "");
-		std::string lifting_axis_jog_speed_address = command_config->getString("lifting_axis_jog_speed_address", "");
-		std::string lifting_axis_inch_movement_address = command_config->getString("lifting_axis_inch_movement_address", "");
-		std::string rotating_axis_acce_address = command_config->getString("rotating_axis_acce_address", "");
-		std::string rotating_axis_dece_address = command_config->getString("rotating_axis_dece_address", "");
-		std::string rotating_axis_startup_speed_address = command_config->getString("rotating_axis_startup_speed_address", "");
-		std::string rotating_axis_target_position_address = command_config->getString("rotating_axis_target_position_address", "");
-		std::string rotating_axis_jog_speed_address = command_config->getString("rotating_axis_jog_speed_address", "");
-		std::string rotating_axis_inch_movement_address = command_config->getString("rotating_axis_inch_movement_address", "");
-
-		adddress_list.push_back(lifting_axis_acce_address);
-		adddress_list.push_back(lifting_axis_dece_address);
-		adddress_list.push_back(lifting_axis_startup_speed_address);
-		adddress_list.push_back(lifting_axis_target_position_address);
-		adddress_list.push_back(lifting_axis_target_pressure_address);
-		adddress_list.push_back(lifting_axis_target1_position_address);
-		adddress_list.push_back(lifting_axis_target2_position_address);
-		adddress_list.push_back(lifting_axis_target3_position_address);
-		adddress_list.push_back(lifting_axis_jog_speed_address);
-		adddress_list.push_back(lifting_axis_inch_movement_address);
-		adddress_list.push_back(rotating_axis_acce_address);
-		adddress_list.push_back(rotating_axis_dece_address);
-		adddress_list.push_back(rotating_axis_startup_speed_address);
-		adddress_list.push_back(rotating_axis_target_position_address);
-		adddress_list.push_back(rotating_axis_jog_speed_address);
-		adddress_list.push_back(rotating_axis_inch_movement_address);
-		for (auto _address : adddress_list)
+		// 使用循环读取所有参数
+		for (const auto& mapping : d->_mapping_table)
 		{
-			if (_address.empty())
+			std::string address = command_config->getString(mapping.config_key, "");
+
+			if (address.empty())
 			{
-				break;
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
-					Poco::format("address: %s not defined", getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
+					Poco::format("address: %s not defined", sub->getName()), this);
 			}
-		}
-		PMCavityAxisSettingParameters process_parameters;
-		logInform(sub->getName().c_str(), "读取参数命令开始执行");
-		
-		if (!readDouble(lifting_axis_acce_address, process_parameters.lifting_axis_acce))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴加速度错误", sub->getName()), this);
-		}
-		if (!readDouble(lifting_axis_dece_address, process_parameters.lifting_axis_dece))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴减速度错误", sub->getName(), process_parameters.lifting_axis_dece), this);
-		}
-		if (!readDouble(lifting_axis_inch_movement_address, process_parameters.lifting_axis_inch_movement))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴启动速度错误", sub->getName(), process_parameters.lifting_axis_inch_movement), this);
-		}
-		if (!readDouble(lifting_axis_jog_speed_address, process_parameters.lifting_axis_jog_speed))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴目标坐标错误", sub->getName(), process_parameters.lifting_axis_jog_speed), this);
-		}
-		if (!readDouble(lifting_axis_startup_speed_address, process_parameters.lifting_axis_startup_speed))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取溅升降轴目标压力错误", sub->getName(), process_parameters.lifting_axis_startup_speed), this);
-		}
-		if (!readDouble(lifting_axis_target1_position_address, process_parameters.lifting_axis_target1_position))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴位置1错误", sub->getName(), process_parameters.lifting_axis_target1_position), this);
-		}
-		if (!readDouble(lifting_axis_target2_position_address, process_parameters.lifting_axis_target2_position))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴位置2错误", sub->getName(), process_parameters.lifting_axis_target2_position), this);
-		}
-		if (!readDouble(lifting_axis_target3_position_address, process_parameters.lifting_axis_target3_position))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴位置3错误", sub->getName(), process_parameters.lifting_axis_target3_position), this);
-		}
-		if (!readDouble(lifting_axis_target_position_address, process_parameters.lifting_axis_target_position))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴jog速度错误", sub->getName(), process_parameters.lifting_axis_target_position), this);
-		}
-		if (!readDouble(lifting_axis_target_pressure_address, process_parameters.lifting_axis_target_pressure))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取升降轴寸动移动量错误", sub->getName(), process_parameters.lifting_axis_target_pressure), this);
-		}
-		if (!readDouble(rotating_axis_acce_address, process_parameters.rotating_axis_acce))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取旋转轴加速度错误", sub->getName(), process_parameters.rotating_axis_acce), this);
-		}
-		if (!readDouble(rotating_axis_dece_address, process_parameters.rotating_axis_dece))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取旋转轴减速度错误", sub->getName(), process_parameters.rotating_axis_dece), this);
-		}
-		if (!readDouble(rotating_axis_startup_speed_address, process_parameters.rotating_axis_startup_speed))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取旋转轴定位速度错误", sub->getName(), process_parameters.rotating_axis_startup_speed), this);
-		}
-		if (!readDouble(rotating_axis_target_position_address, process_parameters.rotating_axis_target_position))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取旋转轴目标坐标错误", sub->getName(), process_parameters.rotating_axis_target_position), this);
-		}
-		if (!readDouble(rotating_axis_jog_speed_address, process_parameters.rotating_axis_jog_speed))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取旋转轴jog速度错误", sub->getName(), process_parameters.rotating_axis_jog_speed), this);
-		}
-		if (!readDouble(rotating_axis_inch_movement_address, process_parameters.rotating_axis_inch_movement))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读取旋转轴寸动移动量错误", sub->getName()), this);
-		}
 
-		sub->setPMCavityAxisParameters(process_parameters);
+			float& value = axis_parames.*(mapping.member_ptr);
 
+			if (!readFloat(address, value))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+					Poco::format(" %s读取%s错误", sub->getName(), mapping.description), this);
+			}
+
+		}
+	
+		sub->setPMCavityAxisParameters(axis_parames);
 		logInform(sub->getName().c_str(), "读取电机参数命令执行结束");
 		return IKernelCommand::RunResult::RUN_OK;
 

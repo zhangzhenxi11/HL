@@ -25,6 +25,8 @@
 #include "PMCavity/fortrend_pm_cavity_write_process_parameters_command.h"
 #include "PMCavity/fortrend_pm_cavity_clear_state_command.h"
 #include "PMCavity/fortrend_pm_cavity_inserting_plate_opening_controller_command.h"
+#include "PMCavity/fortrend_pm_cavity_lifting_axis_home_command.h"
+#include "PMCavity/fortrend_pm_cavity_rotating_axis_home_command.h"
 
 #include "PMCavity/fortrend_pm_cavity_to_get_station_command.h"
 #include "PMCavity/fortrend_pm_cavity_to_put_station_command.h"
@@ -75,10 +77,13 @@ namespace FC{
 		std::shared_ptr<PMCavityUploadFinishedCommand> createUploadFinishedCommand()const; //上片完成
 
 		//升降轴动作
-		std::shared_ptr<PMCavityLiftingActionCommand> createLiftingActionCommand(double targetPos)const;//去目标位命令
-		std::shared_ptr<PMCavityToGetStationCommand> createToGetStationCommand()const;					//去取料位命令
-		std::shared_ptr<PMCavityToPutStationCommand> createToPutStationCommand(int stationid=1)const;   //去工艺位命令 
-		std::shared_ptr<PMCavityToRotatingStationCommand> createToRotatingStationCommand()const;	    //去旋转位命令
+		std::shared_ptr<PMCavityLiftingActionCommand> createLiftingActionCommand(double targetPos)const;//手动命令： 目标位命令
+
+		std::shared_ptr<PMCavityToGetStationCommand> createToGetStationCommand()const;					//去取料位命令  位置1
+		std::shared_ptr<PMCavityToRotatingStationCommand> createToRotatingStationCommand()const;	    //去旋转位命令  位置2
+		std::shared_ptr<PMCavityToPutStationCommand> createToPutStationCommand()const;					//去工艺位命令  位置3
+		
+
 		//旋转轴动作
 		std::shared_ptr<PMCavityRotatingActionCommand> createRotatingActionCommand(double degree)const;
 
@@ -87,6 +92,8 @@ namespace FC{
 		std::shared_ptr<PMCavityClearStateCommand> createClearStateCommand()const;
 		std::shared_ptr<PMCavityInsertingPlateOpeningControllerCommand> createInsertingPlateOpeningControllerCommand(const float percentage) const;
 
+		std::shared_ptr<PMCavityLiftingAxisHomeCommand> createPMCavityLiftingAxisHomeCommand()const;
+		std::shared_ptr<PMCavityRotatingAxisHomeCommand> createPMCavityRotatingAxisHomeCommand()const;
 	public:
 		void setDoorOpen(const bool value);
 		bool getPMCavityDoorrOpend()const;
@@ -111,7 +118,7 @@ namespace FC{
 		bool getPMCavitySafeSignal();
 		void setPMCavitySafeSignal(bool value);
 
-		bool getPMCavityMotorHomeSignal();
+		bool getPMCavityMotorHomeSignal(); 
 		bool getPMCavityMotorForwardSignal();
 
 		bool getPMCavityMotorRunSignal();
@@ -127,13 +134,32 @@ namespace FC{
 		std::string getPMCavityAlarmMessage();
 
 		bool getPMCavityUpdateProcessParameters();
+
+		//PM腔工艺参数
 		PMCavityProcessParameters getPMCavityProcessParameters();
+
+		//膜厚仪监控参数值
 		PMCavityMoniterFilmValue getPMCavityFilmValue();
 
 		void setPMCavityProcessParameters(const PMCavityProcessParameters pm_param);
 
+		//设置轴参数
 		void setPMCavityAxisParameters(const PMCavityAxisSettingParameters pm_param);
 		PMCavityAxisSettingParameters getPMCavityAxisParameters();
+
+		bool getPMCavityUpdatAxisParameters();
+
+		//最低面位检测
+		bool getMinimumPlaneLevelSignal()const;
+		//中间旋转面位检测
+		bool getMaximumPlaneLevelSignal()const;
+		//最高面位检测
+		bool getRotatingimumPlaneLevelSignal()const;
+
+		//z轴定位坐标
+		float getPmLiftingTargetPos()const;
+		//r轴定位坐标
+		float getPmRotatingTargetPos()const;
 
 		/**
 		* 获取镀膜时间
@@ -143,7 +169,11 @@ namespace FC{
 		* 获取工艺步骤
 		*/
 		short getPMCavityProcessingStep();
-		
+
+		//工艺次数
+		void setPMCavityCraftCount(int count);
+
+		int getPMCavityCraftCount();
 		//Z轴控使能
 		bool getLiftingAxisPowerDone()const;
 		void setLiftingAxisPower(bool enable);
@@ -163,6 +193,7 @@ namespace FC{
 		//R轴控使能
 		bool getRotationAxisPowerDone()const;
 		void setRotationAxisPower(bool enable);
+
 		//R轴回原
 		bool getRotationHomeDone()const;
 		void setRotationHome(bool enable);
@@ -197,18 +228,34 @@ namespace FC{
 		bool getRAxleAutoRunning()const;
 
 		double getPMCavityMagnitude()const;
-		double getPMCavityAxleSpeed()const;
-		double getPMCavityMotorSpeed()const;
-		double getPMCavityAxleLocation();
 
-		void setPMCavityAxleSpeed(double speed);
+		float getPMCavityMotorSpeed()const; //Z轴jog速度
 
-		void setPMCavityTurnSpeed(double speed);
+		float getPMCavityRAxisMotorSpeed()const; //R轴jog速度
 
-		//JOG+
+		double getPMCavityAxleSpeed()const; //z轴速度  -->废弃
+		
+		double getPMCavityAxleLocation();//z轴位置-->废弃
+
+		//Z轴
+		void setPMCavityAxleSpeed(float speed);
+
+		void setPMCavityTurnSpeed(float speed);
+		//R轴
+
+		void setPMCavityRAxleSpeed(float speed);
+
+		void setsetPMCavityRAxleTurnSpeed(float speed);
+
+		//Z JOG+
 		void setPMCavityForward(bool forward);
-		//JOG-
+		//Z JOG-
 		void setPMCavityBackward(bool backward);
+
+		//R JOG+
+		void setPMCavityRAxlePositive(bool Positive);
+		//R JOG-
+		void setPMCavityRAxleNegative(bool Negative);
 
 		int  getPMCavityCrftCountLLA()const;
 		int  getPMCavityCrftCountLLB()const;

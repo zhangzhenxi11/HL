@@ -7577,17 +7577,17 @@ namespace FC{
 			{
 				if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 				{
-					auto cmd = pm2->createToPutStationCommand(2);
-					pm2->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						logFailedExcuteCommandHasError(pm2->getName(), "去工艺位命令执行失败", pm_process_name, pm_auto_step);
-					}
-					else
-					{
-						pm_auto_step = 2100;
-					}
+					//auto cmd = pm2->createToPutStationCommand(2);
+					//pm2->startCommand(cmd);
+					//cmd->wait();
+					//if (cmd->hasError())
+					//{
+					//	logFailedExcuteCommandHasError(pm2->getName(), "去工艺位命令执行失败", pm_process_name, pm_auto_step);
+					//}
+					//else
+					//{
+					//	pm_auto_step = 2100;
+					//}
 
 				}
 				else
@@ -7608,6 +7608,7 @@ namespace FC{
 				{
 					if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+#if 0
 						auto cmd = pm2->createToPutStationCommand(2);//去工艺位2
 						pm2->startCommand(cmd);
 						cmd->wait();
@@ -7633,7 +7634,7 @@ namespace FC{
 								break;
 							}
 						}
-
+#endif
 					}
 					else
 					{

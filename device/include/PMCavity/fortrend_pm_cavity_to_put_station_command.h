@@ -24,7 +24,7 @@ namespace FC{
 	class  PMCavityToPutStationCommand :public std::enable_shared_from_this<PMCavityToPutStationCommand>, public  KernelSubsystemCommand, public KeyencePlcCommandExecuter{
 	public:
 		DECLARE_PTR(PMCavityToPutStationCommand)
-		PMCavityToPutStationCommand(KeyencePlcSubSystemHelper* helper,int stationNum);
+		PMCavityToPutStationCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "ToPutStation"; }
 		int stationid;
 	protected:

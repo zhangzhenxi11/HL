@@ -52,7 +52,14 @@ namespace FC{
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 		std::string open_tm_cavity_door_address = command_config->getString("open_tm_cavity_door_address", "");
 		std::string close_tm_cavity_door_address = command_config->getString("close_tm_cavity_door_address", "");
-		if (open_tm_cavity_door_address == "" || close_tm_cavity_door_address == "")
+
+		std::string lifting_axis_upper_enable_address = command_config->getString("lifting_axis_upper_enable_address", "");
+		std::string rotating_axis_upper_enable_address = command_config->getString("rotating_axis_upper_enable_address", "");
+		std::string lifting_axis_enable_address = command_config->getString("lifting_axis_enable_address", "");
+		std::string rotating_axis_enable_address = command_config->getString("rotating_axis_enable_address", "");
+
+		if (open_tm_cavity_door_address == "" || close_tm_cavity_door_address == "" ||(lifting_axis_upper_enable_address =="")||(rotating_axis_upper_enable_address =="")
+			||(lifting_axis_enable_address =="")||(rotating_axis_enable_address ==""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 获取状态地址未定义", getName()), this);
 		}
@@ -74,22 +81,58 @@ namespace FC{
 			{
 			}
 		}
-		if (sub->readPMCavityHasObjectState())
-		{
-			//check modules
-			auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
-			//get cass
-			auto station_cass = cassManager->getCassette(sub);
-			if (!station_cass){
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
-			}
-			std::vector<int> all_slot;
-			std::vector<Cassette::Mapping> all_mapping;
-			all_slot.push_back(1);
-			all_mapping.push_back(Cassette::Mapping::Present);
+		bool lifting_axis_enable = false;
+		bool rotating_axis_enable = false;
+		int count = 0;
+		int loopCount = 10;
 
-			//station_cass->setMapping(all_slot, all_mapping);
+		while (count <= loopCount)
+		{
+			Sleep(20);
+			readBit(lifting_axis_enable_address, lifting_axis_enable);
+			readBit(rotating_axis_enable_address, rotating_axis_enable);
+
+			if (lifting_axis_enable && rotating_axis_enable)
+			{
+				break;
+			}
+			count++;
 		}
+
+		if (!lifting_axis_enable)
+		{
+			if (!writeBit(lifting_axis_upper_enable_address, true))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s Z轴上使能命令地址错误，地址%s", sub->getName(), lifting_axis_upper_enable_address), this);
+			}
+		}
+
+		if (!rotating_axis_enable)
+		{
+			if (!writeBit(rotating_axis_upper_enable_address, true))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s R轴上使能命令命令地址错误，地址%s", sub->getName(), rotating_axis_upper_enable_address), this);
+			}
+		}
+
+		//2025-10-24 注释
+		//if (sub->readPMCavityHasObjectState())
+		//{
+		//	//check modules
+		//	auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
+		//	//get cass
+		//	auto station_cass = cassManager->getCassette(sub);
+		//	if (!station_cass){
+		//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
+		//	}
+		//	std::vector<int> all_slot;
+		//	std::vector<Cassette::Mapping> all_mapping;
+		//	all_slot.push_back(1);
+		//	all_mapping.push_back(Cassette::Mapping::Present);
+
+		//	//station_cass->setMapping(all_slot, all_mapping);
+		//}
+
 		return ret;
 
 	}

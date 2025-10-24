@@ -82,7 +82,7 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写目标坐标:%f 命令地址错误，地址%s", sub->getName(), d->_degree, relative_position_address), this);
     }
-    if (writeBit(start_address, true))
+    if (!writeBit(start_address, true))
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 定位开始命令地址错误，地址%s", sub->getName(), start_address), this);
     }

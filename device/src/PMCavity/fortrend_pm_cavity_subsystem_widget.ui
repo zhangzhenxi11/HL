@@ -599,7 +599,7 @@
         </size>
        </property>
        <property name="text">
-        <string>移动到取料位</string>
+        <string>移动到取放料位</string>
        </property>
       </widget>
      </item>
@@ -615,7 +615,7 @@
         </size>
        </property>
        <property name="text">
-        <string>移动到放料位</string>
+        <string>移动到工艺位</string>
        </property>
       </widget>
      </item>
@@ -684,6 +684,20 @@
        </property>
        <property name="text">
         <string>复位</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clear_z_axis_alarm">
+       <property name="text">
+        <string>清除Z轴报警</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clear_r_axis_alarm">
+       <property name="text">
+        <string>清除R轴报警</string>
        </property>
       </widget>
      </item>

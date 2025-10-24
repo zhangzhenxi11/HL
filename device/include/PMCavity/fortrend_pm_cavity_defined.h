@@ -123,26 +123,26 @@ namespace FC {
 	*/
 	struct PMCavityAxisSettingParameters
 	{
-		double lifting_axis_acce = 0.0F;
-		double lifting_axis_dece = 0.0F;
-		double lifting_axis_startup_speed = 0.0F;
-		double lifting_axis_target_position = 0.0F;
-		double lifting_axis_target_pressure = 0.0F;
-		double lifting_axis_target1_position = 0.0F;
-		double lifting_axis_target2_position = 0.0F;
-		double lifting_axis_target3_position = 0.0F;
-		double lifting_axis_jog_speed = 0.0F;
-		double lifting_axis_inch_movement = 0.0F;
-		double rotating_axis_acce = 0.0F;
-		double rotating_axis_dece = 0.0F;
-		double rotating_axis_startup_speed = 0.0F;
-		double rotating_axis_target_position = 0.0F;
-		double rotating_axis_jog_speed = 0.0F;
-		double rotating_axis_inch_movement = 0.0F;
+		float lifting_axis_acce = 0.0F;
+		float lifting_axis_dece = 0.0F;
+		float lifting_axis_startup_speed = 0.0F;
+		float lifting_axis_target_position = 0.0F;
+		float lifting_axis_target_pressure = 0.0F;
+		float lifting_axis_target1_position = 0.0F;
+		float lifting_axis_target2_position = 0.0F;
+		float lifting_axis_target3_position = 0.0F;
+		float lifting_axis_jog_speed = 0.0F;
+		float lifting_axis_inch_movement = 0.0F;
+		float rotating_axis_acce = 0.0F;
+		float rotating_axis_dece = 0.0F;
+		float rotating_axis_startup_speed = 0.0F;
+		float rotating_axis_target_position = 0.0F;
+		float rotating_axis_jog_speed = 0.0F;
+		float rotating_axis_inch_movement = 0.0F;
 	};
 	struct ParameterMapping {
 		std::string config_key;
-		double PMCavityAxisSettingParameters::* member_ptr;
+		float PMCavityAxisSettingParameters::* member_ptr;
 		std::string description;
 	};
 

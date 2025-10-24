@@ -40,8 +40,16 @@ signals:
 	void signalPMCloseTMCavityDoor(std::string name);
 	void signalPMGetFinished(std::string name);
 	void signalPMUplaodFinished(std::string name);
+	void signalPMRotatePosFinished(std::string name);
+	void signalPMRotatingDegreeFinished(std::string name);
 	void signalPMGetStatus(std::string name);
 	void signalPMReset(std::string name);
+	void signalPMZaxisReset(std::string name);
+	void signalPMRaxisReset(std::string name);
+	void signalPMClearZaxisError(std::string name);
+	void signalPMClearRaxisError(std::string name);
+
+
 	void signalRightClick();
 private:
     Ui::PMGDTWidget *ui;

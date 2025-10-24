@@ -34,11 +34,11 @@ namespace FC{
 	/**
 	* PMCavityToPutStationCommand
 	*/
-	PMCavityToPutStationCommand::PMCavityToPutStationCommand(KeyencePlcSubSystemHelper* helper,int stationNum)
+	PMCavityToPutStationCommand::PMCavityToPutStationCommand(KeyencePlcSubSystemHelper* helper)
 		:KeyencePlcCommandExecuter(helper){
 		//setMessageName("UploadFinished");
 		//setDescription("upload request the pm cavity");
-		stationid = stationNum;
+
 	};
 
 
@@ -64,10 +64,10 @@ namespace FC{
 		if (!station_cass){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
 		}
-		if (station_cass->getMapping(1) == Cassette::Mapping::Empty)
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("工位: %s 腔目前不存在晶圆（逻辑错误）", sub->getName()), this);
-		}
+		//if (station_cass->getMapping(1) == Cassette::Mapping::Empty)
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("工位: %s 腔目前不存在晶圆（逻辑错误）", sub->getName()), this);
+		//}
 		/*if (!sub->getPMCavityUploadRequest())
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("工位: %s 腔未发出上片请求（逻辑错误）", sub->getName()), this);
@@ -80,35 +80,28 @@ namespace FC{
 		std::string finish_address = command_config->getString("finish_address", "");
 		std::string failed_address = command_config->getString("failed_address", "");
 		std::string abs_position_address = command_config->getString("abs_position_address", "");
-		std::string axis_target2_position_address = command_config->getString("axis_target2_position_address", "");
+		std::string axis_target3_position_address = command_config->getString("axis_target3_position_address", "");
 
-		if (stationid != 1){//移动到工艺位2
-			start_address = command_config->getString("start_address2", "");
-			finish_address = command_config->getString("finish_address2", "");
-			failed_address = command_config->getString("failed_address2", "");
-			//error_code_address = command_config->getString("error_code_address2", "");
-		}
-		
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 去工艺位命令超时参数设置错误", sub->getName()), this);
 		}
 
-		if ((start_address == "") || (finish_address == "") || (failed_address == "") || (abs_position_address == "") ||(axis_target2_position_address == ""))
+		if ((start_address == "") || (finish_address == "") || (failed_address == "") || (abs_position_address == "") ||(axis_target3_position_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 去工艺位命令地址未定义", getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "去工艺位%d命令开始执行",stationid);
+		logInform(sub->getName().c_str(), "去工艺位命令开始执行");
 		sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
-		float axis_target2_pos = 0.0F;
-		if (!readFloat(axis_target2_position_address, axis_target2_pos))
+		float axis_target3_pos = 0.0F;
+		if (!readFloat(axis_target3_position_address, axis_target3_pos))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读设置的工艺位命令地址错误，地址%s", sub->getName(), axis_target2_position_address), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读设置的工艺位命令地址错误，地址%s", sub->getName(), axis_target3_position_address), this);
 		}
 
-		if (!writeFloat(abs_position_address, axis_target2_pos))
+		if (!writeFloat(abs_position_address, axis_target3_pos))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写工艺位位置命令地址错误，地址%s", sub->getName(), abs_position_address), this);
 		}
