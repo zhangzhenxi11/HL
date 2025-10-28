@@ -1399,6 +1399,11 @@ namespace FC{
 			d->rotating_axis_motor_speed_address = config->getString("AxisReadParameters.rotating_axis_jog_speed_address","");
 		}
 
+		if (config->has("Reset"))
+		{
+			d->rotating_axis_clear_error_address = config->getString("Reset.rotating_axis_start_address","");
+			d->lifting_axis_clear_error_address = config->getString("Reset.lifting_axis_start_address","");
+		}
 	}
 
 

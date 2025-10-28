@@ -692,60 +692,6 @@
     <string>终止流程</string>
    </property>
   </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>1260</x>
-     <y>650</y>
-     <width>451</width>
-     <height>141</height>
-    </rect>
-   </property>
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
-     <widget class="QLabel" name="label_12">
-      <property name="text">
-       <string>loadlockA抽真空</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="label_7">
-      <property name="text">
-       <string>loadlockB抽真空</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="ProgressColor" name="gmfm_lla_progress" native="true">
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="ProgressColor" name="gmfm_tm_progress" native="true">
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="ProgressColor" name="gmfm_llb_progress" native="true">
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_13">
-      <property name="text">
-       <string>TM抽真空</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
   <zorder>ppv_llb_h_1</zorder>
   <zorder>pav_llb_w_1</zorder>
   <zorder>pav_lla_w_1</zorder>
@@ -800,7 +746,6 @@
   <zorder>gridLayoutWidget_12</zorder>
   <zorder>gridLayoutWidget_13</zorder>
   <zorder>abort_process_btn</zorder>
-  <zorder>layoutWidget</zorder>
  </widget>
  <customwidgets>
   <customwidget>
@@ -873,12 +818,6 @@
    <class>ValveWheel</class>
    <extends>QWidget</extends>
    <header location="global">valvewheel.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ProgressColor</class>
-   <extends>QWidget</extends>
-   <header location="global">ProgressColor.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

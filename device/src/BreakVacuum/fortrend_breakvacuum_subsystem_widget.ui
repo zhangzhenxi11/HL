@@ -1084,61 +1084,6 @@
     <string>终止流程</string>
    </property>
   </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>1400</x>
-     <y>580</y>
-     <width>401</width>
-     <height>121</height>
-    </rect>
-   </property>
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
-     <widget class="QLabel" name="label_9">
-      <property name="text">
-       <string>loadlockA破真空</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="ProgressColor" name="gmfm_lla_progress" native="true">
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="label_7">
-      <property name="text">
-       <string>loadlockB破真空</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="ProgressColor" name="gmfm_tm_progress" native="true">
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_8">
-      <property name="text">
-       <string>TM破真空</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="ProgressColor" name="gmfm_llb_progress" native="true">
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <zorder>layoutWidget</zorder>
   <zorder>widget_35</zorder>
   <zorder>widget_36</zorder>
   <zorder>widget_37</zorder>
@@ -1314,12 +1259,6 @@
    <class>DigitalPressureOpenMeter</class>
    <extends>QWidget</extends>
    <header location="global">digitalpressureopenmeter.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ProgressColor</class>
-   <extends>QWidget</extends>
-   <header location="global">ProgressColor.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

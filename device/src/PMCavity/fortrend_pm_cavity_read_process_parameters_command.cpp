@@ -29,24 +29,24 @@
 namespace FC{
 
 	/**
-* PMCavityReadProcessParametersCommandPrivate
-*/
+	* PMCavityReadProcessParametersCommandPrivate
+	*/
 	class PMCavityReadProcessParametersCommandPrivate {
 	public:
-		
-		std::vector<ParameterMapping> _mapping_table;
-
+		// 2025-10-28: 删除_mapping_table成员变量，直接使用getMappingTable()返回的static引用
+		// std::vector<ParameterMapping> _mapping_table;  // 已删除
 	};
 
 	/**
 	* PMCavityReadProcessParametersCommand
 	*/
 	PMCavityReadProcessParametersCommand::PMCavityReadProcessParametersCommand(KeyencePlcSubSystemHelper* helper)
-		:KeyencePlcCommandExecuter(helper){
-
-		d->_mapping_table = getMappingTable();
-
-	};
+		:KeyencePlcCommandExecuter(helper)
+		, d(std::make_shared<PMCavityReadProcessParametersCommandPrivate>())  // 2025-10-28: 初始化d指针，避免空指针访问
+	{
+		// 2025-10-28: 不需要赋值，直接使用getMappingTable()返回的static引用，避免不必要的拷贝
+		// d->_mapping_table = getMappingTable(); // 删除此行，因为不再需要存储在成员变量中
+	}
 
 	/**
 	* return true if success else false.
@@ -63,8 +63,11 @@ namespace FC{
 		logInform(sub->getName().c_str(), "读参数命令开始执行");
 		PMCavityAxisSettingParameters axis_parames;
 
+		// 2025-10-28: 直接使用getMappingTable()返回的static const引用，避免从成员变量读取
+		const auto& mapping_table = getMappingTable();
+		
 		// 使用循环读取所有参数
-		for (const auto& mapping : d->_mapping_table)
+		for (const auto& mapping : mapping_table)
 		{
 			std::string address = command_config->getString(mapping.config_key, "");
 

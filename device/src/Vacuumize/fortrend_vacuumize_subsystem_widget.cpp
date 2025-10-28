@@ -137,18 +137,18 @@ public:
 	//d->ui->widget_13->setWaterDirection(0);//设置从下往上流动
 	//d->ui->widget_53->setWaterDirection(1);//设置从右往左流动
 
-	d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
-	d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
-	d->ui->gmfm_lla_progress->setRange(0, 100);
+	//d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
+	//d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
+	//d->ui->gmfm_lla_progress->setRange(0, 100);
 
-	d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
-	d->ui->gmfm_llb_progress->setPrecision(1);
-	d->ui->gmfm_llb_progress->setRange(0, 100);
+	//d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
+	//d->ui->gmfm_llb_progress->setPrecision(1);
+	//d->ui->gmfm_llb_progress->setRange(0, 100);
 
-	d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
-	d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
-	d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
-	d->ui->gmfm_tm_progress->setRange(0, 100);
+	//d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
+	//d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
+	//d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
+	//d->ui->gmfm_tm_progress->setRange(0, 100);
 
 	QKernelSubsystemStatusWidget* status_widget_tm = new QKernelSubsystemStatusWidget(d->tm);
 
@@ -445,9 +445,9 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 
 	//进度条
-	d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumUpperlimitValue(),d->lk1->getVacuumValue()));
-	d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumUpperlimitValue(),d->tm->getTMCavityVacuumValue()));
-	d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumUpperlimitValue(), d->lk2->getVacuumValue()));
+	//d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumUpperlimitValue(),d->lk1->getVacuumValue()));
+	//d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumUpperlimitValue(),d->tm->getTMCavityVacuumValue()));
+	//d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumUpperlimitValue(), d->lk2->getVacuumValue()));
 
 	if (d->lk1->getAngleValveOpend()) {
 		d->ui->widget_pav_lla->open();

@@ -1524,13 +1524,16 @@ namespace FC{
 #pragma region PM模块指令
 	void QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor(std::string name){
 		Q_D(QFortrendStationStatusVTMWidget);
-		//KernelSubsystemCommand::Ptr cmd = d->pm2->createOpenTMCavityDoorCommand();
-		//d->pm2widget->executeCommand(d->pm2, cmd);
-	};
+		auto pm = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(name);
+		KernelSubsystemCommand::Ptr cmd = pm->createOpenTMCavityDoorCommand();
+		d->pm2widget->executeCommand(pm, cmd);
+	}
 	void QFortrendStationStatusVTMWidget::onPMCloseTMCavityDoor(std::string name){
 		Q_D(QFortrendStationStatusVTMWidget);
-		/*KernelSubsystemCommand::Ptr cmd = d->pm2->createCloseTMCavityDoorCommand();
-		d->pm2widget->executeCommand(d->pm2, cmd);*/
+		auto pm = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(name);
+
+		KernelSubsystemCommand::Ptr cmd = pm->createCloseTMCavityDoorCommand();
+		d->pm2widget->executeCommand(pm, cmd);
 	};
 	void QFortrendStationStatusVTMWidget::onPMGetFinished(std::string name){//移到取放料位
 		Q_D(QFortrendStationStatusVTMWidget);
@@ -1595,8 +1598,9 @@ namespace FC{
 	};
 	void QFortrendStationStatusVTMWidget::onPMReset(std::string name){
 		Q_D(QFortrendStationStatusVTMWidget);
-		KernelSubsystemCommand::Ptr cmd = d->pm2->createResetCommand();
-		d->pm2widget->executeCommand(d->pm2, cmd);
+		auto pm = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(name);
+		KernelSubsystemCommand::Ptr cmd = pm->createResetCommand();
+		d->pm2widget->executeCommand(pm, cmd);
 	};
 #pragma endregion
 

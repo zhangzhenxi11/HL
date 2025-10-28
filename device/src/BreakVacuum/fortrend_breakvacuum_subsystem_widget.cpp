@@ -233,20 +233,20 @@ namespace FC{
 		d->ui->tm__lla_door->setWaterDirection(2);
 		d->ui->tm__llb_door->setWaterDirection(2);
 
-		d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
-		d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
-		d->ui->gmfm_lla_progress->setPrecision(1);
-		d->ui->gmfm_lla_progress->setRange(0, 100);
+		//d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
+		//d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
+		//d->ui->gmfm_lla_progress->setPrecision(1);
+		//d->ui->gmfm_lla_progress->setRange(0, 100);
 
-		d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
-		d->ui->gmfm_llb_progress->setPrecision(1);
-		d->ui->gmfm_llb_progress->setRange(0, 100);
+		//d->ui->gmfm_llb_progress->setBarColor(QColor(255, 107, 107));
+		//d->ui->gmfm_llb_progress->setPrecision(1);
+		//d->ui->gmfm_llb_progress->setRange(0, 100);
 
-		d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
-		d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
-		d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
-		d->ui->gmfm_tm_progress->setPrecision(1);
-		d->ui->gmfm_tm_progress->setRange(0, 100);
+		//d->ui->gmfm_tm_progress->setTextColor(QColor(250, 250, 250));
+		//d->ui->gmfm_tm_progress->setBarBgColor(QColor(80, 80, 80));
+		//d->ui->gmfm_tm_progress->setBarColor(QColor(24, 189, 155));
+		//d->ui->gmfm_tm_progress->setPrecision(1);
+		//d->ui->gmfm_tm_progress->setRange(0, 100);
 
 		//ui->widget_14->setWaterDirection(1);//设置从下往上流动
 		//ui->widget_15->setWaterDirection(1);//设置从下往上流动
@@ -404,9 +404,9 @@ namespace FC{
 		d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 		
 		//进度条
-		d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
-		d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumValue()));
-		d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
+		//d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
+		//d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumValue()));
+		//d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumValue()));
 
 		if (d->tm->getFastDiaphragmValveOpend()){
 //			d->ui->gmfk_tm_w_1->setWaterDirection(1);//流动方向,0从左往右，1从右往左，其他停止流动
