@@ -18,7 +18,6 @@
 
 #include <mutex>
 
-#define SIM_CYCLE_MODE 1
 class QTableWidget;
 
 namespace  FC {
@@ -37,6 +36,7 @@ namespace  FC {
 		~QSlotTransferCycleVTMWidget();
 		//更新配方
 		void onUpdateRecipe(int model);
+		void onSelectTransferMode(int model);
 		void clickStart();
 		void clickPause();
 		void clickReset();
@@ -67,7 +67,6 @@ namespace  FC {
 		void onLoadLock2PutCassetteFinished();
 		void onGetStep();
 		void update_cycle_data();
-		void status_Changed();
 		void updateProcessControlEnabled(const bool enabled);
 		void updateControlEnabled(const QString control,const bool enabled);
 		void updateLightButtonStatus(const QString control, const int color);

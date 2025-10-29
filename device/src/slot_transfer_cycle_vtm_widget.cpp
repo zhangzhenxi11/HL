@@ -106,6 +106,7 @@
 
 #include "UnifiedWaferTask.h"
 #include "TaskManager.h"
+#include "CycleStateSnapshot.h"  // 2025-10-28: 状态快照保存与恢复
 
 #include "ThreadSafeStateMachine.h"
 
@@ -113,7 +114,9 @@
 #pragma execution_character_set("utf-8")
 #endif
 
-#define CYCLE_SIM_MODE 0
+#define CYCLE_SIM_MODE1
+
+#define DEBUG_LOAD_SNAPSHOT1
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
 
@@ -319,8 +322,15 @@ namespace FC{
 		std::chrono::steady_clock::time_point LLB_start_time; //检测真空
 
 		std::mutex updateLPData_mtx;
+		
+		typedef enum FilmTransferMode
+		{
+			Formula_Go_Up_And_Down = 0,
+			Formula_Double_Up_And_Down =1
+		};
 
-		std::string  FormulaName;//配方名
+		FilmTransferMode currentTransferMode; //传片模式
+		std::string  filmTransferMode;//模式名
 
 		/************************zzx  add*********************************/
 		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr = nullptr;
@@ -730,9 +740,19 @@ namespace FC{
 
 	private:
 		void logFailed(const std::string station_name, const std::string log);
+
 		void logFailedNotNormal(const std::string station_name, const std::string process_name, const int step);
 		
 		void logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name, const int step);
+		
+		// 2025-10-28: 状态快照保存与恢复功能
+		void saveCurrentStateSnapshot(const std::string& errorMsg, const std::string& errorLocation);
+
+		bool loadStateSnapshot(const std::string& filePath);
+
+		CycleStateSnapshot::Snapshot captureCurrentState(const std::string& errorMsg, const std::string& errorLocation);
+
+		void restoreStateFromSnapshot(const CycleStateSnapshot::Snapshot& snapshot);
 	};
 
 	QSlotTransferCycleVTMWidgetPrivate::QSlotTransferCycleVTMWidgetPrivate(QSlotTransferCycleVTMWidget*p)
@@ -1075,7 +1095,8 @@ namespace FC{
 					auto station_cass_lk = cassManager->getCassette(lk.get());
 					std::vector<Cassette::Mapping> lkmaps;
 					int count = 0;
-					if (FormulaName == "Formula_Go_Up_And_Down")
+
+					if (currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down)
 					{
 						lkmaps = station_cass_lk->getAllMapping();
 						for (int i = 0; i < lkmaps.size(); i++)
@@ -1083,14 +1104,14 @@ namespace FC{
 							if (lkmaps[i] == Cassette::Empty) //空片的槽号
 							{
 								count = 1; 
-								logWarn(lk->getName().c_str(),"当前配方名是：%s", FormulaName.c_str());
+								logWarn(lk->getName().c_str(),"当前传片模式是:Go_Up_And_Down");
 								break;
 							}
 						}	
 					}
-					else if (FormulaName == "Formula_Double_Up_And_Down")
+					else if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
 					{
-						logWarn(lk->getName().c_str(), "当前配方名是：%s", FormulaName.c_str());
+						logWarn(lk->getName().c_str(), "当前传片模式是:Double_Up_And_Down");
 						lkmaps = station_cass_lk->getAllMapping();
 						count = lkmaps.size(); //lp中有多片下，按loadlock需要的片数，去上料
 					}
@@ -1571,7 +1592,7 @@ namespace FC{
 					}
 					else
 					{
-						logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+						logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 					}
 				}
 				break;
@@ -1599,6 +1620,10 @@ namespace FC{
 						else {
 							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 						}
+					}
+					else
+					{
+						logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 					}
 				}
 				break;
@@ -7155,8 +7180,7 @@ namespace FC{
 
 			//reset_finish = false;
 
-			if(CYCLE_SIM_MODE == 0)
-			{
+#ifndef CYCLE_SIM_MODE
 				//刷新wafer数据回原始的状态
 				int taskSize = taskManager.getAllTasksSize();
 				auto tasks = taskManager.getAllTasks();
@@ -7168,7 +7192,7 @@ namespace FC{
 						taskManager.updateTaskStatus(tasks[i].taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
 					}
 				}
-			}
+#endif
 
 		}
 		onUpdateControlEnabled("reset_pbt", true);
@@ -8045,57 +8069,18 @@ namespace FC{
 		FortrendCassetteManager::Ptr llbManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 		lk2_cass = llbManager->getCassette(lk2.get());
 
-#if 0
-		QString fileName = QDir::currentPath() + "/config/" + "config.ini";
-		if (fileName.isEmpty())
-		{
-			logInform("Cycle:","读取的配置文件为空");
-			return false;
-		}
 
-		QSettings settings(fileName, QSettings::IniFormat);
-
-		//配方配置
-		settings.beginGroup("Formula");
-		int Formula_1 =  settings.value("Formula_Go_Up_And_Down").toInt();   //上进下出
-		int Formula_2 = settings.value("Formula_Double_Up_And_Down").toInt();//双上双下 
-		bool loadlockAEnable = settings.value("LoadLockAEnable", true).toBool();
-		bool loadlockBEnable = settings.value("LoadLockBEnable", true).toBool();
-
-		settings.endGroup();
-
-		if (Formula_1 == 1 && Formula_2 == 0)
-		{
-			slots_ = 1;
-			FormulaName = "Formula_Go_Up_And_Down";
-		}
-		else if (Formula_1 == 0 && Formula_2 == 1)
+		if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
 		{
 			slots_ = 2;
-			FormulaName = "Formula_Double_Up_And_Down";
 		}
-		else
-		{
-			logInform("Cycle:", "配方配置错误");
-			return false;
-		}
-#endif
-		if (FormulaName.empty())
-		{
-			logError("Cycle:", "未选择配方!");
-			return false;
-		}
-		if (FormulaName == "Formula_Go_Up_And_Down")
+		else if(currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down)
 		{
 			slots_ = 1;
 		}
-		else if (FormulaName == "Formula_Double_Up_And_Down")
-		{
-			slots_ = 2;	
-		}
 		else
 		{
-			logInform("Cycle:", "配方配置错误");
+			logInform("Cycle:", "当前传片模式配置错误");
 			return false;
 		}
 
@@ -8398,6 +8383,11 @@ namespace FC{
 		//running = false;
 		pauseAllThreads();
 		ispause = true;
+		
+		// 2025-10-28: 保存错误时的状态快照
+		std::string errorLocation = station_name + " - " + log;
+		saveCurrentStateSnapshot(log, errorLocation);
+		
 		logError(station_name.c_str(), log.c_str());
 		onUpdateControlEnabled("execute_pbt", true);
 		onUpdateLightButtonStatus("light_running_pbt", 3);
@@ -8411,6 +8401,141 @@ namespace FC{
 	void QSlotTransferCycleVTMWidgetPrivate::logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name, const int step){
 		Q_Q(QSlotTransferCycleVTMWidget);
 		logFailed(station_name, Poco::format("%s %s命令执行失败， %s：%d", station_name, command_name, process_name, step));
+	}
+
+	// 2025-10-28: 捕获当前状态快照
+	CycleStateSnapshot::Snapshot QSlotTransferCycleVTMWidgetPrivate::captureCurrentState(
+		const std::string& errorMsg, const std::string& errorLocation) 
+	{
+		CycleStateSnapshot::Snapshot snapshot;
+		
+		// 基本信息
+		Poco::DateTime now;
+		snapshot.timestamp = Poco::DateTimeFormatter::format(now, Poco::DateTimeFormat::ISO8601_FORMAT);
+		snapshot.errorMessage = errorMsg;
+		snapshot.errorLocation = errorLocation;
+		
+		// 各线程step状态
+		snapshot.efem_auto_step = efem_auto_step;
+		snapshot.loadlock1_auto_step = loadlock1_auto_step;
+		snapshot.loadlock2_auto_step = loadlock2_auto_step;
+		snapshot.robot_auto_step = robot_auto_step;
+		snapshot.vacuum_auto_step = vacuum_auto_step;
+		snapshot.pm1_auto_step = pm1_auto_step.load();
+		snapshot.pm2_auto_step = pm2_auto_step.load();
+		snapshot.pm3_auto_step = pm3_auto_step.load();
+		snapshot.pm4_auto_step = pm4_auto_step.load();
+		snapshot.update_auto_step = update_auto_step;
+		
+		// 标志位状态
+		snapshot.tool_allow_get_wafer_LLA = tool_allow_get_wafer_LLA;
+		snapshot.tool_allow_get_wafer_LLB = tool_allow_get_wafer_LLB;
+		snapshot.tool_allow_put_wafer_LLA = tool_allow_put_wafer_LLA;
+		snapshot.tool_allow_put_wafer_LLB = tool_allow_put_wafer_LLB;
+		snapshot.lp1_cycle_one_time_finished = lp1_cycle_one_time_finished;
+		snapshot.lp2_cycle_one_time_finished = lp2_cycle_one_time_finished;
+		snapshot.cycleFinished_lla = cycleFinished_lla;
+		snapshot.cycleFinished_llb = cycleFinished_llb;
+		
+		// 任务统计
+		snapshot.originTaskSize = originTaskSize;
+		snapshot.lp1TaskSize = lp1TaskSize;
+		snapshot.lp2TaskSize = lp2TaskSize;
+		
+		// 其他状态
+		snapshot.current_lp_cycle = current_lp_cycle;
+		snapshot.robot_selected_arm = robot_selected_arm;
+		
+		// 任务列表（从taskManager获取）
+		snapshot.allTasks = taskManager.getAllTasks();
+		
+		return snapshot;
+	}
+
+	// 2025-10-28: 保存当前状态快照
+	void QSlotTransferCycleVTMWidgetPrivate::saveCurrentStateSnapshot(
+		const std::string& errorMsg, const std::string& errorLocation) 
+	{
+		try {
+			auto snapshot = captureCurrentState(errorMsg, errorLocation);
+			bool success = CycleStateSnapshot::saveSnapshot(snapshot);
+			
+			if (success) {
+				logWarn("Cycle", "✅ 状态快照已保存，可用于调试恢复");
+			} else {
+				logError("Cycle", "⚠️ 保存状态快照失败");
+			}
+		}
+		catch (const std::exception& e) {
+			logError("Cycle", "保存快照时发生异常: %s", e.what());
+		}
+	}
+
+	// 2025-10-28: 从快照恢复状态
+	void QSlotTransferCycleVTMWidgetPrivate::restoreStateFromSnapshot(
+		const CycleStateSnapshot::Snapshot& snapshot) 
+	{
+		// 恢复各线程step状态
+		efem_auto_step = snapshot.efem_auto_step;
+		loadlock1_auto_step = snapshot.loadlock1_auto_step;
+		loadlock2_auto_step = snapshot.loadlock2_auto_step;
+		robot_auto_step = snapshot.robot_auto_step;
+		vacuum_auto_step = snapshot.vacuum_auto_step;
+		pm1_auto_step.store(snapshot.pm1_auto_step);
+		pm2_auto_step.store(snapshot.pm2_auto_step);
+		pm3_auto_step.store(snapshot.pm3_auto_step);
+		pm4_auto_step.store(snapshot.pm4_auto_step);
+		update_auto_step = snapshot.update_auto_step;
+		
+		// 恢复标志位状态
+		tool_allow_get_wafer_LLA = snapshot.tool_allow_get_wafer_LLA;
+		tool_allow_get_wafer_LLB = snapshot.tool_allow_get_wafer_LLB;
+		tool_allow_put_wafer_LLA = snapshot.tool_allow_put_wafer_LLA;
+		tool_allow_put_wafer_LLB = snapshot.tool_allow_put_wafer_LLB;
+		lp1_cycle_one_time_finished = snapshot.lp1_cycle_one_time_finished;
+		lp2_cycle_one_time_finished = snapshot.lp2_cycle_one_time_finished;
+		cycleFinished_lla = snapshot.cycleFinished_lla;
+		cycleFinished_llb = snapshot.cycleFinished_llb;
+		
+		// 恢复任务统计
+		originTaskSize = snapshot.originTaskSize;
+		lp1TaskSize = snapshot.lp1TaskSize;
+		lp2TaskSize = snapshot.lp2TaskSize;
+		
+		// 恢复其他状态
+		current_lp_cycle = snapshot.current_lp_cycle;
+		robot_selected_arm = snapshot.robot_selected_arm;
+		
+		// 恢复任务列表（清空taskManager并重新添加）
+		taskManager.clearTasks();
+		for (const auto& task : snapshot.allTasks) {
+			taskManager.addTask(task);
+		}
+		
+		logWarn("Cycle", "✅ 状态已从快照恢复: %s", snapshot.timestamp.c_str());
+		logWarn("Cycle", "   错误位置: %s", snapshot.errorLocation.c_str());
+		logWarn("Cycle", "   任务数量: %d", (int)snapshot.allTasks.size());
+	}
+
+	// 2025-10-28: 加载状态快照
+	bool QSlotTransferCycleVTMWidgetPrivate::loadStateSnapshot(const std::string& filePath) 
+	{
+		try {
+			CycleStateSnapshot::Snapshot snapshot;
+			bool success = CycleStateSnapshot::loadSnapshot(filePath, snapshot);
+			
+			if (success) {
+				restoreStateFromSnapshot(snapshot);
+				return true;
+			} else {
+				logError("Cycle", "加载状态快照失败: %s", filePath.c_str());
+				return false;
+			}
+		}
+		catch (const std::exception& e) {
+			logError("Cycle", "加载快照时发生异常: %s", e.what());
+			return false;
+		}
 	}
 
 	/**
@@ -8465,8 +8590,9 @@ namespace FC{
 
 		connect(d->ui->get_step_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onGetStep);
 
-		connect(s_ptr, &QFortrendStationStatusVTMWidget::signalUpdateRecipe, this, &QSlotTransferCycleVTMWidget::onUpdateRecipe);
-
+		//connect(s_ptr, &QFortrendStationStatusVTMWidget::signalUpdateRecipe, this, &QSlotTransferCycleVTMWidget::onUpdateRecipe);
+		//2025-10-29 改成选择模式
+		connect(s_ptr, &QFortrendStationStatusVTMWidget::signalSelectTransferMode, this, &QSlotTransferCycleVTMWidget::onSelectTransferMode);
 
 		d->ui->enableAtmosphere->setEnabled(true);
 		d->ui->execute_pbt->setEnabled(true);
@@ -8565,21 +8691,13 @@ namespace FC{
 		//0=单片上下料模式 1=双片上下料模式
 		if (d->running)return;
 		try{
-			QString fileName = "";
-			switch (model)
-			{
-			case 0:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/Formula_Go_Up_And_Down.ini";
-				break;
-			case 1:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/Formula_Double_Up_And_Down.ini";
-				break;
-			default:
-				break;
-			}
+			QString fileName = QCoreApplication::applicationDirPath() + "/config/config.ini";
+
 			if (fileName == "")return;
 			onClearSequence();
 
+			
+#if 0
 			std::string fileNamePath = fileName.toStdString(); 
 			size_t slash = fileNamePath.rfind('/');
 			if (slash != std::string::npos)
@@ -8588,7 +8706,7 @@ namespace FC{
 				size_t slash_1 = Formula.find('.');
 				if (slash_1 != std::string::npos)
 				{
-					d->FormulaName = Formula.substr(0, slash_1);
+					d->filmTransferMode = Formula.substr(0, slash_1);
 				}
 				else
 				{
@@ -8602,13 +8720,15 @@ namespace FC{
 				return;
 
 			}
-			if (d->FormulaName == "")
+			if (d->filmTransferMode == "")
 			{
 				QMessageBox::warning(this, tr("警告信息"), tr("解析配方错误"));
 				logError(d->module_name.c_str(), "解析配方错误");
 				return;
 			}
-			logInform(d->module_name.c_str(), "current FormulaName:%s", d->FormulaName.c_str());
+			logInform(d->module_name.c_str(), "current filmTransferMode:%s", d->filmTransferMode.c_str());
+
+			
 
 			QSettings settings(fileName, QSettings::IniFormat);
 			int rowCount = settings.value("rowCount", 0).toInt();
@@ -8671,21 +8791,33 @@ namespace FC{
 						QDoubleSpinBox* dsb = (QDoubleSpinBox*)widget;
 						dsb->setValue(value.toDouble());
 					}
-
-					//QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-					//if (j > 16)
-					//{
-					//	QComboBox *combox = (QComboBox*)widget;
-					//	combox->setCurrentText(value);
-					//}
-					//else{
-					//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
-					//	dsb->setValue(value.toDouble());
-					//}
 				}
 			}
+#endif
 		}
 		catch (KernelException& e){
+			logError(d->module_name.c_str(), e.what());
+			//throw e;
+		}
+	}
+
+	void QSlotTransferCycleVTMWidget::onSelectTransferMode(int model)
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		if (d->running)return;
+		logInform("test","model:%d", model);
+		try {
+			switch (model)
+			{
+			case 0:
+				d->currentTransferMode = d->FilmTransferMode::Formula_Go_Up_And_Down;
+			case 1:
+				d->currentTransferMode = d->FilmTransferMode::Formula_Double_Up_And_Down;
+			default:
+				break;
+			}
+		}
+		catch (KernelException& e) {
 			logError(d->module_name.c_str(), e.what());
 			//throw e;
 		}
@@ -8762,17 +8894,6 @@ namespace FC{
 				QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
 				QString value = settings.value(key, "").toString();
 				QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-
-				//if (j > 16)
-				//{
-				//	QComboBox *combox = (QComboBox*)widget;
-				//	combox->setCurrentText(value);
-
-				//}
-				//else{
-				//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
-				//	dsb->setValue(value.toDouble());
-				//}
 				if (j == 2)
 				{
 					QComboBox* combox = (QComboBox*)widget;
@@ -9015,7 +9136,7 @@ namespace FC{
 		thread.detach();
 	}
 
-	void QSlotTransferCycleVTMWidget::onStart(){
+	void QSlotTransferCycleVTMWidget::onStart() {
 		Q_D(QSlotTransferCycleVTMWidget);
 
 		//start action & store param
@@ -9030,92 +9151,43 @@ namespace FC{
 		//	return;
 		//}
 		//调试注释
-		if (SIM_CYCLE_MODE == 0)
-		{
-			if (!pm2->getPMCavityMotorHomeSignal()){
-				QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
-				return;
-			}
+#ifdef CYCLE_SIM_MODE
+		if (!pm2->getPMCavityMotorHomeSignal()) {
+			QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
+			return;
 		}
+#endif
 		d->cycle_times_lla = d->ui->cycle_setting_times_sbx->value(); //LP1循环次数
 		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();//LP2循环次数
 
 		if (taskManager.getAllTasksSize() == 0 && !d->ispause)// 无任务配置，无暂停，才执行解析流程配方
 		{
-			//测试
-			if(CYCLE_SIM_MODE == 1)
-			{				
-				UnifiedWaferTask task;
-				task.target = UnifiedWaferTask::Location::LLA;
-				task.target_pm = UnifiedWaferTask::Location::PM1;
-				task.targetFeedingSlot = 2;
-				task.taskId = 0; //ID
-				task.status = UnifiedWaferTask::Status::COMPLETED;
-				task.taskType = UnifiedWaferTask::TaskType::LOADLOCK_RETURN;
-				task.arm = 0;
-				task.source = UnifiedWaferTask::Location::LP2;
-				task.targetBlankingSlot = 1;
-				task.sourceSlot = 5;
+			//快照回复测试
+#ifdef DEBUG_LOAD_SNAPSHOT
 
-				task.selectPmEnableList[0] = 1; // 隐式转换：true->1, false->0
-				task.selectPmEnableList[1] = 0;
-				task.selectPmEnableList[2] = 0;
-				task.selectPmEnableList[3] = 0;
-
-				taskManager.addTask(task);
-
-				d->loadlock1_auto_step = 5023;
-
-
-				UnifiedWaferTask task1;
-				task1.taskId = 1; //ID
-				task1.status = UnifiedWaferTask::Status::COMPLETED;
-				task1.taskType = UnifiedWaferTask::TaskType::LOADLOCK_RETURN;
-				task1.arm = 1;
-				task1.source = UnifiedWaferTask::Location::LP2;
-				task1.target = UnifiedWaferTask::Location::LLB;
-
-				task1.target_pm = UnifiedWaferTask::Location::PM2;
-				task1.selectPmEnableList[0] = 0; // 隐式转换：true->1, false->0
-				task1.selectPmEnableList[1] = 1;
-				task1.selectPmEnableList[2] = 0;
-				task1.selectPmEnableList[3] = 0;
-				task1.targetFeedingSlot = 2;
-				task1.targetBlankingSlot = 1;
-				task1.sourceSlot = 7;
-				taskManager.addTask(task1);
-				//d->loadlock2_auto_step = 5023;
-
-				d->originTaskSize = taskManager.getAllTasksSize();
-				//
-				//taskManager.largeTaskIdSortAlgorithm();
-
-				//for (auto& task : taskManager.getLoadLockReturnCompletedTasks())
-				//{
-				//	taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
-				//}
-
+			auto snapshots = CycleStateSnapshot::listSnapshots();
+			if (!snapshots.empty())
+			{
+				if (d->loadStateSnapshot(snapshots.back()))
+				{
+					logWarn("Cycle", "🔄 已从快照恢复，直接跳到错误位置");
+				}
+			}
+#else
+			//正常流程
+			if (d->setHLTransferSequence())
+			{
+				d->ui->cycle_finished_times_spx->setValue(0);
+				d->ui->cycle_finished_times_spx_2->setValue(0);
+				logInform("Cycle", "传送HL流程配置成功。");
+				//return;
 			}
 			else
 			{
-				if (d->setHLTransferSequence())
-				{
-					d->ui->cycle_finished_times_spx->setValue(0);
-					d->ui->cycle_finished_times_spx_2->setValue(0);
-					logInform("Cycle", "传送HL流程配置成功。");
-					//return;
-				}
-				else
-				{
-					QMessageBox::warning(this, "警告", "传送流程配置错误.");
-					return;
-				}
+				QMessageBox::warning(this, "警告", "传送流程配置错误.");
+				return;
 			}
 
-		}
-
-		if (CYCLE_SIM_MODE == 0)
-		{
 			//2025-8-14 默认已经手动处理机台片子，重新把wafer数据刷新到初始状态
 			//暂停过，检测机台状态
 			if (d->ispause && taskManager.detectionHasNoInitialTypeTasks()) {
@@ -9123,36 +9195,35 @@ namespace FC{
 				QMessageBox::warning(this, "警告", "请检查机台有无片子，再执行整体复位");
 				return;
 			}
-		}
 
-		if (SIM_CYCLE_MODE == 0)
-		{
+#endif
+#ifdef CYCLE_SIM_MODE
 			if (!isEnabledplcAuto()) {
 				QMessageBox::warning(this, "警告", "PLC不在自动模式.");
 				return;
 			}
+#endif
+			d->startAllThreads();
+			//d->running = true;
+			d->ispause = false;
+
+			pm1->setIsRunning(d->running);
+			pm2->setIsRunning(d->running);
+			pm3->setIsRunning(d->running);
+			pm4->setIsRunning(d->running);
+
+			Sleep(500);
+			//新流程线程启动
+			//startProcessingThreads();
+
+			d->onUpdateLightButtonStatus("light_running_pbt", 2);
+
+			d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
+			d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
+			d->ui->execute_pbt->setEnabled(false);
+			d->ui->reset_pbt->setEnabled(false);
+			d->ui->pause_pbt->setEnabled(true);
 		}
-
-		d->startAllThreads();
-		//d->running = true;
-		d->ispause = false;
-
-		pm1->setIsRunning(d->running);
-		pm2->setIsRunning(d->running);
-		pm3->setIsRunning(d->running);
-		pm4->setIsRunning(d->running);
-
-		Sleep(500);
-		//新流程线程启动
-		//startProcessingThreads();
-
-		d->onUpdateLightButtonStatus("light_running_pbt", 2);
-
-		d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
-		d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
-		d->ui->execute_pbt->setEnabled(false);
-		d->ui->reset_pbt->setEnabled(false);
-		d->ui->pause_pbt->setEnabled(true);
 	}
 
 	void QSlotTransferCycleVTMWidget::clickStart(){
@@ -9540,11 +9611,6 @@ namespace FC{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->ui->cycle_finished_times_spx->setValue(d->finished_time_lla);
 		d->ui->cycle_finished_times_spx_2->setValue(d->finished_time_llb);
-	}
-
-	void QSlotTransferCycleVTMWidget::status_Changed()
-	{
-
 	}
 
 	void QSlotTransferCycleVTMWidget::updateProcessControlEnabled(const bool enabled){

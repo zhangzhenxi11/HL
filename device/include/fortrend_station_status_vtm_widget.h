@@ -49,6 +49,7 @@ namespace FC {
 		Q_INVOKABLE void updateCassetteAnimation(const std::string &name, bool isBoxOpened, const std::vector<Cassette::Mapping> &mapping);
 	signals :
 		void signalUpdateRecipe(int model); //«–ªª≈‰∑Ω–≈∫≈
+		void signalSelectTransferMode(int model);
 	private slots:
 		void updateState();
 		void pauseAnimation();
@@ -124,6 +125,7 @@ namespace FC {
 		void _onSelectASlot(int solt);
 		void _onSelectBSlot(int solt);
 		void onRecipe();
+		void onModel();
 
 		void onEfemReset();
 

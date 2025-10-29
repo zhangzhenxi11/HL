@@ -108,6 +108,7 @@ namespace FC{
 		void onAttributeChange(const FC::FortrendCassetteManager *arg) override;
 		void onAttributeChange(const FC::Cassette *arg) override;
 		void onRecipe();
+		void onMode();
 		void onEfemReset();
 
 
@@ -530,6 +531,12 @@ namespace FC{
 		emit q_ptr->signalUpdateRecipe(ui->recipe_box->currentIndex());
 	}
 
+	void QFortrendStationStatusVTMWidgetPrivate::onMode()
+	{
+		//0=上进下出模式 1=双上双下模式
+		emit q_ptr->signalSelectTransferMode(ui->recipe_box->currentIndex());
+	}
+
 	void QFortrendStationStatusVTMWidgetPrivate::onEfemReset()
 	{
 		tower->EfemResetAll();
@@ -743,7 +750,8 @@ namespace FC{
 		
 		connect(d->ui->robot_widget, &vtmrobot::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(9); d->ui->center_layout->setCurrentIndex(9);});
 		
-		connect(d->ui->recipe_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onRecipe);
+		//connect(d->ui->recipe_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onRecipe);
+		connect(d->ui->recipe_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onModel);
 
 		connect(d->ui->reset_all_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onEfemReset);
 		
@@ -1712,6 +1720,13 @@ namespace FC{
 	void QFortrendStationStatusVTMWidget::onRecipe(){
 		Q_D(QFortrendStationStatusVTMWidget);
 		d->onRecipe();
+	}
+
+	void QFortrendStationStatusVTMWidget::onModel()
+	{
+		Q_D(QFortrendStationStatusVTMWidget);
+		d->onMode();
+
 	}
 
 	void QFortrendStationStatusVTMWidget::onEfemReset()
