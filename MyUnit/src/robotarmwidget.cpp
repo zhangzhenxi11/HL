@@ -228,28 +228,33 @@ void RobotArmWidget::resizeEvent(QResizeEvent *event)
        baseCenter = QPointF(width() / 2, height() / 2);
        chamberRadius = qMin(width(), height()) * 0.35;
 
-       // 定义5个工位的位置 (矩形EFEM布局)
-       // 矩形腔体参数
-       double rectWidth = 729.0;
-       double rectHeight = 254.0;
-       double rectLeft = baseCenter.x() - 300;
-       double rectTop = baseCenter.y() - 200;
-       double stationSize = 50;  // 工位矩形大小
-       
-       // LoadLockA - 矩形外上方左侧
-       stationPositions[0] = QPointF(rectLeft + 200, rectTop - stationSize);
-       
-       // LoadLockB - 矩形外上方右侧
-       stationPositions[1] = QPointF(rectLeft + rectWidth - 100, rectTop - stationSize);
-       
-       // Aligner - 矩形内最左侧
-       stationPositions[2] = QPointF(rectLeft + 60, baseCenter.y());
-       
-       // loadPortA - 矩形外下方左侧
-       stationPositions[3] = QPointF(rectLeft + 200, rectTop + rectHeight + stationSize );
-       
-       // loadPortB - 矩形外下方右侧
-       stationPositions[4] = QPointF(rectLeft + rectWidth - 100, rectTop + rectHeight + stationSize);
+       // 定义5个工位的位置，使LoadLockA和LoadLockB正好位于对应widget下方
+        // 矩形EFEM腔体参数 - 调整大小以适应新布局
+        double rectWidth = width() * 0.9;
+        double rectHeight = height() * 0.8;
+        double rectLeft = baseCenter.x() - rectWidth/2;
+        double rectTop = baseCenter.y() - rectHeight/2;
+        double stationSize = 70;  // 工位矩形大小
+        
+        // 关键点：将LoadLockA工位绘制在控件中心偏左下方
+        // 
+        // 使其在视觉上位于loadlockA_widget的正下方
+        stationPositions[0] = QPointF(width() * 0.4, rectTop -30);//rectTop - stationSize
+        
+        // 关键点：将LoadLockB工位绘制在控件中心偏右下方
+        // 使其在视觉上位于loadlockB_widget的正下方
+        stationPositions[1] = QPointF(width() * 0.7, rectTop -30);//rectTop - stationSize
+
+        
+        // Aligner - 矩形内左侧
+        stationPositions[2] = QPointF(rectLeft + 100, baseCenter.y());
+
+        
+        // loadPortA - 矩形外上方左侧
+        stationPositions[3] = QPointF(width() * 0.4, height() * 0.9);
+        
+        // loadPortB - 矩形外上方右侧
+        stationPositions[4] = QPointF(width() * 0.7, height() * 0.9);
 
        // 更新关节位置
        updateJointPositions();
@@ -348,13 +353,22 @@ void RobotArmWidget::paintEvent(QPaintEvent *)
     //}
     //for (int y = 0; y < height(); y += 20) {
     //    painter.drawLine(0, y, width(), y);
-    //}
+     //}
 
-    //绘制矩形efem
+    //绘制矩形efem - 调整大小以完全适应控件并确保机械臂完整显示
     painter.setPen(QPen(QColor(50, 50, 100), 3));
     painter.setBrush(QColor(220, 230, 255, 180));
-    QRectF rectangle2(baseCenter.x()-300, baseCenter.y()-200, 550.0, 350.0);
+    // 使EFEM矩形在控件内部居中显示，大小调整为更适合完整显示机械臂
+    QRectF rectangle2(baseCenter.x() - width() * 0.4, 
+                     baseCenter.y() - height() * 0.4, 
+                     width() * 0.9, 
+                     height() * 0.8);
     painter.drawRect(rectangle2);
+    
+    //// 绘制辅助线，指示机械臂到LoadLockA和LoadLockB的路径
+    //painter.setPen(QPen(QColor(100, 100, 150), 1, Qt::DashLine));
+    //painter.drawLine(baseCenter, stationPositions[0]);
+    //painter.drawLine(baseCenter, stationPositions[1]);
 
     // 绘制工位
     for (int i = 0; i < 5; ++i) {
@@ -381,13 +395,14 @@ void RobotArmWidget::paintEvent(QPaintEvent *)
 
     painter.drawText(10, 20, statusText);
 
-    // 绘制操作说明
-    painter.setPen(Qt::darkGray);
-    font.setPointSize(8);
-    font.setBold(false);
-    painter.setFont(font);
-    painter.drawText(10, height() - 60, QString::fromUtf8("双臂机械手 - 俯视图腕关节重叠"));
-    painter.drawText(10, height() - 40, "操作流程:loadPortA → Aligner→ LoadLockA");
+    //// 绘制操作说明
+    //painter.setPen(Qt::darkGray);
+    //font.setPointSize(8);
+    //font.setBold(false);
+    //painter.setFont(font);
+    //painter.drawText(10, height() - 60, QString::fromUtf8("双臂机械手 - 俯视图腕关节重叠"));
+    //painter.drawText(10, height() - 40, "操作流程:loadPortA → Aligner→ LoadLockA/LoadLockB");
+    //painter.drawText(10, height() - 20, QString::fromUtf8("注意：LoadLockA和LoadLockB已移动到底部位置"));
 }
 
 void RobotArmWidget::drawStation(QPainter &painter, int index)

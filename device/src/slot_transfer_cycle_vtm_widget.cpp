@@ -116,7 +116,7 @@
 
 #define CYCLE_SIM_MODE1
 
-#define DEBUG_LOAD_SNAPSHOT1
+#define DEBUG_LOAD_SNAPSHOT
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1985</width>
-    <height>960</height>
+    <height>922</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -58,13 +58,93 @@
        <height>16777215</height>
       </size>
      </property>
+     <widget class="TM" name="tm_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>400</x>
+        <y>310</y>
+        <width>291</width>
+        <height>281</height>
+       </rect>
+      </property>
+      <widget class="vtmrobot" name="robot_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>40</y>
+         <width>221</width>
+         <height>201</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <widget class="PMGDTWidget" name="pm2_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>290</x>
+        <y>150</y>
+        <width>251</width>
+        <height>261</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="PMGDTWidget" name="pm1_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>320</y>
+        <width>221</width>
+        <height>231</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="PMGDTWidget" name="pm3_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>570</x>
+        <y>160</y>
+        <width>251</width>
+        <height>261</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="PMGDTWidget" name="pm4_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>610</x>
+        <y>320</y>
+        <width>221</width>
+        <height>231</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="LoadLockA" name="loadlockA_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>310</x>
+        <y>460</y>
+        <width>201</width>
+        <height>201</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="LoadLockB" name="loadlockB_widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>560</x>
+        <y>470</y>
+        <width>201</width>
+        <height>201</height>
+       </rect>
+      </property>
+     </widget>
      <widget class="QWidget" name="gridLayoutWidget">
       <property name="geometry">
        <rect>
-        <x>60</x>
-        <y>490</y>
-        <width>141</width>
-        <height>201</height>
+        <x>10</x>
+        <y>510</y>
+        <width>121</width>
+        <height>160</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayoutA"/>
@@ -72,8 +152,8 @@
      <widget class="QWidget" name="gridLayoutWidget_2">
       <property name="geometry">
        <rect>
-        <x>1050</x>
-        <y>490</y>
+        <x>980</x>
+        <y>530</y>
         <width>141</width>
         <height>202</height>
        </rect>
@@ -126,9 +206,9 @@
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>170</y>
-        <width>181</width>
-        <height>91</height>
+        <y>190</y>
+        <width>151</width>
+        <height>121</height>
        </rect>
       </property>
       <property name="title">
@@ -151,14 +231,14 @@
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="geometry">
        <rect>
-        <x>1200</x>
+        <x>1180</x>
         <y>10</y>
-        <width>651</width>
-        <height>651</height>
+        <width>671</width>
+        <height>660</height>
        </rect>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page"/>
       <widget class="QWidget" name="page_2"/>
@@ -166,9 +246,9 @@
      <widget class="QStackedWidget" name="center_layout">
       <property name="geometry">
        <rect>
-        <x>1230</x>
-        <y>670</y>
-        <width>401</width>
+        <x>830</x>
+        <y>20</y>
+        <width>351</width>
         <height>271</height>
        </rect>
       </property>
@@ -178,159 +258,48 @@
      <widget class="QGroupBox" name="efemAreaGroupBox">
       <property name="geometry">
        <rect>
-        <x>230</x>
-        <y>510</y>
-        <width>800</width>
-        <height>451</height>
-       </rect>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>800</width>
-        <height>430</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>600</width>
-        <height>720</height>
-       </size>
-      </property>
-      <property name="layoutDirection">
-       <enum>Qt::LeftToRight</enum>
-      </property>
-      <property name="title">
-       <string>EFEM系统</string>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="RobotArmWidget" name="widget" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>1</horstretch>
-           <verstretch>1</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>390</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QGroupBox" name="groupBox_3">
-      <property name="geometry">
-       <rect>
-        <x>230</x>
-        <y>10</y>
-        <width>801</width>
-        <height>501</height>
+        <x>270</x>
+        <y>600</y>
+        <width>631</width>
+        <height>311</height>
        </rect>
       </property>
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>500</height>
+        <height>200</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>980</width>
+        <height>600</height>
        </size>
       </property>
       <property name="title">
-       <string>VTM系统</string>
+       <string>EFEM系统</string>
       </property>
-      <widget class="PMGDTWidget" name="pm1_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>70</x>
-         <y>190</y>
-         <width>221</width>
-         <height>231</height>
-        </rect>
+      <layout class="QHBoxLayout" name="efemHorizontalLayout">
+       <property name="spacing">
+        <number>10</number>
        </property>
-      </widget>
-      <widget class="TM" name="tm_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>270</x>
-         <y>180</y>
-         <width>291</width>
-         <height>281</height>
-        </rect>
+       <property name="leftMargin">
+        <number>10</number>
        </property>
-       <widget class="vtmrobot" name="robot_widget" native="true">
-        <property name="geometry">
-         <rect>
-          <x>40</x>
-          <y>40</y>
-          <width>221</width>
-          <height>201</height>
-         </rect>
-        </property>
-       </widget>
-      </widget>
-      <widget class="PMGDTWidget" name="pm2_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>160</x>
-         <y>20</y>
-         <width>251</width>
-         <height>261</height>
-        </rect>
+       <property name="topMargin">
+        <number>10</number>
        </property>
-      </widget>
-      <widget class="LoadLockA" name="loadlockA_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>180</x>
-         <y>330</y>
-         <width>201</width>
-         <height>201</height>
-        </rect>
+       <property name="rightMargin">
+        <number>10</number>
        </property>
-       <zorder>efemAreaGroupBox</zorder>
-      </widget>
-      <widget class="PMGDTWidget" name="pm3_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>440</x>
-         <y>20</y>
-         <width>251</width>
-         <height>261</height>
-        </rect>
+       <property name="bottomMargin">
+        <number>10</number>
        </property>
-      </widget>
-      <widget class="PMGDTWidget" name="pm4_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>480</x>
-         <y>190</y>
-         <width>221</width>
-         <height>231</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="LoadLockB" name="loadlockB_widget" native="true">
-       <property name="geometry">
-        <rect>
-         <x>430</x>
-         <y>340</y>
-         <width>201</width>
-         <height>201</height>
-        </rect>
-       </property>
-      </widget>
+       <item>
+        <widget class="RobotArmWidget" name="widget" native="true"/>
+       </item>
+      </layout>
      </widget>
-     <zorder>gridLayoutWidget</zorder>
-     <zorder>gridLayoutWidget_2</zorder>
-     <zorder>groupBox</zorder>
-     <zorder>groupBox_2</zorder>
-     <zorder>stackedWidget</zorder>
-     <zorder>center_layout</zorder>
-     <zorder>efemAreaGroupBox</zorder>
-     <zorder>efemAreaGroupBox</zorder>
-     <zorder>efemAreaGroupBox</zorder>
-     <zorder>groupBox_3</zorder>
     </widget>
    </item>
   </layout>
