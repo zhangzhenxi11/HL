@@ -147,6 +147,8 @@ void PMGDTWidget::animateToYOffset(int newYOffset,int speed) {
 
 void PMGDTWidget::paintEvent(QPaintEvent *){
     QPainter painter(this);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform); // 2025-10-29: 启用平滑缩放
+    
     QPixmap pixmap("image/image/PM1.png");
 
 	// 创建一个QTransform对象
@@ -154,10 +156,13 @@ void PMGDTWidget::paintEvent(QPaintEvent *){
 	// 旋转图像
 	transform.rotate(rotationAngle);
 	// 应用变换到原始图像，创建旋转后的图像
-	QPixmap rotatedPixmap = pixmap.transformed(transform);
+	QPixmap rotatedPixmap = pixmap.transformed(transform, Qt::SmoothTransformation);
 
-    int centerX = rotatedPixmap.width() / 2;
-    int centerY = rotatedPixmap.height() / 2;
+    // 2025-10-29: 缩放图片以适应控件大小
+    QPixmap scaledPixmap = rotatedPixmap.scaled(this->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    
+    int centerX = scaledPixmap.width() / 2;
+    int centerY = scaledPixmap.height() / 2;
 	int RectX = centerX*0.87;
 	//int RectY = centerY*0.8;
 	//double RectY = 20;
@@ -174,9 +179,11 @@ void PMGDTWidget::paintEvent(QPaintEvent *){
 	int lineSpacing = 50;
     painter.save();
 
-
-    // 设置画刷颜色
-    painter.drawPixmap(0,0, rotatedPixmap);
+    // 2025-10-29: 绘制缩放后的图片，居中显示
+    int x = (this->width() - scaledPixmap.width()) / 2;
+    int y = (this->height() - scaledPixmap.height()) / 2;
+    painter.drawPixmap(x, y, scaledPixmap);
+    
     // 恢复到保存的画家状态，这时候的状态是未旋转的
     painter.restore();
 
@@ -192,23 +199,23 @@ void PMGDTWidget::paintEvent(QPaintEvent *){
 	painter.setPen(QPen(Qt::green, 2));
 	painter.setBrush(Qt::green);
 
+	// 2025-10-29: 根据缩放比例调整线条参数
+	double scaleRatio = (double)this->width() / rotatedPixmap.width();
 	int widgetWidth = width();
-	//int y1 = (height() - lineSpacing)/2;  // 计算第一条线段的Y坐标
-	//int y1 = centerY*0.8;
 	int y1 = RectY;
-	int y2 = y1 + lineSpacing;              // 第二条线段的Y坐标
+	int y2 = y1 + lineSpacing * scaleRatio;
 
-	int x1 = (widgetWidth - lineLength) / 2;  // 计算线段的起点X坐标
-	int x2 = x1 + lineLength;                // 计算线段的终点X坐标
+	int x1 = (widgetWidth - lineLength * scaleRatio) / 2;
+	int x2 = x1 + lineLength * scaleRatio;
 
 	//painter.drawLine(x1, y1, x2, y1);  // 绘制第一条线
 	//painter.drawLine(x1, y2, x2, y2);  // 绘制第二条线
 
 
-	painter.setPen(QPen(Qt::red, 8));
+	painter.setPen(QPen(Qt::red, 8 * scaleRatio));
 	painter.setBrush(Qt::red);
 
-	int y3 = 140;
+	int y3 = 140 * scaleRatio;
 	//painter.drawLine(x1, y3, x2, y3);  // 绘制第一条线
 
 

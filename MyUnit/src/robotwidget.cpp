@@ -23,23 +23,29 @@ robotWidget::~robotWidget()
 }
 void robotWidget::paintEvent(QPaintEvent *event){
     QPainter painter(this);
-            painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::Antialiasing);
 
-            int centerX = width() / 2;
-            int centerY = height() / 2;
-            // 圆形基座的中心位置
-                   QPointF baseCenter(centerX, centerY-100);
-                   qreal baseRadius = 70;
-                   // 绘制圆形基座
-                    painter.setBrush(QColor(166, 166, 166)); // 设置填充颜色
-                   painter.drawEllipse(baseCenter, baseRadius, baseRadius); // 绘制圆形基座
-                   // 第一个圆形轴承的位置与基座圆心相同
-                   QPointF bearing1Center = baseCenter;
-                   qreal bearingRadius = 20; // 轴承的半径
-                   qreal bearingDiameter = bearingRadius*2;
-                   // 绘制第一个圆形轴承
-                   painter.setBrush(QColor(166, 166, 166)); // 设置填充颜色
-                   painter.drawEllipse(bearing1Center, bearingRadius, bearingRadius); // 绘制圆形轴承
+    // 2025-10-29: 计算缩放比例（基于控件宽高，参考值250px）
+    double scaleRatio = qMin(width(), height()) / 250.0;
+    
+    int centerX = width() / 2;
+    int centerY = height() / 2;
+    
+    // 2025-10-29: 根据缩放比例调整各部件尺寸
+    // 圆形基座的中心位置
+    QPointF baseCenter(centerX, centerY-100*scaleRatio);
+    qreal baseRadius = 70*scaleRatio;
+    // 绘制圆形基座
+    painter.setBrush(QColor(166, 166, 166)); // 设置填充颜色
+    painter.drawEllipse(baseCenter, baseRadius, baseRadius); // 绘制圆形基座
+    
+    // 第一个圆形轴承的位置与基座圆心相同
+    QPointF bearing1Center = baseCenter;
+    qreal bearingRadius = 20*scaleRatio; // 轴承的半径
+    qreal bearingDiameter = bearingRadius*2;
+    // 绘制第一个圆形轴承
+    painter.setBrush(QColor(166, 166, 166)); // 设置填充颜色
+    painter.drawEllipse(bearing1Center, bearingRadius, bearingRadius); // 绘制圆形轴承
 
                    // 计算第一段机械手臂的起始位置
                    QPointF arm1Start(bearing1Center.x(), bearing1Center.y());
@@ -49,7 +55,7 @@ void robotWidget::paintEvent(QPaintEvent *event){
                    painter.translate(-bearing1Center); // 平移回原始坐标系
 
                    // 第一段机械手臂尺寸和位置
-                   qreal arm1Height = 80;
+                   qreal arm1Height = 80*scaleRatio;  // 2025-10-29: 手臂高度缩放
                    // 绘制第一段机械手臂
                    QPainterPath arm1Path;
                    arm1Path.moveTo(arm1Start + QPointF(-bearingDiameter / 2, 0)); // 上边左点
@@ -74,7 +80,7 @@ void robotWidget::paintEvent(QPaintEvent *event){
                    // 计算第二段机械手臂的起始位置
                    QPointF arm2Start = QPointF(bearing2Center.x(), bearing2Center.y());
                    // 第二段机械手臂尺寸和位置
-                   qreal arm2Height = 80;
+                   qreal arm2Height = 80*scaleRatio;  // 2025-10-29: 手臂高度缩放
                    // 绘制第二段机械手臂
                    QPainterPath arm2Path;
                    arm2Path.moveTo(arm2Start + QPointF(-bearingDiameter / 2, 0)); // 上边左点
@@ -101,7 +107,7 @@ void robotWidget::paintEvent(QPaintEvent *event){
                       QPointF trapezoidTopCenter(bearingCenter.x(), bearingCenter.y());
 
                       // 梯形尺寸和位置
-                      qreal trapezoidHeight = 40.0;
+                      qreal trapezoidHeight = 40.0*scaleRatio;  // 2025-10-29: 梯形高度缩放
                       qreal trapezoidTopWidth = bearingDiameter; // 短边，等于轴承直径
                       qreal trapezoidBottomWidth = 1.2 * bearingDiameter; // 长边
 
@@ -116,7 +122,7 @@ void robotWidget::paintEvent(QPaintEvent *event){
                       // 绘制三角形
                       QPointF triangleBaseLeft = trapezoidTopCenter + QPointF(-trapezoidBottomWidth / 2, trapezoidHeight);
                       QPointF triangleBaseRight = trapezoidTopCenter + QPointF(trapezoidBottomWidth / 2, trapezoidHeight);
-                      qreal triangleHeight = 60; // 三角形高，可调整
+                      qreal triangleHeight = 60*scaleRatio; // 2025-10-29: 三角形高度缩放
 
                       QPainterPath trianglePath;
                       // 左侧三角形

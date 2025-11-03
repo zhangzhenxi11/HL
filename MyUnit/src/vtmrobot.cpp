@@ -539,13 +539,16 @@ void vtmrobot::paintEvent(QPaintEvent *event){
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
+        // 2025-10-29: 计算缩放比例（基于控件宽度，参考值250px）
+        double scaleRatio = qMin(width(), height()) / 250.0;
+        
         // 中心点坐标
         int centerX = width() / 2;
         int centerY = height() / 2;
 		armLength = width() / 2.5;
 
-        // 底座圆轴
-        int baseRadius = 13;
+        // 2025-10-29: 根据缩放比例调整各部件尺寸
+        int baseRadius = 13 * scaleRatio;  // 底座圆轴半径
 		int clipRadius = qMin(width(), height()) / 2.00;
 
 		QPainterPath clipPath;
@@ -553,20 +556,20 @@ void vtmrobot::paintEvent(QPaintEvent *event){
 		painter.setClipPath(clipPath);
 
 
-        painter.setPen(QPen(QColor(0, 0, 0), 1));
+        painter.setPen(QPen(QColor(0, 0, 0), 1 * scaleRatio));
         painter.setBrush(QColor(246, 246, 246)); // 设置画刷颜色
 
         painter.drawEllipse(QPointF(centerX, centerY), baseRadius, baseRadius);
 
-        painter.setPen(QPen(QColor(0, 0, 0), 1));
+        painter.setPen(QPen(QColor(0, 0, 0), 1 * scaleRatio));
         painter.setBrush(QColor(179, 185, 211)); // 设置画刷颜色
-        painter.drawEllipse(QPointF(centerX, centerY), 9, 9);
-		drawArm(painter, baseRotationAngle + 180, 1);
-        drawArm(painter,baseRotationAngle,2);
+        painter.drawEllipse(QPointF(centerX, centerY), 9 * scaleRatio, 9 * scaleRatio);
+		drawArm(painter, baseRotationAngle + 180, 1, scaleRatio);  // 传递scaleRatio
+        drawArm(painter,baseRotationAngle,2, scaleRatio);  // 传递scaleRatio
 
 }
 
-void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm){
+void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm, double scaleRatio){
 
     int armAngle = getArmAngle();
 
@@ -603,12 +606,12 @@ void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm){
      QPointF clawCenter(clawx, clawy);
 
     // 绘制手臂
-    painter.setPen(QPen(QColor(214,214,219), armWidth));
+    painter.setPen(QPen(QColor(214,214,219), armWidth * scaleRatio));  // 2025-10-29: 线条粗细缩放
     painter.drawLine(QPointF(centerX, centerY), arm1End);
     painter.drawLine(QPointF(centerX, centerY), arm2End);
 
     // 绘制轴承，轴承在手臂1和手臂2的末端
-    int bearingRadius = 2; // 轴承的半径
+    int bearingRadius = 2 * scaleRatio; // 2025-10-29: 轴承半径缩放
     painter.drawEllipse(arm1End, bearingRadius, bearingRadius);
     painter.drawEllipse(arm2End, bearingRadius, bearingRadius);
 
@@ -620,6 +623,7 @@ void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm){
         //int clawWidth = 30; // 手爪的宽度
         //int clawHeight = 30; // 手爪的矩形部分的高度
         //int trapezoidHeight = 40; // 手爪梯形部分的高度
+		// 2025-10-29: 手爪尺寸随控件大小缩放（基于armLength已经跟随width缩放）
 		int clawWidth = armLength / 3; // 手爪的宽度
 		int clawHeight = armLength / 3; // 手爪的矩形部分的高度
 		int trapezoidHeight = armLength / 2.8; // 手爪梯形部分的高度
@@ -643,14 +647,14 @@ void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm){
         rotatedTrapezoid.closeSubpath();
 
         // 绘制旋转后的矩形和梯形
-        painter.setPen(QPen(QColor(0, 0, 0), 1));
+        painter.setPen(QPen(QColor(0, 0, 0), 1 * scaleRatio));  // 2025-10-29: 边框粗细缩放
         painter.setBrush(QColor(214,214,219)); // 设置画刷颜色
         painter.drawRect(rotatedRectangle); // 绘制矩形
         painter.drawPath(rotatedTrapezoid); // 绘制梯形
 
-		// 设置字体大小
+		// 2025-10-29: 字体大小随缩放比例调整
 		QFont font = painter.font();  
-		font.setPointSize(15);        
+		font.setPointSize(15 * scaleRatio);        
 		painter.setFont(font);        
 		if (arm == 1){
 			QPointF textPosA(-clawWidth / 2.0 + clawWidth / 3.5, -clawHeight + clawHeight / 1.3);
@@ -670,7 +674,8 @@ void vtmrobot::drawArm(QPainter &painter, int baseRotationAngle,int arm){
             painter.setBrush(QColor(0, 255, 0)); // 设置为绿色
            // painter.drawRect(waferRect); // 绘制晶圆
 
-			int waferSize = 60;
+			// 2025-10-29: Wafer大小随缩放比例调整
+			int waferSize = 60 * scaleRatio;
 			painter.drawEllipse(-waferSize / 2.0, -clawHeight - trapezoidHeight - waferSize / 2, waferSize, waferSize);
         }
         // 恢复画笔状态

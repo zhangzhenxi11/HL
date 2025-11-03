@@ -27,7 +27,7 @@ public:
     void updateColor();
     void setStatus(bool busy);
     bool getStatus();
-    void setRotationAngle(int angle);//½Ç¶È
+    void setRotationAngle(int angle);//ï¿½Ç¶ï¿½
     void setWafer(bool wafer);
 	std::string GetName();
 	void SetName(std::string name);
@@ -62,9 +62,9 @@ private:
 	std::string name;
 	int isUpdateColor = 0;
 
-	int lineLength;  // Ïß¶Î³¤¶È
-	int lineSpacing; // Ïß¶Î¼ä¾à
-	int yOffsetValue; // YÖáÆ«ÒÆÁ¿
+	int lineLength;  // ï¿½ß¶Î³ï¿½ï¿½ï¿½
+	int lineSpacing; // ï¿½ß¶Î¼ï¿½ï¿½
+	int yOffsetValue; // Yï¿½ï¿½Æ«ï¿½ï¿½ï¿½ï¿½
 	QSequentialAnimationGroup *animationGroup;
 };
 

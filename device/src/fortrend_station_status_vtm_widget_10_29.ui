@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1985</width>
-    <height>922</height>
+    <width>1800</width>
+    <height>883</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -48,8 +48,8 @@
     <widget class="QWidget" name="processAreaContainer" native="true">
      <property name="minimumSize">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>1985</width>
+       <height>678</height>
       </size>
      </property>
      <property name="maximumSize">
@@ -155,7 +155,7 @@
         <x>980</x>
         <y>530</y>
         <width>141</width>
-        <height>202</height>
+        <height>140</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayoutB"/>
@@ -255,51 +255,62 @@
       <widget class="QWidget" name="page_3"/>
       <widget class="QWidget" name="page_4"/>
      </widget>
-     <widget class="QGroupBox" name="efemAreaGroupBox">
-      <property name="geometry">
-       <rect>
-        <x>270</x>
-        <y>600</y>
-        <width>631</width>
-        <height>311</height>
-       </rect>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="efemAreaGroupBox">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>200</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>980</width>
+       <height>250</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>EFEM系统</string>
+     </property>
+     <layout class="QHBoxLayout" name="efemHorizontalLayout">
+      <property name="spacing">
+       <number>10</number>
       </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>200</height>
-       </size>
+      <property name="leftMargin">
+       <number>10</number>
       </property>
-      <property name="maximumSize">
-       <size>
-        <width>980</width>
-        <height>600</height>
-       </size>
+      <property name="topMargin">
+       <number>10</number>
       </property>
-      <property name="title">
-       <string>EFEM系统</string>
+      <property name="rightMargin">
+       <number>10</number>
       </property>
-      <layout class="QHBoxLayout" name="efemHorizontalLayout">
-       <property name="spacing">
-        <number>10</number>
-       </property>
-       <property name="leftMargin">
-        <number>10</number>
-       </property>
-       <property name="topMargin">
-        <number>10</number>
-       </property>
-       <property name="rightMargin">
-        <number>10</number>
-       </property>
-       <property name="bottomMargin">
-        <number>10</number>
-       </property>
-       <item>
-        <widget class="RobotArmWidget" name="widget" native="true"/>
-       </item>
-      </layout>
-     </widget>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="efemRobotPlaceholder">
+        <property name="minimumSize">
+         <size>
+          <width>300</width>
+          <height>180</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">border: 2px dashed #999; background-color: #f0f0f0;</string>
+        </property>
+        <property name="text">
+         <string>EFEM
+（待添加控件）</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>
@@ -333,12 +344,6 @@
    <class>LoadLockB</class>
    <extends>QWidget</extends>
    <header location="global">loadlockB.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>RobotArmWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">robotarmwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -139,6 +139,9 @@ void LoadLockB::mousePressEvent(QMouseEvent *event){
 }
 void LoadLockB::paintEvent(QPaintEvent *event){
     QPainter painter(this);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform); // 2025-10-29: 启用平滑缩放
+    painter.setRenderHint(QPainter::Antialiasing);
+    
     int w=width();
     int h=height();
 
@@ -147,9 +150,12 @@ void LoadLockB::paintEvent(QPaintEvent *event){
     //QPixmap mirroredPixmap = QPixmap::fromImage(mirroredImage); // 再将 QImage 转换回 QPixmap
     // 现在使用镜像后的 QPixmap 绘制图片
 	painter.drawPixmap(0, 0, w, h, originalPixmap);
+	
+	// 2025-10-29: 根据缩放比例调整字体和位置
+	double scaleRatio = (double)w / originalPixmap.width();
 	// 设置字体大小
 	QFont font = painter.font();
-	font.setPointSize(15);
+	font.setPointSize(15 * scaleRatio);
 	painter.setFont(font);
 	painter.setPen(Qt::green);
 	int textX = w*0.66;

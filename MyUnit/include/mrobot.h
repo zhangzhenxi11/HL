@@ -25,7 +25,7 @@ public:
     void updateAngle();
     void drawParallelLine(QPainter &painter, int x1, int y1, int x2, int y2, int X);
     int rotationAngle = 0; // 手臂旋转角度
-private:
+private:    
     Ui::mRobot *ui;
     QTimer *timer;
 

@@ -30,7 +30,7 @@ public:
 	std::string GetName();
     void paintEvent(QPaintEvent *event)override;
 	void mousePressEvent(QMouseEvent *event) override;
-    void drawArm(QPainter &painter, int baseRotationAngle,int arm);
+    void drawArm(QPainter &painter, int baseRotationAngle,int arm, double scaleRatio = 1.0);  // 2025-10-29: 添加scaleRatio参数
     int getBaseRotationAngle() const;
 	int getCurrentRotationAngle() const;
     void setBaseRotationAngle(int angle);

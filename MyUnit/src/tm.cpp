@@ -154,15 +154,27 @@ void TM::startRotationAnimation(int numRotations) {
 
 void TM::paintEvent(QPaintEvent *){
     QPainter painter(this);
-    int centerX = width() / 3.16;
-    int centerY = height() / 1.265;
+    painter.setRenderHint(QPainter::SmoothPixmapTransform); // 2025-10-29: 启用平滑缩放
+    painter.setRenderHint(QPainter::Antialiasing);
+    
+    // 2025-10-29: 加载图片并缩放以适应控件大小
     QPixmap pixmap("image/image/TM.png");
-    painter.drawPixmap(0,0,pixmap);
+    QPixmap scaledPixmap = pixmap.scaled(this->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    
+    // 2025-10-29: 居中绘制缩放后的图片
+    int xOffset = (this->width() - scaledPixmap.width()) / 2;
+    int yOffset = (this->height() - scaledPixmap.height()) / 2;
+    painter.drawPixmap(xOffset, yOffset, scaledPixmap);
+    
+    // 2025-10-29: 根据缩放比例调整Wafer的位置和大小
+    double scaleRatio = (double)scaledPixmap.width() / pixmap.width();
+    int centerX = xOffset + scaledPixmap.width() / 3.16;
+    int centerY = yOffset + scaledPixmap.height() / 1.265;
 	if (IsWaferAligner){
 		// 设置旋转
-		int notchWidth = 6;
-		int notchDepth = 8;
-		int diameter = 52;
+		int notchWidth = 6 * scaleRatio;  // 2025-10-29: 根据缩放比例调整
+		int notchDepth = 8 * scaleRatio;
+		int diameter = 52 * scaleRatio;
 		int radius = diameter / 2;
 		QPointF center(centerX, centerY);
 		painter.setPen(Qt::NoPen);
