@@ -41,7 +41,7 @@ private:
 /**
 *@brief  PutObject command for fortrend robot
 */
-class EFEMRobotPutWaferCommand : public  RobotAbstractPutWaferCommand, public HexCommandExecuter
+class EFEMRobotPutWaferCommand :public std::enable_shared_from_this<EFEMRobotPutWaferCommand>, public  RobotAbstractPutWaferCommand, public HexCommandExecuter
 {
 public:
 	DECLARE_PTR(EFEMRobotPutWaferCommand)

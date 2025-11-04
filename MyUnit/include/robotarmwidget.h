@@ -55,6 +55,8 @@ public:
     void pauseAnimation();
     void resetAnimation();
     void loadAnimationFromJson(const QString &jsonFilePath);  // 新增：从 JSON 加载动画
+    void loadStationRobotStatusFromJson(const QString& jsonFilePath,int stationId, QString& status); //加载不同工位的状态
+
 signals:
     void animationStateChanged(const QString &state);
 
@@ -67,30 +69,17 @@ private:
     void updateAnimation();
      // 更新关节位置
     void updateJointPositions();
-
     // 新的动画状态机函数（基于用户记录的姿态数据）
     void moveToNextPose();  // 移动到下一个姿态
-
     void drawRobotArm(QPainter &painter);
     void drawRobotArm2(QPainter &painter);
-    
     // 更新机械臂2的关节位置
     void updateJointPositions2();
-
-    void drawWafer(QPainter &painter);
     void drawStation(QPainter &painter, int stationIndex);
     void drawJoint(QPainter &painter, const QPointF &center, double radius);
-
-    //取消
-    void drawFingerSegment(QPainter &painter, const QPointF &start, const QPointF &end, double width);
-
     void drawArmSegment(QPainter &painter, const QPointF &start, const QPointF &end, double width);
-
     // 添加半导体机械手特有的方法
     void drawEndEffector(QPainter &painter, const QPointF &wristPos, double rotation, bool hasWaferFlag);
-
-
-
     // 如果 Qt 版本太低，可以自己定义
     qreal qDegreesToRadians(qreal degrees);
 
@@ -174,7 +163,7 @@ public:
     void placeWafer(int stationId, int armIndex = 1);    // 放片动作（armIndex: 1=下臂, 2=上臂）
     void extendToStation(int stationId, int armIndex = 1); // 伸出到工位（armIndex: 1=下臂, 2=上臂）
     void retractFromStation(int stationId, int armIndex = 1); // 从工位缩回（armIndex: 1=下臂, 2=上臂）
-
+    void stationRobotStatus(int stationId);
     // 模式控制
     void setAnimationMode(bool enable);
     void setManualControlMode(bool enable);
@@ -183,8 +172,6 @@ public:
     // 预设管理
     void savePreset(const QString &name);
     void loadPreset(const QString &name);
-
-
 
 signals:
     void jointsChanged(double baseX, double baseRot, double shoulder, double elbow, double wrist);
@@ -220,13 +207,19 @@ public:
     // 获取当前动画速度
     double getAnimationSpeed() const;
 
-
-
     enum ActionType {
         IDLE,
         MOVING_TO_STATION,    // 平移+旋转到工位
         EXTENDING,            // 伸出取放片
         RETRACTING            // 缩回
+    };
+
+    enum stationID {
+        STATIONIDLP1=1,
+        STATIONIDLP2 = 2,
+        STATIONIDELK1,
+        STATIONIDELK2,
+        STATIONIDEALIGNER
     };
 
     // 姿态数据结构

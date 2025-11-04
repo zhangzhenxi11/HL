@@ -44,7 +44,7 @@ namespace FC {
 		void setAxislocation(double location);
 	public:
 		Q_INVOKABLE void Animation(int station, int arm, QString action);
-		Q_INVOKABLE void EfemAnimation(int station, int arm, QString action);
+		Q_INVOKABLE void EFEMAnimation(int station, int arm, QString action);
 		Q_INVOKABLE void updateCassetteAnimation(const std::string &name, bool isBoxOpened, const std::vector<Cassette::Mapping> &mapping);
 	signals :
 		void signalUpdateRecipe(int model); //«–ªª≈‰∑Ω–≈∫≈

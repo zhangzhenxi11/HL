@@ -18,7 +18,8 @@
 #include "Kernel/kernel_block_manager.h"
 #include "LoadLock/fortrend_loadlock_subsystem.h" 
 #include "Kernel/Fortrend/loadport_abstract_subsystem.h"
-
+#include "fortrend_device_kernel.h"
+#include "Kernel/kernel_event_paramters.h"
 #include "Poco/Format.h"
 #include <iostream>
 
@@ -109,6 +110,7 @@ std::string EFEMRobotReadyPutWaferCommand::getDescription() const {
 */
 EFEMRobotReadyPutWaferCommand::RunResult EFEMRobotReadyPutWaferCommand::onRun() throw(KernelException){
 	EFEMWaferRobotSubsystem* robot = dynamic_cast<EFEMWaferRobotSubsystem*>(getSubsystem());
+	
 	if (beforeRun() != RUN_OK){
 		return RUN_REJECT;
 	}
@@ -223,7 +225,8 @@ std::vector<IKernelResources* > EFEMRobotPutWaferCommand::resources() const{
 */
 EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(KernelException){
 	EFEMWaferRobotSubsystem* robot = dynamic_cast<EFEMWaferRobotSubsystem*>(getSubsystem());
-	
+	KernelCommandParameter parameter(shared_from_this());
+
 	//get command configure
 	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 	//fill params
@@ -356,6 +359,8 @@ EFEMRobotPutWaferCommand::RunResult EFEMRobotPutWaferCommand::onRun() throw(Kern
 	std::string str = Poco::format("MOV:UNLOAD/%s/%s/%d/0/%d", robotName,stationName, slotnum,getArm());
 	str.push_back(';');
 	logInform(robot->getName().c_str(), "command str:%s", str.c_str());
+	//25-11-04  add
+	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
 	bool result = robot->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;

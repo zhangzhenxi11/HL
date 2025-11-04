@@ -221,6 +221,32 @@ void RobotArmWidget::loadAnimationFromJson(const QString &jsonFilePath)
     resetAnimation();
 }
 
+void RobotArmWidget::loadStationRobotStatusFromJson(const QString& jsonFilePath,int stationId, QString& status)
+{
+    QFile file(jsonFilePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << QString::fromUtf8("❌ 无法打开文件:") << jsonFilePath;
+        return;
+    }
+
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isObject()) {
+        qDebug() << QString::fromUtf8("❌ JSON格式错误");
+        return;
+    }
+
+    QJsonObject root = doc.object();
+    QJsonArray posesArray = root["poses"].toArray();
+
+    if (posesArray.isEmpty()) {
+        qDebug() << QString::fromUtf8("❌ JSON中没有姿态数据");
+        return;
+    }
+}
+
 void RobotArmWidget::resizeEvent(QResizeEvent *event)
 {
        Q_UNUSED(event);
@@ -1099,13 +1125,11 @@ void RobotArmWidget::pickWafer(int stationId, int armIndex)
         // 同步动作：肩关节前伸 + 肘关节同步伸出
         double targetShoulder = extendShoulderAngle;  // 使用伸展位置角度
         double targetElbow = extendElbowAngle;        // 使用伸展位置角度
-        if (stationId == 1)
-        {
-
-        }
+        
         setShoulderAngle(targetShoulder);
         setElbowAngle(targetElbow);
-        
+        stationRobotStatus(stationId);
+
         // 更新关节位置
         updateJointPositions();
         
@@ -1120,6 +1144,7 @@ void RobotArmWidget::pickWafer(int stationId, int armIndex)
         // 机械臂2（上臂）取片
         // 同步动作：肩关节前伸 + 肘关节同步伸出
         // 注意：机械臂2的角度需要根据对称关系调整
+        stationRobotStatus(stationId);
         double targetShoulder2 = extendShoulderAngle2;  // 对称180°
         double targetElbow2 = extendElbowAngle2;             // 肘关节取负值
         
@@ -1150,7 +1175,7 @@ void RobotArmWidget::placeWafer(int stationId, int armIndex)
         // 同步动作：肩关节前伸 + 肘关节同步伸出
         double targetShoulder = extendShoulderAngle;
         double targetElbow = extendElbowAngle;
-        
+        stationRobotStatus(stationId);
         setShoulderAngle(targetShoulder);
         setElbowAngle(targetElbow);
         
@@ -1165,6 +1190,7 @@ void RobotArmWidget::placeWafer(int stationId, int armIndex)
                  << QString::fromUtf8("肘关节=") << targetElbow << "°";
     } 
     else if (armIndex == 2) {
+        stationRobotStatus(stationId);
         // 机械臂2（上臂）放片
         double targetShoulder2 = extendShoulderAngle2;
         double targetElbow2 = extendElbowAngle2;
@@ -1192,6 +1218,7 @@ void RobotArmWidget::extendToStation(int stationId, int armIndex)
     qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("伸出到工位 ======");
     
     if (armIndex == 1) {
+        stationRobotStatus(stationId);
         // 机械臂1伸出
         double targetShoulder = extendShoulderAngle;
         double targetElbow = extendElbowAngle;
@@ -1208,7 +1235,7 @@ void RobotArmWidget::extendToStation(int stationId, int armIndex)
         // 机械臂2伸出
         double targetShoulder2 = extendShoulderAngle2;
         double targetElbow2 = extendElbowAngle2;
-        
+        stationRobotStatus(stationId);
         setShoulderAngle2(targetShoulder2);
         setElbowAngle2(targetElbow2);
         updateJointPositions2();
@@ -1255,4 +1282,43 @@ void RobotArmWidget::retractFromStation(int stationId, int armIndex)
     }
     
     update();
+}
+
+void RobotArmWidget::stationRobotStatus(int stationId)
+{
+
+    switch (stationId)
+    {
+    case stationID::STATIONIDLP1:
+    {
+        setBaseXOffset(-100);
+        setBaseRotation(284);
+    }
+    break;
+    case stationID::STATIONIDLP2:
+    {
+        setBaseXOffset(146);
+        setBaseRotation(106);
+    }
+    break;
+    case stationID::STATIONIDELK1:
+    {
+        setBaseXOffset(-100);
+        setBaseRotation(106);
+    }
+    break;
+    case stationID::STATIONIDELK2:
+    {
+        setBaseXOffset(149);
+        setBaseRotation(105);
+    }
+    case stationID::STATIONIDEALIGNER:
+    {
+        setBaseXOffset(-63);
+        setBaseRotation(14);
+    }
+    break;
+    default:
+        break;
+    }
 }

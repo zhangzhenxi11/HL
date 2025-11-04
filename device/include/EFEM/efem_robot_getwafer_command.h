@@ -42,7 +42,7 @@ private:
 /**
 *@brief  GetObject command for fortrend robot
 */
-class EFEMRobotGetWaferCommand : public  RobotAbstractGetWaferCommand, public HexCommandExecuter
+class EFEMRobotGetWaferCommand : public std::enable_shared_from_this<EFEMRobotGetWaferCommand>,public  RobotAbstractGetWaferCommand, public HexCommandExecuter
 {
 public:
 	DECLARE_PTR(EFEMRobotGetWaferCommand)

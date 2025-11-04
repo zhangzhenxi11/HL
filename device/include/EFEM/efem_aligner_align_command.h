@@ -24,7 +24,7 @@ class HexSubSystemHelper;
 /**
 *@brief   align command for rnd  aligner subsystem
 */
-class  EFEMAlignerAlignCommand :  public AlignerAbstractAlignCommand, public HexCommandExecuter
+class  EFEMAlignerAlignCommand :public AlignerAbstractAlignCommand, public HexCommandExecuter
 {
 public:
 	DECLARE_PTR(EFEMAlignerAlignCommand)

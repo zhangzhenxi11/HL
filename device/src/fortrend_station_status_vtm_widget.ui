@@ -204,7 +204,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="RobotArmWidget" name="widget" native="true">
+        <widget class="RobotArmWidget" name="ewtr_widget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>1</horstretch>
@@ -288,7 +288,6 @@
          <height>201</height>
         </rect>
        </property>
-       <zorder>efemAreaGroupBox</zorder>
       </widget>
       <widget class="PMGDTWidget" name="pm3_widget" native="true">
        <property name="geometry">
@@ -321,16 +320,6 @@
        </property>
       </widget>
      </widget>
-     <zorder>gridLayoutWidget</zorder>
-     <zorder>gridLayoutWidget_2</zorder>
-     <zorder>groupBox</zorder>
-     <zorder>groupBox_2</zorder>
-     <zorder>stackedWidget</zorder>
-     <zorder>center_layout</zorder>
-     <zorder>efemAreaGroupBox</zorder>
-     <zorder>efemAreaGroupBox</zorder>
-     <zorder>efemAreaGroupBox</zorder>
-     <zorder>groupBox_3</zorder>
     </widget>
    </item>
   </layout>

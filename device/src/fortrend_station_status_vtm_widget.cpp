@@ -64,8 +64,16 @@
 #include  "PMCavity/fortrend_pm_cavity_to_get_station_command.h"
 #include  "PMCavity/fortrend_pm_cavity_to_put_station_command.h"
 
+#include "EFEM/efem_aligner_subsystem.h"
+#include "EFEM/efem_loadport_subsystem.h"
+#include "EFEM/efem_wafer_robot_subsystem.h"
+#include "EFEM/efem_robot_getwafer_command.h"
+#include "EFEM/efem_robot_putwafer_command.h"
+#include "EFEM/efem_aligner_align_command.h"
+
 #include "fortrend_device_kernel.h"
 #include "vtmrobot.h"
+#include "robotarmwidget.h"
 #include "robotdialog.h"
 #include "tm.h"
 
@@ -110,8 +118,6 @@ namespace FC{
 		void onRecipe();
 		void onMode();
 		void onEfemReset();
-
-
 	private:
 		Ui::FortrendStationStatusVTMWidget* ui;
 		//stackedWidget显示，就是模组手动界面
@@ -131,8 +137,6 @@ namespace FC{
 		QFortrendSlotWidget* slot_widgetA;
 		QFortrendSlotWidget* slot_widgetB;
 		//vtmrobot *robot;
-
-
 		std::shared_ptr<IKernel> kernel;
 		QFortrendStationStatusVTMWidget* q_ptr;
 
@@ -152,6 +156,12 @@ namespace FC{
 		std::shared_ptr<FortrendVTMSignalTower> tower;
 
 		std::shared_ptr<FortrendCassetteManager> cassManager;
+		//25-11-4 新增
+		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr;
+		std::shared_ptr<EFEMLPSubsystem> lp1;
+		std::shared_ptr<EFEMLPSubsystem> lp2;
+		std::shared_ptr<EFEMAlignerSubsystem> ealigner;
+
 
 		//执行指令的widget，继承了QKernelModuleWidget
 		QAbstractSubsystemWidget<FortrendLoadLockSubsystem> *lk1widget;
@@ -163,7 +173,11 @@ namespace FC{
 		
 		QAbstractSubsystemWidget<FortrendTMCavitySubsystem> *tmwidget;
 		QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem> *wtrwidget;
-
+		//25-11-4 新增
+		QAbstractSubsystemWidget<EFEMWaferRobotSubsystem> *ewtrwidget;
+		QAbstractSubsystemWidget<EFEMLPSubsystem>* lp1widget;
+		QAbstractSubsystemWidget<EFEMLPSubsystem>* lp2widget;
+		QAbstractSubsystemWidget<EFEMAlignerSubsystem>* ealignerwidget;
 
 		int stationidlk1 = 1;
 		int stationidpm1 = 2;
@@ -177,9 +191,9 @@ namespace FC{
 		
 		int ewtrStationIdLp1 = 1;
 		int ewtrStationIdLp2 = 2;
-		int ewtrStationIdeLk1 = 1;
-		int ewtrStationIdeLk2 = 1;
-		int ewtrStationIdeAligner= 1;
+		int ewtrStationIdeLk1 = 3;
+		int ewtrStationIdeLk2 = 4;
+		int ewtrStationIdeAligner= 5;
 	};
 
 	QFortrendStationStatusVTMWidgetPrivate::QFortrendStationStatusVTMWidgetPrivate(QFortrendStationStatusVTMWidget* p, const std::shared_ptr<IKernel>& kernel)
@@ -199,6 +213,11 @@ namespace FC{
 		wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		aligner = kernel->getKernelModule<FortrendAlignerSubsystem>("Aligner");
 		tower = kernel->getKernelModule<FortrendVTMSignalTower>("Tower");
+		//25-11-14
+		ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+		lp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
+		lp2 = kernel->getKernelModule<EFEMLPSubsystem>("ELP2");
+		ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
 
 		cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 		robotdialog = new RobotDialog(p);
@@ -221,6 +240,12 @@ namespace FC{
 		wtr->addEventListener(this);
 		//aligner->addEventListener(this);
 		cassManager->addListener(this);
+		//25-11-04
+		ewtr->addEventListener(this);
+		lp1->addEventListener(this);
+		lp2->addEventListener(this);
+		ealigner->addEventListener(this);
+
 		
 		for (auto* station : cassManager->allStations()){
 			//logInform(kernel->getName().c_str(), "station:%s", station->getName().c_str());
@@ -288,11 +313,11 @@ namespace FC{
 		}
 	}
 	
-	
 
 	//监控命令执行调整动画
 	void QFortrendStationStatusVTMWidgetPrivate::onKernelEvent(FC::KernelEventModule* kernelModule, const std::shared_ptr<FC::IEventId>& eventId, FC::KernelEventParameter* context){
 		//logInform("EventTest", "onKernelEvent");
+
 		if (std::dynamic_pointer_cast<EVENT_ALARM_CREATE>(eventId)){
 				auto sub_system = dynamic_cast<KernelAbstractSubSystem*>(kernelModule);
 				auto name = QString::fromStdString(sub_system->getName());
@@ -345,6 +370,8 @@ namespace FC{
 					ui->loadlockB_widget->SetCurrentSlot(slot);
 				}
 			}
+			
+			//wtr设置速度命令完成
 			auto setspeed = std::dynamic_pointer_cast<SunwayRobotSetSpeedCommand>(command);
 			if (setspeed){
 				int speed = setspeed->getSpeed();
@@ -502,6 +529,34 @@ namespace FC{
 				return;
 			}
 			
+			//过滤命令
+			auto ewtr_get_command = std::dynamic_pointer_cast<EFEMRobotGetWaferCommand>(command);
+			if (ewtr_get_command)
+			{
+				int station = get_command->getStation()->getStationId(ewtr->getName());
+				int arm = get_command->getArm();
+				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "get"));
+				return;
+			}
+
+			//过滤命令
+			auto ewtr_put_command = std::dynamic_pointer_cast<EFEMRobotPutWaferCommand>(command);
+			if (ewtr_put_command)
+			{
+				int station = get_command->getStation()->getStationId(ewtr->getName());
+				int arm = get_command->getArm();
+				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "put"));
+				return;
+			}
+			//过滤命令
+			auto ealigner_align_command = std::dynamic_pointer_cast<EFEMAlignerAlignCommand>(command);
+			if (ealigner_align_command)
+			{
+				int station = get_command->getStation()->getStationId(ewtr->getName());
+				int arm = get_command->getArm();
+				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "align"));
+				return;
+			}
 			return;
 		}
 	}
@@ -583,23 +638,25 @@ namespace FC{
 
 		d->lk1widget = new QAbstractSubsystemWidget<FortrendLoadLockSubsystem>(d->lk1, this);
 		d->lk2widget = new QAbstractSubsystemWidget<FortrendLoadLockSubsystem>(d->lk2, this);
-
 		d->pm1widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm1, this);
 		d->pm2widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm2, this);
 		d->pm3widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm3, this);
 		d->pm4widget = new QAbstractSubsystemWidget<FortrendPMCavitySubsystem>(d->pm4, this);
-
 		d->tmwidget = new QAbstractSubsystemWidget<FortrendTMCavitySubsystem>(d->tm, this);
 		d->wtrwidget = new QAbstractSubsystemWidget<FortrendSunwayRobotSubsystem>(d->wtr, this);
-	
+
+		//25-11-04 add
+		d->lp1widget = new QAbstractSubsystemWidget<EFEMLPSubsystem>(d->lp1,this);
+		d->lp2widget = new QAbstractSubsystemWidget<EFEMLPSubsystem>(d->lp2, this);
+		d->ewtrwidget = new QAbstractSubsystemWidget<EFEMWaferRobotSubsystem>(d->ewtr,this);
+		d->ealignerwidget = new QAbstractSubsystemWidget<EFEMAlignerSubsystem>(d->ealigner,this);
+
 		d->mainLoadlock1Widget = new QMainLoadLockSubsystemWidget(d->lk1,this);
 		d->mainLoadlock2Widget = new QMainLoadLockSubsystemWidget(d->lk2, this);
-
 		d->mainPM1Widget = new QMainPMCavitySubsystemWidget(d->pm1, this);
 		d->mainPM2Widget = new QMainPMCavitySubsystemWidget(d->pm2, this);
 		d->mainPM3Widget = new QMainPMCavitySubsystemWidget(d->pm3, this);
 		d->mainPM4Widget = new QMainPMCavitySubsystemWidget(d->pm4, this);
-
 		d->mainTMWidget = new QMainTMCavitySubsystemWidget(d->tm,d->aligner, this);
 		d->mainRobotWidget = new QMainSunwayRobotSubsystemWidget(d->wtr, this);
 
@@ -1063,10 +1120,33 @@ namespace FC{
 
 	}
 
-	Q_INVOKABLE void QFortrendStationStatusVTMWidget::EfemAnimation(int station, int arm, QString action)
-	{
-		return Q_INVOKABLE void();
+	Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int arm, QString action)
+{
+	Q_D(QFortrendStationStatusVTMWidget);
+
+	// 根据不同的动作类型执行相应的操作
+	if (action == "get") {
+		// 取片动作：先移动到位，再取片
+		d->ui->ewtr_widget->retractFromStation(station, arm); // 先缩回到安全位置
+		d->ui->ewtr_widget->pickWafer(station, arm);         // 再执行取片
+		d->ui->ewtr_widget->retractFromStation(station, arm);
+	} 
+	else if (action == "put") {
+		// 放片动作：先移动到位，再放片
+		d->ui->ewtr_widget->retractFromStation(station, arm); // 先缩回到安全位置
+		d->ui->ewtr_widget->placeWafer(station, arm);        // 再执行放片
+		d->ui->ewtr_widget->retractFromStation(station, arm);
+	} 
+	else if (action == "align") {
+		// 对准动作：移动到对准工位
+		//d->ui->ewtr_widget->extendToStation(station, arm);
 	}
+	else {
+		// 默认缩回动作
+		d->ui->ewtr_widget->retractFromStation(station, arm);
+	}
+}
+
 
 #pragma region 机械手模块指令
 	void QFortrendStationStatusVTMWidget::onRobotDialog(){

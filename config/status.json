@@ -1,0 +1,51 @@
+{
+    "description": "机械臂工位动作姿态记录",
+    "poses": [
+        {
+            "baseRotation": 13,
+            "baseX": 116,
+            "elbowAngle": -150,
+            "name": "loadlockb关节状态",
+            "sequence": 1,
+            "shoulderAngle": -120,
+            "wristAngle": -106
+        },
+        {
+            "baseRotation": 13,
+            "baseX": 116,
+            "elbowAngle": 142,
+            "name": "loadlocka关节状态",
+            "sequence": 2,
+            "shoulderAngle": -84,
+            "wristAngle": -106
+        },
+        {
+            "baseRotation": 13,
+            "baseX": 116,
+            "elbowAngle": 150,
+            "name": "loadporta关节状态",
+            "sequence": 3,
+            "shoulderAngle": 120,
+            "wristAngle": -106
+        },
+        {
+            "baseRotation": 13,
+            "baseX": 116,
+            "elbowAngle": 142,
+            "name": "loadportb关节状态",
+            "sequence": 4,
+            "shoulderAngle": -84,
+            "wristAngle": -106
+        },
+        {
+            "baseRotation": 13,
+            "baseX": 116,
+            "elbowAngle": 150,
+            "name": "aligner关节状态",
+            "sequence": 5,
+            "shoulderAngle": 120,
+            "wristAngle": -106
+        }
+    ],
+    "timestamp": "2025-10-31T16:03:46"
+}

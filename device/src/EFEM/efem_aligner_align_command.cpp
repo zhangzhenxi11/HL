@@ -71,11 +71,8 @@ IKernelCommand::RunResult EFEMAlignerAlignCommand::onRun() throw(KernelException
 	//EALIGNER
 	std::string str = sub->getName().erase(0,1);
 	str.erase(5,3);
-
 	command.append(str).append(";");
-
 	bool result = sub->api->sendMessage(command.data(), command.size());
-
 	RunResult ret = RunResult::RUN_OK;
 	if (!result) {
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, 

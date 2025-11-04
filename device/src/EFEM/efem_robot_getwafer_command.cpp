@@ -20,6 +20,8 @@
 #include <iostream>
 #include "Kernel/kernel_block.h"
 #include "Kernel/kernel_block_manager.h"
+#include "fortrend_device_kernel.h"
+#include "Kernel/kernel_event_paramters.h"
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -219,7 +221,7 @@ void handleStationName(std::string& stationName_, int& slotnum_)
 */
 EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(KernelException){
 	EFEMWaferRobotSubsystem* robot = dynamic_cast<EFEMWaferRobotSubsystem*>(getSubsystem());
-
+	KernelCommandParameter parameter(shared_from_this());
 	//get command configure
 	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 	////check modules
@@ -365,6 +367,8 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	std::string str = Poco::format("MOV:LOAD/%s/%s/%d/0/%d", robotName, d->stationName, slotnum,getArm());
 	str.push_back(';');
 	logInform(robot->getName().c_str(), "command str:%s", str.c_str());
+	//25-11-04  add
+	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
 	bool result = robot->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;
