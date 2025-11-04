@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>561</width>
-    <height>310</height>
+    <height>374</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -79,6 +79,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="map_btn">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="text">
         <string>读取Map</string>
        </property>

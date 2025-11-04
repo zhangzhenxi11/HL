@@ -109,6 +109,7 @@ QEFEMAlignerAbstractSubsystemWidget::QEFEMAlignerAbstractSubsystemWidget(
 	connect(d->ui->vaccum_on_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::vaccum_on);
 	connect(d->ui->vaccum_off_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::vaccum_off);
 	connect(d->ui->rotate_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::rotate);
+	connect(d->ui->getmap_btn, &QAbstractButton::clicked, this, &QEFEMAlignerAbstractSubsystemWidget::getMapdt);
 
 	//connect(d->ui->dirct_cbx, QOverload<int>::of(&QComboBox::currentIndexChanged), this,&QEFEMAlignerAbstractSubsystemWidget::readOcr);
 
@@ -180,6 +181,14 @@ void QEFEMAlignerAbstractSubsystemWidget::readOcr(int index)
 	Q_D(QEFEMAlignerAbstractSubsystemWidget);
 	KernelSubsystemCommand::Ptr cmd = d->aligner->createOcrCommand(index);
 	executeCommand(getSubsystem(), cmd);
+}
+
+void QEFEMAlignerAbstractSubsystemWidget::getMapdt()
+{
+	Q_D(QEFEMAlignerAbstractSubsystemWidget);
+	KernelSubsystemCommand::Ptr cmd = d->aligner->createGetMapCommand();
+	executeCommand(getSubsystem(),cmd);
+
 }
 
 void KERNEL_NS::QEFEMAlignerAbstractSubsystemWidget::updateOcrInfo()

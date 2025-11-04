@@ -116,7 +116,7 @@
 
 #define CYCLE_SIM_MODE1
 
-#define DEBUG_LOAD_SNAPSHOT
+#define DEBUG_LOAD_SNAPSHOT1
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
 
@@ -1571,23 +1571,35 @@ namespace FC{
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (!ealigner->getPresentWafer())
+
+						auto maptCmd = ealigner->createGetMapCommand();
+						ealigner->startCommand(maptCmd);
+						maptCmd->wait();
+
+						if (!maptCmd->hasError())
 						{
-							auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);//A手放
-							ewtr->startCommand(cmd2);
-							cmd2->wait();
-							if (cmd2->hasError())
+							if (!ealigner->getPresentWafer())
 							{
-								logFailedExcuteCommandHasError(ewtr->getName(), "A手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);//A手放
+								ewtr->startCommand(cmd2);
+								cmd2->wait();
+								if (cmd2->hasError())
+								{
+									logFailedExcuteCommandHasError(ewtr->getName(), "A手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								}
+								else
+								{
+									efem_auto_step = 1541;
+								}
 							}
 							else
 							{
-								efem_auto_step = 1541; 
+								Sleep(2000);
 							}
 						}
 						else
 						{
-							Sleep(2000);
+							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 						}
 					}
 					else
@@ -1599,9 +1611,19 @@ namespace FC{
 				case 1541:
 				{
 					//寻边
+					if (elp == nullptr) {
+						logError("EFEM", "step:%d, elp指针为空，重新获取失败", efem_auto_step);
+						break;
+					}
+
+					// 确保ealigner指针不为空
+					if (ealigner == nullptr) {
+						ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+					}
+
 					logInform(elp->getName().c_str(), "晶圆寻边,step:%d", efem_auto_step);
 
-					if (ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					if (ealigner && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ealigner->getPresentWafer())
 						{
@@ -1618,8 +1640,10 @@ namespace FC{
 							}
 						}
 						else {
+							
 							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 						}
+		
 					}
 					else
 					{
@@ -1659,23 +1683,34 @@ namespace FC{
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (!ealigner->getPresentWafer())
+						auto maptCmd = ealigner->createGetMapCommand();
+						ealigner->startCommand(maptCmd);
+						maptCmd->wait();
+						if (!maptCmd->hasError())
 						{
-							auto cmd2 = ewtr->createPutCommand(ealigner, 2, 1);//B手放
-							ewtr->startCommand(cmd2);
-							cmd2->wait();
-							if (cmd2->hasError())
+
+							if (!ealigner->getPresentWafer())
 							{
-								logFailedExcuteCommandHasError(ewtr->getName(), "B手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								auto cmd2 = ewtr->createPutCommand(ealigner, 2, 1);//B手放
+								ewtr->startCommand(cmd2);
+								cmd2->wait();
+								if (cmd2->hasError())
+								{
+									logFailedExcuteCommandHasError(ewtr->getName(), "B手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								}
+								else
+								{
+									efem_auto_step = 1545;
+								}
 							}
 							else
 							{
-								efem_auto_step = 1545;
+								Sleep(2000);
 							}
 						}
 						else
 						{
-							Sleep(2000);
+
 						}
 					}
 					else
@@ -1690,22 +1725,32 @@ namespace FC{
 
 					if (ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (ealigner->getPresentWafer())
+						auto maptCmd = ealigner->createGetMapCommand();
+						ealigner->startCommand(maptCmd);
+						maptCmd->wait();
+						if (!maptCmd->hasError())
 						{
-							auto alignerCmd = ealigner->createAlignCommand();
-							ealigner->startCommand(alignerCmd);
-							alignerCmd->wait();
-							if (alignerCmd->hasError())
+							if (ealigner->getPresentWafer())
 							{
-								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+								auto alignerCmd = ealigner->createAlignCommand();
+								ealigner->startCommand(alignerCmd);
+								alignerCmd->wait();
+								if (alignerCmd->hasError())
+								{
+									logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+								}
+								else {
+									Sleep(2000);
+									efem_auto_step = 1546;
+								}
 							}
 							else {
-								Sleep(2000);
-								efem_auto_step = 1546;
+								logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 							}
 						}
-						else {
-							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
+						else
+						{
+
 						}
 					}
 				}
@@ -8380,10 +8425,8 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::logFailed(const std::string station_name, const std::string log){
 		Q_Q(QSlotTransferCycleVTMWidget);
-		//running = false;
 		pauseAllThreads();
-		ispause = true;
-		
+
 		// 2025-10-28: 保存错误时的状态快照
 		std::string errorLocation = station_name + " - " + log;
 		saveCurrentStateSnapshot(log, errorLocation);
@@ -8596,7 +8639,7 @@ namespace FC{
 
 		d->ui->enableAtmosphere->setEnabled(true);
 		d->ui->execute_pbt->setEnabled(true);
-		d->ui->continue_pbt->setEnabled(false);
+		d->ui->continue_pbt->setEnabled(true);
 
 		initPMCavityParamEdieTableWidget();
 

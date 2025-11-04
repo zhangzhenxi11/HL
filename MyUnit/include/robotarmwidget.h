@@ -170,10 +170,10 @@ public:
     void setExtendElbowAngle2(double angle);     // 新增：机械臂2
     
     // 双臂同步取放片功能
-    void pickWafer(int armIndex = 1);     // 取片动作（armIndex: 1=下臂, 2=上臂）
-    void placeWafer(int armIndex = 1);    // 放片动作（armIndex: 1=下臂, 2=上臂）
-    void extendToStation(int armIndex = 1); // 伸出到工位（armIndex: 1=下臂, 2=上臂）
-    void retractFromStation(int armIndex = 1); // 从工位缩回（armIndex: 1=下臂, 2=上臂）
+    void pickWafer(int stationId,int armIndex = 1);     // 取片动作（armIndex: 1=下臂, 2=上臂）
+    void placeWafer(int stationId, int armIndex = 1);    // 放片动作（armIndex: 1=下臂, 2=上臂）
+    void extendToStation(int stationId, int armIndex = 1); // 伸出到工位（armIndex: 1=下臂, 2=上臂）
+    void retractFromStation(int stationId, int armIndex = 1); // 从工位缩回（armIndex: 1=下臂, 2=上臂）
 
     // 模式控制
     void setAnimationMode(bool enable);

@@ -97,25 +97,19 @@ void EFEMAlignerSubsystem::onProcess(){
 		FortrendAbstractAligner::emitAttributeChanged(this);
 	}
 
-	//优化超时检测逻辑，避免在没有命令执行时进行不必要的超时检查
-	if (state == EFEMAsciiApi::State::TRANS_WAIT_REPLY && !primaryMessageName.empty()) {
-		auto now = std::chrono::system_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp).count();
-		if (elapsed > timeout) {
-			//timeout
-			logError(getName().c_str(), "onProcess() detected timeout after %lld ms for command: %s", 
-					static_cast<long long>(elapsed), primaryMessageName.c_str());
-			//设置超时状态并通知等待的线程
-			setCommandState(EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT);
-			logError(getName().c_str(), "Timeout command: %s for module", primaryMessageName.c_str());
-			return;
-		}
-	}
-
 	std::string ocr = getWaferID();
 	if (ocr != "")
 	{
 		FortrendAbstractAligner::emitAttributeChanged(this);
+	}
+	if (getCommandState() == EFEMAsciiApi::State::TRANS_WAIT_REPLY) {
+		auto now = std::chrono::system_clock::now();
+		if (std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp).count() > timeout) {
+			//timeout
+			setCommandState(EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT);
+			logError(getName().c_str(), "Timeout command: %s for module", primaryMessageName.c_str());
+			return;
+		}
 	}
 
 
@@ -150,7 +144,7 @@ std::shared_ptr<AlignerAbstractRotateCommand> EFEMAlignerSubsystem::createRotate
 
 std::shared_ptr<KernelSubsystemUpdateCommand> EFEMAlignerSubsystem::createUpdateCommand()const{
 	EFEMAlignerSubsystem* self = const_cast<EFEMAlignerSubsystem*>(this);
-	EFEMAlignerStatusCommand::Ptr ret(new EFEMAlignerStatusCommand());
+	KernelSubsystemUpdateCommand::Ptr ret(new EFEMAlignerStatusCommand());
 	return ret;
 }
 
@@ -163,7 +157,7 @@ std::shared_ptr<AlignerAbstractAlignCommand> EFEMAlignerSubsystem::createAlignCo
 std::shared_ptr<EFEMAlignerOcrCommand> EFEMAlignerSubsystem::createOcrCommand(int dirct) const
 {
 	EFEMAlignerSubsystem* self = const_cast<EFEMAlignerSubsystem*>(this);
-	EFEMAlignerOcrCommand::Ptr ret(new EFEMAlignerOcrCommand(self, dirct));
+	EFEMAlignerOcrCommand::Ptr ret(new EFEMAlignerOcrCommand(self, dirct));//Ĭ������
 	return ret;
 }
 
@@ -240,8 +234,6 @@ void EFEMAlignerSubsystem::wait()
 	}
 	//wait for it
 	cv.wait(loc);  //wait
-
-	
 }
 
 // MOV, GET, SET, INF, ABS, EVT, ACK, NAK  
@@ -266,12 +258,6 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 				if (status == "IDLE") setState(State::SUB_IDEL);
 				if (status == "NORMAL") setState(State::SUB_NORMAL);
 				if (status == "ERROR") setState(State::SUB_ERROR);
-				
-				// 2025-11-04 当收到INF:STATE响应且当前命令处于等待状态时，将命令状态设置为完成
-				// 这解决了Update命令（EFEMAlignerStatusCommand）超时的问题
-				if (state == EFEMAsciiApi::State::TRANS_WAIT_REPLY) {
-					setCommandState(EFEMAsciiApi::State::TRANS_FINISHED);
-				}
 			}
 		}
 		//ALIGN
@@ -284,7 +270,7 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 
 		#pragma region MAPDT
 		if (command->message->base == EFEMAsciiApi::Base::MAPDT)
-		{//
+		{//���Ѱ��chuck �Ƿ��о�Բ
 			if (command->message->paramers.size() == 2)
 			{
 				FortrendCassetteManager::Ptr cassManager = IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
@@ -387,28 +373,6 @@ void EFEMAlignerSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& 
 				logError(getName().c_str(), "ERROR_SUB=%s, ERROR_TYPE=%s,ERROR_CODE=%s ",
 					ERROR_SUB.c_str(), ERROR_TYPE.c_str(), ERROR_CODE.c_str());
 			}
-		}
-		//EVT:MAPDT/ALIGNER/E   EVT:MAPDT/ALIGNER/E
-		else if (command->message->base == EFEMAsciiApi::Base::MAPDT)
-		{
-			if (command->message->paramers.size() == 2)
-			{
-				std::string MAPDT = command->message->paramers.at(1);
-				
-				if (MAPDT == "P")
-				{
-					setPresentWafer(true); 
-				}
-				else if (MAPDT == "E")
-				{
-					setPresentWafer(false);
-				}	
-				else
-				{
-					setPresentWafer(false);
-				}
-			}
-
 		}
 
 		setCommandState(EFEMAsciiApi::State::TRANS_REQUEST_FAILD);

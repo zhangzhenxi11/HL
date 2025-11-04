@@ -172,7 +172,14 @@ namespace FC{
 		int stationidpm4 = 5;
 		int stationidlk2 = 6;
 		int stationidaligner=5;
-	
+
+		//2025-11-4 EWTR下工位序号 ELP1,ELP2,LLA,LLB,EALIGNER
+		
+		int ewtrStationIdLp1 = 1;
+		int ewtrStationIdLp2 = 2;
+		int ewtrStationIdeLk1 = 1;
+		int ewtrStationIdeLk2 = 1;
+		int ewtrStationIdeAligner= 1;
 	};
 
 	QFortrendStationStatusVTMWidgetPrivate::QFortrendStationStatusVTMWidgetPrivate(QFortrendStationStatusVTMWidget* p, const std::shared_ptr<IKernel>& kernel)
@@ -1054,6 +1061,11 @@ namespace FC{
 			d->ui->robot_widget->put(arm, rotationangle, armangle);
 		}
 
+	}
+
+	Q_INVOKABLE void QFortrendStationStatusVTMWidget::EfemAnimation(int station, int arm, QString action)
+	{
+		return Q_INVOKABLE void();
 	}
 
 #pragma region 机械手模块指令

@@ -19,6 +19,8 @@
 #include <mutex>
 #include <condition_variable>
 #include "EFEM/efem_aligner_ocr_command.h"
+#include "EFEM/efem_aligner_getmap_command.h"
+#include "EFEM/efem_aligner_status_command.h"
 KERNEL_NS_BEGIN
 
 /**
@@ -50,6 +52,7 @@ public:
 	std::shared_ptr<AlignerAbstractVaccOnCommand> createVaccOnCommand() const override;
 	std::shared_ptr<AlignerAbstractVaccOffCommand> createVaccOffCommand() const override;
 	std::shared_ptr<EFEMAlignerOcrCommand> createOcrCommand(int dirct) const;//OCR
+	std::shared_ptr<EFEMAlignerGetMapCommand> createGetMapCommand()const;//getmapdt
 
 public:
 	void GetOCRCommand(int dirct);
@@ -67,7 +70,7 @@ public:
 	bool onSetCommunicationState(KernelApi::CommunicationState comm);
 	bool isPresentWafer = false;
 
-	uint32_t timeout = 10000;   //default 3s
+	uint32_t timeout = 10000; //10s 
 	std::chrono::system_clock::time_point timestamp;
 	std::string primaryMessageName;
 	std::string  map_crossed;

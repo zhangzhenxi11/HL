@@ -295,6 +295,9 @@
 			<Update>
 				<timeout>20000</timeout>
 			</Update>
+			<GetMap>
+				<timeout>20000</timeout>
+			</GetMap>
 			<UI>
 				<!--需要隐藏的UI组件objectName列表,逗号分开-->
 				<Hide>movstart_btn,vaccum_on_btn,vaccum_off_btn</Hide>

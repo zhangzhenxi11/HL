@@ -37,6 +37,7 @@ private slots:
 	void vaccum_off();
 	void rotate();
 	void readOcr(int index);
+	void getMapdt();
 	void updateOcrInfo();
 
 private:

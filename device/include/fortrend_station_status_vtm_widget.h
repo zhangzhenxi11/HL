@@ -20,8 +20,6 @@
 #include "tm.h"
 #include "chamberwidget.h"
 #include "gdt_pmwidget.h"
-
-#include "ProgressColor.h" //进度条
 #include <QWidget>
 #include "qcoreapplication.h"
 #include "qimage.h"
@@ -46,6 +44,7 @@ namespace FC {
 		void setAxislocation(double location);
 	public:
 		Q_INVOKABLE void Animation(int station, int arm, QString action);
+		Q_INVOKABLE void EfemAnimation(int station, int arm, QString action);
 		Q_INVOKABLE void updateCassetteAnimation(const std::string &name, bool isBoxOpened, const std::vector<Cassette::Mapping> &mapping);
 	signals :
 		void signalUpdateRecipe(int model); //切换配方信号

@@ -1,13 +1,13 @@
 // Library: Fortrend
-// Package: CommandImp/Rnd/Aligner
+// Package: CommandImp/Hex/Aligner
 //
-// status command for rnd subsystem
+// status command for Hex subsystem
 //
 // author xielonghua
 //
 
 
-#include "EFEM/efem_aligner_status_command.h"
+#include "EFEM/efem_aligner_getmap_command.h"
 #include "EFEM/efem_aligner_subsystem.h"
 #include "Kernel/Fortrend/fortrend_cassette_manager.h"
 #include "Kernel/kernel.h"
@@ -24,14 +24,15 @@ KERNEL_NS_BEGIN
 #pragma execution_character_set("utf-8")
 #endif
 
-class EFEMAlignerStatusCommandPrivate{
+class EFEMAlignerGetMapCommandPrivate{
 public: 
 	
 };
 
 
-EFEMAlignerStatusCommand::EFEMAlignerStatusCommand():
-	 d(new EFEMAlignerStatusCommandPrivate)
+EFEMAlignerGetMapCommand::EFEMAlignerGetMapCommand(HexSubSystemHelper* hexHelper):
+	 HexCommandExecuter(hexHelper),
+	 d(new EFEMAlignerGetMapCommandPrivate)
 {
  
 }
@@ -39,7 +40,7 @@ EFEMAlignerStatusCommand::EFEMAlignerStatusCommand():
 /**
 * return true if success else false.
 */
-IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelException){
+IKernelCommand::RunResult EFEMAlignerGetMapCommand::onRun() throw(KernelException){
 	std::string res;
 	auto aligner = dynamic_cast<EFEMAlignerSubsystem*>(getSubsystem());
 	if (!aligner){
@@ -66,33 +67,7 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 	aligner->primaryMessageName = this->getName();
 
 	std::string stationName = aligner->getName().erase(0,1); //ALIGNER
-	std::string str = Poco::format("GET:STATE/%s", stationName);
-	str.push_back(';');
-	//GET:STATE/ALIGNER;  --->INF:STATE/ALIGNER/NORMAL/BUSY;    INF:STATE/ALIGNER/NORMAL/IDLE;
-	bool result = aligner->api->sendMessage(str.data(), str.size());
 	RunResult ret = RunResult::RUN_OK;
-
-	if (!result) {
-		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s update command failed to send, please check the communication!", aligner->getName())));
-		setAlarm(alarm);
-		ret = RunResult::RUN_FAILD;
-		logError(aligner->getName().c_str(), "%s»ñÈ¡×´Ì¬ÃüÁî·¢ËÍÊ§°Ü£¬Çë¼ì²éÍ¨Ñ¶£¡", aligner->getName());
-		return ret;
-	}
-	aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
-	aligner->timestamp = std::chrono::system_clock::now();
-	aligner->wait();
-	if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_RESPONSE_TIMEOUT) {
-		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command timed out.", aligner->getName(), getName())));
-		setAlarm(alarm);
-		ret = RunResult::RUN_FAILD;
-	}
-	else if (aligner->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD) {
-		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s %s command failed", aligner->getName(), getName())));
-		setAlarm(alarm);
-		ret = RunResult::RUN_FAILD;
-	}
-#if 0
 	std::string str2 = Poco::format("GET:MAPDT/%s", stationName);
 	str2.push_back(';');
 
@@ -117,10 +92,8 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 		setAlarm(alarm);
 		ret = RunResult::RUN_FAILD;
 	}
-#endif
-
 	aligner->getKernel()->getKernelBlockManager()->releaseBlock(aligner);
-	logInform(aligner->getName().c_str(), Poco::format("»ñÈ¡Ñ°±ßÆ÷¾§Ô²×´Ì¬ %s ÃüÁîÖ´ÐÐ½áÊø", aligner->getName()).c_str());
+	logInform(aligner->getName().c_str(), Poco::format("»ñÈ¡Ñ°±ßÆ÷ÓÐÎÞ¾§Ô²×´Ì¬ %s ÃüÁîÖ´ÐÐ½áÊø", aligner->getName()).c_str());
 
 	return RunResult::RUN_OK;
 }

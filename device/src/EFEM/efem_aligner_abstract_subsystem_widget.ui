@@ -187,6 +187,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="getmap_btn">
+         <property name="text">
+          <string>MAPDT</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="vaccum_on_btn">
          <property name="text">
           <string>开真空</string>

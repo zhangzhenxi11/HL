@@ -1090,7 +1090,7 @@ void RobotArmWidget::setExtendElbowAngle2(double angle)
 // ========== 双臂同步取放片功能实现 ==========
 
 // 取片动作：上臂和前臂同步伸出，手指朝向工位取片
-void RobotArmWidget::pickWafer(int armIndex)
+void RobotArmWidget::pickWafer(int stationId, int armIndex)
 {
     qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("取片动作 ======");
     
@@ -1099,7 +1099,10 @@ void RobotArmWidget::pickWafer(int armIndex)
         // 同步动作：肩关节前伸 + 肘关节同步伸出
         double targetShoulder = extendShoulderAngle;  // 使用伸展位置角度
         double targetElbow = extendElbowAngle;        // 使用伸展位置角度
-        
+        if (stationId == 1)
+        {
+
+        }
         setShoulderAngle(targetShoulder);
         setElbowAngle(targetElbow);
         
@@ -1138,7 +1141,7 @@ void RobotArmWidget::pickWafer(int armIndex)
 }
 
 // 放片动作：上臂和前臂同步伸出，手指朝向工位放片
-void RobotArmWidget::placeWafer(int armIndex)
+void RobotArmWidget::placeWafer(int stationId, int armIndex)
 {
     qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("放片动作 ======");
     
@@ -1184,7 +1187,7 @@ void RobotArmWidget::placeWafer(int armIndex)
 }
 
 // 伸出到工位：上臂和前臂同步伸出
-void RobotArmWidget::extendToStation(int armIndex)
+void RobotArmWidget::extendToStation(int stationId, int armIndex)
 {
     qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("伸出到工位 ======");
     
@@ -1219,7 +1222,7 @@ void RobotArmWidget::extendToStation(int armIndex)
 }
 
 // 从工位缩回：上臂和前臂同步缩回
-void RobotArmWidget::retractFromStation(int armIndex)
+void RobotArmWidget::retractFromStation(int stationId, int armIndex)
 {
     qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("从工位缩回 ======");
     
