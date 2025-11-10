@@ -2,6 +2,7 @@
 #include "MyUnit/ui_robotdialog.h"
 
 
+
 RobotDialog::RobotDialog(QWidget* parent) :
 	QDialog(parent),
     ui(new Ui::RobotDialog)
@@ -26,6 +27,7 @@ RobotDialog::RobotDialog(QWidget* parent) :
 	//ui->widget->setStyleSheet("background-color: #FFFFFF;");
 
 }
+
 void RobotDialog::AddStation(QRadioButton* selectBtn){
 	ui->station_layout->addWidget(selectBtn);
 }

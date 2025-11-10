@@ -222,6 +222,10 @@ void handleStationName(std::string& stationName_, int& slotnum_)
 EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(KernelException){
 	EFEMWaferRobotSubsystem* robot = dynamic_cast<EFEMWaferRobotSubsystem*>(getSubsystem());
 	KernelCommandParameter parameter(shared_from_this());
+
+	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
+	return RunResult::RUN_OK;
+
 	//get command configure
 	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 	////check modules

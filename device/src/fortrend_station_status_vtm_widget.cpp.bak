@@ -196,10 +196,9 @@ namespace FC{
 		
 		int ewtrStationIdLp1 = 1;
 		int ewtrStationIdLp2 = 2;
-		int ewtrStationIdeAligner = 4;
-		int ewtrStationIdeLk1 = 5;
-		int ewtrStationIdeLk2 = 6;
-		
+		int ewtrStationIdeLk1 = 3;
+		int ewtrStationIdeLk2 = 4;
+		int ewtrStationIdeAligner= 5;
 	};
 
 	QFortrendStationStatusVTMWidgetPrivate::QFortrendStationStatusVTMWidgetPrivate(QFortrendStationStatusVTMWidget* p, const std::shared_ptr<IKernel>& kernel)
@@ -239,11 +238,10 @@ namespace FC{
 		stationidpm2 = pm2->getStationId(wtr->getName());
 		//stationidaligner = aligner->getStationId(wtr->getName());
 		
-		//这里加入会报错！
 		ewtr->KernelAbstractSubSystem::addListener(this); //加入订阅队伍中
-	/*	ewtrStationIdLp1 = lp1->getStationId(ewtr->getName());
+		ewtrStationIdLp1 = lp1->getStationId(ewtr->getName());
 		ewtrStationIdLp2 = lp2->getStationId(ewtr->getName());
-		ewtrStationIdeAligner = ealigner->getStationId(ewtr->getName());*/
+		ewtrStationIdeAligner = ealigner->getStationId(ewtr->getName());
 		
 		// 注册UI监听器
 		lk1->addEventListener(this);
@@ -558,8 +556,8 @@ namespace FC{
 			auto ewtr_get_command = std::dynamic_pointer_cast<EFEMRobotGetWaferCommand>(command);
 			if (ewtr_get_command)
 			{
-				int station = ewtr_get_command->getStation()->getStationId(ewtr->getName());
-				int arm = ewtr_get_command->getArm();
+				int station = get_command->getStation()->getStationId(ewtr->getName());
+				int arm = get_command->getArm();
 				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "get"));
 				return;
 			}
@@ -568,9 +566,8 @@ namespace FC{
 			auto ewtr_put_command = std::dynamic_pointer_cast<EFEMRobotPutWaferCommand>(command);
 			if (ewtr_put_command)
 			{
-
-				int station = ewtr_put_command->getStation()->getStationId(ewtr->getName());
-				int arm = ewtr_put_command->getArm();
+				int station = get_command->getStation()->getStationId(ewtr->getName());
+				int arm = get_command->getArm();
 				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "put"));
 				return;
 			}
@@ -578,10 +575,10 @@ namespace FC{
 			auto ealigner_align_command = std::dynamic_pointer_cast<EFEMAlignerAlignCommand>(command);
 			if (ealigner_align_command)
 			{
-				//int station = ealigner_align_command->getStation()->getStationId(ewtr->getName());
-				//int arm = ealigner_align_command->getArm();
-				//QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "align"));
-				//return;
+				int station = get_command->getStation()->getStationId(ewtr->getName());
+				int arm = get_command->getArm();
+				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "align"));
+				return;
 			}
 			return;
 		}
@@ -753,8 +750,8 @@ namespace FC{
 			d->slot_widgetLp1->canSelected(true,false);
 			d->slot_widgetLp1->setName(QString::fromStdString("ELP1"));
 			d->ui->gridLayoutC->addWidget(d->slot_widgetLp1,0,0,Qt::AlignLeft);
-			//QWidget* cassette_Widget = new QFortrendCassetteWidget(casslp1, d->cassManager, true, true, 25, this); //max row count = 25
-			//d->ui->center_layout->addWidget(cassette_Widget);
+			QWidget* cassette_Widget = new QFortrendCassetteWidget(casslp1, d->cassManager, true, true, 25, this); //max row count = 25
+			d->ui->center_layout->addWidget(cassette_Widget);
 		}
 
 		auto casslp2 = d->cassManager->getCassette(d->lp2.get());
@@ -765,8 +762,8 @@ namespace FC{
 			d->slot_widgetLp2->canSelected(true, false);
 			d->slot_widgetLp2->setName(QString::fromStdString("ELP2"));
 			d->ui->gridLayoutD->addWidget(d->slot_widgetLp2, 0, 0, Qt::AlignLeft);
-			//QWidget* cassette_Widget = new QFortrendCassetteWidget(casslp2, d->cassManager, true, true, 25, this); //max row count = 25
-			//d->ui->center_layout->addWidget(cassette_Widget);
+			QWidget* cassette_Widget = new QFortrendCassetteWidget(casslp2, d->cassManager, true, true, 25, this); //max row count = 25
+			d->ui->center_layout->addWidget(cassette_Widget);
 		}
 
 
@@ -846,47 +843,7 @@ namespace FC{
 			});
 		}
 #pragma endregion
-#pragma region efem大气机械手添加工位选择
 
-		for (int i = 0; i < d->ewtr->getWorkStations().size(); i++)
-		{
-			auto station = d->ewtr->getWorkStations().at(i);
-			QRadioButton* radioButton = new QRadioButton;
-			radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(d->ewtr->getName())));
-			radioButton->setProperty("index", i); //index
-			d->erobotdialog->addStation(radioButton);
-			if (i == 0)
-			{
-				radioButton->setChecked(true);
-			}
-
-			
-			QObject::connect(radioButton, &QRadioButton::clicked, this, [=]() {
-
-				// 获取对话框的布局
-				QLayout* slotsLayout = d->erobotdialog->findChild<QLayout*>("slots_layout"); // 假设布局有对象名
-
-				// 清除布局中的所有内容
-				if (slotsLayout) {
-					QLayoutItem* child;
-					while ((child = slotsLayout->takeAt(0)) != nullptr) {
-						if (child->widget()) {
-							delete child->widget();
-						}
-						delete child;
-					}
-				}
-				//recreate
-				Cassette::Ptr cass = d->cassManager->getCassette(station.get());
-				if (cass) {
-					QFortrendSlotWidget* w = new QFortrendSlotWidget(cass, 15, 20); //max row count = 5
-					w->canSelected(true, false);
-					d->erobotdialog->addSlot(w);
-				}
-				radioButton->setText(QString::fromStdString(station->getName()) + QString("[%1]").arg(station->getStationId(d->ewtr->getName())));
-				});
-		}
-#pragma endregion
 		//lambada 表达式做槽函数
 		d->ui->stackedWidget->setCurrentIndex(7);
 		connect(d->ui->loadlockA_widget, &LoadLockA::signalRightClick, this, [this]() {Q_D(QFortrendStationStatusVTMWidget); d->ui->stackedWidget->setCurrentIndex(2); d->ui->center_layout->setCurrentIndex(2);});
@@ -952,18 +909,8 @@ namespace FC{
 			Q_D(QFortrendStationStatusVTMWidget);
 			d->ui->tm_widget->IseventFilter = true;
 		});//Dialog关闭误触发其他窗体点击事件，添加过滤标志
-
-#pragma endregion  efem机械手模块信号槽绑定
-		QObject::connect(d->ui->ewtr_widget, &RobotArmWidget::signalERobotDialog, this, &QFortrendStationStatusVTMWidget::onERobotDialog);
-		QObject::connect(d->ui->ewtr_widget, &RobotArmWidget::signalERobotReset, this, &QFortrendStationStatusVTMWidget::onERobotReset);
-		QObject::connect(d->ui->ewtr_widget, &RobotArmWidget::signalERobotGetStatus, this, &QFortrendStationStatusVTMWidget::onERobotGetStatus);
-		QObject::connect(d->ui->ewtr_widget, &RobotArmWidget::signalERobotClearError, this, &QFortrendStationStatusVTMWidget::onERobotClearError);
-		QObject::connect(d->erobotdialog, &ERobotDialog::signalSpeed, this, &QFortrendStationStatusVTMWidget::onERobotSpeed);
-		QObject::connect(d->erobotdialog,&ERobotDialog::signalGet,this,&QFortrendStationStatusVTMWidget::onERobotGet);
-		QObject::connect(d->erobotdialog, &ERobotDialog::signalPut, this, &QFortrendStationStatusVTMWidget::onERobotPut);
-#pragma region
-
-#pragma endregion	
+#pragma endregion
+		
 #pragma region LoadLock模块信号槽绑定
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAOpenbox, this, &QFortrendStationStatusVTMWidget::onLoadLockOpenbox);
 		QObject::connect(d->ui->loadlockA_widget, &LoadLockA::signalLoadLockAClosebox, this, &QFortrendStationStatusVTMWidget::onLoadLockClosebox);
@@ -1216,23 +1163,27 @@ namespace FC{
 		else{
 			//printf("Put currentRotationAngle:%d  rotationangle: %d \n", currentRotationAngle, rotationangle);
 			//logInform(d->wtr->getName().c_str(), "Put currentRotationAngle:%d  rotationangle: %d station=%d stationidlk1=%d", currentRotationAngle, rotationangle, station, d->stationidlk1);
-			d->ui->robot_widget->put(arm, rotationangle,armangle);
+			d->ui->robot_widget->put(arm, rotationangle, armangle);
 		}
 
 	}
 
-Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int arm, QString action)
+	Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int arm, QString action)
 {
 	Q_D(QFortrendStationStatusVTMWidget);
-	d->ui->ewtr_widget->setArmSpeed(2000);
+
 	// 根据不同的动作类型执行相应的操作
 	if (action == "get") {
-		d->ui->ewtr_widget->queueAnimation("pick", station, arm);// "retract", "pick", "place", "extend"
-		d->ui->ewtr_widget->queueAnimation("retract", station, arm);
+		// 取片动作：先移动到位，再取片
+		d->ui->ewtr_widget->retractFromStation(station, arm); // 先缩回到安全位置
+		d->ui->ewtr_widget->pickWafer(station, arm);         // 再执行取片
+		d->ui->ewtr_widget->retractFromStation(station, arm);
 	} 
 	else if (action == "put") {
-		d->ui->ewtr_widget->queueAnimation("place", station, arm);// "retract", "pick", "place", "extend"
-		d->ui->ewtr_widget->queueAnimation("retract", station, arm);
+		// 放片动作：先移动到位，再放片
+		d->ui->ewtr_widget->retractFromStation(station, arm); // 先缩回到安全位置
+		d->ui->ewtr_widget->placeWafer(station, arm);        // 再执行放片
+		d->ui->ewtr_widget->retractFromStation(station, arm);
 	} 
 	else if (action == "align") {
 		// 对准动作：移动到对准工位
@@ -1281,149 +1232,7 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 		Q_D(QFortrendStationStatusVTMWidget);
 		KernelSubsystemCommand::Ptr cmd = d->wtr->createClearErrorCommand();
 		d->wtrwidget->executeCommand(d->wtr, cmd);
-	}
-	void QFortrendStationStatusVTMWidget::onERobotDialog()
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-		d->erobotdialog->show();
-	}
-	void QFortrendStationStatusVTMWidget::onERobotReset()
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-		KernelSubsystemCommand::Ptr cmd = d->ewtr->createResetCommand();
-		d->ewtrwidget->executeCommand(d->ewtr, cmd);
-	}
-	void QFortrendStationStatusVTMWidget::onERobotGetStatus()
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-		KernelSubsystemCommand::Ptr cmd = d->ewtr->createUpdateCommand();
-		d->ewtrwidget->executeCommand(d->ewtr, cmd);
-	}
-	void QFortrendStationStatusVTMWidget::onERobotClearError()
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-		KernelSubsystemCommand::Ptr cmd = d->ewtr->createResetCommand();
-		d->ewtrwidget->executeCommand(d->ewtr, cmd);
-	}
-	void QFortrendStationStatusVTMWidget::onERobotSpeed(int speed)
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-		KernelSubsystemCommand::Ptr cmd = d->ewtr->createSetSpeedCommand(speed);
-		d->ewtrwidget->executeCommand(d->ewtr, cmd);
-	}
-	void QFortrendStationStatusVTMWidget::onERobotGet(int station, int arm, int slot)
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-		if (station == -1) {
-			logWarn(d->ewtr->getName().c_str(), "请选择取料工位!");
-			return;
-		}
-		if (arm == -1) {
-			logWarn(d->ewtr->getName().c_str(), "请选择取料手爪!");
-			return;
-		}
-
-		//bool armwafer = d->ewtr->hasObject(arm);
-		//if (armwafer) {
-		//	QString armstr = arm == 0 ? "A" : "B";
-		//	logWarn(d->wtr->getName().c_str(), "工位%s已有料，禁止取料，请重新检查!", armstr);
-		//	return;
-		//}
-
-		std::shared_ptr<FortrendStation> stationptr = d->ewtr->getWorkStations().at(station);
-		auto stationcass = d->cassManager->getCassette(stationptr.get());
-		bool stationIsWafer = false;
-
-
-		if (station == 5) {
-			stationIsWafer = stationcass->getMapping(d->ui->loadlockA_widget->GetCurrentSlot()) == Cassette::Present;
-			station = d->ewtrStationIdeLk1;
-		}
-		else if (station == 6) {
-			stationIsWafer = stationcass->getMapping(d->ui->loadlockB_widget->GetCurrentSlot()) == Cassette::Present;
-			station = d->ewtrStationIdeLk2;
-		}
-		else if (station == 1) {
-			stationIsWafer = stationcass->getMapping(slot) == Cassette::Present;
-			station = d->ewtrStationIdLp1;
-		}
-
-		else if (station == 2) {
-			stationIsWafer = stationcass->getMapping(slot) == Cassette::Present;
-			station = d->ewtrStationIdLp2;
-		}
-		else {
-			stationIsWafer = stationcass->getMapping(1) == Cassette::Present;
-		}
-		//if (!stationIsWafer) {
-		//	logWarn(d->ewtr->getName().c_str(), "工位%s没有料，禁止取料，请重新检查!", stationptr->getName());
-		//	return;
-		//}
-		d->ui->ewtr_widget->setCurrentStation(station);
-		d->ui->ewtr_widget->setCurrentArm(arm);
-		/*KernelSubsystemCommand::Ptr cmd = d->ewtr->createGetCommand(stationptr, arm, slot);
-		d->ewtrwidget->executeCommand(d->ewtr, cmd);*/
-
-		logWarn(d->ewtr->getName().c_str(), "手爪:%d", arm);
-		//QMetaObject::invokeMethod(this, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "get"));
-		EFEMAnimation(station, arm, "get");
-	}
-	void QFortrendStationStatusVTMWidget::onERobotPut(int station, int arm, int slot)
-	{
-		Q_D(QFortrendStationStatusVTMWidget);
-
-		if (station == -1) {
-			logWarn(d->ewtr->getName().c_str(), "请选择取料工位!");
-			return;
-		}
-		if (arm == -1) {
-			logWarn(d->ewtr->getName().c_str(), "请选择取料手爪!");
-			return;
-		}
-		bool armwafer =  d->ewtr->hasObject(arm);
-		//if (armwafer) {
-		//	QString armstr = arm == 0 ? "A" : "B";
-		//	logWarn(d->wtr->getName().c_str(), "工位%s没有料，禁止放料，请重新检查!", armstr);
-		//	return;
-		//}
-
-		std::shared_ptr<FortrendStation> stationptr = d->ewtr->getWorkStations().at(station);
-		auto stationcass = d->cassManager->getCassette(stationptr.get());
-		bool stationIsWafer = false;
-
-
-		if (station == 5) {
-			stationIsWafer = stationcass->getMapping(d->ui->loadlockA_widget->GetCurrentSlot()) == Cassette::Present;
-			station = d->ewtrStationIdeLk1;
-		}
-		else if (station == 6) {
-			stationIsWafer = stationcass->getMapping(d->ui->loadlockB_widget->GetCurrentSlot()) == Cassette::Present;
-			station = d->ewtrStationIdeLk2;
-		}
-		else if (station == 1) {
-			stationIsWafer = stationcass->getMapping(slot) == Cassette::Present;
-			station = d->ewtrStationIdLp1;
-		}
-
-		else if (station == 2) {
-			stationIsWafer = stationcass->getMapping(slot) == Cassette::Present;
-			station = d->ewtrStationIdLp2;
-		}
-		else {
-			stationIsWafer = stationcass->getMapping(1) == Cassette::Present;
-		}
-		//if (stationIsWafer) {
-		//	logWarn(d->wtr->getName().c_str(), "工位%s有料，禁止放料，请重新检查!", stationptr->getName());
-		//	return;
-		//}
-		//d->ui->ewtr_widget->setCurrentStation(station);
-		//d->ui->ewtr_widget->setCurrentArm(arm);
-		//KernelSubsystemCommand::Ptr cmd = d->ewtr->createPutCommand(stationptr, arm, slot);
-		//d->ewtrwidget->executeCommand(d->ewtr, cmd);
-		//调试用
-		logWarn(d->ewtr->getName().c_str(), "手爪:%d", arm);
-		EFEMAnimation(station, arm,"put");
-	}
+	};
 	void QFortrendStationStatusVTMWidget::onRobotGet(int station,int arm, int slot){
 		Q_D(QFortrendStationStatusVTMWidget);
 		if (station == -1){

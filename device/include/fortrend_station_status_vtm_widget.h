@@ -60,6 +60,16 @@ namespace FC {
 		void onRobotReset();
 		void onRobotGetStatus();
 		void onRobotClearError();
+
+		//EFEM ROBOT
+		void onERobotDialog();
+		void onERobotReset();
+		void onERobotGetStatus();
+		void onERobotClearError();
+		void onERobotSpeed(int speed);
+		void onERobotGet(int station, int arm, int slot);
+		void onERobotPut(int station, int arm, int slot);
+
 		//void onRobotData();
 		//void onRobotStatusDialog();
 		void onRobotGet(int station, int arm, int slot);

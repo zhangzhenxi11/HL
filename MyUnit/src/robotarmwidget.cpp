@@ -9,6 +9,14 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+
+
+#include <QMouseEvent>
+#include <QMenu>
+#include <QAction>
+#include "QMessageBox"
+#include "Kernel/kernel_log.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -27,45 +35,47 @@ RobotArmWidget::RobotArmWidget(QWidget *parent) : QWidget(parent)
     stationHasWafer << false << false << false << true << false; // loadPortA(3)有晶圆
 
     // 初始化机械臂参数（复位位置）
-    currentStation = 3;     // 从 loadPortA 开始
-    baseXOffset = 116;      // 复位 X轴偏移
-    baseRotation = 13;      // 复位旋转角度
+    currentStation = 1;     // 从 loadPortA 开始
+    baseXOffset = 150;      // 复位 X轴偏移
+    baseRotation = 196;      // 复位旋转角度
 
     // 安全位置角度（缩回姿态）
     // 约束：肩关节和肘关节夹角必须保持锐角（<90°）
-    //safeShoulderAngle = -104;   // 范围：-107° ~ 131°
-    safeShoulderAngle = -84;
-    safeElbowAngle = 142;       // 范围：153° ~ -150°
-    safeWristAngle = -106;      // 范围：-115° ± 2°
+    safeShoulderAngle = -84;    // 范围：55° ~ -108°
+    safeElbowAngle = 142;       // 范围：144° ~ -142°
+    safeWristAngle = -106;      // 范围：-105° ± 2°
 
     // 伸展位置角度（通用伸展姿态 - 从数据总结）
     // 约束：保持肩肘夹角为锐角
+    
+    // 初始化动画状态
+    isAnimationRunning = false;
     extendShoulderAngle = -120.0;   // 机械臂1伸展时肩关节约 -103° ~ -126°
     extendElbowAngle = -150.0;      // 机械臂1伸展时肘关节约 -131° ~ -157°（已修正到范围内）
     
     // 机械臂2伸展位置角度（对称关系）
-    extendShoulderAngle2 = 60.0;    // 机械臂2伸展时肩关节角度（-120 + 180）
-    extendElbowAngle2 = 150.0;      // 机械臂2伸展时肘关节角度（-150取负）
+    extendShoulderAngle2 = 100.0;    // 机械臂2伸展时肩关节角度（103~126）
+    extendElbowAngle2 = 142.0;      // 机械臂2伸展时肘关节角度（-150取负）
 
     // 机械臂1 - 初始设置为安全位置
-    shoulderAngle = safeShoulderAngle;  // -104°
+    shoulderAngle = safeShoulderAngle;  // -84°
     elbowAngle = safeElbowAngle;        // 142°
     wristAngle = safeWristAngle;        // -106°
     hasWafer = false;
     
     // 机械臂2 - 初始设置为安全位置（对称180°，使腕关节坐标重叠）
-    // 关键：肩关节相对机械臂1旋转180°，肘关节角度取负值，使腕关节位置重叠
-//    shoulderAngle2 = safeShoulderAngle + 180;  // 76° (-104 + 180)
-    shoulderAngle2 = 58;
+    shoulderAngle2 = 58;                       //复位值 58°
     elbowAngle2 = -safeElbowAngle;             // -142° (对称关系)
     wristAngle2 = safeWristAngle;              // -106° (保持一致)
     hasWafer2 = false;
 
     rotationSpeed = 2.0;   // 提高速度
     extensionSpeed = 2.0;  // 提高速度
+    armSpeed = 1500;        //整体速度
     actionType = IDLE;
     currentPoseIndex = 0;
     
+    animationGroup = new QSequentialAnimationGroup(this);
     // 初始化动画序列（基于用户记录的真实数据）
     initAnimationSequence();
 
@@ -150,6 +160,39 @@ void RobotArmWidget::resetAnimation()
     update();
 }
 
+void RobotArmWidget::startAnimationGroup()
+{
+    if (animationGroup->state() == QAbstractAnimation::Running) {
+        logWarn(name.c_str(), "操作重复!");
+        return;
+    }
+    animationGroup->start();
+
+}
+void RobotArmWidget::clearAnimationGroup()
+{
+    animationGroup->clear();
+}
+
+void RobotArmWidget::animationPauseGroup()
+{
+    if (animationGroup->state() == QAbstractAnimation::Running) {
+        animationGroup->pause();
+    }
+}
+void RobotArmWidget::animationResumeGroup()
+{
+    if (animationGroup->state() == QAbstractAnimation::Paused) {
+        animationGroup->resume();
+    }
+}
+void RobotArmWidget::animationAbortGroup()
+{
+    if (animationGroup->state() == QAbstractAnimation::Paused) {
+        animationGroup->stop();
+        animationGroup->clear();
+    }
+}
 // 从 JSON 文件加载动画序列
 void RobotArmWidget::loadAnimationFromJson(const QString &jsonFilePath)
 {
@@ -287,6 +330,41 @@ void RobotArmWidget::resizeEvent(QResizeEvent *event)
        updateJointPositions2();
 
        update();
+}
+
+void RobotArmWidget::mousePressEvent(QMouseEvent* event)
+{
+    QPoint circleCenter = QPoint(width() / 2, height() / 2);
+    int distance = (event->pos() - circleCenter).manhattanLength();
+    // 如果距离小于半径，则认为点击在圆内
+    if (distance <= handLength * 1.2) {
+        if (event->button() == Qt::RightButton)
+        {
+            QMenu menu(this);
+            QAction* action1 = menu.addAction("动作控制");
+            QAction* action2 = menu.addAction("获取状况");
+            QAction* action3 = menu.addAction("复位");
+            QAction* action4 = menu.addAction("清除错误");
+
+
+            connect(action1, &QAction::triggered, this, [this]() {
+                emit signalERobotDialog(); //发送机械手弹窗信号
+                });
+            connect(action2, &QAction::triggered, this, [this]() {
+                emit signalERobotGetStatus();
+                });
+            connect(action3, &QAction::triggered, this, [this]() {
+                emit signalERobotReset();
+                });
+            connect(action4, &QAction::triggered, this, [this]() {
+                emit signalERobotClearError();
+                });
+            // 在鼠标点击的位置显示菜单
+            menu.exec(event->globalPos());
+        }
+    }
+    // 确保调用基类的实现
+    QWidget::mousePressEvent(event);
 }
 
 void RobotArmWidget::updateJointPositions()
@@ -544,7 +622,7 @@ void RobotArmWidget::drawRobotArm(QPainter &painter)
 
     // 1. 绘制底座（最大圆）
     painter.setPen(QPen(Qt::darkGray, 3));
-    painter.setBrush(QColor(100, 100, 120));
+    painter.setBrush(QColor(214, 214, 219));
     painter.drawEllipse(actualBaseCenter, baseRadius, baseRadius);
 
     // 底座细节
@@ -594,7 +672,7 @@ void RobotArmWidget::drawRobotArm2(QPainter &painter)
     // 机械臂2使用与机械臂1不同的颜色，以区分
     // 3. 绘制上臂（肩关节到肘关节）
     painter.setPen(QPen(QColor(100, 80, 80), 1));
-    painter.setBrush(QColor(150, 100, 100));
+    painter.setBrush(QColor(214, 214, 219));
     drawArmSegment(painter, shoulderPos2, elbowPos2, 20);
 
     // 4. 绘制肘关节
@@ -603,7 +681,7 @@ void RobotArmWidget::drawRobotArm2(QPainter &painter)
     // 5. 绘制前臂（肘关节到腕关节）
     //    腕关节位置独立计算，在复位状态下与机械臂1重叠
     painter.setPen(QPen(QColor(100, 80, 80), 1));
-    painter.setBrush(QColor(150, 100, 100));
+    painter.setBrush(QColor(214, 214, 219));
     drawArmSegment(painter, elbowPos2, wristPos2, 16);
 
     // 6. 绘制腕关节（独立的关节）
@@ -708,9 +786,14 @@ qreal RobotArmWidget::qDegreesToRadians(qreal degrees)
      return degrees * (M_PI / 180.0);
 }
 
+void RobotArmWidget::SetName(std::string Name)
+{
+    name = Name;
+}
+
 void RobotArmWidget::setBaseXOffset(double offset)
 {
-    if (qAbs(baseXOffset - offset) < 0.01) return;  // 避免重复更新
+    if (qAbs(baseXOffset - offset) < 0.01) return;  // 避免重复更新，使用原始offset值进行比较
     
     baseXOffset = offset;
     updateJointPositions();
@@ -836,6 +919,7 @@ void RobotArmWidget::setShoulderAngle2(double angle)
     shoulderAngle2 = normalizedAngle;
     updateJointPositions2();
     update();
+    emit shoulderAngle2Changed(shoulderAngle2);  // 发出属性变化信号
 }
 
 void RobotArmWidget::setElbowAngle2(double angle)
@@ -849,6 +933,7 @@ void RobotArmWidget::setElbowAngle2(double angle)
     elbowAngle2 = normalizedAngle;
     updateJointPositions2();
     update();
+    emit elbowAngle2Changed(elbowAngle2);  // 发出属性变化信号
 }
 
 void RobotArmWidget::setWristAngle2(double angle)
@@ -862,6 +947,7 @@ void RobotArmWidget::setWristAngle2(double angle)
     wristAngle2 = normalizedAngle;
     updateJointPositions2();
     update();
+    emit wristAngle2Changed(wristAngle2);  // 发出属性变化信号
 }
 
 double RobotArmWidget::getShoulderAngle2() const
@@ -940,6 +1026,35 @@ void RobotArmWidget::setAnimationSpeed(double speed)
 double RobotArmWidget::getAnimationSpeed() const
 {
     return rotationSpeed; // 返回任一速度值即可
+}
+void RobotArmWidget::setArmSpeed(int speed)
+{
+    armSpeed = speed;
+}
+
+int RobotArmWidget::getArmSpeed()const
+{
+    return armSpeed;
+}
+
+void RobotArmWidget::setRotationSpeed(double speed)
+{
+    rotationSpeed = 1.0 * speed;
+}
+
+double RobotArmWidget::getRotationSpeed() const
+{
+    return rotationSpeed;
+}
+
+void RobotArmWidget::setExtensionSpeed(double speed)
+{
+    extensionSpeed = 1.0 * speed;
+}
+
+double RobotArmWidget::getExtensionSpeed() const
+{
+    return extensionSpeed;
 }
 
 void RobotArmWidget::updateAnimation()
@@ -1118,207 +1233,555 @@ void RobotArmWidget::setExtendElbowAngle2(double angle)
 // 取片动作：上臂和前臂同步伸出，手指朝向工位取片
 void RobotArmWidget::pickWafer(int stationId, int armIndex)
 {
-    qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("取片动作 ======");
-    
-    if (armIndex == 1) {
-        // 机械臂1（下臂）取片
-        // 同步动作：肩关节前伸 + 肘关节同步伸出
-        double targetShoulder = extendShoulderAngle;  // 使用伸展位置角度
-        double targetElbow = extendElbowAngle;        // 使用伸展位置角度
-        
-        setShoulderAngle(targetShoulder);
-        setElbowAngle(targetElbow);
-        stationRobotStatus(stationId);
+    logInform(name.c_str(),"====== 机械臂:%d,取片动作 ======", armIndex);
 
-        // 更新关节位置
-        updateJointPositions();
-        
-        // 设置持有晶圆标志
-        setHasWafer(true);
-        
-        qDebug() << QString::fromUtf8("机械臂1 取片完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow << "°";
-    } 
-    else if (armIndex == 2) {
-        // 机械臂2（上臂）取片
-        // 同步动作：肩关节前伸 + 肘关节同步伸出
-        // 注意：机械臂2的角度需要根据对称关系调整
-        stationRobotStatus(stationId);
-        double targetShoulder2 = extendShoulderAngle2;  // 对称180°
-        double targetElbow2 = extendElbowAngle2;             // 肘关节取负值
-        
-        setShoulderAngle2(targetShoulder2);
-        setElbowAngle2(targetElbow2);
-        
-        // 更新关节位置
-        updateJointPositions2();
-        
-        // 设置持有晶圆标志
-        setHasWafer2(true);
-        
-        qDebug() << QString::fromUtf8("机械臂2 取片完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
-    }
+    QPropertyAnimation* shoulderAnim = 0;
+    QPropertyAnimation* elbowAnim = 0;
+    QPropertyAnimation* backShoulderAnim = 0;
+    QPropertyAnimation* backElbowAnim = 0;
+
+    // 先保存当前位置
+    double suorceBaseX = baseXOffset;
+    double sourceBaseRot = baseRotation;
+
+    // 调用stationRobotStatus更新到底座的绝对位置
+    stationRobotStatus(stationId);
     
-    update();  // 刷新显示
+    // 获取目标绝对位置
+    double targetBaseX = baseXOffset;
+    double targetBaseRot = baseRotation;
+
+    animationGroup->clear();
+
+    // 底座位置平滑过渡动画
+    QPropertyAnimation *baseXAnim = new QPropertyAnimation(this, "baseXOffset", this);
+    baseXAnim->setDuration(2000);
+    baseXAnim->setStartValue(suorceBaseX);
+    baseXAnim->setEndValue(targetBaseX);
+    baseXAnim->setEasingCurve(QEasingCurve::InOutQuad);
+    
+    QPropertyAnimation *baseRotAnim = new QPropertyAnimation(this, "baseRotation", this);
+    baseRotAnim->setDuration(2000);
+    baseRotAnim->setStartValue(sourceBaseRot);
+    baseRotAnim->setEndValue(targetBaseRot);
+    baseRotAnim->setEasingCurve(QEasingCurve::InOutQuad);
+
+    if (armIndex == 1)
+    {
+        logInform(name.c_str(), "====== 机械臂:%d,开始取片 ======", armIndex);
+        // 机械臂1（下臂）取片
+        double targetShoulder = extendShoulderAngle;
+        double targetElbow = extendElbowAngle; //-150.0;   
+        
+        shoulderAnim = new QPropertyAnimation(this, "shoulderAngle", this);
+        shoulderAnim->setDuration(getArmSpeed());
+        shoulderAnim->setStartValue(shoulderAngle);
+        shoulderAnim->setEndValue(targetShoulder);
+        shoulderAnim->setEasingCurve(QEasingCurve::InOutQuad);
+        
+        elbowAnim = new QPropertyAnimation(this, "elbowAngle", this);
+        elbowAnim->setDuration(getArmSpeed());
+        //先---->180度-->-180 度 --->-150.0   先过正180,再增就过轨道线是-180，再增是-150.回原反过来
+        elbowAnim->setStartValue(elbowAngle); //141
+        elbowAnim->setEndValue(180);
+        elbowAnim->setStartValue(-180);
+        elbowAnim->setEndValue(targetElbow); //-150.0; 
+        elbowAnim->setEasingCurve(QEasingCurve::InOutQuad);
+        
+        //animationGroup->addAnimation(shoulderAnim);
+        //animationGroup->addAnimation(elbowAnim);
+ 
+
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            // 设置持有晶圆标志
+            setHasWafer(true);
+            //qDebug() << QString::fromUtf8("机械臂1 取片完成:") 
+            //         << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
+            //         << QString::fromUtf8("肘关节=") << targetElbow << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+            processNextAnimation();
+        });
+    }
+    else if (armIndex == 2)
+    {
+        logInform(name.c_str(), "====== 机械臂:%d,开始取片 ======", armIndex);
+        // 机械臂2（上臂）取片
+        double targetShoulder2 = extendShoulderAngle2;
+        double targetElbow2 = extendElbowAngle2;
+        shoulderAnim = new QPropertyAnimation(this, "shoulderAngle2", this);
+        shoulderAnim->setDuration(getArmSpeed());
+        shoulderAnim->setStartValue(shoulderAngle2);
+        shoulderAnim->setEndValue(targetShoulder2);
+        shoulderAnim->setEasingCurve(QEasingCurve::InOutQuad);
+
+        elbowAnim = new QPropertyAnimation(this, "elbowAngle2", this);
+        //-142° ---> -180°----->180----->150
+        elbowAnim->setDuration(getArmSpeed());
+        elbowAnim->setStartValue(elbowAngle2);
+        elbowAnim->setEndValue(-180);
+        elbowAnim->setStartValue(180);
+        elbowAnim->setEndValue(targetElbow2);
+        elbowAnim->setEasingCurve(QEasingCurve::InOutQuad);
+        //animationGroup->addAnimation(shoulderAnim);
+        //animationGroup->addAnimation(elbowAnim);
+
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            // 设置持有晶圆标志
+            setHasWafer2(true);
+            //qDebug() << QString::fromUtf8("机械臂2 取片完成:") 
+            //         << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
+            //         << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+            ////animationGroup->clear();
+            // 动画完成后处理下一个任务
+            processNextAnimation();
+        });
+    }
+    else
+    {
+        logInform(name.c_str(), "====== 机械臂:%d ======", armIndex);
+    }
+    //底座动作动画
+    animationGroup->addAnimation(baseXAnim);
+    animationGroup->addAnimation(baseRotAnim);
+    //取片动作动画
+    animationGroup->addAnimation(shoulderAnim);
+    animationGroup->addAnimation(elbowAnim);
+    //缩回动作动画
+    //animationGroup->addAnimation(backShoulderAnim);
+    //animationGroup->addAnimation(backElbowAnim);
+    // 启动动画 - 不使用DeleteWhenStopped，避免指针悬空
+    animationGroup->start();
 }
 
 // 放片动作：上臂和前臂同步伸出，手指朝向工位放片
 void RobotArmWidget::placeWafer(int stationId, int armIndex)
 {
-    qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("放片动作 ======");
+    logInform(name.c_str(), "====== 机械臂:%d,放片动作 ======", armIndex);
+
+    // 确保animationGroup存在且清空旧动画
+    if (!animationGroup)
+    {
+        animationGroup = new QSequentialAnimationGroup(this);
+    }
+    animationGroup->clear();
+    // 先保存当前位置
+    double suorceBaseX = baseXOffset;
+    double sourceBaseRot = baseRotation;
+
+    // 调用stationRobotStatus更新到底座的绝对位置
+    stationRobotStatus(stationId);
     
-    if (armIndex == 1) {
+    // 获取目标绝对位置
+    double targetBaseX = baseXOffset;
+    double targetBaseRot = baseRotation;
+    
+    // 底座位置平滑过渡动画
+    QPropertyAnimation *baseXAnim = new QPropertyAnimation(this, "baseXOffset", this);
+    baseXAnim->setDuration(2000);
+    baseXAnim->setStartValue(suorceBaseX);
+    baseXAnim->setEndValue(targetBaseX);
+    baseXAnim->setEasingCurve(QEasingCurve::InOutQuad);
+    
+    QPropertyAnimation *baseRotAnim = new QPropertyAnimation(this, "baseRotation", this);
+    baseRotAnim->setDuration(2000);
+    baseRotAnim->setStartValue(sourceBaseRot);
+    baseRotAnim->setEndValue(targetBaseRot);
+    baseRotAnim->setEasingCurve(QEasingCurve::InOutQuad);
+    
+    animationGroup->addAnimation(baseXAnim);
+    animationGroup->addAnimation(baseRotAnim);
+    
+    if (armIndex == 1)
+    {
         // 机械臂1（下臂）放片
-        // 同步动作：肩关节前伸 + 肘关节同步伸出
         double targetShoulder = extendShoulderAngle;
         double targetElbow = extendElbowAngle;
-        stationRobotStatus(stationId);
-        setShoulderAngle(targetShoulder);
-        setElbowAngle(targetElbow);
         
-        // 更新关节位置
-        updateJointPositions();
+        QPropertyAnimation *shoulderAnim = new QPropertyAnimation(this, "shoulderAngle", this);
+        shoulderAnim->setDuration(getArmSpeed());
+        shoulderAnim->setStartValue(shoulderAngle);
+        shoulderAnim->setEndValue(targetShoulder);
+        shoulderAnim->setEasingCurve(QEasingCurve::InOutQuad);
         
-        // 清除持有晶圆标志
-        setHasWafer(false);
+        QPropertyAnimation *elbowAnim = new QPropertyAnimation(this, "elbowAngle", this);
+        elbowAnim->setDuration(getArmSpeed());
+        elbowAnim->setStartValue(elbowAngle);
+        elbowAnim->setEndValue(180);
+        elbowAnim->setStartValue(-180);
+        elbowAnim->setEndValue(targetElbow);
+        elbowAnim->setEasingCurve(QEasingCurve::InOutQuad);
         
-        qDebug() << QString::fromUtf8("机械臂1 放片完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow << "°";
-    } 
-    else if (armIndex == 2) {
-        stationRobotStatus(stationId);
+        animationGroup->addAnimation(shoulderAnim);
+        animationGroup->addAnimation(elbowAnim);
+        
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            // 清除持有晶圆标志
+            setHasWafer(false);
+            qDebug() << QString::fromUtf8("机械臂1 放片完成:") 
+                     << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
+                     << QString::fromUtf8("肘关节=") << targetElbow << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+            processNextAnimation();
+        });
+    }
+    else if (armIndex == 2)
+    {
         // 机械臂2（上臂）放片
         double targetShoulder2 = extendShoulderAngle2;
         double targetElbow2 = extendElbowAngle2;
         
-        setShoulderAngle2(targetShoulder2);
-        setElbowAngle2(targetElbow2);
+        QPropertyAnimation *shoulder2Anim = new QPropertyAnimation(this, "shoulderAngle2", this);
+        shoulder2Anim->setDuration(getArmSpeed());
+        shoulder2Anim->setStartValue(shoulderAngle2);
+        shoulder2Anim->setEndValue(targetShoulder2);
+        shoulder2Anim->setEasingCurve(QEasingCurve::InOutQuad);
         
-        // 更新关节位置
-        updateJointPositions2();
+        QPropertyAnimation *elbow2Anim = new QPropertyAnimation(this, "elbowAngle2", this);
+        elbow2Anim->setDuration(getArmSpeed());
+        elbow2Anim->setStartValue(elbowAngle2);
+        elbow2Anim->setEndValue(-180);
+        elbow2Anim->setStartValue(180);
+        elbow2Anim->setEndValue(targetElbow2);
+        elbow2Anim->setEasingCurve(QEasingCurve::InOutQuad);
         
-        // 清除持有晶圆标志
-        setHasWafer2(false);
+        animationGroup->addAnimation(shoulder2Anim);
+        animationGroup->addAnimation(elbow2Anim);
         
-        qDebug() << QString::fromUtf8("机械臂2 放片完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            // 清除持有晶圆标志
+            setHasWafer2(false);
+            qDebug() << QString::fromUtf8("机械臂2 放片完成:") 
+                     << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
+                     << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+            processNextAnimation();
+        });
     }
-    
-    update();  // 刷新显示
+    else
+    {
+        logInform(name.c_str(), "====== 机械臂:%d ======", armIndex);
+    }
+    // 启动动画 - 不使用DeleteWhenStopped，避免指针悬空
+    animationGroup->start();
 }
 
 // 伸出到工位：上臂和前臂同步伸出
 void RobotArmWidget::extendToStation(int stationId, int armIndex)
 {
-    qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("伸出到工位 ======");
+   
+    logInform(name.c_str(), "====== 机械臂:%d,伸出到工位 ======", armIndex);
+    // 确保animationGroup存在且清空旧动画
+    if (!animationGroup)
+    {
+        animationGroup = new QSequentialAnimationGroup(this);
+    }
+    animationGroup->clear();
+    // 先保存当前位置
+    double suorceBaseX = baseXOffset;
+    double sourceBaseRot = baseRotation;
+
+    // 调用stationRobotStatus更新到底座的绝对位置
+    stationRobotStatus(stationId);
     
-    if (armIndex == 1) {
-        stationRobotStatus(stationId);
+    // 获取目标绝对位置
+    double targetBaseX = baseXOffset;
+    double targetBaseRot = baseRotation;
+    
+    // 创建动画组
+    //animationGroup = new QParallelAnimationGroup(this);
+    
+    // 底座位置平滑过渡动画
+    QPropertyAnimation *baseXAnim = new QPropertyAnimation(this, "baseXOffset", this);
+    baseXAnim->setDuration(2000);
+    baseXAnim->setStartValue(suorceBaseX);
+    baseXAnim->setEndValue(targetBaseX);
+    baseXAnim->setEasingCurve(QEasingCurve::InOutQuad);
+    
+    QPropertyAnimation *baseRotAnim = new QPropertyAnimation(this, "baseRotation", this);
+    baseRotAnim->setDuration(2000);
+    baseRotAnim->setStartValue(sourceBaseRot);
+    baseRotAnim->setEndValue(targetBaseRot);
+    baseRotAnim->setEasingCurve(QEasingCurve::InOutQuad);
+    
+    animationGroup->addAnimation(baseXAnim);
+    animationGroup->addAnimation(baseRotAnim);
+    
+    if (armIndex == 1)
+    {
         // 机械臂1伸出
         double targetShoulder = extendShoulderAngle;
         double targetElbow = extendElbowAngle;
         
-        setShoulderAngle(targetShoulder);
-        setElbowAngle(targetElbow);
-        updateJointPositions();
+        QPropertyAnimation *shoulderAnim = new QPropertyAnimation(this, "shoulderAngle", this);
+        shoulderAnim->setDuration(getArmSpeed());
+        shoulderAnim->setStartValue(shoulderAngle);
+        shoulderAnim->setEndValue(targetShoulder);
+        shoulderAnim->setEasingCurve(QEasingCurve::InOutQuad);
         
-        qDebug() << QString::fromUtf8("机械臂1 伸出完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow << "°";
-    } 
-    else if (armIndex == 2) {
+        QPropertyAnimation *elbowAnim = new QPropertyAnimation(this, "elbowAngle", this);
+        elbowAnim->setDuration(getArmSpeed());
+        elbowAnim->setStartValue(elbowAngle);
+        elbowAnim->setEndValue(180);
+        elbowAnim->setStartValue(-180);
+        elbowAnim->setEndValue(targetElbow);
+        elbowAnim->setEasingCurve(QEasingCurve::InOutQuad);
+        
+        animationGroup->addAnimation(shoulderAnim);
+        animationGroup->addAnimation(elbowAnim);
+        
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            qDebug() << QString::fromUtf8("机械臂1 伸出完成:") 
+                     << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
+                     << QString::fromUtf8("肘关节=") << targetElbow << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+           // processNextAnimation();
+        });
+    }
+    else if (armIndex == 2)
+    {
         // 机械臂2伸出
         double targetShoulder2 = extendShoulderAngle2;
         double targetElbow2 = extendElbowAngle2;
-        stationRobotStatus(stationId);
-        setShoulderAngle2(targetShoulder2);
-        setElbowAngle2(targetElbow2);
-        updateJointPositions2();
         
-        qDebug() << QString::fromUtf8("机械臂2 伸出完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+        QPropertyAnimation *shoulder2Anim = new QPropertyAnimation(this, "shoulderAngle2", this);
+        shoulder2Anim->setDuration(getArmSpeed());
+        shoulder2Anim->setStartValue(shoulderAngle2);
+        shoulder2Anim->setEndValue(targetShoulder2);
+        shoulder2Anim->setEasingCurve(QEasingCurve::InOutQuad);
+        
+        QPropertyAnimation *elbow2Anim = new QPropertyAnimation(this, "elbowAngle2", this);
+        elbow2Anim->setDuration(getArmSpeed());
+        elbow2Anim->setStartValue(elbowAngle2);
+        elbow2Anim->setEndValue(-180);
+        elbow2Anim->setStartValue(180);
+        elbow2Anim->setEndValue(targetElbow2);
+        elbow2Anim->setEasingCurve(QEasingCurve::InOutQuad);
+        
+        animationGroup->addAnimation(shoulder2Anim);
+        animationGroup->addAnimation(elbow2Anim);
+        
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            qDebug() << QString::fromUtf8("机械臂2 伸出完成:") 
+                     << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
+                     << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+           // processNextAnimation();
+        });
     }
-    
-    update();
+    else
+    {
+        logInform(name.c_str(), "====== 机械臂:%d ======", armIndex);
+    }
+    // 启动动画 - 不使用DeleteWhenStopped，避免指针悬空
+    animationGroup->start();
 }
 
 // 从工位缩回：上臂和前臂同步缩回
 void RobotArmWidget::retractFromStation(int stationId, int armIndex)
 {
-    qDebug() << QString::fromUtf8("====== 机械臂") << armIndex << QString::fromUtf8("从工位缩回 ======");
-    
-    if (armIndex == 1) {
+    logInform(name.c_str(), "====== 机械臂:%d,从工位缩回======", armIndex);
+    // 确保animationGroup存在且清空旧动画
+    if (!animationGroup)
+    {
+        animationGroup = new QSequentialAnimationGroup(this);
+    }
+    //清除之前动作
+    animationGroup->clear();
+
+    if (armIndex == 1)
+    {
         // 机械臂1缩回到安全位置
         double targetShoulder = safeShoulderAngle;
         double targetElbow = safeElbowAngle;
-        
-        setShoulderAngle(targetShoulder);
-        setElbowAngle(targetElbow);
-        updateJointPositions();
-        
-        qDebug() << QString::fromUtf8("机械臂1 缩回完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow << "°";
-    } 
-    else if (armIndex == 2) {
+
+        QPropertyAnimation* shoulderAnim = new QPropertyAnimation(this, "shoulderAngle", this);
+        shoulderAnim->setDuration(getArmSpeed());
+        shoulderAnim->setStartValue(getShoulderAngle());
+        shoulderAnim->setEndValue(targetShoulder);
+        shoulderAnim->setEasingCurve(QEasingCurve::InOutQuad);
+
+        QPropertyAnimation* elbowAnim = new QPropertyAnimation(this, "elbowAngle", this);
+        elbowAnim->setDuration(getArmSpeed());
+        elbowAnim->setStartValue(getElbowAngle());
+        elbowAnim->setEndValue(-180);
+        elbowAnim->setStartValue(180);
+        elbowAnim->setEndValue(targetElbow);
+        elbowAnim->setEasingCurve(QEasingCurve::InOutQuad);
+
+        animationGroup->addAnimation(shoulderAnim);
+        animationGroup->addAnimation(elbowAnim);
+
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            qDebug() << QString::fromUtf8("机械臂1 缩回完成:")
+                << QString::fromUtf8("肩关节=") << targetShoulder << "°, "
+                << QString::fromUtf8("肘关节=") << targetElbow << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+            //processNextAnimation();
+        });
+    }
+    else if (armIndex == 2)
+    {
         // 机械臂2缩回到安全位置
-        double targetShoulder2 = safeShoulderAngle + 142;
-        //double targetShoulder2 = safeShoulderAngle;
+        double targetShoulder2 = safeShoulderAngle + 142; //58°
         double targetElbow2 = -safeElbowAngle;
-        
-        setShoulderAngle2(targetShoulder2);
-        setElbowAngle2(targetElbow2);
-        updateJointPositions2();
-        
-        qDebug() << QString::fromUtf8("机械臂2 缩回完成:") 
-                 << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
-                 << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+
+        QPropertyAnimation* shoulder2Anim = new QPropertyAnimation(this, "shoulderAngle2", this);
+        shoulder2Anim->setDuration(getArmSpeed());
+        shoulder2Anim->setStartValue(getShoulderAngle2());
+        shoulder2Anim->setEndValue(targetShoulder2);
+        shoulder2Anim->setEasingCurve(QEasingCurve::InOutQuad);
+
+        QPropertyAnimation* elbow2Anim = new QPropertyAnimation(this, "elbowAngle2", this);
+        elbow2Anim->setDuration(getArmSpeed());
+        elbow2Anim->setStartValue(getElbowAngle2());
+        elbow2Anim->setEndValue(180);
+        elbow2Anim->setStartValue(-180);
+        elbow2Anim->setEndValue(targetElbow2);
+        elbow2Anim->setEasingCurve(QEasingCurve::InOutQuad);
+
+        animationGroup->addAnimation(shoulder2Anim);
+        animationGroup->addAnimation(elbow2Anim);
+
+        connect(animationGroup, &QSequentialAnimationGroup::finished, this, [=]() {
+            qDebug() << QString::fromUtf8("机械臂2 缩回完成:")
+                << QString::fromUtf8("肩关节=") << targetShoulder2 << "°, "
+                << QString::fromUtf8("肘关节=") << targetElbow2 << "°";
+            //animationGroup->clear();
+            // 动画完成后处理下一个任务
+            //processNextAnimation();
+        });
+    }
+    else
+    {
+        logInform(name.c_str(), "====== 机械臂:%d ======", armIndex);
     }
     
-    update();
+    // 启动动画
+    animationGroup->start();
 }
 
+int RobotArmWidget::getCurrentStation()const
+{
+    return currentStation;
+}
+void RobotArmWidget::setCurrentStation(int station)
+{
+    currentStation = station;
+}
+int RobotArmWidget::getCurrentArm()const
+{
+    return currentArm;
+}
+void RobotArmWidget::setCurrentArm(int arm)
+{
+    currentArm = arm;
+}
 void RobotArmWidget::stationRobotStatus(int stationId)
 {
-
+    // 直接设置工位的绝对位置
+    int targetBaseX = 0;
+    int targetBaseRot = 0;
+    
     switch (stationId)
     {
     case stationID::STATIONIDLP1:
     {
-        setBaseXOffset(-100);
-        setBaseRotation(284);
+        targetBaseX = -142;
+        targetBaseRot = 284;
     }
     break;
     case stationID::STATIONIDLP2:
     {
-        setBaseXOffset(146);
-        setBaseRotation(106);
+        targetBaseX = 149;
+        targetBaseRot = 284;
     }
     break;
     case stationID::STATIONIDELK1:
     {
-        setBaseXOffset(-100);
-        setBaseRotation(106);
+        targetBaseX = -142;
+        targetBaseRot = 106;
     }
     break;
     case stationID::STATIONIDELK2:
     {
-        setBaseXOffset(149);
-        setBaseRotation(105);
+        targetBaseX = 149;
+        targetBaseRot = 106;
     }
+    break;
     case stationID::STATIONIDEALIGNER:
     {
-        setBaseXOffset(-63);
-        setBaseRotation(14);
+        targetBaseX = -63;
+        targetBaseRot = 16;
+    }
+    break;
+    case stationID::STATIONORIGIN:
+    {
+        targetBaseX = 150;  // 原点绝对位置
+        targetBaseRot = 196;
+        setShoulderAngle(-89);
+        setElbowAngle(140);
+        setWristAngle(-106);
+        setShoulderAngle2(53);
+        setElbowAngle2(-141);
+        setWristAngle2(-105);
     }
     break;
     default:
         break;
+    }
+    
+    // 直接设置绝对位置，不再计算偏移值
+    // 这样可以确保在取放前准确定位到工位的绝对X位置
+    // 并旋转让手指执行到工位中心
+    setBaseXOffset(targetBaseX);  // 直接使用绝对X位置
+    setBaseRotation(targetBaseRot);  // 直接使用绝对旋转角度
+}
+
+// 添加动画任务到队列
+void RobotArmWidget::queueAnimation(const QString& type, int stationId, int armIndex)
+{
+    AnimationTask task;
+    task.type = type;
+    task.stationId = stationId;
+    task.armIndex = armIndex;
+    animationQueue.enqueue(task);
+    
+    // 如果当前没有动画在运行，开始处理队列
+    if (!isAnimationRunning) {
+        processNextAnimation();
+    }
+    else
+    {
+        /*logWarn(name.c_str(),"Animation is Running!");*/
+    }
+}
+
+// 处理队列中的下一个动画任务
+void RobotArmWidget::processNextAnimation()
+{
+    if (animationQueue.isEmpty()) {
+        isAnimationRunning = false;
+        /*logWarn(name.c_str(), "no animation!");*/
+        return;
+    }
+    
+    isAnimationRunning = true;
+    AnimationTask task = animationQueue.dequeue();
+    
+    // 根据任务类型执行相应的动画
+    if (task.type == "retract") {
+        retractFromStation(task.stationId, task.armIndex);
+    } else if (task.type == "pick") {
+        pickWafer(task.stationId, task.armIndex);
+    } else if (task.type == "place") {
+        placeWafer(task.stationId, task.armIndex);
+    } else if (task.type == "extend") {
+        extendToStation(task.stationId, task.armIndex);
     }
 }
