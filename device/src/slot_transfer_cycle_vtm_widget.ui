@@ -230,7 +230,7 @@
           </column>
           <column>
            <property name="text">
-            <string>电机升降开始位置/mm</string>
+            <string>电机取放片位置/mm</string>
            </property>
            <property name="font">
             <font>
@@ -252,7 +252,7 @@
           </column>
           <column>
            <property name="text">
-            <string>旋转次数</string>
+            <string>电机旋转次数</string>
            </property>
            <property name="font">
             <font>
@@ -274,7 +274,7 @@
           </column>
           <column>
            <property name="text">
-            <string>电机升降结束位置/mm</string>
+            <string>电机工艺位置/mm</string>
            </property>
            <property name="font">
             <font>
@@ -306,7 +306,7 @@
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
         <widget class="QGroupBox" name="parameters_gbx">

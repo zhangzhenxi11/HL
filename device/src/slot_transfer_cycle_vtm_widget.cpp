@@ -574,8 +574,8 @@ namespace FC{
 		std::string armWferTarget = "";
 		std::string target_loadlock = "";
 
-		bool cycleFinished_lla = false;
-		bool cycleFinished_llb = false;
+		bool cycleFinished_lla = false; //lp1完成所有循环
+		bool cycleFinished_llb = false; //lp2完成所有循环
 
 		bool robot_step_once_finished = true;
 		bool vacumm_step_once_finished = true;
@@ -714,7 +714,7 @@ namespace FC{
 
 		bool is_lp1_cycle = false;//lp1循环
 
-		bool current_lp_cycle = false; //lp1
+		bool current_lp_cycle = false; 
 
 		bool hasUPS = false;
 
@@ -2220,7 +2220,7 @@ namespace FC{
 									{
 										logWarn(ewtr->getName().c_str(), "cycle end efemReturnCompletedTasks=%d", efemReturnCompletedTasks.size());
 
-										current_lp_cycle= is_lp1_cycle = true;
+										current_lp_cycle = is_lp1_cycle = true;
 										logWarn(ewtr->getName().c_str(), "is_lp1_cycle true");
 									}
 									else if (efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP2)
@@ -6352,13 +6352,23 @@ namespace FC{
 				{
 				case 10:
 				{
+					UpdateEfemSubTransferDatas();
+					Sleep(500);
+					
 					if (lp1_cycle_one_time_finished && !cycleFinished_lla)
 					{//Lp1的一次Cycle已做完
-						update_auto_step = 1030;
+						//2025-11-17: 多加一条检测条件：
+						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0))
+						{
+							update_auto_step = 1030;
+						}
 					}
 					else if (lp2_cycle_one_time_finished && !cycleFinished_llb)
 					{//Lp2的一次Cycle已做完
-						update_auto_step = 1040;
+						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0))
+						{
+							update_auto_step = 1040;
+						}
 					}
 					else {
 						Sleep(1000);
@@ -7194,6 +7204,7 @@ namespace FC{
 				update_auto_step = 10;
 				reset_loop = false;
 				reset_finish = true;
+				current_lp_cycle = false;  //2025-11-17  重置
 				rest_step = -1;
 				
 			}
@@ -9579,7 +9590,7 @@ namespace FC{
 		item->setText(name);
 		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
-		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机升降开始位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机取放片位置
 		addEditTableWidgetItemComboBox(row_count, 2, 1);//电机旋转角度/°
 		QSpinBox* Rotation_count_spx = new QSpinBox();
 		Rotation_count_spx->setMinimum(0);
@@ -9587,7 +9598,7 @@ namespace FC{
 		Rotation_count_spx->setSingleStep(1);
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
 		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机升降结束位置/mm
+		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机工艺位置/mm
 		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
 	}
 
