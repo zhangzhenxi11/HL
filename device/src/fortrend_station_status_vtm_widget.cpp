@@ -559,6 +559,21 @@ namespace FC{
 			if (ewtr_get_command)
 			{
 				int station = ewtr_get_command->getStation()->getStationId(ewtr->getName());
+				if (station == 5)
+				{
+					//llA
+					station = 3;
+				}
+				else if (station ==6)
+				{
+					//LLB
+					station = 4;
+				}
+				else if (station == 4)
+				{
+					//aligner
+					station = 5;
+				}
 				int arm = ewtr_get_command->getArm();
 				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "get"));
 				return;
@@ -570,6 +585,21 @@ namespace FC{
 			{
 
 				int station = ewtr_put_command->getStation()->getStationId(ewtr->getName());
+				if (station == 5)
+				{
+					//llA
+					station = 3;
+				}
+				else if (station == 6)
+				{
+					//LLB
+					station = 4;
+				}
+				else if (station == 4)
+				{
+					//aligner
+					station = 5;
+				}
 				int arm = ewtr_put_command->getArm();
 				QMetaObject::invokeMethod(q_ptr, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "put"));
 				return;

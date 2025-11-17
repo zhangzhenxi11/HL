@@ -223,8 +223,8 @@ EFEMRobotGetWaferCommand::RunResult EFEMRobotGetWaferCommand::onRun() throw(Kern
 	EFEMWaferRobotSubsystem* robot = dynamic_cast<EFEMWaferRobotSubsystem*>(getSubsystem());
 	KernelCommandParameter parameter(shared_from_this());
 
-	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
-	return RunResult::RUN_OK;
+	//robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
+	//return RunResult::RUN_OK;
 
 	//get command configure
 	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());

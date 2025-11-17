@@ -191,7 +191,6 @@ public:
     void extendToStation(int stationId, int armIndex = 1); // 伸出到工位（armIndex: 1=下臂, 2=上臂）
     void retractFromStation(int stationId, int armIndex = 1); // 从工位缩回（armIndex: 1=下臂, 2=上臂）
     void stationRobotStatus(int stationId);
-    void testStationPositions();
     // 模式控制
     void setAnimationMode(bool enable);
     void setManualControlMode(bool enable);
@@ -271,7 +270,7 @@ public:
         EXTENDING,            // 伸出取放片
         RETRACTING            // 缩回
     };
-
+    //ELP1,ELP2,LLA,LLB,EALIGNER
     enum stationID {
         STATIONIDLP1=1,
         STATIONIDLP2 = 2,
