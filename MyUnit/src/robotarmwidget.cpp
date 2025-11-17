@@ -1684,7 +1684,7 @@ void RobotArmWidget::setCurrentArm(int arm)
 }
 void RobotArmWidget::stationRobotStatus(int stationId)
 {
-    // 直接设置工位的绝对位置
+    // 使用实际验证过的精确数值，基于动画序列中的工位位置数据
     int targetBaseX = 0;
     int targetBaseRot = 0;
     
@@ -1692,55 +1692,104 @@ void RobotArmWidget::stationRobotStatus(int stationId)
     {
     case stationID::STATIONIDLP1:
     {
-        targetBaseX = -142;
-        targetBaseRot = 284;
+        // loadPortA：基于实际动画序列数据
+        targetBaseX = -96;   // 向左平移96像素
+        targetBaseRot = 105;  // 旋转105度指向loadPortA
+        logInform("robot", "LP1: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("LP1(loadPortA): baseX=") << targetBaseX << QString::fromUtf8(", baseRot=") << targetBaseRot;
     }
     break;
     case stationID::STATIONIDLP2:
     {
-        targetBaseX = 149;
-        targetBaseRot = 284;
+        // loadPortB：基于实际动画序列数据
+        targetBaseX = 144;   // 向右平移144像素
+        targetBaseRot = 283;  // 旋转283度指向loadPortB
+        logInform("robot", "LP2: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("LP2(loadPortB): baseX=") << targetBaseX << QString::fromUtf8(", baseRot=") << targetBaseRot;
     }
     break;
     case stationID::STATIONIDELK1:
     {
-        targetBaseX = -142;
-        targetBaseRot = 106;
+        // LoadLockA：基于实际动画序列数据（与loadPortA相同位置）
+        targetBaseX = -96;   // 向左平移96像素
+        targetBaseRot = 105;  // 旋转105度指向LoadLockA
+        logInform("robot", "ELK1: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("ELK1(LoadLockA): baseX=") << targetBaseX << QString::fromUtf8(", baseRot=") << targetBaseRot;
     }
     break;
     case stationID::STATIONIDELK2:
     {
-        targetBaseX = 149;
-        targetBaseRot = 106;
+        // LoadLockB：基于实际动画序列数据（与loadPortB相同位置）
+        targetBaseX = 144;   // 向右平移144像素
+        targetBaseRot = 283;  // 旋转283度指向LoadLockB
+        logInform("robot", "ELK2: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("ELK2(LoadLockB): baseX=") << targetBaseX << QString::fromUtf8(", baseRot=") << targetBaseRot;
     }
     break;
     case stationID::STATIONIDEALIGNER:
     {
-        targetBaseX = -63;
-        targetBaseRot = 16;
+        // Aligner：基于实际动画序列数据
+        targetBaseX = -96;   // 向左平移96像素
+        targetBaseRot = 14;   // 旋转14度指向Aligner
+        logInform("robot", "ALIGNER: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("ALIGNER: baseX=") << targetBaseX << QString::fromUtf8(", baseRot=") << targetBaseRot;
     }
     break;
     case stationID::STATIONORIGIN:
     {
-        targetBaseX = 150;  // 原点绝对位置
-        targetBaseRot = 196;
+        // 原点位置：控件中心，复位姿态
+        targetBaseX = 0;     // 回到中心位置
+        targetBaseRot = 0;    // 复位旋转角度
         setShoulderAngle(-89);
         setElbowAngle(140);
         setWristAngle(-106);
         setShoulderAngle2(53);
         setElbowAngle2(-141);
         setWristAngle2(-105);
+        logInform("robot", "ORIGIN: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("ORIGIN: 复位到中心位置");
     }
     break;
     default:
+        logInform("robot", "未知的工位: 位移=:%d, 角度=%d", targetBaseX, targetBaseRot);
+        qDebug() << QString::fromUtf8("未知的工位ID:") << stationId;
         break;
     }
     
-    // 直接设置绝对位置，不再计算偏移值
-    // 这样可以确保在取放前准确定位到工位的绝对X位置
-    // 并旋转让手指执行到工位中心
-    setBaseXOffset(targetBaseX);  // 直接使用绝对X位置
-    setBaseRotation(targetBaseRot);  // 直接使用绝对旋转角度
+    // 规范化角度到0-360度范围
+    if (targetBaseRot < 0) targetBaseRot += 360;
+    if (targetBaseRot >= 360) targetBaseRot -= 360;
+    
+    // 设置验证过的绝对位置
+    setBaseXOffset(targetBaseX);   // 设置X轴平移位置
+    setBaseRotation(targetBaseRot); // 设置底座旋转角度
+    
+    qDebug() << QString::fromUtf8("最终设置: baseXOffset=") << targetBaseX << QString::fromUtf8(", baseRotation=") << targetBaseRot;
+}
+
+// 测试函数：验证工位坐标计算
+void RobotArmWidget::testStationPositions()
+{
+    qDebug() << QString::fromUtf8("=== 工位坐标计算测试 ===");
+    qDebug() << QString::fromUtf8("控件尺寸:") << width() << "x" << height();
+    
+    // 临时保存当前状态
+    int currentBaseX = baseXOffset;
+    int currentBaseRot = baseRotation;
+    
+    // 测试所有工位
+    stationRobotStatus(stationID::STATIONIDLP1);
+    stationRobotStatus(stationID::STATIONIDLP2);
+    stationRobotStatus(stationID::STATIONIDELK1);
+    stationRobotStatus(stationID::STATIONIDELK2);
+    stationRobotStatus(stationID::STATIONIDEALIGNER);
+    stationRobotStatus(stationID::STATIONORIGIN);
+    
+    // 恢复原始状态
+    setBaseXOffset(currentBaseX);
+    setBaseRotation(currentBaseRot);
+    
+    qDebug() << QString::fromUtf8("=== 测试完成 ===");
 }
 
 // 添加动画任务到队列

@@ -191,6 +191,7 @@ public:
     void extendToStation(int stationId, int armIndex = 1); // 伸出到工位（armIndex: 1=下臂, 2=上臂）
     void retractFromStation(int stationId, int armIndex = 1); // 从工位缩回（armIndex: 1=下臂, 2=上臂）
     void stationRobotStatus(int stationId);
+    void testStationPositions();
     // 模式控制
     void setAnimationMode(bool enable);
     void setManualControlMode(bool enable);

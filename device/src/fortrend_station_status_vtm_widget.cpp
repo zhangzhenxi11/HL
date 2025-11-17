@@ -1361,12 +1361,12 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 		//}
 		d->ui->ewtr_widget->setCurrentStation(station);
 		d->ui->ewtr_widget->setCurrentArm(arm);
-		/*KernelSubsystemCommand::Ptr cmd = d->ewtr->createGetCommand(stationptr, arm, slot);
-		d->ewtrwidget->executeCommand(d->ewtr, cmd);*/
+		KernelSubsystemCommand::Ptr cmd = d->ewtr->createGetCommand(stationptr, arm, slot);
+		d->ewtrwidget->executeCommand(d->ewtr, cmd);
 
 		logWarn(d->ewtr->getName().c_str(), "手爪:%d", arm);
-		//QMetaObject::invokeMethod(this, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "get"));
-		EFEMAnimation(station, arm, "get");
+		QMetaObject::invokeMethod(this, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "get"));
+		//EFEMAnimation(station, arm, "get");
 	}
 	void QFortrendStationStatusVTMWidget::onERobotPut(int station, int arm, int slot)
 	{
@@ -1416,13 +1416,15 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 		//	logWarn(d->wtr->getName().c_str(), "工位%s有料，禁止放料，请重新检查!", stationptr->getName());
 		//	return;
 		//}
-		//d->ui->ewtr_widget->setCurrentStation(station);
-		//d->ui->ewtr_widget->setCurrentArm(arm);
-		//KernelSubsystemCommand::Ptr cmd = d->ewtr->createPutCommand(stationptr, arm, slot);
-		//d->ewtrwidget->executeCommand(d->ewtr, cmd);
+		d->ui->ewtr_widget->setCurrentStation(station);
+		d->ui->ewtr_widget->setCurrentArm(arm);
+		KernelSubsystemCommand::Ptr cmd = d->ewtr->createPutCommand(stationptr, arm, slot);
+		d->ewtrwidget->executeCommand(d->ewtr, cmd);
+
+		QMetaObject::invokeMethod(this, "EFEMAnimation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "put"));
 		//调试用
-		logWarn(d->ewtr->getName().c_str(), "手爪:%d", arm);
-		EFEMAnimation(station, arm,"put");
+		//logWarn(d->ewtr->getName().c_str(), "手爪:%d", arm);
+		//EFEMAnimation(station, arm,"put");
 	}
 	void QFortrendStationStatusVTMWidget::onRobotGet(int station,int arm, int slot){
 		Q_D(QFortrendStationStatusVTMWidget);
