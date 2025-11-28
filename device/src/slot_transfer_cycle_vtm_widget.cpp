@@ -329,7 +329,7 @@ namespace FC{
 			Formula_Double_Up_And_Down =1
 		};
 
-		FilmTransferMode currentTransferMode; //传片模式
+		FilmTransferMode currentTransferMode = FilmTransferMode::Formula_Go_Up_And_Down; //传片模式
 		std::string  filmTransferMode;//模式名
 
 		/************************zzx  add*********************************/
@@ -1115,8 +1115,11 @@ namespace FC{
 						lkmaps = station_cass_lk->getAllMapping();
 						count = lkmaps.size(); //lp中有多片下，按loadlock需要的片数，去上料
 					}
+					else
+					{
+						logFailed(lk->getName().c_str(),"当前是未知的传片模式!");
+					}
 
-					
 					//要区分LLA,LLB 分别给LLA,LLB 分配task,只改变选中的料
 					//getEfemUnkownStatusLLATasks
 
@@ -8206,7 +8209,7 @@ namespace FC{
 			task.selectPmEnableList[3] = task.pm4Enabled;
 
 			// 轮换式LoadLock分配
-			const int GROUP_SIZE = slots_; //可配置
+			const int GROUP_SIZE = slots_; //可配置 1,2
 			int groupIndex = i / GROUP_SIZE;
 
 			if(GROUP_SIZE == 2)
@@ -8865,8 +8868,10 @@ namespace FC{
 			{
 			case 0:
 				d->currentTransferMode = d->FilmTransferMode::Formula_Go_Up_And_Down;
+				break;//要加break
 			case 1:
 				d->currentTransferMode = d->FilmTransferMode::Formula_Double_Up_And_Down;
+				break;
 			default:
 				break;
 			}
@@ -8893,6 +8898,8 @@ namespace FC{
 		if (row_count > 0)
 		{
 			d->ui->sequence_edit_tbw->setRowCount(0);
+			//清空任务队列
+			taskManager.clearTasks();
 		}
 
 	}
@@ -9267,16 +9274,16 @@ namespace FC{
 			pm4->setIsRunning(d->running);
 
 			Sleep(500);
-			//新流程线程启动
-			//startProcessingThreads();
-
 			d->onUpdateLightButtonStatus("light_running_pbt", 2);
-
 			d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
 			d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
 			d->ui->execute_pbt->setEnabled(false);
 			d->ui->reset_pbt->setEnabled(false);
 			d->ui->pause_pbt->setEnabled(true);
+		}
+		else
+		{
+			logError("Cycle","无任务配置，无暂停，才执行解析流程配方");
 		}
 	}
 
