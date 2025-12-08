@@ -262,9 +262,18 @@ void FortrendDeviceModel::addMainCompoments(){
 	slot_transfer_cycle_vtm_widget = new QSlotTransferCycleVTMWidget(kernel, status_widget);
 	addAutoReleasedObject(new SubSystemWorkPanel(slot_transfer_cycle_vtm_widget, "循环", "配方", 0, UserLevel::USER_ADMIN, ":/Imageblack/main_while.png"));
 
-	QWidget* system_button_widget = new QVTMSystemControlHLayoutWidget(kernel, slot_transfer_cycle_vtm_widget,this);
-	system_button_widget->setMaximumWidth(450);
-	addAutoReleasedObject(new HeadPanel(system_button_widget, 2, IHeadPanel::HEAD_CENTER));
+	//add 在配方界面中加一个pm配方界面
+
+	pmRecipe_widget = new QPmRecipeWidget(kernel);
+	addAutoReleasedObject(new SubSystemWorkPanel(pmRecipe_widget, "PM配方", "配方", 0, UserLevel::USER_ADMIN, ":/Imageblack/main_formula.png"));
+	
+	//2025-12-3 注释
+	//QWidget* system_button_widget = new QVTMSystemControlHLayoutWidget(kernel, slot_transfer_cycle_vtm_widget,this);
+	//system_button_widget->setMaximumWidth(450);
+	//addAutoReleasedObject(new HeadPanel(system_button_widget, 2, IHeadPanel::HEAD_CENTER));
+	
+	
+	
 	/*DataWidget* data_widget = new DataWidget();
 
 	addAutoReleasedObject(new SubSystemWorkPanel(data_widget, "实时数据", "历史曲线", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));

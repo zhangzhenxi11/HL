@@ -1,0 +1,115 @@
+#pragma once
+// UnifiedWaferTask.h
+#include <chrono>
+#include "kernel/kernel.h"
+#include <array>
+#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+namespace FC {
+    
+    struct UnifiedWaferTask {
+        enum Location { LP1, LP2, LLA, LLB, PM1, PM2, PM3, PM4 };//¦Ë??
+
+        enum Status { 
+            QUEUED,      //????
+            IN_PROGRESS, //??????
+            IN_ERROR,    //???????
+            COMPLETED,   //???
+            UNKNOWN_PROGRESS//¦Ä?????
+        }; //??????
+
+        enum TaskType {
+            EFEM_TRANSFER,      // EFEM????
+            LOADLOCK_TRANSFER,  // LOADLOCK????
+            ROBOT_PROCESS,      // ????§ÖROBOT
+            PM_PROCESS,         // PM?
+            LOADLOCK_RETURN,    // LOADLOCK????
+            EFEM_RETURN,        // EFEM????
+            UNKNOWN
+        };//??????????
+
+        enum AlignerStatus
+        {
+            ALIGNER_READY,
+            ALIGNER_PROCESS,
+            ALIGNER_COMPLETED
+        };
+
+        int taskId; //ID
+        TaskType taskType; 
+        Status status;
+        int currentStep = 3;  // ???????????
+        Location source;  //??????   lp
+        Location target;  //??????   loadlock
+        Location target_pm;//??????2  PM
+
+        int sourceSlot;  //???????
+        int targetSlot;  //???????
+
+        int targetFeedingSlot;  //???????????
+        int targetBlankingSlot; //???????????
+
+        int arm;         // ????§Ö?????0=A, 1=B
+        AlignerStatus Aligner_status;
+
+        std::array<int, 4> selectPmEnableList;
+
+        //???????LOADLOCK ??¦Ë??? ??true???????¦Ë  false:?????¦Ë(?????)
+        bool isLoadingInPlace = false;
+        
+
+        // ???????
+        bool pm1Enabled;
+        bool pm2Enabled;
+        bool pm3Enabled;
+        bool pm4Enabled;
+        // ????
+        std::chrono::system_clock::time_point createdAt;
+        std::chrono::system_clock::time_point startedAt;
+        std::chrono::system_clock::time_point completedAt;
+
+        // ¦Ë????????????
+        static std::string locationToString(Location loc) {
+            switch (loc) {
+            case Location::LP1: return "LP1";
+            case Location::LP2: return "LP2";
+            case Location::LLA: return "LLA";
+            case Location::LLB: return "LLB";
+            case Location::PM1: return "PM1";
+            case Location::PM2: return "PM2";
+            case Location::PM3: return "PM3";
+            case Location::PM4: return "PM4";
+            default: return "UNKNOWN";
+            }
+        }
+
+        // ????????????
+        static std::string statusToString(Status stat) 
+        {
+            switch (stat) {
+            case Status::QUEUED: return "QUEUED";
+            case Status::IN_PROGRESS: return "IN_PROGRESS";
+            case Status::IN_ERROR: return "IN_ERROR";
+            case Status::COMPLETED: return "COMPLETED";
+            default: return "UNKNOWN";
+            }
+        }
+        // ??????????????
+        static std::string typeToString(TaskType stat)
+        {
+            switch (stat) {
+            case TaskType::EFEM_TRANSFER: return "EFEM_TRANSFER";
+            case TaskType::LOADLOCK_TRANSFER: return "LOADLOCK_TRANSFER";
+            case TaskType::ROBOT_PROCESS:return "ROBOT_PROCESS";
+            case TaskType::PM_PROCESS: return "PM_PROCESS";
+            case TaskType::LOADLOCK_RETURN: return "LOADLOCK_RETURN";
+            case TaskType::EFEM_RETURN: return "EFEM_RETURN";
+            default: return "UNKNOWN";
+            }
+        }
+    };
+
+
+} // namespace FC

@@ -16,7 +16,7 @@
 #include <BreakVacuum/fortrend_breakvacuum_subsystem_widget.h>
 #include <fortrend_station_status_vtm_widget.h>
 #include <kernel/CoreUI/kernel_alarm_module_widget.h>
-
+#include <pm_recipe_widget.h>
 #include  "slot_transfer_cycle_vtm_widget.h" 
 
 namespace FC{
@@ -57,6 +57,10 @@ private:
 	
 	QWidget* system_button_widget;//控制启动、暂停、停止、复位、手动、自动
 	QKernelAlarmWidget* alarm;//报警
+
+	QWidget* pmRecipe_widget;//pm配方界面
+
+
 private:
 	std::shared_ptr<FortrendDeviceKernel> kernel;
 };

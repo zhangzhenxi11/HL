@@ -1,0 +1,508 @@
+// Library: VTM
+// Library: VTM
+// Package: VTM
+
+#include "Kernel/kernel_api.h"
+#include "pm_recipe_widget.h"
+#include "device/ui_pm_recipe_widget.h"
+#include "PMCavity/fortrend_pm_cavity_defined.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QFile>
+#include <QDir>
+#include <QMessageBox>
+#include <QDoubleSpinBox>
+
+#if _MSC_VER >1600
+#pragma execution_character_set("utf-8")
+#endif
+
+
+namespace FC {
+
+	class QPmRecipeWidgetPrivate
+	{
+	public:
+		Q_DECLARE_PUBLIC(QPmRecipeWidget)
+		QPmRecipeWidgetPrivate(QPmRecipeWidget*p, const std::shared_ptr<IKernel>& kernel);
+		~QPmRecipeWidgetPrivate();
+	
+		void initTableWidget(QTableWidget* tableWidget);
+		QTableWidget* getCurrentTableWidget();
+		QTableWidget* getIndexTableWidget(int index);
+		
+	private:
+		Ui::QPmRecipeWidgetClass* ui;
+		std::shared_ptr<IKernel> kernel;
+		QPmRecipeWidget* q_ptr;
+	
+		// 四个tab页对应的表格
+		QTableWidget* pm1TableWidget;
+		QTableWidget* pm2TableWidget;
+		QTableWidget* pm3TableWidget;
+		QTableWidget* pm4TableWidget;
+
+		// 存储所有PM腔的工艺数据
+		std::map<std::string, std::vector<PMMotionProcessParameters>> pmMotionProcessData;
+
+	};
+	QPmRecipeWidgetPrivate::QPmRecipeWidgetPrivate(QPmRecipeWidget* p, const std::shared_ptr<IKernel>& kernel)
+		:q_ptr(p)
+		, kernel(kernel)
+		, ui(new Ui::QPmRecipeWidgetClass)
+		, pm1TableWidget(nullptr)
+		, pm2TableWidget(nullptr)
+		, pm3TableWidget(nullptr)
+		, pm4TableWidget(nullptr) {
+
+	}
+	QPmRecipeWidgetPrivate::~QPmRecipeWidgetPrivate()
+	{
+		delete ui;
+	}
+
+	void QPmRecipeWidgetPrivate::initTableWidget(QTableWidget* tableWidget)
+	{
+		if (!tableWidget)
+			return;
+		
+		// 设置表格属性，与主表格一致
+		tableWidget->setAlternatingRowColors(true);
+		// 显示垂直表头（自动生成行号）
+		tableWidget->verticalHeader()->setVisible(true);
+		// 设置垂直表头宽度
+		tableWidget->verticalHeader()->setDefaultSectionSize(30);
+		tableWidget->setMinimumSize(600, 200);
+		tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+		for (size_t i = 0; i < tableWidget->columnCount(); i++)
+		{
+			tableWidget->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
+		}
+		// 设置中文字体
+		QFont font;
+		font.setFamily("SimHei"); // 黑体
+		tableWidget->horizontalHeader()->setFont(font);
+		tableWidget->verticalHeader()->setFont(font);
+		
+		// 设置列数和列名
+		tableWidget->setColumnCount(8);
+		QStringList headers = {
+			"liftingAcce1",
+			"liftingAcce2",
+			"liftingAcce3",
+			"liftingAcce4",
+			"rotatingAcce1",
+			"rotatingAcce2",
+			"rotatingAcce3",
+			"rotatingAcce4"
+		};
+		tableWidget->setHorizontalHeaderLabels(headers);
+	}
+
+	QTableWidget* QPmRecipeWidgetPrivate::getCurrentTableWidget()
+	{
+		int currentIndex = ui->tabWidget->currentIndex();
+		switch (currentIndex) {
+		case 0:
+			return pm1TableWidget;
+		case 1:
+			return pm2TableWidget;
+		case 2:
+			return pm3TableWidget;
+		case 3:
+			return pm4TableWidget;
+		default:
+			return nullptr;
+		}
+	}
+
+	QTableWidget* QPmRecipeWidgetPrivate::getIndexTableWidget(int index)
+	{
+		switch (index) {
+		case 0:
+			return pm1TableWidget;
+		case 1:
+			return pm2TableWidget;
+		case 2:
+			return pm3TableWidget;
+		case 3:
+			return pm4TableWidget;
+		default:
+			return nullptr;
+		}
+	}
+
+	QPmRecipeWidget::QPmRecipeWidget(const std::shared_ptr<IKernel>& kernel,QWidget* parent)
+		: QWidget(parent)
+		, d_ptr(new QPmRecipeWidgetPrivate(this, kernel))
+	{
+		Q_D(QPmRecipeWidget);
+		d->ui->setupUi(this);
+		
+		// 为每个tab页创建并配置QTableWidget
+		d->pm1TableWidget = new QTableWidget(d->ui->tab);
+		d->pm2TableWidget = new QTableWidget(d->ui->tab_2);
+		d->pm3TableWidget = new QTableWidget(d->ui->tab_3);
+		d->pm4TableWidget = new QTableWidget(d->ui->tab_4);
+		
+		// 初始化表格
+		d->initTableWidget(d->pm1TableWidget);
+		d->initTableWidget(d->pm2TableWidget);
+		d->initTableWidget(d->pm3TableWidget);
+		d->initTableWidget(d->pm4TableWidget);
+		
+		// 创建布局并将表格添加到tab页
+		QVBoxLayout* layout1 = new QVBoxLayout(d->ui->tab);
+		layout1->addWidget(d->pm1TableWidget);
+		
+		QVBoxLayout* layout2 = new QVBoxLayout(d->ui->tab_2);
+		layout2->addWidget(d->pm2TableWidget);
+		
+		QVBoxLayout* layout3 = new QVBoxLayout(d->ui->tab_3);
+		layout3->addWidget(d->pm3TableWidget);
+		
+		QVBoxLayout* layout4 = new QVBoxLayout(d->ui->tab_4);
+		layout4->addWidget(d->pm4TableWidget);
+		
+		// 连接按钮信号到槽函数
+		connect(d->ui->add_an_item_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onAddAnItem);
+		connect(d->ui->delete_the_selected_item_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onDeleteTheSelectedItem);
+		connect(d->ui->load_prams_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onLoadParameters);
+		connect(d->ui->clear_prams_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onClearParameters);
+		connect(d->ui->save_prams_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onSetParameters);
+	}
+
+	QPmRecipeWidget::~QPmRecipeWidget()
+	{
+	}
+	
+	// 获取pmMotionProcessData的公共方法实现
+	std::map<std::string, std::vector<PMMotionProcessParameters>>& QPmRecipeWidget::getPMMotionProcessData()
+	{
+		Q_D(QPmRecipeWidget);
+		return d->pmMotionProcessData;
+	}
+
+	// 增加一项
+	void QPmRecipeWidget::onAddAnItem()
+	{
+		Q_D(QPmRecipeWidget);
+		QTableWidget* currentTable = d->getCurrentTableWidget();
+		if (!currentTable)
+			return;
+		
+		int rowCount = currentTable->rowCount();
+		currentTable->insertRow(rowCount);
+		// 为新行添加默认值
+		for (int col = 0; col < 8; ++col) {
+
+			addTableWidgetItemDoubleSpinBox(rowCount, col, 0.0, 100.0, 1, 100);
+			
+		}
+	}
+
+	// 删除选中项
+	void QPmRecipeWidget::onDeleteTheSelectedItem()
+	{
+		Q_D(QPmRecipeWidget);
+		QTableWidget* currentTable = d->getCurrentTableWidget();
+		if (!currentTable)
+			return;
+		
+		int selectedRow = currentTable->currentRow();
+		if (selectedRow >= 0) {
+			currentTable->removeRow(selectedRow);
+		}
+	}
+
+	// 清空数据
+	void QPmRecipeWidget::onClearParameters()
+	{
+		Q_D(QPmRecipeWidget);
+		QTableWidget* currentTable = d->getCurrentTableWidget();
+		if (!currentTable)
+			return;
+		
+		currentTable->setRowCount(0);
+	}
+
+	void QPmRecipeWidget::onLoadParameters()
+	{
+		Q_D(QPmRecipeWidget);
+
+		// 打开JSON文件
+		QFile file("./config/pm_recipe_parameters.json");
+		if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+			QMessageBox::warning(nullptr, QStringLiteral("load failed"), QStringLiteral("Unable to open file for loading"));
+			return;
+		}
+
+		// 读取JSON数据
+		QByteArray jsonData = file.readAll();
+		file.close();
+
+		// 解析JSON文档
+		QJsonDocument doc = QJsonDocument::fromJson(jsonData);
+		if (doc.isNull() || !doc.isObject()) {
+			QMessageBox::warning(nullptr, QStringLiteral("load failed"), QStringLiteral("JSON file format error"));
+			return;
+		}
+
+		// 获取根对象
+		QJsonObject rootObj = doc.object();
+
+		// 清空之前的数据
+		d->pmMotionProcessData.clear();
+
+		// 遍历每个PM的数据
+		for (int i = 0; i < 4; i++) {
+			// 获取当前PM的名称
+			std::string pmName = "PM" + std::to_string(i + 1);
+			QString pmNameStr = QString::fromStdString(pmName);
+
+			// 检查当前PM是否存在于JSON文件中
+			if (!rootObj.contains(pmNameStr)) {
+				continue;
+			}
+
+			// 获取当前PM的工艺数据数组
+			QJsonValue pmValue = rootObj.value(pmNameStr);
+			if (!pmValue.isArray()) {
+				continue;
+			}
+
+			QJsonArray pmArray = pmValue.toArray();
+
+			// 创建当前PM的工艺数据vector
+			std::vector<PMMotionProcessParameters> pmProcessVector;
+			pmProcessVector.reserve(pmArray.size());
+
+			// 获取当前PM的表格
+			QTableWidget* currentTable = d->getIndexTableWidget(i);
+			if (!currentTable) {
+				continue;
+			}
+
+			// 清空当前表格
+			currentTable->setRowCount(0);
+
+			// 遍历每个工艺次数的数据
+			for (int j = 0; j < pmArray.count(); j++)
+			{
+				QJsonValue processValue = pmArray.at(j).toObject();
+
+				if (!processValue.isObject()) {
+					continue;
+				}
+
+				QJsonObject processObj = processValue.toObject();
+
+				// 创建一个新的工艺参数对象
+				PMMotionProcessParameters processData;
+
+				// 从JSON对象中读取工艺参数
+				processData.cycle = processObj["cycle"].toInt();
+				processData.lifting_axis_acce1 = processObj["lifting_axis_acce1"].toDouble();
+				processData.lifting_axis_acce2 = processObj["lifting_axis_acce2"].toDouble();
+				processData.lifting_axis_acce3 = processObj["lifting_axis_acce3"].toDouble();
+				processData.lifting_axis_acce4 = processObj["lifting_axis_acce4"].toDouble();
+				processData.rotating_axis_acce1 = processObj["rotating_axis_acce1"].toDouble();
+				processData.rotating_axis_acce2 = processObj["rotating_axis_acce2"].toDouble();
+				processData.rotating_axis_acce3 = processObj["rotating_axis_acce3"].toDouble();
+				processData.rotating_axis_acce4 = processObj["rotating_axis_acce4"].toDouble();
+
+				// 将工艺数据添加到vector中
+				pmProcessVector.push_back(processData);
+
+				// 将工艺数据添加到表格中
+				int row = currentTable->rowCount();
+				currentTable->insertRow(row);
+
+				// 使用addTableWidgetItemDoubleSpinBox方法创建和设置QDoubleSpinBox部件
+				addTableWidgetItemDoubleSpinBox(row, 0, 0.0, 100.0, 1, processData.lifting_axis_acce1);
+				addTableWidgetItemDoubleSpinBox(row, 1, 0.0, 100.0, 1, processData.lifting_axis_acce2);
+				addTableWidgetItemDoubleSpinBox(row, 2, 0.0, 100.0, 1, processData.lifting_axis_acce3);
+				addTableWidgetItemDoubleSpinBox(row, 3, 0.0, 100.0, 1, processData.lifting_axis_acce4);
+				addTableWidgetItemDoubleSpinBox(row, 4, 0.0, 100.0, 1, processData.rotating_axis_acce1);
+				addTableWidgetItemDoubleSpinBox(row, 5, 0.0, 100.0, 1, processData.rotating_axis_acce2);
+				addTableWidgetItemDoubleSpinBox(row, 6, 0.0, 100.0, 1, processData.rotating_axis_acce3);
+				addTableWidgetItemDoubleSpinBox(row, 7, 0.0, 100.0, 1, processData.rotating_axis_acce4);
+				
+				// 设置升降轴加速度1-4
+				//currentTable->setItem(row, 0, new QTableWidgetItem(QString::number(processData.lifting_axis_acce1)));
+				//currentTable->setItem(row, 1, new QTableWidgetItem(QString::number(processData.lifting_axis_acce2)));
+				//currentTable->setItem(row, 2, new QTableWidgetItem(QString::number(processData.lifting_axis_acce3)));
+				//currentTable->setItem(row, 3, new QTableWidgetItem(QString::number(processData.lifting_axis_acce4)));
+
+				//// 设置旋转轴加速度1-4
+				//currentTable->setItem(row, 4, new QTableWidgetItem(QString::number(processData.rotating_axis_acce1)));
+				//currentTable->setItem(row, 5, new QTableWidgetItem(QString::number(processData.rotating_axis_acce2)));
+				//currentTable->setItem(row, 6, new QTableWidgetItem(QString::number(processData.rotating_axis_acce3)));
+				//currentTable->setItem(row, 7, new QTableWidgetItem(QString::number(processData.rotating_axis_acce4)));
+			}
+
+			// 将当前PM的工艺数据vector添加到map中
+			d->pmMotionProcessData[pmName] = pmProcessVector;
+		}
+
+		QMessageBox::information(nullptr, QStringLiteral("load success"), QStringLiteral("PM process prams loaded success!"));
+	}
+
+	// 设置参数
+	void QPmRecipeWidget::onSetParameters()
+	{
+		Q_D(QPmRecipeWidget);
+
+		// 清空之前的数据
+		d->pmMotionProcessData.clear();
+
+		// 遍历所有4个PM tab页
+		for (int i = 0; i < 4; i++)
+		{
+			QTableWidget* currentTable = d->getIndexTableWidget(i);
+			if (!currentTable)
+				continue;
+
+			// 获取当前PM的名称
+			std::string pmName = "PM" + std::to_string(i + 1);
+			
+			// 获取当前表格的行数（工艺次数）
+			int rowCount = currentTable->rowCount();
+			
+			// 创建当前PM的工艺数据vector
+			std::vector<PMMotionProcessParameters> pmProcessVector;
+			pmProcessVector.reserve(rowCount);
+			
+			// 遍历每一行（每一次工艺）
+			for (int row = 0; row < rowCount; ++row) {
+				// 创建一个新的工艺参数对象
+				PMMotionProcessParameters processData;
+				
+				// 工艺次数（使用行号+1表示）
+				processData.cycle = row + 1;
+				
+				// 从当前行的各个列读取数据，使用QDoubleSpinBox部件
+				// 升降轴加速度1
+				QDoubleSpinBox* liftingAcce1Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 0));
+				if (liftingAcce1Dsb) {
+					processData.lifting_axis_acce1 = liftingAcce1Dsb->value();
+				}
+				
+				// 升降轴加速度2
+				QDoubleSpinBox* liftingAcce2Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 1));
+				if (liftingAcce2Dsb) {
+					processData.lifting_axis_acce2 = liftingAcce2Dsb->value();
+				}
+				
+				// 升降轴加速度3
+				QDoubleSpinBox* liftingAcce3Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 2));
+				if (liftingAcce3Dsb) {
+					processData.lifting_axis_acce3 = liftingAcce3Dsb->value();
+				}
+				
+				// 升降轴加速度4
+				QDoubleSpinBox* liftingAcce4Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 3));
+				if (liftingAcce4Dsb) {
+					processData.lifting_axis_acce4 = liftingAcce4Dsb->value();
+				}
+				
+				// 旋转轴加速度1
+				QDoubleSpinBox* rotatingAcce1Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 4));
+				if (rotatingAcce1Dsb) {
+					processData.rotating_axis_acce1 = rotatingAcce1Dsb->value();
+				}
+				
+				// 旋转轴加速度2
+				QDoubleSpinBox* rotatingAcce2Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 5));
+				if (rotatingAcce2Dsb) {
+					processData.rotating_axis_acce2 = rotatingAcce2Dsb->value();
+				}
+				
+				// 旋转轴加速度3
+				QDoubleSpinBox* rotatingAcce3Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 6));
+				if (rotatingAcce3Dsb) {
+					processData.rotating_axis_acce3 = rotatingAcce3Dsb->value();
+				}
+				
+				// 旋转轴加速度4
+				QDoubleSpinBox* rotatingAcce4Dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, 7));
+				if (rotatingAcce4Dsb) {
+					processData.rotating_axis_acce4 = rotatingAcce4Dsb->value();
+				}
+				
+				// 将当前工艺数据添加到vector中
+				pmProcessVector.push_back(processData);
+			}
+			
+			// 将当前PM的工艺数据vector添加到map中
+			d->pmMotionProcessData[pmName] = pmProcessVector;
+		}
+
+		// 将数据保存为JSON文件
+		QJsonObject rootObj;
+
+		// 遍历每个PM的数据
+		for (const auto& pmData : d->pmMotionProcessData) {
+			const std::string& pmName = pmData.first;
+			const std::vector<PMMotionProcessParameters>& processVector = pmData.second;
+
+			// 创建PM对应的JSON数组
+			QJsonArray pmArray;
+
+			// 遍历每个工艺次数的数据
+			for (const auto& processData : processVector) {
+				// 创建工艺参数对应的JSON对象
+				QJsonObject processObj;
+				processObj["cycle"] = processData.cycle;
+				processObj["lifting_axis_acce1"] = processData.lifting_axis_acce1;
+				processObj["lifting_axis_acce2"] = processData.lifting_axis_acce2;
+				processObj["lifting_axis_acce3"] = processData.lifting_axis_acce3;
+				processObj["lifting_axis_acce4"] = processData.lifting_axis_acce4;
+				processObj["rotating_axis_acce1"] = processData.rotating_axis_acce1;
+				processObj["rotating_axis_acce2"] = processData.rotating_axis_acce2;
+				processObj["rotating_axis_acce3"] = processData.rotating_axis_acce3;
+				processObj["rotating_axis_acce4"] = processData.rotating_axis_acce4;
+
+				// 将工艺参数对象添加到PM数组中
+				pmArray.append(processObj);
+			}
+
+			// 将PM数组添加到根对象中
+			rootObj[QString::fromStdString(pmName)] = pmArray;
+		}
+
+		// 创建JSON文档
+		QJsonDocument doc(rootObj);
+
+		// 保存到文件
+		QFile file("./config/pm_recipe_parameters.json");
+		if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+			file.write(doc.toJson());
+			file.close();
+			QMessageBox::information(nullptr, QStringLiteral("save success"), QStringLiteral("PM process parameters have been successfully saved to file"));
+		} else {
+			QMessageBox::warning(nullptr, QStringLiteral("save failed"), QStringLiteral("Unable to open file for saving."));
+		}
+	}
+
+	void QPmRecipeWidget::addTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value)
+	{
+		Q_D(QPmRecipeWidget);
+		QTableWidget* currentTable = d->getCurrentTableWidget();
+		if (!currentTable)
+			return;
+		QDoubleSpinBox* dsb = new QDoubleSpinBox();
+		dsb->setMaximum(max_value);
+		dsb->setMinimum(min_value);
+		dsb->setDecimals(decimals_value);
+		dsb->setSingleStep(single_step);
+		dsb->setValue(value);
+		currentTable->setCellWidget(row, column, dsb);
+	}
+
+
+
+
+}

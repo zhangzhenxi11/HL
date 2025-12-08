@@ -116,6 +116,26 @@ namespace FC {
 		int lifetime = 0;			//寿命
 
 	};
+	/*
+	* @brief     运动过程参数值
+	* @struct    PMMotionProcessParameters
+	
+	*/
+	struct PMMotionProcessParameters
+	{
+		int cycle = 0;
+		float lifting_axis_acce1 = 0.0F;
+		float lifting_axis_acce2 = 0.0F;
+		float lifting_axis_acce3 = 0.0F;
+		float lifting_axis_acce4 = 0.0F;
+		float rotating_axis_acce1 = 0.0F;
+		float rotating_axis_acce2 = 0.0F;
+		float rotating_axis_acce3 = 0.0F;
+		float rotating_axis_acce4 = 0.0F;
+	};
+
+
+
 
 	/**
 	* @brief    PM Cavity Axis Setting parameters

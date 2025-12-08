@@ -82,13 +82,12 @@ namespace  FC {
 
 	private:
 		void startVacuumAction();
-		void startVacuumMoniterAction();
-		void startRobotAction();
-		void startPMAction();
-		void startLoadLock1Action();
-		void startLoadLock2Action();
-		void startUpdateStatusAction();
-		void startEFEMAction();
+		//void startRobotAction();
+		//void startPMAction();
+		//void startLoadLock1Action();
+		//void startLoadLock2Action();
+		//void startUpdateStatusAction();
+		//void startEFEMAction();
 		void resetAction();
 		void onProcess();
 

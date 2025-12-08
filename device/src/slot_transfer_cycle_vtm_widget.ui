@@ -252,7 +252,7 @@
           </column>
           <column>
            <property name="text">
-            <string>电机旋转次数</string>
+            <string>工艺次数</string>
            </property>
            <property name="font">
             <font>

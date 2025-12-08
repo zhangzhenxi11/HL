@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
 * @file            slot_transfer_cycle_test_widget.h
 * @brief           slot transfer cycle test widget
 * @author			xielonghua
@@ -106,6 +106,7 @@
 
 #include "UnifiedWaferTask.h"
 #include "TaskManager.h"
+#include "CycleStateSnapshot.h"  // 2025-10-28: 状态快照保存与恢复
 
 #include "ThreadSafeStateMachine.h"
 
@@ -113,60 +114,13 @@
 #pragma execution_character_set("utf-8")
 #endif
 
-#define CYCLE_SIM_MODE 0
+#define CYCLE_SIM_MODE1
+
+#define DEBUG_LOAD_SNAPSHOT1
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
 
 namespace FC{
-
-	//LK 内部传输任务 (机械手搬运)
-	struct LoadLockTransferWafer{
-		int slot = 0;
-		std::string transfer = "lk1_to_lk2";
-		bool is_finish = false;
-		int selected_arm = 0;
-	};
-	//LP -> LK 传输任务 (EFEM 搬运)
-	struct LPTransferWafer{
-		int slot_lp = 0;
-		int slot_lk = 0;
-		std::string transfer = "lk1_to_lk2";
-		std::string source_lp = "ELP1";
-		bool is_finish_putlk = false; //是否完成放入Load Lock
-		int selected_arm = 0;
-	};
-	//机械手跨腔传输任务 (TM 机械手)
-	struct RobotTransferWafer{
-		std::string source_loadlock = "";
-		std::string target_loadlock = "";
-		std::string source_lp = "ELP1";
-		int slot_lp = 0;
-		int slot_lk = 0;
-		std::string transfer = "lk1_to_lk2";
-		int selected_arm = 0;
-		bool pm1_is_enable = true;
-		bool pm2_is_enable = true;
-		bool pm3_is_enable = true;
-		bool pm4_is_enable = true;//add
-		bool is_finish = false;
-	};
-
-	// 定义传输任务结构体
-	struct TransferTask {
-		enum PortType { LP1, LP2 };
-		enum LockType { LLA, LLB };
-
-		PortType sourcePort;
-		LockType targetLock;
-		int sourceSlot;   // LoadPort中的槽位
-		int targetSlot;   // LoadLock中的槽位
-		int arm;          // 机械臂选择 (0=A, 1=B)
-		bool pm1Enabled;  // 处理模块1使能
-		bool pm2Enabled;  // 处理模块2使能
-		bool pm3Enabled;  // 处理模块3使能
-		bool pm4Enabled;  // 处理模块4使能
-	};
-
 	UnifiedWaferTask UnifiedTask; //统一结构体
 
 	/**
@@ -222,13 +176,7 @@ namespace FC{
 		Q_DECLARE_PUBLIC(QSlotTransferCycleVTMWidget)
 		QSlotTransferCycleVTMWidgetPrivate(QSlotTransferCycleVTMWidget*p);
 	public:
-		void startLoadLock1Action(); //pass
-		void startLoadLock2Action(); //pass
-		void startEFEMAction();      //pass
-		void startPMAction();        
-		void startUpdateStatusAction(); 
-		void startRobotAction();    //pass
-		void startVacuumAction();   //pass
+		void startVacuumAction();
 		void resetAction();
 		void setRunning(const bool value);
 		void setLoadLock1PutCassetteFinished();
@@ -302,7 +250,8 @@ namespace FC{
 		bool llB_condition = false;//true 满足互锁 ，  false不满足没锁
 
 
-		//情景：当一个LL的料下到位，另一个没下料时，为了不让另一个LL继续发送上料请求的互锁条件（此时也可能也没发送下料请求）
+		//情景：当一个LL的料下到位，另一个没下料时，为了不让另一个LL继续发送上料请求的互锁条件
+		// （此时也可能也没发送下料请求）
 		//例如：LLA有料下到位，要等LLB的下料到位，才能上料（LLB上过料是前提）
 		bool isLoadingInterlock(const std::string& LLName);
 
@@ -319,10 +268,16 @@ namespace FC{
 		std::chrono::steady_clock::time_point LLB_start_time; //检测真空
 
 		std::mutex updateLPData_mtx;
+		
+		typedef enum FilmTransferMode
+		{
+			Formula_Go_Up_And_Down = 0,
+			Formula_Double_Up_And_Down =1
+		};
 
-		std::string  FormulaName;//配方名
+		FilmTransferMode currentTransferMode = FilmTransferMode::Formula_Go_Up_And_Down; //传片模式
+		std::string  filmTransferMode;//模式名
 
-		/************************zzx  add*********************************/
 		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr = nullptr;
 		std::shared_ptr<EFEMLPSubsystem> elp1 = nullptr;
 		std::shared_ptr<EFEMLPSubsystem> elp2 = nullptr;
@@ -331,8 +286,6 @@ namespace FC{
 
 		std::shared_ptr<EFEMLPSubsystem> elp = nullptr;
 		std::shared_ptr<FortrendLoadLockSubsystem> lk = nullptr;
-
-		/*std::shared_ptr<FortrendSTATIONMODESubsystem> lk1_down = nullptr;*/
 
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = nullptr;
 		std::shared_ptr<EFEMAlignerSubsystem> ealigner = nullptr;
@@ -393,7 +346,6 @@ namespace FC{
 
 		int lp2TaskSize;
 
-		/************************zzx  add*********************************/
 		//2025-7-16 新增
 		std::vector<UnifiedWaferTask> tasks; //总任务队列
 
@@ -474,98 +426,12 @@ namespace FC{
 		std::vector<UnifiedWaferTask> pm4ProgressingTasks;
 
 
-		/******************************************1.LP->LK 任务池（按 LK 分类）******************************************************/
-		// 1.LP->LK 任务池（按 LK 分类）
-		std::vector<LPTransferWafer> sequence_tolk1_wafer;//cycle配置数组 上料时给sequence_lp1_get_wafer赋值的
-		std::vector<LPTransferWafer> sequence_tolk2_wafer;//cycle配置数组 上料时给sequence_lp2_get_wafer赋值的
-
-		std::vector<LPTransferWafer> sequence_tolk1_wafer_copy;//cycle配置数组
-		std::vector<LPTransferWafer> sequence_tolk2_wafer_copy;//cycle配置数组
-
-		std::vector<LPTransferWafer> sequence_lp1_transfer_wafer;//cycle配置 lp1待工艺总数组
-		std::vector<LPTransferWafer> sequence_lp1_put_wafer;//工艺完后 LP1待放料数组
-		std::vector<LPTransferWafer> sequence_lp1_get_wafer;//工艺完前 LP1待上料数组
-		
-		std::vector<LPTransferWafer> sequence_lp2_transfer_wafer; //cycle配置 lp2待工艺总数组
-		std::vector<LPTransferWafer> sequence_lp2_put_wafer;//工艺完后 LP2待放料数组
-		std::vector<LPTransferWafer> sequence_lp2_get_wafer;//工艺完前 LP2待上料数组
-
-		//LLB的复制任务队列  做完一次循环后重新添加到sequence_loadlock2_transfer_wafer数组
-		std::vector<LPTransferWafer> sequence_lp2_transfer_wafer_copy;
-
-		//LLA的复制任务队列，做完一次循环后重新添加到sequence_loadlock1_transfer_wafer数组
-		std::vector<LPTransferWafer> sequence_lp1_transfer_wafer_copy;
-
-
-		/****************************************2. 机械手任务池********************************************************/
-
-		//2. 机械手任务池
-		/*
-		机械手任务队列里面的LP1部分。LLA全部做完工艺 需再循环时 重新添加到sequence_robot_transfer_wafer的末尾
-		*/
-		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer_lp1;
-
-		/*
-		机械手任务队列里面的LP2部分，每一次读取cycle配置时添加
-		*/
-		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer_lp2;
-
-		/*
-		cycle上面配置的所有LLA和LLB晶圆集合,做完工艺放回对应LL腔后从集合删除
-		*/
-		std::vector<RobotTransferWafer> sequence_robot_transfer_wafer;  // 总任务队列
-
-		/*
-		机械手放PM上的晶圆数组,从PM上取走后删除
-		*/
-		std::vector<RobotTransferWafer> sequence_robot_get_wafer;
-
-
-		/*****************************************互斥锁*******************************************************/
-
-		/*
-		sequence_robot_transfer_wafer数组的互斥锁，数组在多个线程里面操作的情况下必须添加
-		*/
-		std::mutex vec_mutex_robot;
-
-		/*
-		sequence_loadlock1_transfer_wafer数组的互斥锁，数组在多个线程里面操作的情况下必须添加
-		*/
-		std::mutex vec_mutex_lla;
-
-		/*
-		sequence_loadlock2_transfer_wafer数组的互斥锁，数组在多个线程里面操作的情况下必须添加
-		*/
-		std::mutex vec_mutex_llb;
-
-		/**************************************3.LK 内部任务池**********************************************************/
-
-		/*
-		  Cycle配置LLA腔上待做工艺的晶圆数组，从LLA取料完成后删除
-		*/
-		std::vector<LoadLockTransferWafer> sequence_loadlock1_transfer_wafer;
-		/*
-		 从LLA取走后的晶圆数组。放回LLA后从数组删除
-		*/
-		std::vector<LoadLockTransferWafer> sequence_loadlock1_put_wafer;
-		/*
-		Cycle配置LLB腔上待做工艺的晶圆数组，从LLB腔取走后删除
-		*/
-		std::vector<LoadLockTransferWafer> sequence_loadlock2_transfer_wafer;
-		/*
-		从LLB取走后的晶圆数组。放回LLB后从数组删除
-		*/
-		std::vector<LoadLockTransferWafer> sequence_loadlock2_put_wafer;
-
-		/************************************************************************************************/
-
-
 		PMCavityProcessParameters pm_process_param[3];
 		std::string armWferTarget = "";
 		std::string target_loadlock = "";
 
-		bool cycleFinished_lla = false;
-		bool cycleFinished_llb = false;
+		bool cycleFinished_lla = false; //lp1完成所有循环
+		bool cycleFinished_llb = false; //lp2完成所有循环
 
 		bool robot_step_once_finished = true;
 		bool vacumm_step_once_finished = true;
@@ -704,7 +570,7 @@ namespace FC{
 
 		bool is_lp1_cycle = false;//lp1循环
 
-		bool current_lp_cycle = false; //lp1
+		bool current_lp_cycle = false; 
 
 		bool hasUPS = false;
 
@@ -730,9 +596,19 @@ namespace FC{
 
 	private:
 		void logFailed(const std::string station_name, const std::string log);
+
 		void logFailedNotNormal(const std::string station_name, const std::string process_name, const int step);
 		
 		void logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name, const int step);
+		
+		// 2025-10-28: 状态快照保存与恢复功能
+		void saveCurrentStateSnapshot(const std::string& errorMsg, const std::string& errorLocation);
+
+		bool loadStateSnapshot(const std::string& filePath);
+
+		CycleStateSnapshot::Snapshot captureCurrentState(const std::string& errorMsg, const std::string& errorLocation);
+
+		void restoreStateFromSnapshot(const CycleStateSnapshot::Snapshot& snapshot);
 	};
 
 	QSlotTransferCycleVTMWidgetPrivate::QSlotTransferCycleVTMWidgetPrivate(QSlotTransferCycleVTMWidget*p)
@@ -1075,7 +951,8 @@ namespace FC{
 					auto station_cass_lk = cassManager->getCassette(lk.get());
 					std::vector<Cassette::Mapping> lkmaps;
 					int count = 0;
-					if (FormulaName == "Formula_Go_Up_And_Down")
+
+					if (currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down)
 					{
 						lkmaps = station_cass_lk->getAllMapping();
 						for (int i = 0; i < lkmaps.size(); i++)
@@ -1083,19 +960,22 @@ namespace FC{
 							if (lkmaps[i] == Cassette::Empty) //空片的槽号
 							{
 								count = 1; 
-								logWarn(lk->getName().c_str(),"当前配方名是：%s", FormulaName.c_str());
+								logWarn(lk->getName().c_str(),"当前传片模式是:Go_Up_And_Down");
 								break;
 							}
 						}	
 					}
-					else if (FormulaName == "Formula_Double_Up_And_Down")
+					else if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
 					{
-						logWarn(lk->getName().c_str(), "当前配方名是：%s", FormulaName.c_str());
+						logWarn(lk->getName().c_str(), "当前传片模式是:Double_Up_And_Down");
 						lkmaps = station_cass_lk->getAllMapping();
 						count = lkmaps.size(); //lp中有多片下，按loadlock需要的片数，去上料
 					}
+					else
+					{
+						logFailed(lk->getName().c_str(),"当前是未知的传片模式!");
+					}
 
-					
 					//要区分LLA,LLB 分别给LLA,LLB 分配task,只改变选中的料
 					//getEfemUnkownStatusLLATasks
 
@@ -1550,37 +1430,59 @@ namespace FC{
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (!ealigner->getPresentWafer())
+
+						auto maptCmd = ealigner->createGetMapCommand();
+						ealigner->startCommand(maptCmd);
+						maptCmd->wait();
+
+						if (!maptCmd->hasError())
 						{
-							auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);//A手放
-							ewtr->startCommand(cmd2);
-							cmd2->wait();
-							if (cmd2->hasError())
+							if (!ealigner->getPresentWafer())
 							{
-								logFailedExcuteCommandHasError(ewtr->getName(), "A手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								auto cmd2 = ewtr->createPutCommand(ealigner, 1, 1);//A手放
+								ewtr->startCommand(cmd2);
+								cmd2->wait();
+								if (cmd2->hasError())
+								{
+									logFailedExcuteCommandHasError(ewtr->getName(), "A手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								}
+								else
+								{
+									efem_auto_step = 1541;
+								}
 							}
 							else
 							{
-								efem_auto_step = 1541; 
+								Sleep(2000);
 							}
 						}
 						else
 						{
-							Sleep(2000);
+							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 						}
 					}
 					else
 					{
-						logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
+						logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 					}
 				}
 				break;
 				case 1541:
 				{
 					//寻边
+					if (elp == nullptr) {
+						logError("EFEM", "step:%d, elp指针为空，重新获取失败", efem_auto_step);
+						break;
+					}
+
+					// 确保ealigner指针不为空
+					if (ealigner == nullptr) {
+						ealigner = kernel->getKernelModule<EFEMAlignerSubsystem>("EALIGNER");
+					}
+
 					logInform(elp->getName().c_str(), "晶圆寻边,step:%d", efem_auto_step);
 
-					if (ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					if (ealigner && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ealigner->getPresentWafer())
 						{
@@ -1597,8 +1499,14 @@ namespace FC{
 							}
 						}
 						else {
+							
 							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 						}
+		
+					}
+					else
+					{
+						logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 					}
 				}
 				break;
@@ -1634,23 +1542,34 @@ namespace FC{
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL && ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (!ealigner->getPresentWafer())
+						auto maptCmd = ealigner->createGetMapCommand();
+						ealigner->startCommand(maptCmd);
+						maptCmd->wait();
+						if (!maptCmd->hasError())
 						{
-							auto cmd2 = ewtr->createPutCommand(ealigner, 2, 1);//B手放
-							ewtr->startCommand(cmd2);
-							cmd2->wait();
-							if (cmd2->hasError())
+
+							if (!ealigner->getPresentWafer())
 							{
-								logFailedExcuteCommandHasError(ewtr->getName(), "B手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								auto cmd2 = ewtr->createPutCommand(ealigner, 2, 1);//B手放
+								ewtr->startCommand(cmd2);
+								cmd2->wait();
+								if (cmd2->hasError())
+								{
+									logFailedExcuteCommandHasError(ewtr->getName(), "B手放晶圆到寻边器", efem_process_name, efem_auto_step);
+								}
+								else
+								{
+									efem_auto_step = 1545;
+								}
 							}
 							else
 							{
-								efem_auto_step = 1545;
+								Sleep(2000);
 							}
 						}
 						else
 						{
-							Sleep(2000);
+
 						}
 					}
 					else
@@ -1665,22 +1584,32 @@ namespace FC{
 
 					if (ealigner->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						if (ealigner->getPresentWafer())
+						auto maptCmd = ealigner->createGetMapCommand();
+						ealigner->startCommand(maptCmd);
+						maptCmd->wait();
+						if (!maptCmd->hasError())
 						{
-							auto alignerCmd = ealigner->createAlignCommand();
-							ealigner->startCommand(alignerCmd);
-							alignerCmd->wait();
-							if (alignerCmd->hasError())
+							if (ealigner->getPresentWafer())
 							{
-								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+								auto alignerCmd = ealigner->createAlignCommand();
+								ealigner->startCommand(alignerCmd);
+								alignerCmd->wait();
+								if (alignerCmd->hasError())
+								{
+									logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
+								}
+								else {
+									Sleep(2000);
+									efem_auto_step = 1546;
+								}
 							}
 							else {
-								Sleep(2000);
-								efem_auto_step = 1546;
+								logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
 							}
 						}
-						else {
-							logFailedNotNormal(ealigner->getName(), efem_process_name, efem_auto_step);
+						else
+						{
+
 						}
 					}
 				}
@@ -2150,7 +2079,7 @@ namespace FC{
 									{
 										logWarn(ewtr->getName().c_str(), "cycle end efemReturnCompletedTasks=%d", efemReturnCompletedTasks.size());
 
-										current_lp_cycle= is_lp1_cycle = true;
+										current_lp_cycle = is_lp1_cycle = true;
 										logWarn(ewtr->getName().c_str(), "is_lp1_cycle true");
 									}
 									else if (efemReturnCompletedTasks.at(0).source == UnifiedWaferTask::Location::LP2)
@@ -6282,13 +6211,23 @@ namespace FC{
 				{
 				case 10:
 				{
+					UpdateEfemSubTransferDatas();
+					Sleep(500);
+					
 					if (lp1_cycle_one_time_finished && !cycleFinished_lla)
 					{//Lp1的一次Cycle已做完
-						update_auto_step = 1030;
+						//2025-11-17: 多加一条检测条件：
+						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0))
+						{
+							update_auto_step = 1030;
+						}
 					}
 					else if (lp2_cycle_one_time_finished && !cycleFinished_llb)
 					{//Lp2的一次Cycle已做完
-						update_auto_step = 1040;
+						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0))
+						{
+							update_auto_step = 1040;
+						}
 					}
 					else {
 						Sleep(1000);
@@ -7124,6 +7063,7 @@ namespace FC{
 				update_auto_step = 10;
 				reset_loop = false;
 				reset_finish = true;
+				current_lp_cycle = false;  //2025-11-17  重置
 				rest_step = -1;
 				
 			}
@@ -7155,8 +7095,7 @@ namespace FC{
 
 			//reset_finish = false;
 
-			if(CYCLE_SIM_MODE == 0)
-			{
+#ifndef CYCLE_SIM_MODE
 				//刷新wafer数据回原始的状态
 				int taskSize = taskManager.getAllTasksSize();
 				auto tasks = taskManager.getAllTasks();
@@ -7168,7 +7107,7 @@ namespace FC{
 						taskManager.updateTaskStatus(tasks[i].taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
 					}
 				}
-			}
+#endif
 
 		}
 		onUpdateControlEnabled("reset_pbt", true);
@@ -7317,392 +7256,6 @@ namespace FC{
 		}
 	}
 
-	void QSlotTransferCycleVTMWidgetPrivate::startEFEMAction(){
-		std::shared_ptr<EFEMWaferRobotSubsystem> ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
-		std::shared_ptr<EFEMLPSubsystem> elp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
-		std::shared_ptr<EFEMLPSubsystem> elp2 = kernel->getKernelModule<EFEMLPSubsystem>("ELP2");
-		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-		
-
-		}
-
-	void QSlotTransferCycleVTMWidgetPrivate::startUpdateStatusAction(){
-		//std::shared_ptr<FortrendTMCavitySubsystem> tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
-		//std::shared_ptr<FortrendPumpSubsystem> pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
-		//std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-		//std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-
-		while (running)
-		{
-			update_step_once_finished = false;
-			switch (update_auto_step)
-			{
-			case 10:
-			{
-				if (lp1_cycle_one_time_finished && !cycleFinished_lla){//LLA的一次Cycle已做完
-					update_auto_step = 1030;
-				}
-				else if (lp2_cycle_one_time_finished &&! cycleFinished_llb){//LLB的一次Cycle已做完
-					update_auto_step = 1040;
-				}
-				/*else if (sequence_robot_transfer_wafer.size() == 0 && sequence_robot_get_wafer.size() == 0){
-				update_auto_step = 1050;
-				}*/
-				else{
-					Sleep(1000);
-				}
-			}
-			break;
-			case 1030:
-			{
-				finished_time_lla ++;
-
-				if (is_lp1_cycle)
-				{
-					is_lp1_cycle = false;
-				}
-
-				if (finished_time_lla >= cycle_times_lla)
-				{
-					onUpdateProcessControlEnabled(true);//
-					//cycle 完成
-					logInform("Cycle", Poco::format("LP1 Cycle次数%d已完成", cycle_times_lla).c_str());
-					
-					/*running = false;*/
-					finished_time_lla = 0;
-					//loadlock1_auto_step = 10;
-
-					cycleFinished_lla = true;
-
-					sequence_lp1_transfer_wafer_copy.clear();
-
-					sequence_robot_transfer_wafer_lp1.clear();
-
-				}
-				else
-				{
-					logInform("Cycle", "LP1第%d次Cycle完成 copysize=%d size=%d robot_lla=%d robot=%d", 
-						finished_time_lla, 
-						sequence_lp1_transfer_wafer_copy.size(),
-						sequence_lp1_transfer_wafer.size(),
-						sequence_robot_transfer_wafer_lp1.size(),
-						sequence_robot_transfer_wafer.size());
-
-					// 将sequence_robot_transfer_wafer_lp1中的所有元素添加到sequence_robot_transfer_wafer的末尾
-
-					if (sequence_robot_transfer_wafer_lp1.size()>0)
-					{
-						std::lock_guard<std::mutex> lock1(vec_mutex_robot);
-						sequence_robot_transfer_wafer.insert(sequence_robot_transfer_wafer.end(), sequence_robot_transfer_wafer_lp1.begin(), sequence_robot_transfer_wafer_lp1.end());
-					}
-
-					if (sequence_lp1_transfer_wafer_copy.size() > 0){
-						std::lock_guard<std::mutex> lock(vec_mutex_lla);
-						std::copy(sequence_lp1_transfer_wafer_copy.begin(), sequence_lp1_transfer_wafer_copy.end(), std::back_inserter(sequence_lp1_transfer_wafer));
-					}
-
-					if (sequence_tolk1_wafer_copy.size()>0 && sequence_tolk1_wafer.size()==0)
-					{
-						std::copy(sequence_tolk1_wafer_copy.begin(), sequence_tolk1_wafer_copy.end(), std::back_inserter(sequence_tolk1_wafer));
-					}
-
-					if (sequence_tolk2_wafer_copy.size()>0 && sequence_tolk2_wafer.size() == 0)
-					{
-						std::copy(sequence_tolk2_wafer_copy.begin(), sequence_tolk2_wafer_copy.end(), std::back_inserter(sequence_tolk2_wafer));
-					}
-
-				}
-				onUpdateCycleInfo();
-				lp1_cycle_one_time_finished = false;
-				update_auto_step = 10;
-			}
-			break;
-			case 1040:
-			{
-				finished_time_llb++;
-				if (is_lp2_cycle){
-					is_lp2_cycle = false;
-				}
-				if (finished_time_llb >= cycle_times_llb)
-				{
-					//onUpdateProcessControlEnabled(true);
-					//cycle 完成,删除集合做标识位
-					logInform("Cycle", Poco::format("LP2 Cycle次数%d已完成", cycle_times_llb).c_str());
-					finished_time_llb = 0;
-					//loadlock2_auto_step = 10;
-					cycleFinished_llb = true;
-					sequence_lp2_transfer_wafer_copy.clear();
-					sequence_robot_transfer_wafer_lp2.clear();
-
-				}
-				else
-				{
-					logInform("Cycle", "LP2第%d次Cycle完成 copysize=%d size=%d robot_llb=%d robot=%d", finished_time_llb, sequence_lp2_transfer_wafer_copy.size(), sequence_lp2_transfer_wafer.size(), sequence_robot_transfer_wafer_lp2.size(), sequence_robot_transfer_wafer.size());
-					//setTransferSequence(); 只初始化时使用，单独更新cycle流程
-					
-					// 将sequence_robot_transfer_wafer_lp2中的所有元素添加到sequence_robot_transfer_wafer的末尾
-
-					if (sequence_robot_transfer_wafer_lp2.size()>0)
-					{
-						std::lock_guard<std::mutex> lock1(vec_mutex_robot);
-						sequence_robot_transfer_wafer.insert(sequence_robot_transfer_wafer.end(), sequence_robot_transfer_wafer_lp2.begin(), sequence_robot_transfer_wafer_lp2.end());
-					}
-
-					if (sequence_lp2_transfer_wafer_copy.size() > 0)
-					{
-						std::lock_guard<std::mutex> lock(vec_mutex_llb);
-						std::copy(sequence_lp2_transfer_wafer_copy.begin(), sequence_lp2_transfer_wafer_copy.end(), std::back_inserter(sequence_lp2_transfer_wafer));
-					}
-
-					if (sequence_tolk1_wafer_copy.size()>0 && sequence_tolk1_wafer.size() == 0)
-					{
-						std::copy(sequence_tolk1_wafer_copy.begin(), sequence_tolk1_wafer_copy.end(), std::back_inserter(sequence_tolk1_wafer));
-					}
-					if (sequence_tolk2_wafer_copy.size()>0 && sequence_tolk2_wafer.size() == 0)
-					{
-						std::copy(sequence_tolk2_wafer_copy.begin(), sequence_tolk2_wafer_copy.end(), std::back_inserter(sequence_tolk2_wafer));
-					}
-
-				}
-				onUpdateCycleInfo();
-				lp2_cycle_one_time_finished = false;
-				update_auto_step = 10;
-			}
-			break;
-			/*case 1050:
-			{
-			logInform("Cycle", "WTR Cycle已完成");
-			robot_auto_step = 10;
-			onUpdateProcessControlEnabled(true);
-			running = false;
-			}
-			break;*/
-			default:
-				break;
-			}
-			update_step_once_finished = true;
-			Sleep(10);
-		}
-	}
-
-	void QSlotTransferCycleVTMWidgetPrivate::startRobotAction(){
-
-		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
-		std::shared_ptr<FortrendTMCavitySubsystem> tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
-		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
-		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-		//std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
-
-		std::shared_ptr<FortrendAlignerSubsystem> aligner = kernel->getKernelModule<FortrendAlignerSubsystem>("Aligner");
-
-		//check modules
-		auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
-
-
-	}
-
-	void QSlotTransferCycleVTMWidgetPrivate::startLoadLock1Action(){
-		Q_Q(QSlotTransferCycleVTMWidget);
-		std::shared_ptr<FortrendLoadLockSubsystem> lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-	}
-
-	void QSlotTransferCycleVTMWidgetPrivate::startLoadLock2Action(){
-
-		std::shared_ptr<FortrendLoadLockSubsystem> lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-
-	}
-
-	void QSlotTransferCycleVTMWidgetPrivate::startPMAction(){
-		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-		while (running)
-		{
-			pm_step_once_finished = false;
-
-			switch (pm_auto_step)
-			{
-			case 10:
-			{
-				if (!pm2_allow_get_put_wafer){
-					pm_auto_step = 100;
-				}
-				else{
-					Sleep(200);
-				}
-				
-				if (pm2_allow_goto_craft){
-					pm_auto_step = 2000;
-				}
-				else{
-					Sleep(200);
-				}
-			}
-			break;
-			case 100:
-			{
-				if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					auto cmd = pm2->createToGetStationCommand();
-					pm2->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						logFailedExcuteCommandHasError(pm2->getName(), "去上下料位命令执行失败", pm_process_name, pm_auto_step);
-					}
-					else
-					{
-						pm2_allow_get_put_wafer = true;
-						pm_auto_step = 200;
-					}
-
-				}
-				else
-				{
-					logFailedNotNormal(pm2->getName(), pm_process_name, pm_auto_step);
-				}
-			}
-			case 200:
-			{
-				if (!pm2_allow_get_put_wafer){
-					pm_auto_step = 10;
-				}
-				else{
-					Sleep(200);
-				}
-			}
-
-			break;
-			case 2000:
-			{
-				if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					//auto cmd = pm2->createToPutStationCommand(2);
-					//pm2->startCommand(cmd);
-					//cmd->wait();
-					//if (cmd->hasError())
-					//{
-					//	logFailedExcuteCommandHasError(pm2->getName(), "去工艺位命令执行失败", pm_process_name, pm_auto_step);
-					//}
-					//else
-					//{
-					//	pm_auto_step = 2100;
-					//}
-
-				}
-				else
-				{
-					logFailedNotNormal(pm2->getName(), pm_process_name, pm_auto_step);
-				}
-			}
-			break;
-			case 2100:
-			{
-				auto cassManager = pm2->getKernel()->getKernelModule<FortrendCassetteManager>();
-				auto station_cass = cassManager->getCassette(pm2.get());
-				int count = station_cass->getPodSize();
-				bool finish = true;
-				//count = count == 0 ? 1 : count;
-				logInform(pm2->getName().c_str(), "开始工艺次数 %d", count);
-				for (int i = 0; i < count; i++)
-				{
-					if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-					{
-#if 0
-						auto cmd = pm2->createToPutStationCommand(2);//去工艺位2
-						pm2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							finish = false;
-							logFailedExcuteCommandHasError(pm2->getName(), "去工艺位命令执行失败", pm_process_name, pm_auto_step);
-							logError(pm2->getName().c_str(), "第%d次工艺失败", i);
-							pm_auto_step = 2110;
-							break;
-						}
-						else
-						{
-							auto cmd = pm2->createToPutStationCommand();//去工艺位1
-							pm2->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
-							{
-								finish = false;
-								logFailedExcuteCommandHasError(pm2->getName(), "去上下料位命令执行失败", pm_process_name, pm_auto_step);
-								logError(pm2->getName().c_str(), "第%d次工艺失败", i);
-								pm_auto_step = 2110;
-								break;
-							}
-						}
-#endif
-					}
-					else
-					{
-						finish = false;
-						logFailedNotNormal(pm2->getName(), pm_process_name, pm_auto_step);
-						pm_auto_step = 2110;
-						break;
-					}
-				}
-				if (finish){
-					pm_auto_step = 2200;
-				}
-				else{
-					pm_auto_step = 2110;
-				}
-			}
-			break;
-
-			case 2200:
-			{
-				if (pm2->getState() == IKernelSubSystem::State::SUB_NORMAL)
-				{
-					auto cmd = pm2->createToGetStationCommand();
-					pm2->startCommand(cmd);
-					cmd->wait();
-					if (cmd->hasError())
-					{
-						logFailedExcuteCommandHasError(pm2->getName(), "去上下料位命令执行失败", pm_process_name, pm_auto_step);
-					}
-					else
-					{
-						pm2_allow_get_put_wafer = true;
-						pm2_allow_goto_craft = false;
-						pm_auto_step = 10;
-					}
-
-				}
-				else
-				{
-					logFailedNotNormal(pm2->getName(), pm_process_name, pm_auto_step);
-				}
-			}
-			break;
-			case 2110:
-			{
-				if (PMMessagecount > 0){
-					//报错后弹窗人工确认
-					if (QMessageBox::Yes == QMessageBox::question(q_ptr, "警告", "工艺位移动指令错误，请人工检查！点击确认将会尝试重新开始工艺", QMessageBox::Yes | QMessageBox::No)){
-						pm_auto_step = 2100;
-						PMMessagecount = 2;
-					}
-					else{
-						PMMessagecount--;
-					}
-				}
-				Sleep(5000);
-			}
-			break;
-			
-			default:
-				break;
-			}
-
-			pm_step_once_finished = true;
-			Sleep(10);
-		}
-	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::setLoadLock1PutCassetteFinished()
 	{
@@ -7727,297 +7280,6 @@ namespace FC{
 		logInform("Cycle", Poco::format("%s = %d", pm4_process_name, pm4_auto_step.load()).c_str());
 		logInform("Cycle", Poco::format("%s = %d", update_process_name, update_auto_step).c_str());
 	}
-
-	bool QSlotTransferCycleVTMWidgetPrivate::setTransferSequence(){
-		sequence_robot_transfer_wafer.clear();
-		sequence_loadlock1_transfer_wafer.clear();
-		sequence_loadlock2_transfer_wafer.clear();
-		sequence_loadlock1_put_wafer.clear();
-		sequence_loadlock2_put_wafer.clear();
-		sequence_lp1_transfer_wafer.clear();
-		sequence_lp2_transfer_wafer.clear();
-		sequence_lp1_transfer_wafer_copy.clear();
-		sequence_lp2_transfer_wafer_copy.clear();
-		sequence_tolk1_wafer.clear();
-		sequence_tolk2_wafer.clear();
-		sequence_tolk1_wafer_copy.clear();
-		sequence_tolk2_wafer_copy.clear();
-
-		//计算LoadLock的理论槽位（未直接使用）
-		int lk1slot = 1;
-		int lk2slot = 1;
-
-		//lpnum跟踪每个LoadPort（LP）的晶圆传输顺序编号,1-8循环
-		//LL总共能放8片
-		int lp1num = 1;
-		int lp2num = 1;
-
-		//记录上一次传输的序号，用于方向切换时的槽位计算
-		int lp1num2 = 1;
-		int lp2num2 = 1;
-
-		std::string lastlp = "";
-		std::string lasttransfer = "";
-		bool lk1_goto_lk2 = false;
-		bool lk2_goto_lk1 = false;
-		//新增不规则晶圆数计算LL腔槽号
-		int currentSlotNumber = 1; //每4片晶圆切换LoadLock
-		bool isRobotLLA = true;//机器人当前服务的LoadLock（True=LLA, False=LLB）
-
-		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i) {
-			QWidget *widget_direction = ui->sequence_edit_tbw->cellWidget(i, 1);
-			QComboBox *direction = (QComboBox*)widget_direction;
-			QWidget *widget_arm = ui->sequence_edit_tbw->cellWidget(i, 3);
-			QComboBox *arm = (QComboBox*)widget_arm;
-
-			QWidget *widget_loadlock1 = ui->sequence_edit_tbw->cellWidget(i, 0);
-			QComboBox *loadlock1_slot = (QComboBox*)widget_loadlock1;
-
-			QWidget *widget_loadlock2 = ui->sequence_edit_tbw->cellWidget(i, 2);
-			QComboBox *loadlock2_slot = (QComboBox*)widget_loadlock2;
-
-			QWidget *widget_pm1 = ui->sequence_edit_tbw->cellWidget(i, 4);
-			QCheckBox *pm1 = (QCheckBox*)widget_pm1;
-
-			QWidget *widget_pm2 = ui->sequence_edit_tbw->cellWidget(i, 5);
-			QCheckBox *pm2 = (QCheckBox*)widget_pm2;
-
-			QWidget *widget_pm3 = ui->sequence_edit_tbw->cellWidget(i, 6);
-			QCheckBox *pm3 = (QCheckBox*)widget_pm3;
-
-			QWidget* widget_pm4 = ui->sequence_edit_tbw->cellWidget(i, 7);
-			QCheckBox* pm4 = (QCheckBox*)widget_pm4;
-
-			int lp1slot = loadlock1_slot->currentText().toInt();//1
-			int lp2slot = loadlock2_slot->currentText().toInt();//1
-
-			if (ui->disabledefem->checkState() == Qt::CheckState::Checked)
-			{//禁用efem
-				lk1slot = lp1slot % 4 == 0 ? 4 : lp1slot % 4;// 1，2，3，4层 ，loadlock共4层的晶圆盒，所以取4的余数
-				lk2slot = lp2slot % 4 == 0 ? 4 : lp2slot % 4;//
-			}
-			else{
-				lk1slot = lk1slot > 4 ? 1 : lk1slot;
-				lk2slot = lk2slot > 4 ? 1 : lk2slot;
-			}
-			
-			//1-8循环
-			lp1num = lp1num > 8 ? 1 : lp1num;
-			lp2num = lp2num > 8 ? 1 : lp2num;
-
-			//logInform("Cycle", "i=%d lk1slot=%d lk2slot=%d lp1num1=%d lp1num2=%d", i, lk1slot, lk2slot, lp1num, lp2num);
-
-			LPTransferWafer lp1;
-			lp1.slot_lp = lp1slot;
-			lp1.is_finish_putlk = false;
-			//lp1.selected_arm = robot.selected_arm;
-
-			LPTransferWafer lp2;
-			lp2.slot_lp = lp2slot;
-			lp2.is_finish_putlk = false;
-			//lp2.selected_arm = robot.selected_arm;
-
-			RobotTransferWafer robot;
-			robot.is_finish = false;
-           if (direction->currentText() == "LP1<----->LP1")
-		   {
-			   if (lastlp != "ELP1" && i != 0)
-			   {
-				   if (lp2num2 >= 1 && lp2num2 < 4){//lk2_to_lk2
-					   lp1num = lp2num2 + 5;
-					   lk2slot = lk1slot + 1;
-					   lk1_goto_lk2 = true;
-					   logInform("Cycle", "i=%d lp1num=%d lk2slot=%d lp2num=%d", i, lp1num, lk2slot, lp2num2);
-				   }
-				   else if (lp2num2 >= 5 && lp2num2 < 8)
-				   {
-					   lp1num = lp2num2 - 3;
-					   lk2slot = lk1slot + 1;
-					   lk1_goto_lk2 = true;
-					   logInform("Cycle", "i=%d lp1num=%d lk2slot=%d lp2num2=%d ", i, lp1num, lk2slot, lp2num2);
-				   }
-				   else if (lp2num2 == 8)
-				   {
-					   lp1num = 5;
-				   }
-			   }
-			   lastlp = "ELP1";
-			   lp1.source_lp = "ELP1";
-			  
-				if (isRobotLLA)
-				{//lp1num <= 4
-					robot.source_loadlock = "LLA";
-					robot.target_loadlock = "LLA";
-					robot.transfer = "lk1_to_lk1";
-					//robot.slot_lk = lk1slot;
-					//lp1.slot_lk = lk1slot;
-
-					robot.slot_lk = currentSlotNumber;
-
-					lp1.slot_lk = currentSlotNumber;
-					lp1.transfer = "lk1_to_lk1";
-
-					sequence_lp1_transfer_wafer.push_back(lp1);
-					sequence_lp1_transfer_wafer_copy.push_back(lp1);
-
-					sequence_tolk1_wafer.push_back(lp1);
-					sequence_tolk1_wafer_copy.push_back(lp1);
-
-					lasttransfer = "lk1_to_lk1";
-					lk1slot++;
-					if (lk1_goto_lk2 && lp1num == 4 )
-					{
-						lk1_goto_lk2 = false;
-						lk2slot = 1;
-						logInform("Cycle", "i=%d updatelk2slot=%d", i, lk2slot);
-					}
-				}
-				else
-				{
-					robot.source_loadlock = "LLB";
-					robot.target_loadlock = "LLB";
-					robot.transfer = "lk2_to_lk2";
-					//robot.slot_lk = lk2slot;
-					//lp1.slot_lk = lk2slot;
-					robot.slot_lk = currentSlotNumber;
-					lp1.slot_lk = currentSlotNumber;
-
-					lp1.transfer = "lk2_to_lk2";
-					sequence_lp1_transfer_wafer.push_back(lp1);
-					sequence_lp1_transfer_wafer_copy.push_back(lp1);
-					sequence_tolk2_wafer.push_back(lp1);
-					sequence_tolk2_wafer_copy.push_back(lp1);
-					lasttransfer = "lk2_to_lk2";
-					lk2slot++;
-				}
-				robot.source_lp = "ELP1";
-				robot.slot_lp = lp1slot;
-				logInform("Cycle", "i=%d lp2=%s lk=%d robot.slot_lp=%d lastlp=%s lp1num=%d robotsource_loadlock=%s",
-					i, lp1.transfer, lp1.slot_lk, robot.slot_lp, lastlp, lp1num, robot.source_loadlock);
-				lp1num2 = lp1num;
-				lp1num++;
-			}
-			else if (direction->currentText() == "LP2<----->LP2")
-		    {
-				if (lastlp != "ELP2"&&i!=0)
-				{
-					if (lp1num2 >= 1 && lp1num2 < 4){
-						lp2num = lp1num2 + 5;
-						lk1slot = lk2slot + 1;
-						lk2_goto_lk1 = true;
-						logInform("Cycle", "i=%d lp2num=%d lk1slot=%d lp1num2=%d", i, lp2num, lk1slot, lp1num2);
-					}
-					else if (lp1num2 >= 5 && lp1num2 < 8){
-						lp2num = lp1num2 - 3;
-						lk1slot = lk2slot + 1;
-						lk2_goto_lk1 = true;
-						logInform("Cycle", "i=%d lp2num=%d lk1slot=%d lp1num2=%d", i, lp2num, lk1slot, lp1num2);
-					}
-					else if (lp1num2==8){
-						lp2num = 5;
-					}
-					
-				}
-				lastlp = "ELP2";
-				lp2.source_lp = "ELP2";
-				if (!isRobotLLA)
-				{//lp2num <= 4
-					robot.source_loadlock = "LLB";
-					robot.target_loadlock = "LLB";
-					robot.transfer = "lk2_to_lk2";
-					//robot.slot_lk = lk2slot;
-					//lp2.slot_lk = lk2slot;
-					robot.slot_lk = currentSlotNumber;
-					lp2.slot_lk = currentSlotNumber;
-
-					lp2.transfer = "lk2_to_lk2";
-					sequence_lp2_transfer_wafer.push_back(lp2);
-					sequence_lp2_transfer_wafer_copy.push_back(lp2);
-					sequence_tolk2_wafer.push_back(lp2);
-					sequence_tolk2_wafer_copy.push_back(lp2);
-					lasttransfer = "lk2_to_lk2";
-					lk2slot++;
-					if (lk2_goto_lk1&&lp2num == 4){
-						lk2_goto_lk1 = false;
-						lk1slot=1;
-						logInform("Cycle", "i=%d updatelk1slot=%d", i, lk1slot);
-					}
-				}
-				else{
-					robot.source_loadlock = "LLA";
-					robot.target_loadlock = "LLA";
-					robot.transfer = "lk1_to_lk1";
-					/*robot.slot_lk = lk1slot;
-					lp2.slot_lk = lk1slot;*/
-					robot.slot_lk = currentSlotNumber;
-					lp2.slot_lk = currentSlotNumber;
-
-					lp2.transfer = "lk1_to_lk1";
-					sequence_lp2_transfer_wafer.push_back(lp2);
-					sequence_lp2_transfer_wafer_copy.push_back(lp2);
-					sequence_tolk1_wafer.push_back(lp2);
-					sequence_tolk1_wafer_copy.push_back(lp2);
-					lasttransfer = "lk1_to_lk1";
-					lk1slot++;
-				}
-			
-				robot.source_lp = "ELP2";
-				robot.slot_lp = lp2slot;
-				logInform("Cycle", "i=%d lp2=%s lk=%d robot.slot_lp=%d lastlp=%s lp2num=%d robotsource_loadlock=%s", i, lp2.transfer, lp2.slot_lk, robot.slot_lp, lastlp, lp2num, robot.source_loadlock);
-				lp2num2 = lp2num;
-				lp2num++;
-			}
-			else
-			{
-				return false;
-			}
-
-			++currentSlotNumber;
-			if (currentSlotNumber > 4)
-			{
-				currentSlotNumber = 1;
-				isRobotLLA = !isRobotLLA;
-			}
-
-			if (arm->currentText() == "A")
-			{
-				robot.selected_arm = 0;
-			}
-			else if (arm->currentText() == "B")
-			{
-				robot.selected_arm = 1;
-			}
-			else
-			{
-				return false;
-			}
-			//robot.pm1_is_enable = pm1->isChecked();
-			robot.pm2_is_enable = pm2->isChecked();
-			//robot.pm3_is_enable = pm3->isChecked();
-				/*if (robot.target_loadlock == "LLB"){
-					sequence_robot_transfer_wafer_lp2.push_back(robot);
-				}
-				else if (robot.target_loadlock == "LLA"){
-					sequence_robot_transfer_wafer_lp1.push_back(robot);
-				}*/
-			if (robot.source_lp == "ELP2"){
-				sequence_robot_transfer_wafer_lp2.push_back(robot);
-			}
-			else if (robot.source_lp == "ELP1"){
-				sequence_robot_transfer_wafer_lp1.push_back(robot);
-			}
-			sequence_robot_transfer_wafer.push_back(robot);
-		}
-
-		if (ui->sequence_edit_tbw->rowCount() > 0)
-		{
-			onUpdateProcessControlEnabled(false);
-			logInform("Cycle", "Cycle开始");
-			return true;
-		}
-		return false;
-	}
-
 
 	bool QSlotTransferCycleVTMWidgetPrivate::setHLTransferSequence()
 	{
@@ -8045,57 +7307,18 @@ namespace FC{
 		FortrendCassetteManager::Ptr llbManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 		lk2_cass = llbManager->getCassette(lk2.get());
 
-#if 0
-		QString fileName = QDir::currentPath() + "/config/" + "config.ini";
-		if (fileName.isEmpty())
-		{
-			logInform("Cycle:","读取的配置文件为空");
-			return false;
-		}
 
-		QSettings settings(fileName, QSettings::IniFormat);
-
-		//配方配置
-		settings.beginGroup("Formula");
-		int Formula_1 =  settings.value("Formula_Go_Up_And_Down").toInt();   //上进下出
-		int Formula_2 = settings.value("Formula_Double_Up_And_Down").toInt();//双上双下 
-		bool loadlockAEnable = settings.value("LoadLockAEnable", true).toBool();
-		bool loadlockBEnable = settings.value("LoadLockBEnable", true).toBool();
-
-		settings.endGroup();
-
-		if (Formula_1 == 1 && Formula_2 == 0)
-		{
-			slots_ = 1;
-			FormulaName = "Formula_Go_Up_And_Down";
-		}
-		else if (Formula_1 == 0 && Formula_2 == 1)
+		if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
 		{
 			slots_ = 2;
-			FormulaName = "Formula_Double_Up_And_Down";
 		}
-		else
-		{
-			logInform("Cycle:", "配方配置错误");
-			return false;
-		}
-#endif
-		if (FormulaName.empty())
-		{
-			logError("Cycle:", "未选择配方!");
-			return false;
-		}
-		if (FormulaName == "Formula_Go_Up_And_Down")
+		else if(currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down)
 		{
 			slots_ = 1;
 		}
-		else if (FormulaName == "Formula_Double_Up_And_Down")
-		{
-			slots_ = 2;	
-		}
 		else
 		{
-			logInform("Cycle:", "配方配置错误");
+			logInform("Cycle:", "当前传片模式配置错误");
 			return false;
 		}
 
@@ -8165,7 +7388,7 @@ namespace FC{
 			task.selectPmEnableList[3] = task.pm4Enabled;
 
 			// 轮换式LoadLock分配
-			const int GROUP_SIZE = slots_; //可配置
+			const int GROUP_SIZE = slots_; //可配置 1,2
 			int groupIndex = i / GROUP_SIZE;
 
 			if(GROUP_SIZE == 2)
@@ -8395,9 +7618,12 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::logFailed(const std::string station_name, const std::string log){
 		Q_Q(QSlotTransferCycleVTMWidget);
-		//running = false;
 		pauseAllThreads();
-		ispause = true;
+
+		// 2025-10-28: 保存错误时的状态快照
+		std::string errorLocation = station_name + " - " + log;
+		saveCurrentStateSnapshot(log, errorLocation);
+		
 		logError(station_name.c_str(), log.c_str());
 		onUpdateControlEnabled("execute_pbt", true);
 		onUpdateLightButtonStatus("light_running_pbt", 3);
@@ -8411,6 +7637,141 @@ namespace FC{
 	void QSlotTransferCycleVTMWidgetPrivate::logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name, const int step){
 		Q_Q(QSlotTransferCycleVTMWidget);
 		logFailed(station_name, Poco::format("%s %s命令执行失败， %s：%d", station_name, command_name, process_name, step));
+	}
+
+	// 2025-10-28: 捕获当前状态快照
+	CycleStateSnapshot::Snapshot QSlotTransferCycleVTMWidgetPrivate::captureCurrentState(
+		const std::string& errorMsg, const std::string& errorLocation) 
+	{
+		CycleStateSnapshot::Snapshot snapshot;
+		
+		// 基本信息
+		Poco::DateTime now;
+		snapshot.timestamp = Poco::DateTimeFormatter::format(now, Poco::DateTimeFormat::ISO8601_FORMAT);
+		snapshot.errorMessage = errorMsg;
+		snapshot.errorLocation = errorLocation;
+		
+		// 各线程step状态
+		snapshot.efem_auto_step = efem_auto_step;
+		snapshot.loadlock1_auto_step = loadlock1_auto_step;
+		snapshot.loadlock2_auto_step = loadlock2_auto_step;
+		snapshot.robot_auto_step = robot_auto_step;
+		snapshot.vacuum_auto_step = vacuum_auto_step;
+		snapshot.pm1_auto_step = pm1_auto_step.load();
+		snapshot.pm2_auto_step = pm2_auto_step.load();
+		snapshot.pm3_auto_step = pm3_auto_step.load();
+		snapshot.pm4_auto_step = pm4_auto_step.load();
+		snapshot.update_auto_step = update_auto_step;
+		
+		// 标志位状态
+		snapshot.tool_allow_get_wafer_LLA = tool_allow_get_wafer_LLA;
+		snapshot.tool_allow_get_wafer_LLB = tool_allow_get_wafer_LLB;
+		snapshot.tool_allow_put_wafer_LLA = tool_allow_put_wafer_LLA;
+		snapshot.tool_allow_put_wafer_LLB = tool_allow_put_wafer_LLB;
+		snapshot.lp1_cycle_one_time_finished = lp1_cycle_one_time_finished;
+		snapshot.lp2_cycle_one_time_finished = lp2_cycle_one_time_finished;
+		snapshot.cycleFinished_lla = cycleFinished_lla;
+		snapshot.cycleFinished_llb = cycleFinished_llb;
+		
+		// 任务统计
+		snapshot.originTaskSize = originTaskSize;
+		snapshot.lp1TaskSize = lp1TaskSize;
+		snapshot.lp2TaskSize = lp2TaskSize;
+		
+		// 其他状态
+		snapshot.current_lp_cycle = current_lp_cycle;
+		snapshot.robot_selected_arm = robot_selected_arm;
+		
+		// 任务列表（从taskManager获取）
+		snapshot.allTasks = taskManager.getAllTasks();
+		
+		return snapshot;
+	}
+
+	// 2025-10-28: 保存当前状态快照
+	void QSlotTransferCycleVTMWidgetPrivate::saveCurrentStateSnapshot(
+		const std::string& errorMsg, const std::string& errorLocation) 
+	{
+		try {
+			auto snapshot = captureCurrentState(errorMsg, errorLocation);
+			bool success = CycleStateSnapshot::saveSnapshot(snapshot);
+			
+			if (success) {
+				logWarn("Cycle", "✅ 状态快照已保存，可用于调试恢复");
+			} else {
+				logError("Cycle", "⚠️ 保存状态快照失败");
+			}
+		}
+		catch (const std::exception& e) {
+			logError("Cycle", "保存快照时发生异常: %s", e.what());
+		}
+	}
+
+	// 2025-10-28: 从快照恢复状态
+	void QSlotTransferCycleVTMWidgetPrivate::restoreStateFromSnapshot(
+		const CycleStateSnapshot::Snapshot& snapshot) 
+	{
+		// 恢复各线程step状态
+		efem_auto_step = snapshot.efem_auto_step;
+		loadlock1_auto_step = snapshot.loadlock1_auto_step;
+		loadlock2_auto_step = snapshot.loadlock2_auto_step;
+		robot_auto_step = snapshot.robot_auto_step;
+		vacuum_auto_step = snapshot.vacuum_auto_step;
+		pm1_auto_step.store(snapshot.pm1_auto_step);
+		pm2_auto_step.store(snapshot.pm2_auto_step);
+		pm3_auto_step.store(snapshot.pm3_auto_step);
+		pm4_auto_step.store(snapshot.pm4_auto_step);
+		update_auto_step = snapshot.update_auto_step;
+		
+		// 恢复标志位状态
+		tool_allow_get_wafer_LLA = snapshot.tool_allow_get_wafer_LLA;
+		tool_allow_get_wafer_LLB = snapshot.tool_allow_get_wafer_LLB;
+		tool_allow_put_wafer_LLA = snapshot.tool_allow_put_wafer_LLA;
+		tool_allow_put_wafer_LLB = snapshot.tool_allow_put_wafer_LLB;
+		lp1_cycle_one_time_finished = snapshot.lp1_cycle_one_time_finished;
+		lp2_cycle_one_time_finished = snapshot.lp2_cycle_one_time_finished;
+		cycleFinished_lla = snapshot.cycleFinished_lla;
+		cycleFinished_llb = snapshot.cycleFinished_llb;
+		
+		// 恢复任务统计
+		originTaskSize = snapshot.originTaskSize;
+		lp1TaskSize = snapshot.lp1TaskSize;
+		lp2TaskSize = snapshot.lp2TaskSize;
+		
+		// 恢复其他状态
+		current_lp_cycle = snapshot.current_lp_cycle;
+		robot_selected_arm = snapshot.robot_selected_arm;
+		
+		// 恢复任务列表（清空taskManager并重新添加）
+		taskManager.clearTasks();
+		for (const auto& task : snapshot.allTasks) {
+			taskManager.addTask(task);
+		}
+		
+		logWarn("Cycle", "✅ 状态已从快照恢复: %s", snapshot.timestamp.c_str());
+		logWarn("Cycle", "   错误位置: %s", snapshot.errorLocation.c_str());
+		logWarn("Cycle", "   任务数量: %d", (int)snapshot.allTasks.size());
+	}
+
+	// 2025-10-28: 加载状态快照
+	bool QSlotTransferCycleVTMWidgetPrivate::loadStateSnapshot(const std::string& filePath) 
+	{
+		try {
+			CycleStateSnapshot::Snapshot snapshot;
+			bool success = CycleStateSnapshot::loadSnapshot(filePath, snapshot);
+			
+			if (success) {
+				restoreStateFromSnapshot(snapshot);
+				return true;
+			} else {
+				logError("Cycle", "加载状态快照失败: %s", filePath.c_str());
+				return false;
+			}
+		}
+		catch (const std::exception& e) {
+			logError("Cycle", "加载快照时发生异常: %s", e.what());
+			return false;
+		}
 	}
 
 	/**
@@ -8465,12 +7826,13 @@ namespace FC{
 
 		connect(d->ui->get_step_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onGetStep);
 
-		connect(s_ptr, &QFortrendStationStatusVTMWidget::signalUpdateRecipe, this, &QSlotTransferCycleVTMWidget::onUpdateRecipe);
-
+		//connect(s_ptr, &QFortrendStationStatusVTMWidget::signalUpdateRecipe, this, &QSlotTransferCycleVTMWidget::onUpdateRecipe);
+		//2025-10-29 改成选择模式
+		connect(s_ptr, &QFortrendStationStatusVTMWidget::signalSelectTransferMode, this, &QSlotTransferCycleVTMWidget::onSelectTransferMode);
 
 		d->ui->enableAtmosphere->setEnabled(true);
 		d->ui->execute_pbt->setEnabled(true);
-		d->ui->continue_pbt->setEnabled(false);
+		d->ui->continue_pbt->setEnabled(true);
 
 		initPMCavityParamEdieTableWidget();
 
@@ -8565,21 +7927,13 @@ namespace FC{
 		//0=单片上下料模式 1=双片上下料模式
 		if (d->running)return;
 		try{
-			QString fileName = "";
-			switch (model)
-			{
-			case 0:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/Formula_Go_Up_And_Down.ini";
-				break;
-			case 1:
-				fileName = QCoreApplication::applicationDirPath() + "/CycleIni/Formula_Double_Up_And_Down.ini";
-				break;
-			default:
-				break;
-			}
+			QString fileName = QCoreApplication::applicationDirPath() + "/config/config.ini";
+
 			if (fileName == "")return;
 			onClearSequence();
 
+			
+#if 0
 			std::string fileNamePath = fileName.toStdString(); 
 			size_t slash = fileNamePath.rfind('/');
 			if (slash != std::string::npos)
@@ -8588,7 +7942,7 @@ namespace FC{
 				size_t slash_1 = Formula.find('.');
 				if (slash_1 != std::string::npos)
 				{
-					d->FormulaName = Formula.substr(0, slash_1);
+					d->filmTransferMode = Formula.substr(0, slash_1);
 				}
 				else
 				{
@@ -8602,13 +7956,15 @@ namespace FC{
 				return;
 
 			}
-			if (d->FormulaName == "")
+			if (d->filmTransferMode == "")
 			{
 				QMessageBox::warning(this, tr("警告信息"), tr("解析配方错误"));
 				logError(d->module_name.c_str(), "解析配方错误");
 				return;
 			}
-			logInform(d->module_name.c_str(), "current FormulaName:%s", d->FormulaName.c_str());
+			logInform(d->module_name.c_str(), "current filmTransferMode:%s", d->filmTransferMode.c_str());
+
+			
 
 			QSettings settings(fileName, QSettings::IniFormat);
 			int rowCount = settings.value("rowCount", 0).toInt();
@@ -8671,21 +8027,35 @@ namespace FC{
 						QDoubleSpinBox* dsb = (QDoubleSpinBox*)widget;
 						dsb->setValue(value.toDouble());
 					}
-
-					//QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-					//if (j > 16)
-					//{
-					//	QComboBox *combox = (QComboBox*)widget;
-					//	combox->setCurrentText(value);
-					//}
-					//else{
-					//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
-					//	dsb->setValue(value.toDouble());
-					//}
 				}
 			}
+#endif
 		}
 		catch (KernelException& e){
+			logError(d->module_name.c_str(), e.what());
+			//throw e;
+		}
+	}
+
+	void QSlotTransferCycleVTMWidget::onSelectTransferMode(int model)
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		if (d->running)return;
+		logInform("test","model:%d", model);
+		try {
+			switch (model)
+			{
+			case 0:
+				d->currentTransferMode = d->FilmTransferMode::Formula_Go_Up_And_Down;
+				break;//要加break
+			case 1:
+				d->currentTransferMode = d->FilmTransferMode::Formula_Double_Up_And_Down;
+				break;
+			default:
+				break;
+			}
+		}
+		catch (KernelException& e) {
 			logError(d->module_name.c_str(), e.what());
 			//throw e;
 		}
@@ -8707,6 +8077,8 @@ namespace FC{
 		if (row_count > 0)
 		{
 			d->ui->sequence_edit_tbw->setRowCount(0);
+			//清空任务队列
+			taskManager.clearTasks();
 		}
 
 	}
@@ -8762,17 +8134,6 @@ namespace FC{
 				QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
 				QString value = settings.value(key, "").toString();
 				QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
-
-				//if (j > 16)
-				//{
-				//	QComboBox *combox = (QComboBox*)widget;
-				//	combox->setCurrentText(value);
-
-				//}
-				//else{
-				//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
-				//	dsb->setValue(value.toDouble());
-				//}
 				if (j == 2)
 				{
 					QComboBox* combox = (QComboBox*)widget;
@@ -8910,39 +8271,6 @@ namespace FC{
 		d->startVacuumAction();
 	}
 
-	void QSlotTransferCycleVTMWidget::startVacuumMoniterAction(){
-		Q_D(QSlotTransferCycleVTMWidget);
-
-	}
-
-	void QSlotTransferCycleVTMWidget::startRobotAction(){
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->startRobotAction();
-	}
-
-	void QSlotTransferCycleVTMWidget::startLoadLock1Action(){
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->startLoadLock1Action();
-	}
-
-	void QSlotTransferCycleVTMWidget::startLoadLock2Action(){
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->startLoadLock2Action();
-	}
-
-	void QSlotTransferCycleVTMWidget::startPMAction(){
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->startPMAction();
-	}
-	void QSlotTransferCycleVTMWidget::startEFEMAction(){
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->startEFEMAction();
-	}
-
-	void QSlotTransferCycleVTMWidget::startUpdateStatusAction(){
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->startUpdateStatusAction();
-	}
 	void QSlotTransferCycleVTMWidget::onPause(){
 		Q_D(QSlotTransferCycleVTMWidget);
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
@@ -9015,7 +8343,7 @@ namespace FC{
 		thread.detach();
 	}
 
-	void QSlotTransferCycleVTMWidget::onStart(){
+	void QSlotTransferCycleVTMWidget::onStart() {
 		Q_D(QSlotTransferCycleVTMWidget);
 
 		//start action & store param
@@ -9030,92 +8358,43 @@ namespace FC{
 		//	return;
 		//}
 		//调试注释
-		if (SIM_CYCLE_MODE == 0)
-		{
-			if (!pm2->getPMCavityMotorHomeSignal()){
-				QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
-				return;
-			}
+#ifdef CYCLE_SIM_MODE
+		if (!pm2->getPMCavityMotorHomeSignal()) {
+			QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
+			return;
 		}
+#endif
 		d->cycle_times_lla = d->ui->cycle_setting_times_sbx->value(); //LP1循环次数
 		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();//LP2循环次数
 
 		if (taskManager.getAllTasksSize() == 0 && !d->ispause)// 无任务配置，无暂停，才执行解析流程配方
 		{
-			//测试
-			if(CYCLE_SIM_MODE == 1)
-			{				
-				UnifiedWaferTask task;
-				task.target = UnifiedWaferTask::Location::LLA;
-				task.target_pm = UnifiedWaferTask::Location::PM1;
-				task.targetFeedingSlot = 2;
-				task.taskId = 0; //ID
-				task.status = UnifiedWaferTask::Status::COMPLETED;
-				task.taskType = UnifiedWaferTask::TaskType::LOADLOCK_RETURN;
-				task.arm = 0;
-				task.source = UnifiedWaferTask::Location::LP2;
-				task.targetBlankingSlot = 1;
-				task.sourceSlot = 5;
+			//快照回复测试
+#ifdef DEBUG_LOAD_SNAPSHOT
 
-				task.selectPmEnableList[0] = 1; // 隐式转换：true->1, false->0
-				task.selectPmEnableList[1] = 0;
-				task.selectPmEnableList[2] = 0;
-				task.selectPmEnableList[3] = 0;
-
-				taskManager.addTask(task);
-
-				d->loadlock1_auto_step = 5023;
-
-
-				UnifiedWaferTask task1;
-				task1.taskId = 1; //ID
-				task1.status = UnifiedWaferTask::Status::COMPLETED;
-				task1.taskType = UnifiedWaferTask::TaskType::LOADLOCK_RETURN;
-				task1.arm = 1;
-				task1.source = UnifiedWaferTask::Location::LP2;
-				task1.target = UnifiedWaferTask::Location::LLB;
-
-				task1.target_pm = UnifiedWaferTask::Location::PM2;
-				task1.selectPmEnableList[0] = 0; // 隐式转换：true->1, false->0
-				task1.selectPmEnableList[1] = 1;
-				task1.selectPmEnableList[2] = 0;
-				task1.selectPmEnableList[3] = 0;
-				task1.targetFeedingSlot = 2;
-				task1.targetBlankingSlot = 1;
-				task1.sourceSlot = 7;
-				taskManager.addTask(task1);
-				//d->loadlock2_auto_step = 5023;
-
-				d->originTaskSize = taskManager.getAllTasksSize();
-				//
-				//taskManager.largeTaskIdSortAlgorithm();
-
-				//for (auto& task : taskManager.getLoadLockReturnCompletedTasks())
-				//{
-				//	taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
-				//}
-
+			auto snapshots = CycleStateSnapshot::listSnapshots();
+			if (!snapshots.empty())
+			{
+				if (d->loadStateSnapshot(snapshots.back()))
+				{
+					logWarn("Cycle", "🔄 已从快照恢复，直接跳到错误位置");
+				}
+			}
+#else
+			//正常流程
+			if (d->setHLTransferSequence())
+			{
+				d->ui->cycle_finished_times_spx->setValue(0);
+				d->ui->cycle_finished_times_spx_2->setValue(0);
+				logInform("Cycle", "传送HL流程配置成功。");
+				//return;
 			}
 			else
 			{
-				if (d->setHLTransferSequence())
-				{
-					d->ui->cycle_finished_times_spx->setValue(0);
-					d->ui->cycle_finished_times_spx_2->setValue(0);
-					logInform("Cycle", "传送HL流程配置成功。");
-					//return;
-				}
-				else
-				{
-					QMessageBox::warning(this, "警告", "传送流程配置错误.");
-					return;
-				}
+				QMessageBox::warning(this, "警告", "传送流程配置错误.");
+				return;
 			}
 
-		}
-
-		if (CYCLE_SIM_MODE == 0)
-		{
 			//2025-8-14 默认已经手动处理机台片子，重新把wafer数据刷新到初始状态
 			//暂停过，检测机台状态
 			if (d->ispause && taskManager.detectionHasNoInitialTypeTasks()) {
@@ -9123,36 +8402,35 @@ namespace FC{
 				QMessageBox::warning(this, "警告", "请检查机台有无片子，再执行整体复位");
 				return;
 			}
-		}
 
-		if (SIM_CYCLE_MODE == 0)
-		{
+#endif
+#ifdef CYCLE_SIM_MODE
 			if (!isEnabledplcAuto()) {
 				QMessageBox::warning(this, "警告", "PLC不在自动模式.");
 				return;
 			}
+#endif
+			d->startAllThreads();
+			//d->running = true;
+			d->ispause = false;
+
+			pm1->setIsRunning(d->running);
+			pm2->setIsRunning(d->running);
+			pm3->setIsRunning(d->running);
+			pm4->setIsRunning(d->running);
+
+			Sleep(500);
+			d->onUpdateLightButtonStatus("light_running_pbt", 2);
+			d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
+			d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
+			d->ui->execute_pbt->setEnabled(false);
+			d->ui->reset_pbt->setEnabled(false);
+			d->ui->pause_pbt->setEnabled(true);
 		}
-
-		d->startAllThreads();
-		//d->running = true;
-		d->ispause = false;
-
-		pm1->setIsRunning(d->running);
-		pm2->setIsRunning(d->running);
-		pm3->setIsRunning(d->running);
-		pm4->setIsRunning(d->running);
-
-		Sleep(500);
-		//新流程线程启动
-		//startProcessingThreads();
-
-		d->onUpdateLightButtonStatus("light_running_pbt", 2);
-
-		d->tower->setOutput(FortrendVTMSignalTower::Output::YELLOW_LIGHT, false);
-		d->tower->setOutput(FortrendVTMSignalTower::Output::GREEN_LIGHT, true);
-		d->ui->execute_pbt->setEnabled(false);
-		d->ui->reset_pbt->setEnabled(false);
-		d->ui->pause_pbt->setEnabled(true);
+		else
+		{
+			logError("Cycle","无任务配置，无暂停，才执行解析流程配方");
+		}
 	}
 
 	void QSlotTransferCycleVTMWidget::clickStart(){
@@ -9465,7 +8743,7 @@ namespace FC{
 		item->setText(name);
 		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
-		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机升降开始位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机取放片位置
 		addEditTableWidgetItemComboBox(row_count, 2, 1);//电机旋转角度/°
 		QSpinBox* Rotation_count_spx = new QSpinBox();
 		Rotation_count_spx->setMinimum(0);
@@ -9473,7 +8751,7 @@ namespace FC{
 		Rotation_count_spx->setSingleStep(1);
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
 		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机升降结束位置/mm
+		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机工艺位置/mm
 		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
 	}
 
@@ -9540,11 +8818,6 @@ namespace FC{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->ui->cycle_finished_times_spx->setValue(d->finished_time_lla);
 		d->ui->cycle_finished_times_spx_2->setValue(d->finished_time_llb);
-	}
-
-	void QSlotTransferCycleVTMWidget::status_Changed()
-	{
-
 	}
 
 	void QSlotTransferCycleVTMWidget::updateProcessControlEnabled(const bool enabled){
