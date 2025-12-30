@@ -39,6 +39,33 @@ namespace FC {
 		
 		// 公共方法，用于获取pmMotionProcessData
 		std::map<std::string, std::vector<PMMotionProcessParameters>>& getPMMotionProcessData();
+		
+		// 新增：统一 PM 配方数据访问
+		struct PMMotorRow {
+			double lifting_axis_acce1 = 0.0;
+			double lifting_axis_acce2 = 0.0;
+			double lifting_axis_acce3 = 0.0;
+			double lifting_axis_acce4 = 0.0;
+			double rotating_axis_acce1 = 0.0;
+			double rotating_axis_acce2 = 0.0;
+			double rotating_axis_acce3 = 0.0;
+			double rotating_axis_acce4 = 0.0;
+		};
+		struct PMParams {
+			double take_position_mm = 0.0;
+			int rotation_angle_deg = 0;
+			int process_count = 0;
+			double rotate_position_mm = 0.0;
+			double process_position_mm = 0.0;
+			double process_time_min = 0.0;
+		};
+		struct PMRecipeConfig {
+			PMParams params;
+			std::vector<PMMotorRow> motors;
+		};
+
+		std::map<std::string, PMRecipeConfig>& getPMRecipeConfigMap();
+
 	private slots:
 		void onStartCycle();
 		void onStopCycle();
@@ -47,6 +74,7 @@ namespace FC {
 		void onClearParameters();
 		void onLoadParameters();
 		void onSetParameters();
+		void onSelectPMChanged(int index);
 
 		//初始化PM腔界面
 		void initPMCavityParamEdieTableWidget();

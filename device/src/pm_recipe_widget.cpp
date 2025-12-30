@@ -52,14 +52,13 @@ namespace FC {
 		QTableWidget* pm3TableWidget;
 		QTableWidget* pm4TableWidget;
 
-		// 存储所有PM腔的工艺数据
+		// 存储所有PM腔的工艺数据---废弃
 		std::map<std::string, std::vector<PMMotionProcessParameters>> pmMotionProcessData;
 
-		// 循环测试相关
-		QPushButton* startCycleBtn;
-		QPushButton* stopCycleBtn;
-		QLabel* cycleCountLabel;
-		
+		//pm统一的PM腔的工艺数据
+		std::map<std::string, QPmRecipeWidget::PMRecipeConfig> pmRecipeConfigMap;
+
+		std::string current_pm; //要执行测试的PM
 		std::thread cycleThread;
 		std::atomic<bool> isRunning;
 		std::atomic<bool> stopRequested;
@@ -76,9 +75,6 @@ namespace FC {
 		, pm2TableWidget(nullptr)
 		, pm3TableWidget(nullptr)
 		, pm4TableWidget(nullptr) 
-		, startCycleBtn(nullptr)
-		, stopCycleBtn(nullptr)
-		, cycleCountLabel(nullptr)
 		, isRunning(false)
 		, stopRequested(false)
 		, currentCycleCount(0)
@@ -203,24 +199,32 @@ namespace FC {
 		QVBoxLayout* layout4 = new QVBoxLayout(d->ui->tab_4);
 		layout4->addWidget(d->pm4TableWidget);
 
-		// 添加循环测试控制按钮和标签
-		d->startCycleBtn = new QPushButton("Start Cycle", this);
-		d->stopCycleBtn = new QPushButton("Stop Cycle", this);
-		d->cycleCountLabel = new QLabel("Current Cycle: 0", this);
-		
-		d->ui->horizontalLayout->addWidget(d->startCycleBtn);
-		d->ui->horizontalLayout->addWidget(d->stopCycleBtn);
-		d->ui->horizontalLayout->addWidget(d->cycleCountLabel);
-		
-		// 连接按钮信号到槽函数
+
 		connect(d->ui->add_an_item_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onAddAnItem);
+
 		connect(d->ui->delete_the_selected_item_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onDeleteTheSelectedItem);
+
 		connect(d->ui->load_prams_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onLoadParameters);
+
 		connect(d->ui->clear_prams_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onClearParameters);
+
 		connect(d->ui->save_prams_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onSetParameters);
-		
-		connect(d->startCycleBtn, &QPushButton::clicked, this, &QPmRecipeWidget::onStartCycle);
-		connect(d->stopCycleBtn, &QPushButton::clicked, this, &QPmRecipeWidget::onStopCycle);
+
+		connect(d->ui->start_pm_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onStartCycle);
+
+		connect(d->ui->stop_pm_pbt, &QPushButton::clicked, this, &QPmRecipeWidget::onStopCycle);
+
+		d->ui->pm_selecte_cbx->clear();
+		d->ui->pm_selecte_cbx->addItem("PM1", 0);
+		d->ui->pm_selecte_cbx->addItem("PM2", 1);
+		d->ui->pm_selecte_cbx->addItem("PM3", 2);
+		d->ui->pm_selecte_cbx->addItem("PM4", 3);
+
+		d->ui->pm_selecte_cbx->setCurrentIndex(d->ui->tabWidget->currentIndex());
+
+		connect(d->ui->pm_selecte_cbx, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &QPmRecipeWidget::onSelectPMChanged);
+
+
 	}
 
 	QPmRecipeWidget::~QPmRecipeWidget()
@@ -234,6 +238,11 @@ namespace FC {
 		Q_D(QPmRecipeWidget);
 		return d->pmMotionProcessData;
 	}
+	std::map<std::string, QPmRecipeWidget::PMRecipeConfig>& QPmRecipeWidget::getPMRecipeConfigMap()
+	{
+		Q_D(QPmRecipeWidget);
+		return d->pmRecipeConfigMap;
+	}
 
 	// 删除选中项
 	void QPmRecipeWidget::onDeleteTheSelectedItem()
@@ -246,20 +255,30 @@ namespace FC {
 		int selectedRow = currentTable->currentRow();
 		if (selectedRow >= 0) {
 			currentTable->removeRow(selectedRow);
+			int pmIndex = d->ui->tabWidget->currentIndex();
+			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(pmIndex, 3))) {
+				spb->setValue(currentTable->rowCount());
+			}
 		}
 	}
-
-	// 清空数据
+	
+		// 清空数据
 	void QPmRecipeWidget::onClearParameters()
 	{
 		Q_D(QPmRecipeWidget);
-		QTableWidget* currentTable = d->getCurrentTableWidget();
-		if (!currentTable)
-			return;
-		
-		currentTable->setRowCount(0);
+		for (int i = 0; i < 4; ++i) {
+			if (auto table = d->getIndexTableWidget(i)) {
+				table->setRowCount(0);
+			}
+			if (auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 1))) dsb->setValue(0.0);
+			if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) cbx->setCurrentIndex(0);
+			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) spb->setValue(0);
+			if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) dsb4->setValue(0.0);
+			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) dsb5->setValue(0.0);
+			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) dsb6->setValue(0.0);
+		}
 	}
-
+	
 	void QPmRecipeWidget::onLoadParameters()
 	{
 		Q_D(QPmRecipeWidget);
@@ -282,202 +301,144 @@ namespace FC {
 			return;
 		}
 
-		// 获取根对象
+		// 新格式：params + motors
 		QJsonObject rootObj = doc.object();
-
-		// 清空之前的数据
-		d->pmMotionProcessData.clear();
-
-		// 遍历每个PM的数据
-		for (int i = 0; i < 4; i++) {
-			// 获取当前PM的名称
+		d->pmRecipeConfigMap.clear();
+		for (int i = 0; i < 4; ++i) 
+		{
 			std::string pmName = "PM" + std::to_string(i + 1);
 			QString pmNameStr = QString::fromStdString(pmName);
-
-			// 检查当前PM是否存在于JSON文件中
-			if (!rootObj.contains(pmNameStr)) {
-				continue;
-			}
-
-			// 获取当前PM的工艺数据数组
-			QJsonValue pmValue = rootObj.value(pmNameStr);
-			if (!pmValue.isArray()) {
-				continue;
-			}
-
-			QJsonArray pmArray = pmValue.toArray();
-
-			// 创建当前PM的工艺数据vector
-			std::vector<PMMotionProcessParameters> pmProcessVector;
-			pmProcessVector.reserve(pmArray.size());
-
-			// 获取当前PM的表格
-			QTableWidget* currentTable = d->getIndexTableWidget(i);
-			if (!currentTable) {
-				continue;
-			}
-
-			// 清空当前表格
-			currentTable->setRowCount(0);
-
-			// 遍历每个工艺次数的数据
-			for (int j = 0; j < pmArray.count(); j++)
+			QPmRecipeWidget::PMRecipeConfig cfg;
+			if (rootObj.contains(pmNameStr) && rootObj[pmNameStr].isObject()) 
 			{
-				QJsonValue processValue = pmArray.at(j).toObject();
-
-				if (!processValue.isObject()) {
-					continue;
+				QJsonObject pmObj = rootObj[pmNameStr].toObject();
+				if (pmObj.contains("params") && pmObj["params"].isObject()) {
+					QJsonObject p = pmObj["params"].toObject();
+					cfg.params.take_position_mm = p["take_position_mm"].toDouble();
+					cfg.params.rotation_angle_deg = p["rotation_angle_deg"].toInt();
+					cfg.params.process_count = p["process_count"].toInt();
+					cfg.params.rotate_position_mm = p["rotate_position_mm"].toDouble();
+					cfg.params.process_position_mm = p["process_position_mm"].toDouble();
+					cfg.params.process_time_min = p["process_time_min"].toDouble();
 				}
-
-				QJsonObject processObj = processValue.toObject();
-
-				// 创建一个新的工艺参数对象
-				PMMotionProcessParameters processData;
-
-				// 从JSON对象中读取工艺参数
-				processData.cycle = processObj["cycle"].toInt();
-				processData.lifting_axis_acce1 = processObj["lifting_axis_acce1"].toDouble();
-				processData.lifting_axis_acce2 = processObj["lifting_axis_acce2"].toDouble();
-				processData.lifting_axis_acce3 = processObj["lifting_axis_acce3"].toDouble();
-				processData.lifting_axis_acce4 = processObj["lifting_axis_acce4"].toDouble();
-				processData.rotating_axis_acce1 = processObj["rotating_axis_acce1"].toDouble();
-				processData.rotating_axis_acce2 = processObj["rotating_axis_acce2"].toDouble();
-				processData.rotating_axis_acce3 = processObj["rotating_axis_acce3"].toDouble();
-				processData.rotating_axis_acce4 = processObj["rotating_axis_acce4"].toDouble();
-				//processData.rotation_angle = processObj["rotation_angle"].toDouble();
-
-				// 将工艺数据添加到vector中
-				pmProcessVector.push_back(processData);
-
-				// 将工艺数据添加到表格中
-				int row = currentTable->rowCount();
-				currentTable->insertRow(row);
-
-				// 使用addTableWidgetItemDoubleSpinBox方法创建和设置QDoubleSpinBox部件
-				addTableWidgetItemDoubleSpinBox(row, 0, 0.0, 100.0, 1, processData.lifting_axis_acce1, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 1, 0.0, 100.0, 1, processData.lifting_axis_acce2, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 2, 0.0, 100.0, 1, processData.lifting_axis_acce3, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 3, 0.0, 100.0, 1, processData.lifting_axis_acce4, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 4, 0.0, 100.0, 1, processData.rotating_axis_acce1, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 5, 0.0, 100.0, 1, processData.rotating_axis_acce2, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 6, 0.0, 100.0, 1, processData.rotating_axis_acce3, 3, currentTable);
-				addTableWidgetItemDoubleSpinBox(row, 7, 0.0, 100.0, 1, processData.rotating_axis_acce4, 3, currentTable);
-				//addTableWidgetItemDoubleSpinBox(row, 8, -360.0, 360.0, 1, processData.rotation_angle, 3, currentTable);
+				if (pmObj.contains("motors") && pmObj["motors"].isArray())
+				{
+					QJsonArray arr = pmObj["motors"].toArray();
+					for (int k = 0; k < arr.size(); ++k) {
+						auto obj = arr[k].toObject();
+						QPmRecipeWidget::PMMotorRow row;
+						row.lifting_axis_acce1 = obj["lifting_axis_acce1"].toDouble();
+						row.lifting_axis_acce2 = obj["lifting_axis_acce2"].toDouble();
+						row.lifting_axis_acce3 = obj["lifting_axis_acce3"].toDouble();
+						row.lifting_axis_acce4 = obj["lifting_axis_acce4"].toDouble();
+						row.rotating_axis_acce1 = obj["rotating_axis_acce1"].toDouble();
+						row.rotating_axis_acce2 = obj["rotating_axis_acce2"].toDouble();
+						row.rotating_axis_acce3 = obj["rotating_axis_acce3"].toDouble();
+						row.rotating_axis_acce4 = obj["rotating_axis_acce4"].toDouble();
+						cfg.motors.push_back(row);
+					}
+				}
 			}
-
-			// 将当前PM的工艺数据vector添加到map中
-			d->pmMotionProcessData[pmName] = pmProcessVector;
+		// 对齐 motors 行数到 process_count
+		if (cfg.params.process_count > (int)cfg.motors.size()) {
+			while ((int)cfg.motors.size() < cfg.params.process_count) {
+				cfg.motors.push_back(QPmRecipeWidget::PMMotorRow{});
+			}
+		} else if (cfg.params.process_count < (int)cfg.motors.size()) {
+			cfg.motors.resize(cfg.params.process_count);
 		}
-
-		QMessageBox::information(nullptr, QStringLiteral("load success"), QStringLiteral("PM process prams loaded success!"));
+		// 写入界面：PM腔参数
+		if (auto dsb1 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 1))) dsb1->setValue(cfg.params.take_position_mm);
+		if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) {
+			int idx = cbx->findData(cfg.params.rotation_angle_deg);
+			cbx->setCurrentIndex(idx >= 0 ? idx : 0);
+		}
+		if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) spb->setValue(cfg.params.process_count);
+		if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) dsb4->setValue(cfg.params.rotate_position_mm);
+		if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) dsb5->setValue(cfg.params.process_position_mm);
+		if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) dsb6->setValue(cfg.params.process_time_min);
+		// 写入界面：电机参数表
+		if (auto table = d->getIndexTableWidget(i)) {
+			table->setRowCount(0);
+			for (int r = 0; r < (int)cfg.motors.size(); ++r) {
+				table->insertRow(r);
+				addTableWidgetItemDoubleSpinBox(r, 0, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce1, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 1, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce2, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 2, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce3, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 3, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce4, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 4, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce1, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 5, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce2, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 6, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce3, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 7, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce4, 3, table);
+			}
+		}
+		d->pmRecipeConfigMap[pmName] = cfg;
+	}
+		QMessageBox::information(nullptr, QStringLiteral("load success"), QStringLiteral("PM recipe loaded (params + motors)."));
 	}
 
 	// 设置参数
 	void QPmRecipeWidget::onSetParameters()
 	{
 		Q_D(QPmRecipeWidget);
-
-		// 清空之前的数据
-		d->pmMotionProcessData.clear();
-
-		// 遍历所有4个PM tab页
-		for (int i = 0; i < 4; i++)
-		{
-			QTableWidget* currentTable = d->getIndexTableWidget(i);
-			if (!currentTable)
-				continue;
-
-			// 获取当前PM的名称
+		QJsonObject rootObj;
+		for (int i = 0; i < 4; ++i) {
 			std::string pmName = "PM" + std::to_string(i + 1);
-			
-			// 获取当前表格的行数（工艺次数）
-			int rowCount = currentTable->rowCount();
-			
-			// 创建当前PM的工艺数据vector
-			std::vector<PMMotionProcessParameters> pmProcessVector;
-			pmProcessVector.reserve(rowCount);
-			
-			// 遍历每一行（每一次工艺）
-			for (int row = 0; row < rowCount; ++row) {
-				// 创建一个新的工艺参数对象
-				PMMotionProcessParameters processData;
-				
-				// 工艺次数（使用行号+1表示）
-				processData.cycle = row + 1;
-				
-				// 从当前行的各个列读取数据，使用QDoubleSpinBox部件
+			QJsonObject pmObj;
+			QJsonObject params;
+			double takePos = 0.0, rotatePos = 0.0, processPos = 0.0, processTime = 0.0;
+			int angleDeg = 0, processCount = 0;
+			if (auto dsb1 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 1))) takePos = dsb1->value();
+			if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) angleDeg = cbx->currentData().toInt();
+			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) processCount = spb->value();
+			if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) rotatePos = dsb4->value();
+			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) processPos = dsb5->value();
+			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) processTime = dsb6->value();
+			params["take_position_mm"] = takePos;
+			params["rotation_angle_deg"] = angleDeg;
+			params["process_count"] = processCount;
+			params["rotate_position_mm"] = rotatePos;
+			params["process_position_mm"] = processPos;
+			params["process_time_min"] = processTime;
+			pmObj["params"] = params;
+			QJsonArray motors;
+			auto table = d->getIndexTableWidget(i);
+			int useRows = std::max(0, processCount);
+			for (int r = 0; r < useRows; ++r) {
+				QJsonObject obj;
 				auto getVal = [&](int col) -> double {
-					QDoubleSpinBox* dsb = qobject_cast<QDoubleSpinBox*>(currentTable->cellWidget(row, col));
+					if (!table) return 0.0;
+					QDoubleSpinBox* dsb = qobject_cast<QDoubleSpinBox*>(table->cellWidget(r, col));
 					return dsb ? dsb->value() : 0.0;
 				};
-
-				processData.lifting_axis_acce1 = getVal(0);
-				processData.lifting_axis_acce2 = getVal(1);
-				processData.lifting_axis_acce3 = getVal(2);
-				processData.lifting_axis_acce4 = getVal(3);
-				processData.rotating_axis_acce1 = getVal(4);
-				processData.rotating_axis_acce2 = getVal(5);
-				processData.rotating_axis_acce3 = getVal(6);
-				processData.rotating_axis_acce4 = getVal(7);
-	/*			processData.rotation_angle = getVal(8);*/
-				
-				// 将当前工艺数据添加到vector中
-				pmProcessVector.push_back(processData);
+				obj["lifting_axis_acce1"] = getVal(0);
+				obj["lifting_axis_acce2"] = getVal(1);
+				obj["lifting_axis_acce3"] = getVal(2);
+				obj["lifting_axis_acce4"] = getVal(3);
+				obj["rotating_axis_acce1"] = getVal(4);
+				obj["rotating_axis_acce2"] = getVal(5);
+				obj["rotating_axis_acce3"] = getVal(6);
+				obj["rotating_axis_acce4"] = getVal(7);
+				motors.append(obj);
 			}
-			
-			// 将当前PM的工艺数据vector添加到map中
-			d->pmMotionProcessData[pmName] = pmProcessVector;
+			pmObj["motors"] = motors;
+			rootObj[QString::fromStdString(pmName)] = pmObj;
 		}
-
-		// 将数据保存为JSON文件
-		QJsonObject rootObj;
-
-		// 遍历每个PM的数据
-		for (const auto& pmData : d->pmMotionProcessData) {
-			const std::string& pmName = pmData.first;
-			const std::vector<PMMotionProcessParameters>& processVector = pmData.second;
-
-			// 创建PM对应的JSON数组
-			QJsonArray pmArray;
-
-			// 遍历每个工艺次数的数据
-			for (const auto& processData : processVector) {
-				// 创建工艺参数对应的JSON对象
-				QJsonObject processObj;
-				processObj["cycle"] = processData.cycle;
-				processObj["lifting_axis_acce1"] = processData.lifting_axis_acce1;
-				processObj["lifting_axis_acce2"] = processData.lifting_axis_acce2;
-				processObj["lifting_axis_acce3"] = processData.lifting_axis_acce3;
-				processObj["lifting_axis_acce4"] = processData.lifting_axis_acce4;
-				processObj["rotating_axis_acce1"] = processData.rotating_axis_acce1;
-				processObj["rotating_axis_acce2"] = processData.rotating_axis_acce2;
-				processObj["rotating_axis_acce3"] = processData.rotating_axis_acce3;
-				processObj["rotating_axis_acce4"] = processData.rotating_axis_acce4;
-				//processObj["rotation_angle"] = processData.rotation_angle;
-
-				// 将工艺参数对象添加到PM数组中
-				pmArray.append(processObj);
-			}
-
-			// 将PM数组添加到根对象中
-			rootObj[QString::fromStdString(pmName)] = pmArray;
-		}
-
-		// 创建JSON文档
 		QJsonDocument doc(rootObj);
-
-		// 保存到文件
 		QFile file("./config/pm_recipe_parameters.json");
 		if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-			file.write(doc.toJson());
+			QByteArray out = doc.toJson(QJsonDocument::Indented);
+			out = out.replace("\n", "\r\n");
+			file.write(out);
 			file.close();
-			QMessageBox::information(nullptr, QStringLiteral("save success"), QStringLiteral("PM process parameters have been successfully saved to file"));
+			QMessageBox::information(nullptr, QStringLiteral("save success"), QStringLiteral("PM recipe parameters saved (CRLF)."));
 		} else {
 			QMessageBox::warning(nullptr, QStringLiteral("save failed"), QStringLiteral("Unable to open file for saving."));
 		}
 	}
 
-	void QPmRecipeWidget::addTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value,QTableWidget* table)
+	void QPmRecipeWidget::addTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, 
+		double value, int decimals_value,QTableWidget* table)
 	{
 		Q_D(QPmRecipeWidget);
 		QTableWidget* target = table ? table : d->getCurrentTableWidget();
@@ -503,10 +464,11 @@ namespace FC {
 		// Save current parameters first to ensure we have latest data
 		onSetParameters();
 
-		int currentIndex = d->ui->tabWidget->currentIndex();
-		std::string pmName = "PM" + std::to_string(currentIndex + 1);
+		int selectedIndex = d->ui->pm_selecte_cbx->currentIndex();
+		std::string pmName = "PM" + std::to_string(selectedIndex + 1);
 
-		if (d->pmMotionProcessData.find(pmName) == d->pmMotionProcessData.end() || d->pmMotionProcessData[pmName].empty()) {
+		if (d->pmRecipeConfigMap.find(pmName) == d->pmRecipeConfigMap.end() || d->pmRecipeConfigMap[pmName].params.process_count <= 0) 
+		{
 			QMessageBox::warning(this, "Warning", "No process parameters for " + QString::fromStdString(pmName));
 			return;
 		}
@@ -514,8 +476,8 @@ namespace FC {
 		d->isRunning = true;
 		d->stopRequested = false;
 		d->currentCycleCount = 0;
-		d->startCycleBtn->setEnabled(false);
-		d->stopCycleBtn->setEnabled(true);
+		d->ui->start_pm_pbt->setEnabled(false);
+		d->ui->stop_pm_pbt->setEnabled(true);
 
 		d->cycleThread = std::thread([=]() {
 			auto pmSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
@@ -524,22 +486,21 @@ namespace FC {
 				d->isRunning = false;
 				return;
 			}
-			
-			// Get positions
-			auto axisParams = pmSubsystem->getPMCavityAxisParameters();
-			double z1 = axisParams.lifting_axis_target1_position;
-			double z2 = axisParams.lifting_axis_target2_position;
-			double z3 = axisParams.lifting_axis_target3_position;
-
-			const auto& cycles = d->pmMotionProcessData[pmName];
+			const auto& cfg = d->pmRecipeConfigMap[pmName];
 			
 			try {
-				for (const auto& cycleParams : cycles) {
+
+				for (int idx = 0; idx < cfg.params.process_count; ++idx) 
+				{
 					if (d->stopRequested) break;
 					
 					// Update UI
-					QMetaObject::invokeMethod(d->cycleCountLabel, "setText", 
-						Q_ARG(QString, QString("Current Cycle: %1 / %2").arg(cycleParams.cycle).arg(cycles.size())));
+					QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, idx + 1));
+
+					double z1 = cfg.params.process_position_mm;
+					double z2 = cfg.params.rotate_position_mm;
+					double z3 = cfg.params.take_position_mm;
+					int rotation_angle_deg = cfg.params.rotation_angle_deg;
 
 					// 1. Start at Z3 (Assumed starting pos or move there first)
 					// Sequence: Z3 -> Z2 -> Rotate -> Z1 -> Wait -> Z2 -> Z3
@@ -551,10 +512,10 @@ namespace FC {
 					if (d->stopRequested) break;
 
 					// Rotate at Z2
-		/*			auto cmdRotate = pmSubsystem->createRotatingActionCommand(cycleParams.rotation_angle);
+					auto cmdRotate = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 					pmSubsystem->startCommand(cmdRotate);
 					cmdRotate->wait();
-					if (d->stopRequested) break;*/
+					if (d->stopRequested) break;
 
 					// Move to Z1 (Process)
 					auto cmdToZ1 = pmSubsystem->createLiftingActionCommand(z1);
@@ -577,15 +538,15 @@ namespace FC {
 					pmSubsystem->startCommand(cmdToZ3);
 					cmdToZ3->wait();
 				}
-			} catch (...) {
+			} 
+			catch (...) {
 				// Handle exceptions
 			}
 
 			d->isRunning = false;
 			// Restore UI state
-			QMetaObject::invokeMethod(d->startCycleBtn, "setEnabled", Q_ARG(bool, true));
-			QMetaObject::invokeMethod(d->stopCycleBtn, "setEnabled", Q_ARG(bool, false));
-			QMetaObject::invokeMethod(d->cycleCountLabel, "setText", Q_ARG(QString, "Cycle Finished"));
+			QMetaObject::invokeMethod(d->ui->start_pm_pbt, "setEnabled", Q_ARG(bool, true));
+			QMetaObject::invokeMethod(d->ui->stop_pm_pbt, "setEnabled", Q_ARG(bool, false));
 		});
 		d->cycleThread.detach(); // Detach to let it run independently
 	}
@@ -595,17 +556,31 @@ namespace FC {
 		Q_D(QPmRecipeWidget);
 		if (d->isRunning) {
 			d->stopRequested = true;
-			d->stopCycleBtn->setEnabled(false); // Prevent multiple clicks
+			d->ui->stop_pm_pbt->setEnabled(false); // Prevent multiple clicks
 		}
+	}
+	
+	void QPmRecipeWidget::onSelectPMChanged(int index)
+	{
+		Q_D(QPmRecipeWidget);
+		d->ui->tabWidget->setCurrentIndex(index);
+		d->ui->pm1_spx->setValue(0);
 	}
 
 
 	void QPmRecipeWidget::initPMCavityParamEdieTableWidget()
 	{
+		Q_D(QPmRecipeWidget);
 		addAnPMItem("PM1");
 		addAnPMItem("PM2");
 		addAnPMItem("PM3");
 		addAnPMItem("PM4");
+		for (size_t i = 0; i < d->ui->pm_cavity_param_edit_tbw->columnCount(); i++)
+		{
+			d->ui->pm_cavity_param_edit_tbw->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
+		}
+
+		d->ui->pm_cavity_param_edit_tbw->setSelectionBehavior(QAbstractItemView::SelectRows);
 	}
 
 
@@ -649,6 +624,10 @@ namespace FC {
 		{
 			addTableWidgetItemDoubleSpinBox(rowCount, col, 0.0, 100.0, 1, 100);
 		}
+		int pmIndex = d->ui->tabWidget->currentIndex();
+		if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(pmIndex, 3))) {
+			spb->setValue(currentTable->rowCount());
+		}
 	}
 
 	void QPmRecipeWidget::addEditTableWidgetItemComboBox(int row, int column, int value)
@@ -675,7 +654,8 @@ namespace FC {
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row,column,dcb);
 	}
 
-	void QPmRecipeWidget::addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value)
+	void QPmRecipeWidget::addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, 
+		double single_step, double value, int decimals_value)
 	{
 		Q_D(QPmRecipeWidget);
 		QDoubleSpinBox* dsb = new QDoubleSpinBox();
