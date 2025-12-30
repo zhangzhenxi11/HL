@@ -6,92 +6,216 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1162</width>
+    <width>1175</width>
     <height>787</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>QPmRecipeWidget</string>
   </property>
-  <widget class="QWidget" name="layoutWidget">
+  <widget class="QGroupBox" name="gbx_pm_parameter">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>50</y>
-     <width>1111</width>
-     <height>51</height>
+     <x>0</x>
+     <y>40</y>
+     <width>1141</width>
+     <height>200</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>200</height>
+    </size>
+   </property>
+   <property name="title">
+    <string>PM腔参数</string>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
-     <widget class="QPushButton" name="add_an_item_pbt">
-      <property name="text">
-       <string>增加一项</string>
+     <widget class="QTableWidget" name="pm_cavity_param_edit_tbw">
+      <property name="minimumSize">
+       <size>
+        <width>600</width>
+        <height>0</height>
+       </size>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="delete_the_selected_item_pbt">
-      <property name="text">
-       <string>删除选中项</string>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>300</height>
+       </size>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="clear_prams_pbt">
-      <property name="text">
-       <string>清空数据</string>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="load_prams_pbt">
-      <property name="text">
-       <string>加载数据</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="save_prams_pbt">
-      <property name="text">
-       <string>保存数据</string>
-      </property>
+      <attribute name="horizontalHeaderVisible">
+       <bool>true</bool>
+      </attribute>
+      <attribute name="verticalHeaderVisible">
+       <bool>false</bool>
+      </attribute>
+      <column>
+       <property name="text">
+        <string>PM腔</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>电机取放片位置/mm</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>电机旋转角度/°</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>工艺次数</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>电机旋转位置/mm</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>电机工艺位置/mm</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>工艺时间/min</string>
+       </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+      </column>
      </widget>
     </item>
    </layout>
   </widget>
-  <widget class="QTabWidget" name="tabWidget">
+  <widget class="QGroupBox" name="gbx_motor_parameter">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>100</y>
-     <width>1121</width>
-     <height>491</height>
+     <x>10</x>
+     <y>270</y>
+     <width>1131</width>
+     <height>501</height>
     </rect>
    </property>
-   <property name="currentIndex">
-    <number>0</number>
+   <property name="title">
+    <string>电机运动参数</string>
    </property>
-   <widget class="QWidget" name="tab">
-    <attribute name="title">
-     <string>PM1</string>
-    </attribute>
-   </widget>
-   <widget class="QWidget" name="tab_2">
-    <attribute name="title">
-     <string>PM2</string>
-    </attribute>
-   </widget>
-   <widget class="QWidget" name="tab_3">
-    <attribute name="title">
-     <string>PM3</string>
-    </attribute>
-   </widget>
-   <widget class="QWidget" name="tab_4">
-    <attribute name="title">
-     <string>PM4</string>
-    </attribute>
-   </widget>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="add_an_item_pbt">
+        <property name="text">
+         <string>增加一项</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="delete_the_selected_item_pbt">
+        <property name="text">
+         <string>删除选中项</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="clear_prams_pbt">
+        <property name="text">
+         <string>清空数据</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="load_prams_pbt">
+        <property name="text">
+         <string>加载数据</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="save_prams_pbt">
+        <property name="text">
+         <string>保存数据</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>3</number>
+      </property>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>PM1</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tab_2">
+       <attribute name="title">
+        <string>PM2</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tab_3">
+       <attribute name="title">
+        <string>PM3</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tab_4">
+       <attribute name="title">
+        <string>PM4</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+   </layout>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

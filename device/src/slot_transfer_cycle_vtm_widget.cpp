@@ -188,7 +188,7 @@ namespace FC{
 		//衡流获取UI流程队列
 		bool setHLTransferSequence();
 
-		bool setPMCavityParameter();
+		//bool setPMCavityParameter();
 
 		void onUpdateCycleInfo();
 
@@ -7467,153 +7467,6 @@ namespace FC{
 	}
 
 	
-	bool QSlotTransferCycleVTMWidgetPrivate::setPMCavityParameter(){
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_temp = ui->pm_cavity_param_edit_tbw->cellWidget(i, 1);
-			QDoubleSpinBox *temperature_dsb = (QDoubleSpinBox*)widget_temp;
-			pm_process_param[i].heating_temperature = temperature_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_extraction_pressure = ui->pm_cavity_param_edit_tbw->cellWidget(i, 2);
-			QDoubleSpinBox *extraction_pressure_dsb = (QDoubleSpinBox*)widget_extraction_pressure;
-			pm_process_param[i].initial_extraction_pressure = extraction_pressure_dsb->value();
-
-		}
-
-
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_purified_pressure = ui->pm_cavity_param_edit_tbw->cellWidget(i, 3);
-			QDoubleSpinBox *purified_pressure_dsb = (QDoubleSpinBox*)widget_purified_pressure;
-			pm_process_param[i].purified_extraction_pressure = purified_pressure_dsb->value();
-		}
-
-
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_sputtering_pressure = ui->pm_cavity_param_edit_tbw->cellWidget(i, 4);
-			QDoubleSpinBox *sputtering_pressure_dsb = (QDoubleSpinBox*)widget_sputtering_pressure;
-			pm_process_param[i].sputtering_pressure = sputtering_pressure_dsb->value();
-		}
-
-
-
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_flow_rate1 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 5);
-			QDoubleSpinBox *flow_rate1_dsb = (QDoubleSpinBox*)widget_flow_rate1;
-			pm_process_param[i].sputtering_flow_rate1 = flow_rate1_dsb->value();
-		}
-
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_flow_rate2 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 6);
-			QDoubleSpinBox *flow_rate2_dsb = (QDoubleSpinBox*)widget_flow_rate2;
-			pm_process_param[i].sputtering_flow_rate2 = flow_rate2_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_flow_rate3 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 7);
-			QDoubleSpinBox *flow_rate3_dsb = (QDoubleSpinBox*)widget_flow_rate3;
-			pm_process_param[i].sputtering_flow_rate3 = flow_rate3_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_power1 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 8);
-			QDoubleSpinBox *flow_power1_dsb = (QDoubleSpinBox*)widget_power1;
-			pm_process_param[i].sputtering_power1 = flow_power1_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_power_gear_up1 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 9);
-			QDoubleSpinBox *flow_power_gear_up1_dsb = (QDoubleSpinBox*)widget_power_gear_up1;
-			pm_process_param[i].sputtering_power_gear_up1 = flow_power_gear_up1_dsb->value();
-		}
-
-		for (int i = 0; i <ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_power2 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 10);
-			QDoubleSpinBox *flow_power2_dsb = (QDoubleSpinBox*)widget_power2;
-			pm_process_param[i].sputtering_power2 = flow_power2_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_power_gear_up2 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 11);
-			QDoubleSpinBox *flow_power_gear_up2_dsb = (QDoubleSpinBox*)widget_power_gear_up2;
-			pm_process_param[i].sputtering_power_gear_up2 = flow_power_gear_up2_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_power3 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 12);
-			QDoubleSpinBox *flow_power3_dsb = (QDoubleSpinBox*)widget_power3;
-			pm_process_param[i].sputtering_power3 = flow_power3_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_power_gear_up3 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 13);
-			QDoubleSpinBox *flow_power_gear_up3_dsb = (QDoubleSpinBox*)widget_power_gear_up3;
-			pm_process_param[i].sputtering_power_gear_up3 = flow_power_gear_up3_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_sputtering_time = ui->pm_cavity_param_edit_tbw->cellWidget(i, 14);
-			QDoubleSpinBox *sputtering_time_dsb = (QDoubleSpinBox*)widget_sputtering_time;
-			pm_process_param[i].pre_sputtering_time = sputtering_time_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_substrate_speed = ui->pm_cavity_param_edit_tbw->cellWidget(i, 15);
-			QDoubleSpinBox *substrate_speed_dsb = (QDoubleSpinBox*)widget_substrate_speed;
-			pm_process_param[i].substrate_speed = substrate_speed_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_process_sputtering_time = ui->pm_cavity_param_edit_tbw->cellWidget(i, 16);
-			QDoubleSpinBox *process_sputtering_time_dsb = (QDoubleSpinBox*)widget_process_sputtering_time;
-			pm_process_param[i].process_sputtering_time = process_sputtering_time_dsb->value();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_cathode_power_selection_1 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 17);
-			QComboBox *cathode_power_selection_1_cbx = (QComboBox*)widget_cathode_power_selection_1;
-			pm_process_param[i].cathode_power_selection_1 = cathode_power_selection_1_cbx->currentIndex();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_cathode_power_selection_2 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 18);
-			QComboBox *cathode_power_selection_2_cbx = (QComboBox*)widget_cathode_power_selection_2;
-			pm_process_param[i].cathode_power_selection_2 = cathode_power_selection_2_cbx->currentIndex();
-		}
-
-		for (int i = 0; i < ui->pm_cavity_param_edit_tbw->rowCount(); i++)
-		{
-			QWidget *widget_cathode_power_selection_3 = ui->pm_cavity_param_edit_tbw->cellWidget(i, 19);
-			QComboBox *cathode_power_selection_3_cbx = (QComboBox*)widget_cathode_power_selection_3;
-			pm_process_param[i].cathode_power_selection_3 = cathode_power_selection_3_cbx->currentIndex();
-		}
-
-		return true;
-
-	}
-
 	void QSlotTransferCycleVTMWidgetPrivate::logFailed(const std::string station_name, const std::string log){
 		Q_Q(QSlotTransferCycleVTMWidget);
 		pauseAllThreads();
@@ -7793,13 +7646,13 @@ namespace FC{
 		{
 			d->ui->sequence_edit_tbw->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
 		}
-		for (size_t i = 0; i < d->ui->pm_cavity_param_edit_tbw->columnCount(); i++)
-		{
-			d->ui->pm_cavity_param_edit_tbw->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
-		}
+		//for (size_t i = 0; i < d->ui->pm_cavity_param_edit_tbw->columnCount(); i++)
+		//{
+		//	d->ui->pm_cavity_param_edit_tbw->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
+		//}
 		//d->ui->sequence_edit_tbw->horizontalHeader()->sectionResizeMode(QHeaderView::Stretch);
 		d->ui->sequence_edit_tbw->setSelectionBehavior(QAbstractItemView::SelectRows);
-		d->ui->pm_cavity_param_edit_tbw->setSelectionBehavior(QAbstractItemView::SelectRows);
+		//d->ui->pm_cavity_param_edit_tbw->setSelectionBehavior(QAbstractItemView::SelectRows);
 		//d->ui->sequence_edit_tbw->horizontalHeader()->setStyleSheet("QHeaderView::section{background:#0000FF;}");
 		//d->ui->sequence_edit_tbw->verticalHeader()->setStyleSheet("QHeaderView::section{background:#a7fffa;}");
 		//d->ui->sequence_edit_tbw->setStyleSheet("QTableCornerButton::section{background:#0000FF;}");
@@ -7832,7 +7685,7 @@ namespace FC{
 		d->ui->execute_pbt->setEnabled(true);
 		d->ui->continue_pbt->setEnabled(true);
 
-		initPMCavityParamEdieTableWidget();
+	/*	initPMCavityParamEdieTableWidget();*/
 
 		//d->ui->gbx_pm_parameter->hide();
 
@@ -8125,7 +7978,7 @@ namespace FC{
 			}
 		}
 
-		int pm_rowCount = settings.value("pm_rowCount", 0).toInt();
+		/*int pm_rowCount = settings.value("pm_rowCount", 0).toInt();
 		int pm_columnCount = settings.value("pm_columnCount", 0).toInt();
 		for (int i = 0; i < pm_rowCount; ++i) {
 			for (int j = 1; j < pm_columnCount; ++j) {
@@ -8149,9 +8002,9 @@ namespace FC{
 				}
 			}
 
-		}
+		}*/
 	}
-		catch (KernelException& e){
+	catch (KernelException& e){
 			logError(d->module_name.c_str(), e.what());
 			//throw e;
 		}
@@ -8202,49 +8055,52 @@ namespace FC{
 			}
 		}
 
-		int pm_rowCount = d->ui->pm_cavity_param_edit_tbw->rowCount();
-		int pm_columnCount = d->ui->pm_cavity_param_edit_tbw->columnCount();
-		settings.setValue("pm_rowCount", pm_rowCount);
-		settings.setValue("pm_columnCount", pm_columnCount);
+		//int pm_rowCount = d->ui->pm_cavity_param_edit_tbw->rowCount();
+		//int pm_columnCount = d->ui->pm_cavity_param_edit_tbw->columnCount();
+		//settings.setValue("pm_rowCount", pm_rowCount);
+		//settings.setValue("pm_columnCount", pm_columnCount);
 
-		for (int i = 0; i < pm_rowCount; ++i) {
-			for (int j = 1; j < pm_columnCount; ++j) {
-				QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
-				QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
+		//for (int i = 0; i < pm_rowCount; ++i) {
+		//	for (int j = 1; j < pm_columnCount; ++j) {
+		//		QString key = QString("pm_row%1pm_col%2").arg(i).arg(j);
+		//		QWidget *widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(i, j);
 
-				//auto className = widget->metaObject()->className();
-				//qDebug() << "className:" << className << endl;
+		//		//auto className = widget->metaObject()->className();
+		//		//qDebug() << "className:" << className << endl;
 
-				if (j == 2)
-				{
-					QComboBox* combox = (QComboBox*)widget;
-					settings.setValue(key, combox->currentText());
-				}
-				else if (j == 3)
-				{
-					QSpinBox* spb = (QSpinBox*)widget;
-					settings.setValue(key, spb->value());
-				}
-				else
-				{
-					QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
-					settings.setValue(key, dsb->value());
-				}
+		//		if (j == 2)
+		//		{
+		//			QComboBox* combox = (QComboBox*)widget;
+		//			settings.setValue(key, combox->currentText());
+		//		}
+		//		else if (j == 3)
+		//		{
+		//			QSpinBox* spb = (QSpinBox*)widget;
+		//			settings.setValue(key, spb->value());
+		//		}
+		//		else
+		//		{
+		//			QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
+		//			settings.setValue(key, dsb->value());
+		//		}
 
-				//if (j > 16)
-				//{
-				//	QComboBox *combox = (QComboBox*)widget;
-				//	settings.setValue(key, combox->currentText());
-				//}
-				//else{
-				//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
-				//	settings.setValue(key, dsb->value());
-				//}
+		//		//if (j > 16)
+		//		//{
+		//		//	QComboBox *combox = (QComboBox*)widget;
+		//		//	settings.setValue(key, combox->currentText());
+		//		//}
+		//		//else{
+		//		//	QDoubleSpinBox *dsb = (QDoubleSpinBox*)widget;
+		//		//	settings.setValue(key, dsb->value());
+		//		//}
 
-			}
+		//	}
 
+		//}
+	
+		
+		
 		}
-	}
 		catch (KernelException& e){
 			logError(d->module_name.c_str(), e.what());
 			//throw e;
@@ -8721,37 +8577,37 @@ namespace FC{
 		d->resetAction();
 	}
 
-	void QSlotTransferCycleVTMWidget::initPMCavityParamEdieTableWidget(){
-		Q_D(QSlotTransferCycleVTMWidget);
+	//void QSlotTransferCycleVTMWidget::initPMCavityParamEdieTableWidget(){
+	//	Q_D(QSlotTransferCycleVTMWidget);
 
 
-		addAnPMItem("PM1");
-		addAnPMItem("PM2");
-		addAnPMItem("PM3");
-		addAnPMItem("PM4");
-	}
+	//	//addAnPMItem("PM1");
+	//	//addAnPMItem("PM2");
+	//	//addAnPMItem("PM3");
+	//	//addAnPMItem("PM4");
+	//}
 
-	void QSlotTransferCycleVTMWidget::addAnPMItem(const QString name){
-		Q_D(QSlotTransferCycleVTMWidget);
+	//void QSlotTransferCycleVTMWidget::addAnPMItem(const QString name){
+	//	Q_D(QSlotTransferCycleVTMWidget);
 		
-		int row_count = d->ui->pm_cavity_param_edit_tbw->rowCount();
-		d->ui->pm_cavity_param_edit_tbw->insertRow(row_count);
+		//int row_count = d->ui->pm_cavity_param_edit_tbw->rowCount();
+		//d->ui->pm_cavity_param_edit_tbw->insertRow(row_count);
 
-		QTableWidgetItem* item = new QTableWidgetItem;
-		item->setText(name);
-		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
-		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机取放片位置
-		addEditTableWidgetItemComboBox(row_count, 2, 1);//电机旋转角度/°
-		QSpinBox* Rotation_count_spx = new QSpinBox();
-		Rotation_count_spx->setMinimum(0);
-		Rotation_count_spx->setMaximum(6);
-		Rotation_count_spx->setSingleStep(1);
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
-		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机工艺位置/mm
-		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
-	}
+		//QTableWidgetItem* item = new QTableWidgetItem;
+		//item->setText(name);
+		//item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+		//d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机取放片位置
+		//addEditTableWidgetItemComboBox(row_count, 2, 1);//电机旋转角度/°
+		//QSpinBox* Rotation_count_spx = new QSpinBox();
+		//Rotation_count_spx->setMinimum(0);
+		//Rotation_count_spx->setMaximum(6);
+		//Rotation_count_spx->setSingleStep(1);
+		//d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机工艺位置/mm
+		//addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
+	//}
 
 	void QSlotTransferCycleVTMWidget::executeEFEMTransfer()
 	{
@@ -8824,7 +8680,7 @@ namespace FC{
 		d->ui->cycle_setting_times_sbx->setEnabled(enabled);
 		d->ui->cycle_setting_times_sbx_2->setEnabled(enabled);
 		d->ui->sequence_edit_tbw->setEnabled(enabled);
-		d->ui->pm_cavity_param_edit_tbw->setEnabled(enabled);
+	/*	d->ui->pm_cavity_param_edit_tbw->setEnabled(enabled);*/
 		d->ui->horizontalLayout->setEnabled(enabled);
 		d->ui->add_an_item_pbt->setEnabled(enabled);
 		d->ui->delete_the_selected_item_pbt->setEnabled(enabled);
@@ -8918,36 +8774,36 @@ namespace FC{
 		}
 	}
 
-	void QSlotTransferCycleVTMWidget::addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value){
-		Q_D(QSlotTransferCycleVTMWidget);
-		QDoubleSpinBox *dsb = new QDoubleSpinBox();
-		dsb->setMaximum(max_value);
-		dsb->setMinimum(min_value);
-		dsb->setDecimals(decimals_value);
-		dsb->setSingleStep(single_step);
-		dsb->setValue(value);
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row, column, dsb);
-	}
+	//void QSlotTransferCycleVTMWidget::addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value){
+	//	Q_D(QSlotTransferCycleVTMWidget);
+	//	QDoubleSpinBox *dsb = new QDoubleSpinBox();
+	//	dsb->setMaximum(max_value);
+	//	dsb->setMinimum(min_value);
+	//	dsb->setDecimals(decimals_value);
+	//	dsb->setSingleStep(single_step);
+	//	dsb->setValue(value);
+	//	d->ui->pm_cavity_param_edit_tbw->setCellWidget(row, column, dsb);
+	//}
 	
-	void QSlotTransferCycleVTMWidget::addEditTableWidgetItemComboBox(int row, int column, int value)
-	{
-		Q_D(QSlotTransferCycleVTMWidget);
-		QComboBox* dcb = new QComboBox();
-		QMap<QString, int> AngleMap;
-		AngleMap.insert("0",0);
-		AngleMap.insert("60", 60);
-		AngleMap.insert("120", 120);
-		AngleMap.insert("180", 180);
-		AngleMap.insert("240", 240);
-		AngleMap.insert("300", 300);
-		AngleMap.insert("360", 360);
-		foreach(const QString & str, AngleMap.keys())
-			dcb->addItem(str, AngleMap.value(str));
+	//void QSlotTransferCycleVTMWidget::addEditTableWidgetItemComboBox(int row, int column, int value)
+	//{
+	//	Q_D(QSlotTransferCycleVTMWidget);
+	//	QComboBox* dcb = new QComboBox();
+	//	QMap<QString, int> AngleMap;
+	//	AngleMap.insert("0",0);
+	//	AngleMap.insert("60", 60);
+	//	AngleMap.insert("120", 120);
+	//	AngleMap.insert("180", 180);
+	//	AngleMap.insert("240", 240);
+	//	AngleMap.insert("300", 300);
+	//	AngleMap.insert("360", 360);
+	//	foreach(const QString & str, AngleMap.keys())
+	//		dcb->addItem(str, AngleMap.value(str));
 
-		dcb->setCurrentIndex(value);
+	//	dcb->setCurrentIndex(value);
 
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row,column,dcb);
-	}
+	//	d->ui->pm_cavity_param_edit_tbw->setCellWidget(row,column,dcb);
+	//}
 
 
 	void QSlotTransferCycleVTMWidget::startProcessingThreads()

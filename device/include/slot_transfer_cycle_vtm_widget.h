@@ -71,10 +71,10 @@ namespace  FC {
 		void updateControlEnabled(const QString control,const bool enabled);
 		void updateLightButtonStatus(const QString control, const int color);
 
-		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 
-			double max_value, double single_step, double value, int decimals_value = 3);
+		//void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 
+		//	double max_value, double single_step, double value, int decimals_value = 3);
 
-		void addEditTableWidgetItemComboBox(int row, int column,int value);
+		//void addEditTableWidgetItemComboBox(int row, int column,int value);
 		//新增 流程启动
 		void startProcessingThreads();
 
@@ -91,9 +91,9 @@ namespace  FC {
 		void resetAction();
 		void onProcess();
 
-		void initPMCavityParamEdieTableWidget();
-		//增加pm项
-		void addAnPMItem(const QString name);
+		/*void initPMCavityParamEdieTableWidget();*/
+		////增加pm项
+		//void addAnPMItem(const QString name);
 		//新增
 		void executeEFEMTransfer();
 

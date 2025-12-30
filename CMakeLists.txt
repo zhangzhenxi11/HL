@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.0)
+﻿cmake_minimum_required(VERSION 3.0)
 project(HL_VTM)
-############################工程设置############################
+############################宸ョ▼璁剧疆############################
 foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG}  ${PROJECT_BINARY_DIR}/output/${OUTPUTCONFIG})
@@ -17,14 +17,14 @@ SET(CMAKE_RELWITHDEBINFO_POSTFIX "" CACHE STRING "Set RelWithDebInfo library pos
 SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
 SET(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
 
-############################依赖设置############################
+############################渚濊禆璁剧疆############################
 find_package(xVersionCommon REQUIRED)
 find_package(Poco REQUIRED Foundation Util)
 find_package(Kernel REQUIRED  Core Utils EditorUI CoreUI Fortrend FortrendUI)
 find_package(QtUI REQUIRED) 
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets PrintSupport WebEngineWidgets AxContainer)
 include_directories(
-${CMAKE_BINARY_DIR}  # 包含编译目标顶级目录，为了能找到版本号头文件
+${CMAKE_BINARY_DIR}  # 鍖呭惈缂栬瘧鐩爣椤剁骇鐩綍锛屼负浜嗚兘鎵惧埌鐗堟湰鍙峰ご鏂囦欢
 ${Qt5AxContainer_INCLUDE_DIRS}
 ${Qt5Core_INCLUDE_DIRS}
 ${Qt5Widgets_INCLUDE_DIRS}
@@ -58,7 +58,7 @@ if (CPPCHECK_PROC)
 endif ()
 
 
-############################编译设置############################
+############################缂栬瘧璁剧疆############################
 add_subdirectory(app)
 add_subdirectory(device)
 add_subdirectory(MyUnit)

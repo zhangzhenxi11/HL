@@ -39,15 +39,32 @@ namespace FC {
 		
 		// 公共方法，用于获取pmMotionProcessData
 		std::map<std::string, std::vector<PMMotionProcessParameters>>& getPMMotionProcessData();
-
 	private slots:
+		void onStartCycle();
+		void onStopCycle();
 		void onAddAnItem();
 		void onDeleteTheSelectedItem();
 		void onClearParameters();
 		void onLoadParameters();
 		void onSetParameters();
+
+		//初始化PM腔界面
+		void initPMCavityParamEdieTableWidget();
+
+		//增加pm项
+		void addAnPMItem(const QString name);
+
 		void addTableWidgetItemDoubleSpinBox(int row, int column, double min_value,
 			double max_value, double single_step, double value, int decimals_value = 3, QTableWidget* table = nullptr);
+
+		//重载函数
+		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 
+			double max_value, double single_step, double value, int decimals_value = 3);
+
+		void addEditTableWidgetItemComboBox(int row, int column,int value);
+
+
+
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)
 		QPmRecipeWidgetPrivate* d_ptr;
