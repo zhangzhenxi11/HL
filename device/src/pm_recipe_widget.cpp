@@ -321,26 +321,14 @@ namespace FC {
 				currentTable->insertRow(row);
 
 				// 使用addTableWidgetItemDoubleSpinBox方法创建和设置QDoubleSpinBox部件
-				addTableWidgetItemDoubleSpinBox(row, 0, 0.0, 100.0, 1, processData.lifting_axis_acce1);
-				addTableWidgetItemDoubleSpinBox(row, 1, 0.0, 100.0, 1, processData.lifting_axis_acce2);
-				addTableWidgetItemDoubleSpinBox(row, 2, 0.0, 100.0, 1, processData.lifting_axis_acce3);
-				addTableWidgetItemDoubleSpinBox(row, 3, 0.0, 100.0, 1, processData.lifting_axis_acce4);
-				addTableWidgetItemDoubleSpinBox(row, 4, 0.0, 100.0, 1, processData.rotating_axis_acce1);
-				addTableWidgetItemDoubleSpinBox(row, 5, 0.0, 100.0, 1, processData.rotating_axis_acce2);
-				addTableWidgetItemDoubleSpinBox(row, 6, 0.0, 100.0, 1, processData.rotating_axis_acce3);
-				addTableWidgetItemDoubleSpinBox(row, 7, 0.0, 100.0, 1, processData.rotating_axis_acce4);
-				
-				// 设置升降轴加速度1-4
-				//currentTable->setItem(row, 0, new QTableWidgetItem(QString::number(processData.lifting_axis_acce1)));
-				//currentTable->setItem(row, 1, new QTableWidgetItem(QString::number(processData.lifting_axis_acce2)));
-				//currentTable->setItem(row, 2, new QTableWidgetItem(QString::number(processData.lifting_axis_acce3)));
-				//currentTable->setItem(row, 3, new QTableWidgetItem(QString::number(processData.lifting_axis_acce4)));
-
-				//// 设置旋转轴加速度1-4
-				//currentTable->setItem(row, 4, new QTableWidgetItem(QString::number(processData.rotating_axis_acce1)));
-				//currentTable->setItem(row, 5, new QTableWidgetItem(QString::number(processData.rotating_axis_acce2)));
-				//currentTable->setItem(row, 6, new QTableWidgetItem(QString::number(processData.rotating_axis_acce3)));
-				//currentTable->setItem(row, 7, new QTableWidgetItem(QString::number(processData.rotating_axis_acce4)));
+				addTableWidgetItemDoubleSpinBox(row, 0, 0.0, 100.0, 1, processData.lifting_axis_acce1, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 1, 0.0, 100.0, 1, processData.lifting_axis_acce2, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 2, 0.0, 100.0, 1, processData.lifting_axis_acce3, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 3, 0.0, 100.0, 1, processData.lifting_axis_acce4, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 4, 0.0, 100.0, 1, processData.rotating_axis_acce1, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 5, 0.0, 100.0, 1, processData.rotating_axis_acce2, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 6, 0.0, 100.0, 1, processData.rotating_axis_acce3, 3, currentTable);
+				addTableWidgetItemDoubleSpinBox(row, 7, 0.0, 100.0, 1, processData.rotating_axis_acce4, 3, currentTable);
 			}
 
 			// 将当前PM的工艺数据vector添加到map中
@@ -487,11 +475,11 @@ namespace FC {
 		}
 	}
 
-	void QPmRecipeWidget::addTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value)
+	void QPmRecipeWidget::addTableWidgetItemDoubleSpinBox(int row, int column, double min_value, double max_value, double single_step, double value, int decimals_value,QTableWidget* table)
 	{
 		Q_D(QPmRecipeWidget);
-		QTableWidget* currentTable = d->getCurrentTableWidget();
-		if (!currentTable)
+		QTableWidget* target = table ? table : d->getCurrentTableWidget();
+		if (!target)
 			return;
 		QDoubleSpinBox* dsb = new QDoubleSpinBox();
 		dsb->setMaximum(max_value);
@@ -499,7 +487,7 @@ namespace FC {
 		dsb->setDecimals(decimals_value);
 		dsb->setSingleStep(single_step);
 		dsb->setValue(value);
-		currentTable->setCellWidget(row, column, dsb);
+		target->setCellWidget(row, column, dsb);
 	}
 
 

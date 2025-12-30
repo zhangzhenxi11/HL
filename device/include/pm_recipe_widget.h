@@ -47,7 +47,7 @@ namespace FC {
 		void onLoadParameters();
 		void onSetParameters();
 		void addTableWidgetItemDoubleSpinBox(int row, int column, double min_value,
-			double max_value, double single_step, double value, int decimals_value = 3);
+			double max_value, double single_step, double value, int decimals_value = 3, QTableWidget* table = nullptr);
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)
 		QPmRecipeWidgetPrivate* d_ptr;

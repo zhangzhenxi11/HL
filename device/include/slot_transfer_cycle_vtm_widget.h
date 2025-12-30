@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * @file            slot_transfer_cycle_test_widget.h
  * @brief           slot transfer cycle test widget
  * @author			xielonghua
