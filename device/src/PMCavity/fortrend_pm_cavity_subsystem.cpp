@@ -687,11 +687,11 @@ namespace FC{
 	}
 	bool FortrendPMCavitySubsystem::getMaximumPlaneLevelSignal() const
 	{
-		return d->pm_cavity_motor_rotating_plane_signal;
+		return d->pm_cavity_motor_maximum_plane_signal;
 	}
 	bool FortrendPMCavitySubsystem::getRotatingimumPlaneLevelSignal() const
 	{
-		return d->pm_cavity_motor_maximum_plane_signal;
+		return d->pm_cavity_motor_rotating_plane_signal;
 	}
 	float FortrendPMCavitySubsystem::getPmLiftingTargetPos() const
 	{

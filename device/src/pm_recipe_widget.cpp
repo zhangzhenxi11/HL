@@ -504,8 +504,11 @@ namespace FC {
 		d->ui->start_pm_pbt->setEnabled(false);
 		d->ui->stop_pm_pbt->setEnabled(true);
 
-		d->cycleThread = std::thread([=]()
-		{
+
+		// Sequence: Z3 -> 执行process_count次（Z2 -> Rotate -> Z1 -> 停留一段工艺时间）-> 执行完总工艺时间->  Z3
+
+
+		d->cycleThread = std::thread([=](){
 			auto pmSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
 			if (!pmSubsystem) {
 				// Log error?
@@ -520,10 +523,19 @@ namespace FC {
 
 			double atProcessPosMinutes = cfg.params.process_time_min / max(1, cfg.params.process_count); //eg:  15/6 = 2.5min
 
-			//d->start_time = std::chrono::steady_clock::now();
+			if (!pmSubsystem->getMinimumPlaneLevelSignal())
+			{
+				auto cmdToZ3 = pmSubsystem->createLiftingActionCommand(z3);
+				pmSubsystem->startCommand(cmdToZ3);
+				cmdToZ3->wait();
+				if (cmdToZ3->hasError() || (d->stopRequested))
+				{
+					//logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到取放片面","测试pm流程");
+					return;
+				}
+			}
+
 			try {
-
-
 				for (int idx = 0; idx < cfg.params.process_count; ++idx) 
 				{
 					if (d->stopRequested) break;
@@ -531,17 +543,18 @@ namespace FC {
 					// Update UI
 					QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, idx + 1));
 
-					// 1. Start at Z3 (Assumed starting pos or move there first)
-					// Sequence: Z3 -> 执行process_count次（Z2 -> Rotate -> Z1 -> 停留一段工艺时间）-> 执行完总工艺时间->  Z3
-					
-					// Move to Z2
-					auto cmdToZ2 = pmSubsystem->createLiftingActionCommand(z2);
-					pmSubsystem->startCommand(cmdToZ2);
-					cmdToZ2->wait();
-					if (cmdToZ2->hasError() || (d->stopRequested))
+					if (!pmSubsystem->getRotatingimumPlaneLevelSignal())
 					{
-						logFailedExcuteCommandHasError(pmSubsystem->getName(),"移动到旋转面","测试pm流程");
-						break;
+						// Move to Z2
+						auto cmdToZ2 = pmSubsystem->createLiftingActionCommand(z2);
+						pmSubsystem->startCommand(cmdToZ2);
+						cmdToZ2->wait();
+						if (cmdToZ2->hasError() || (d->stopRequested))
+						{
+							//logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到旋转面", "测试pm流程");
+							break;
+						}
+						logInform(pmSubsystem->getName().c_str(), "第:%d次，移动到旋转面---------------", idx);
 					}
 						
 					// Rotate at Z2
@@ -551,22 +564,28 @@ namespace FC {
 
 					if (cmdRotate->hasError() || (d->stopRequested))
 					{
-						logFailedExcuteCommandHasError(pmSubsystem->getName(), "执行旋转", "测试pm流程");
+						//logFailedExcuteCommandHasError(pmSubsystem->getName(), "执行旋转", "测试pm流程");
 						break;
 					}
+					logInform(pmSubsystem->getName().c_str(), "第:%d次，执行旋转中---------------", idx);
 
 					// Move to Z1 (Process)
-					auto cmdToZ1 = pmSubsystem->createLiftingActionCommand(z1);
-					pmSubsystem->startCommand(cmdToZ1);
-					cmdToZ1->wait();
-					if (cmdToZ1->hasError() || (d->stopRequested))
+
+					if (!pmSubsystem->getMaximumPlaneLevelSignal())
 					{
-						logFailedExcuteCommandHasError(pmSubsystem->getName(), "上升到工艺面", "测试pm流程");
-						break;
+						auto cmdToZ1 = pmSubsystem->createLiftingActionCommand(z1);
+						pmSubsystem->startCommand(cmdToZ1);
+						cmdToZ1->wait();
+						if (cmdToZ1->hasError() || (d->stopRequested))
+						{
+							//logFailedExcuteCommandHasError(pmSubsystem->getName(), "上升到工艺面", "测试pm流程");
+							break;
+						}
 					}
 
-					logInform1(pmSubsystem->getName().c_str(), "-----------工艺开始---------------");
+					logInform(pmSubsystem->getName().c_str(), "第:%d次，执行上升到工艺面完成---------------", idx);
 
+					logInform(pmSubsystem->getName().c_str(), "第:%d次，执行工艺开始---------------", idx);
 					// Wait (Process Time at Z1) — 计时线程唤醒/停止唤醒
 					d->runTimer(atProcessPosMinutes);
 					{
@@ -576,18 +595,7 @@ namespace FC {
 						});
 						if (d->stopRequested) break;
 					}
-					logInform1(pmSubsystem->getName().c_str(), "-----------工艺结束---------------");
-
-					// Move back to Z2
-					auto cmdBackToZ2 = pmSubsystem->createLiftingActionCommand(z2);
-					pmSubsystem->startCommand(cmdBackToZ2);
-					cmdBackToZ2->wait();
-					if (d->stopRequested) break;
-
-					// Move back to Z3 (End of cycle)
-					auto cmdToZ3 = pmSubsystem->createLiftingActionCommand(z3);
-					pmSubsystem->startCommand(cmdToZ3);
-					cmdToZ3->wait();
+					logInform(pmSubsystem->getName().c_str(), "第:%d次，执行工艺结束---------------", idx);
 
 					/*d->processElapsed += atProcessPosMinutes;
 
@@ -596,6 +604,24 @@ namespace FC {
 						logInform(pmSubsystem->getName().c_str(), "超过工艺总时间，停止循环");
 						break;
 					}*/
+				}
+
+				// Move back to Z3 (End of cycle)
+
+				if (!pmSubsystem->getMinimumPlaneLevelSignal())
+				{
+					auto cmdToZ3 = pmSubsystem->createLiftingActionCommand(z3);
+					pmSubsystem->startCommand(cmdToZ3);
+					cmdToZ3->wait();
+					if (cmdToZ3->hasError() || (d->stopRequested))
+					{
+						//logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到取放片面", "测试pm流程");
+						return;
+					}
+					else
+					{
+						logInform(pmSubsystem->getName().c_str(), "整体工艺完成");
+					}
 				}
 			} 
 			catch (...) {

@@ -1031,7 +1031,7 @@
 			<!--升降轴动作-->
 			<LiftingAxisACtion>
 				<start_address>MR8105</start_address>
-				<finish_address>MR34000</finish_address>
+				<finish_address>MR8109</finish_address>
 				<failed_address>DM6640</failed_address>
 				<!--目标坐标unit:mm-->
 				<abs_position_address>DM6624</abs_position_address>

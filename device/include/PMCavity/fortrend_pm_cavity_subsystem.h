@@ -151,9 +151,11 @@ namespace FC{
 
 		//最低面位检测
 		bool getMinimumPlaneLevelSignal()const;
-		//中间旋转面位检测
-		bool getMaximumPlaneLevelSignal()const;
+		
 		//最高面位检测
+		bool getMaximumPlaneLevelSignal()const;
+		
+		//中间旋转面位检测
 		bool getRotatingimumPlaneLevelSignal()const;
 
 		//z轴定位坐标
