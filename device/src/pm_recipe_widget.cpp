@@ -3,6 +3,7 @@
 // Package: VTM
 
 #include "Kernel/kernel_api.h"
+#include "Poco/Format.h"
 #include "pm_recipe_widget.h"
 #include "device/ui_pm_recipe_widget.h"
 #include "PMCavity/fortrend_pm_cavity_defined.h"
@@ -22,11 +23,15 @@
 #include <chrono>
 #include <QSpinBox>
 #include <QMap>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
 
+#define max(a, b) (((a) > (b)) ? (a) : (b))
 
 namespace FC {
 
@@ -40,6 +45,7 @@ namespace FC {
 		void initTableWidget(QTableWidget* tableWidget);
 		QTableWidget* getCurrentTableWidget();
 		QTableWidget* getIndexTableWidget(int index);
+		void runTimer(double minutes);
 		
 	private:
 		Ui::QPmRecipeWidgetClass* ui;
@@ -58,11 +64,18 @@ namespace FC {
 		//pm统一的PM腔的工艺数据
 		std::map<std::string, QPmRecipeWidget::PMRecipeConfig> pmRecipeConfigMap;
 
+		std::chrono::steady_clock::time_point start_time;//开始时间点
+		const std::chrono::hours timeout = std::chrono::hours(1); //超时时间
+		double processElapsed = 0.0; //工艺耗时（单位：分钟）
+
 		std::string current_pm; //要执行测试的PM
 		std::thread cycleThread;
 		std::atomic<bool> isRunning;
 		std::atomic<bool> stopRequested;
 		std::atomic<int> currentCycleCount;
+		std::atomic<bool> timerFinished{ false };
+		std::condition_variable cycleCv;
+		std::mutex cycleMutex;
 
 		friend class QPmRecipeWidget;
 	};
@@ -91,6 +104,17 @@ namespace FC {
 			}
 		}
 		delete ui;
+	}
+	
+	void QPmRecipeWidgetPrivate::runTimer(double minutes)
+	{
+		timerFinished.store(false);
+		std::thread([this, minutes]() {
+			auto ms = std::chrono::milliseconds(static_cast<long long>(minutes * 60000.0));
+			std::this_thread::sleep_for(ms);
+			timerFinished.store(true);
+			cycleCv.notify_all();
+		}).detach();
 	}
 
 	void QPmRecipeWidgetPrivate::initTableWidget(QTableWidget* tableWidget)
@@ -357,19 +381,20 @@ namespace FC {
 		if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) dsb4->setValue(cfg.params.rotate_position_mm);
 		if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) dsb5->setValue(cfg.params.process_position_mm);
 		if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) dsb6->setValue(cfg.params.process_time_min);
+
 		// 写入界面：电机参数表
 		if (auto table = d->getIndexTableWidget(i)) {
 			table->setRowCount(0);
 			for (int r = 0; r < (int)cfg.motors.size(); ++r) {
 				table->insertRow(r);
-				addTableWidgetItemDoubleSpinBox(r, 0, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce1, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 0, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce1, 3, table);//[0,100]
 				addTableWidgetItemDoubleSpinBox(r, 1, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce2, 3, table);
 				addTableWidgetItemDoubleSpinBox(r, 2, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce3, 3, table);
 				addTableWidgetItemDoubleSpinBox(r, 3, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce4, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 4, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce1, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 5, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce2, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 6, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce3, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 7, 0.0, 100.0, 1, cfg.motors[r].rotating_axis_acce4, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 4, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce1, 3, table);//[-50,100]
+				addTableWidgetItemDoubleSpinBox(r, 5, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce2, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 6, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce3, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 7, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce4, 3, table);
 			}
 		}
 		d->pmRecipeConfigMap[pmName] = cfg;
@@ -403,7 +428,7 @@ namespace FC {
 			pmObj["params"] = params;
 			QJsonArray motors;
 			auto table = d->getIndexTableWidget(i);
-			int useRows = std::max(0, processCount);
+			int useRows = max(0, processCount);
 			for (int r = 0; r < useRows; ++r) {
 				QJsonObject obj;
 				auto getVal = [&](int col) -> double {
@@ -479,7 +504,8 @@ namespace FC {
 		d->ui->start_pm_pbt->setEnabled(false);
 		d->ui->stop_pm_pbt->setEnabled(true);
 
-		d->cycleThread = std::thread([=]() {
+		d->cycleThread = std::thread([=]()
+		{
 			auto pmSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
 			if (!pmSubsystem) {
 				// Log error?
@@ -487,8 +513,16 @@ namespace FC {
 				return;
 			}
 			const auto& cfg = d->pmRecipeConfigMap[pmName];
-			
+			double z1 = cfg.params.process_position_mm; //工艺面
+			double z2 = cfg.params.rotate_position_mm;  //旋转面
+			double z3 = cfg.params.take_position_mm;    //取放片面
+			int rotation_angle_deg = cfg.params.rotation_angle_deg;
+
+			double atProcessPosMinutes = cfg.params.process_time_min / max(1, cfg.params.process_count); //eg:  15/6 = 2.5min
+
+			//d->start_time = std::chrono::steady_clock::now();
 			try {
+
 
 				for (int idx = 0; idx < cfg.params.process_count; ++idx) 
 				{
@@ -497,35 +531,52 @@ namespace FC {
 					// Update UI
 					QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, idx + 1));
 
-					double z1 = cfg.params.process_position_mm;
-					double z2 = cfg.params.rotate_position_mm;
-					double z3 = cfg.params.take_position_mm;
-					int rotation_angle_deg = cfg.params.rotation_angle_deg;
-
 					// 1. Start at Z3 (Assumed starting pos or move there first)
-					// Sequence: Z3 -> Z2 -> Rotate -> Z1 -> Wait -> Z2 -> Z3
+					// Sequence: Z3 -> 执行process_count次（Z2 -> Rotate -> Z1 -> 停留一段工艺时间）-> 执行完总工艺时间->  Z3
 					
 					// Move to Z2
 					auto cmdToZ2 = pmSubsystem->createLiftingActionCommand(z2);
 					pmSubsystem->startCommand(cmdToZ2);
 					cmdToZ2->wait();
-					if (d->stopRequested) break;
-
+					if (cmdToZ2->hasError() || (d->stopRequested))
+					{
+						logFailedExcuteCommandHasError(pmSubsystem->getName(),"移动到旋转面","测试pm流程");
+						break;
+					}
+						
 					// Rotate at Z2
 					auto cmdRotate = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 					pmSubsystem->startCommand(cmdRotate);
 					cmdRotate->wait();
-					if (d->stopRequested) break;
+
+					if (cmdRotate->hasError() || (d->stopRequested))
+					{
+						logFailedExcuteCommandHasError(pmSubsystem->getName(), "执行旋转", "测试pm流程");
+						break;
+					}
 
 					// Move to Z1 (Process)
 					auto cmdToZ1 = pmSubsystem->createLiftingActionCommand(z1);
 					pmSubsystem->startCommand(cmdToZ1);
 					cmdToZ1->wait();
-					if (d->stopRequested) break;
+					if (cmdToZ1->hasError() || (d->stopRequested))
+					{
+						logFailedExcuteCommandHasError(pmSubsystem->getName(), "上升到工艺面", "测试pm流程");
+						break;
+					}
 
-					// Wait (Process Time simulation)
-					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-					if (d->stopRequested) break;
+					logInform1(pmSubsystem->getName().c_str(), "-----------工艺开始---------------");
+
+					// Wait (Process Time at Z1) — 计时线程唤醒/停止唤醒
+					d->runTimer(atProcessPosMinutes);
+					{
+						std::unique_lock<std::mutex> lk(d->cycleMutex);
+						d->cycleCv.wait(lk, [&]() {
+							return d->timerFinished.load() || d->stopRequested.load();
+						});
+						if (d->stopRequested) break;
+					}
+					logInform1(pmSubsystem->getName().c_str(), "-----------工艺结束---------------");
 
 					// Move back to Z2
 					auto cmdBackToZ2 = pmSubsystem->createLiftingActionCommand(z2);
@@ -537,6 +588,14 @@ namespace FC {
 					auto cmdToZ3 = pmSubsystem->createLiftingActionCommand(z3);
 					pmSubsystem->startCommand(cmdToZ3);
 					cmdToZ3->wait();
+
+					/*d->processElapsed += atProcessPosMinutes;
+
+					if (d->processElapsed >= cfg.params.process_time_min)
+					{
+						logInform(pmSubsystem->getName().c_str(), "超过工艺总时间，停止循环");
+						break;
+					}*/
 				}
 			} 
 			catch (...) {
@@ -556,10 +615,28 @@ namespace FC {
 		Q_D(QPmRecipeWidget);
 		if (d->isRunning) {
 			d->stopRequested = true;
+			d->cycleCv.notify_all();
 			d->ui->stop_pm_pbt->setEnabled(false); // Prevent multiple clicks
+
+			//if (d->processElapsed > 0)
+			//{
+			//	d->processElapsed = 0.0;
+			//}
 		}
 	}
 	
+	void QPmRecipeWidget::logFailed(const std::string station_name, const std::string log) {
+		Q_D(QPmRecipeWidget);
+		logError(station_name.c_str(), log.c_str());
+		d->stopRequested = true;
+		d->ui->stop_pm_pbt->setEnabled(false);
+	}
+
+	void QPmRecipeWidget::logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name)
+	{
+		logFailed(station_name, Poco::format("%s %s命令执行失败， %s", station_name, command_name, process_name));
+	}
+
 	void QPmRecipeWidget::onSelectPMChanged(int index)
 	{
 		Q_D(QPmRecipeWidget);
@@ -595,7 +672,7 @@ namespace FC {
 		item->setText(name);
 		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
-		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100); //电机取放片位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 0.0, 100.0, 1, 100); //电机取放片位置
 		addEditTableWidgetItemComboBox(row_count, 2, 1);						//电机旋转角度/°
 
 		QSpinBox* Rotation_count_spx = new QSpinBox();
@@ -604,9 +681,9 @@ namespace FC {
 		Rotation_count_spx->setSingleStep(1);
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
 
-		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100); //电机旋转位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120); //电机工艺位置/mm
-		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);	//工艺时间
+		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 0.0, 100.0, 1, 100); //电机旋转位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 0.0, 100.0, 1, 120); //电机工艺位置/mm   max height:100mm
+		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 20.0, 1, 15.0);	//工艺时间		  max:20min
 
 	}
 	// 增加一项

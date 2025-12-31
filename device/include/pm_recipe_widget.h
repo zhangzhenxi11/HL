@@ -91,7 +91,9 @@ namespace FC {
 
 		void addEditTableWidgetItemComboBox(int row, int column,int value);
 
+		void logFailed(const std::string station_name, const std::string log);
 
+		void logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name);
 
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)
