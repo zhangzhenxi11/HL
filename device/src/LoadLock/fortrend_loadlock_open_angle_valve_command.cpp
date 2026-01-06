@@ -67,11 +67,11 @@ namespace FC{
 		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s高真空挡板阀未关闭(逻辑错误)", sub->getName()), this);
 		//}
 
-		if (SIMULATION_TEST == 1)
-		{
-			logInform(sub->getName().c_str(), "模拟执行打开角阀命令...");
-			return RunResult::RUN_OK;
-		}
+		//if (SIMULATION_TEST == 1)
+		//{
+		//	logInform(sub->getName().c_str(), "模拟执行打开角阀命令...");
+		//	return RunResult::RUN_OK;
+		//}
 
 		// TODO:2025-5-26 如果只开角阀，那条件变化是什么？
 		//if (sub->getName() == "LLA"){

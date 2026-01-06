@@ -69,12 +69,12 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭角阀地址未定义", getName()), this);
 		}
 
-		if (SIMULATION_TEST == 1)
-		{
-			Sleep(200);
-			logInform(sub->getName().c_str(), "模拟关闭角阀命令执行完成...");
-			return RunResult::RUN_OK;
-		}
+		//if (SIMULATION_TEST == 1)
+		//{
+		//	Sleep(200);
+		//	logInform(sub->getName().c_str(), "模拟关闭角阀命令执行完成...");
+		//	return RunResult::RUN_OK;
+		//}
 
 		logInform(sub->getName().c_str(), "关闭角阀命令开始执行");
 

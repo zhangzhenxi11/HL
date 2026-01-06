@@ -91,12 +91,12 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开隔膜阀地址未定义", getName()), this);
 		}
-		if (SIMULATION_TEST == 1)
-		{
-			Sleep(200);
-			logInform(sub->getName().c_str(), "模拟打开隔膜阀命令执行完成...");
-			return RunResult::RUN_OK;
-		}
+		//if (SIMULATION_TEST == 1)
+		//{
+		//	Sleep(200);
+		//	logInform(sub->getName().c_str(), "模拟打开隔膜阀命令执行完成...");
+		//	return RunResult::RUN_OK;
+		//}
 		logInform(sub->getName().c_str(), "打开隔膜阀命令开始");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		bool write_result = false;

@@ -71,11 +71,11 @@ namespace FC{
 			);
 
 		//    更新数据
-	/*	QTimer * time = new QTimer(this);
+		QTimer * time = new QTimer(this);
 		connect(time, &QTimer::timeout, this, [=]{
 			onclick();
 		});
-		time->start(200);*/
+		time->start(200);
 		
 
 	}

@@ -50,9 +50,16 @@ public:
 	//std::vector<QCheckBox*> arm_stat;
 	std::vector<QCheckBox*> input_checkboxs;
 	QCheckBox* tm_cavity_door_ckb = 0;
-	QCheckBox* pm_cavity_motor_home_ckb, * pm_cavity_motor_running_ckb, * pm_cavity_motor_forward_ckb = 0,
-		* pm_cavity_raxis_motor_running_ckb, * pm_cavity_raxis_motor_home_ckb;
-	QCheckBox* pm_min_plane_Level_ckb, *pm_max_plane_Level_ckb, *pm_rotating_plane_Level_ckb;
+	QCheckBox* pm_cavity_motor_home_ckb,
+		* pm_cavity_motor_running_ckb, 
+		* pm_cavity_motor_forward_ckb = 0,
+		* pm_cavity_raxis_motor_running_ckb,
+		* pm_cavity_raxis_motor_home_ckb;
+	QCheckBox* pm_min_plane_Level_ckb,
+		* pm_max_plane_Level_ckb,
+		* pm_rotating_plane_Level_ckb,
+		* pm_liftting_alarm_ckb,
+		* pm_rotating_alarm_ckb;
 
 };
 
@@ -134,19 +141,19 @@ void QMainPMCavitySubsystemWidget::init(){
 	//d->pm_cavity_motor_forward_ckb->setObjectName("io_object");
 	//d->pm_cavity_motor_forward_ckb->setEnabled(false);
 
-	d->pm_cavity_motor_home_ckb = new QCheckBox(QString("Z轴电机回原到位信号"));
+	d->pm_cavity_motor_home_ckb = new QCheckBox(QString("Z轴回原到位信号"));
 	d->pm_cavity_motor_home_ckb->setObjectName("io_object");
 	d->pm_cavity_motor_home_ckb->setEnabled(false);
 
-	d->pm_cavity_motor_running_ckb = new QCheckBox(QString("Z轴电机运动中"));
+	d->pm_cavity_motor_running_ckb = new QCheckBox(QString("Z轴运动中"));
 	d->pm_cavity_motor_running_ckb->setObjectName("io_object");
 	d->pm_cavity_motor_running_ckb->setEnabled(false);
 
-	d->pm_cavity_raxis_motor_home_ckb = new QCheckBox(QString("R轴电机回原到位信号"));
+	d->pm_cavity_raxis_motor_home_ckb = new QCheckBox(QString("R轴回原到位信号"));
 	d->pm_cavity_raxis_motor_home_ckb->setObjectName("io_object");
 	d->pm_cavity_raxis_motor_home_ckb->setEnabled(false);
 
-	d->pm_cavity_raxis_motor_running_ckb = new QCheckBox(QString("R轴电机运动中"));
+	d->pm_cavity_raxis_motor_running_ckb = new QCheckBox(QString("R轴运动中"));
 	d->pm_cavity_raxis_motor_running_ckb->setObjectName("io_object");
 	d->pm_cavity_raxis_motor_running_ckb->setEnabled(false);
 
@@ -163,16 +170,26 @@ void QMainPMCavitySubsystemWidget::init(){
 	d->pm_rotating_plane_Level_ckb->setObjectName("io_object");
 	d->pm_rotating_plane_Level_ckb->setEnabled(false);
 
+	d->pm_liftting_alarm_ckb = new QCheckBox(QString("Z轴报警"));
+	d->pm_liftting_alarm_ckb->setObjectName("io_object");
+	d->pm_liftting_alarm_ckb->setEnabled(false);
+
+	d->pm_rotating_alarm_ckb = new QCheckBox(QString("R轴报警"));
+	d->pm_rotating_alarm_ckb->setObjectName("io_object");
+	d->pm_rotating_alarm_ckb->setEnabled(false);
+
 	d->ui->operation_state_gridLayout->addWidget(d->tm_cavity_door_ckb, 0, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_home_ckb, 0, 1);
 	//d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_forward_ckb, 1, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_running_ckb, 1, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_raxis_motor_running_ckb, 1, 1);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_raxis_motor_home_ckb, 1, 2);
+	d->ui->operation_state_gridLayout->addWidget(d->pm_liftting_alarm_ckb,1,3);
 
 	d->ui->operation_state_gridLayout->addWidget(d->pm_min_plane_Level_ckb, 2, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_max_plane_Level_ckb, 2, 1);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_plane_Level_ckb, 2, 2);
+	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_alarm_ckb, 2, 3);
 
 	d->ui->label_50->hide();
 }
@@ -326,6 +343,9 @@ void QMainPMCavitySubsystemWidget::onAttributeUpdate(){
 
 	d->pm_cavity_raxis_motor_home_ckb->setChecked(getSubsystem()->getRotationHomeDone());
 	d->pm_cavity_raxis_motor_running_ckb->setChecked(getSubsystem()->getRAxleJogRunning());
+
+	d->pm_liftting_alarm_ckb->setChecked(getSubsystem()->getZAxisAlarm());
+	d->pm_rotating_alarm_ckb->setChecked(getSubsystem()->getRAxisAlarm());
 	
 }
 

@@ -1032,6 +1032,7 @@
 			<LiftingAxisACtion>
 				<start_address>MR8105</start_address>
 				<finish_address>MR8109</finish_address>
+				<!--z轴报警-->
 				<failed_address>DM6640</failed_address>
 				<!--目标坐标unit:mm-->
 				<abs_position_address>DM6624</abs_position_address>
@@ -1045,7 +1046,7 @@
 				<!--定位完成-->
 				<finish_address>MR8109</finish_address>
 				<!--Z轴报警-->
-				<failed_address>MR35203</failed_address>
+				<failed_address>DM6640</failed_address>
 				<axis_target1_position_address>DM6600</axis_target1_position_address>
 				<abs_position_address>DM6624</abs_position_address>
 				<timeout>60000</timeout>
@@ -1054,7 +1055,7 @@
 			<ToRotatingStation>
 				<start_address>MR8105</start_address>
 				<finish_address>MR8109</finish_address>
-				<failed_address>MR35203</failed_address>
+				<failed_address>DM6640</failed_address>
 				<axis_target2_position_address>DM6604</axis_target2_position_address>
 				<abs_position_address>DM6624</abs_position_address>
 				<timeout>60000</timeout>
@@ -1063,7 +1064,7 @@
             <ToPutStation>
 				<start_address>MR8105</start_address>
 				<finish_address>MR8109</finish_address>
-				<failed_address>MR35205</failed_address>
+				<failed_address>DM6640</failed_address>
 				<axis_target3_position_address>DM6608</axis_target3_position_address>
 				<abs_position_address>DM6624</abs_position_address>
 				<timeout>60000</timeout>
@@ -1266,6 +1267,10 @@
 				<rotating_axis_current_coordinate_addresss>DM6702</rotating_axis_current_coordinate_addresss>
 				<!--旋转轴当前速度-->
 				<rotating_axis_current_speed_addresss>DM6706</rotating_axis_current_speed_addresss>
+				<!--Z轴报警-->
+				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
+				<!--R轴报警-->
+				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
 			</Update>
 			<Reset>
 				<!--清除升降轴错误-->

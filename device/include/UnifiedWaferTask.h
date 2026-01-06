@@ -30,6 +30,16 @@ namespace FC {
             UNKNOWN
         };//传输类型状态
 
+        //2026-1-06 新增机械手动过状态
+        enum RobotStatus
+        {
+            PICK_QUEUED,       //准备取片
+            PICK_COMPLETED,    //取片完成
+            PLACE_QUEUED,      //准备放片
+            PLACE_COMPLETED,   //放片完成
+            ACTION_ERROR       //错误
+        };
+
         enum AlignerStatus
         {
             ALIGNER_READY,

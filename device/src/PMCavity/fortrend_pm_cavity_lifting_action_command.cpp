@@ -90,13 +90,16 @@ PMCavityLiftingActionCommand::RunResult PMCavityLiftingActionCommand::onRun() th
     int loopCount = timeout / 20;
     int count = 0;
     bool readRes;
-    bool failedRes;
+    short alarmCode = 0;
+    std::string errorMessage = "";
+
     while (count <= loopCount)
     {
         Sleep(20);
         readBit(finish_address,readRes);
-        readBit(failed_address, failedRes);
-        if (readRes || failedRes)
+        readShort(failed_address, alarmCode);
+
+        if (readRes || alarmCode !=0 )
         {
             break;
         }
@@ -117,9 +120,21 @@ PMCavityLiftingActionCommand::RunResult PMCavityLiftingActionCommand::onRun() th
         ret = IKernelCommand::RunResult::RUN_OK;
         logInform(sub->getName().c_str(), "升降轴定位开始命令执行完成");
     }
-    else if(!readRes || failedRes)
+    else if(!readRes || alarmCode != 0)
     {
-        AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "升降轴定位开始命令执行失败"));
+        if (alarmCode == 30204)
+        {
+            errorMessage = "正方向限位错误";
+        }
+        else if (alarmCode == 30205)
+        {
+            errorMessage = "负方向限位错误";
+        }
+        else
+        {
+            errorMessage = "升降轴定位开始命令执行失败";
+        }
+        AlarmMessage::Ptr alarm(new AlarmMessage(1, alarmCode, errorMessage));
         setAlarm(alarm);
     }
     else

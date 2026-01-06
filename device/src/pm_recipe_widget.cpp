@@ -1,4 +1,4 @@
-// Library: VTM
+﻿// Library: VTM
 // Library: VTM
 // Package: VTM
 
@@ -507,7 +507,6 @@ namespace FC {
 
 		// Sequence: Z3 -> 执行process_count次（Z2 -> Rotate -> Z1 -> 停留一段工艺时间）-> 执行完总工艺时间->  Z3
 
-
 		d->cycleThread = std::thread([=](){
 			auto pmSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
 			if (!pmSubsystem) {
@@ -530,7 +529,7 @@ namespace FC {
 				cmdToZ3->wait();
 				if (cmdToZ3->hasError() || (d->stopRequested))
 				{
-					//logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到取放片面","测试pm流程");
+					/*logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到取放片面","测试pm流程");*/
 					return;
 				}
 			}
@@ -551,7 +550,7 @@ namespace FC {
 						cmdToZ2->wait();
 						if (cmdToZ2->hasError() || (d->stopRequested))
 						{
-							//logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到旋转面", "测试pm流程");
+							logFailedExcuteCommandHasError(pmSubsystem->getName(), "移动到旋转面", "测试pm流程");
 							break;
 						}
 						logInform(pmSubsystem->getName().c_str(), "第:%d次，移动到旋转面---------------", idx);
@@ -564,7 +563,7 @@ namespace FC {
 
 					if (cmdRotate->hasError() || (d->stopRequested))
 					{
-						//logFailedExcuteCommandHasError(pmSubsystem->getName(), "执行旋转", "测试pm流程");
+						logFailedExcuteCommandHasError(pmSubsystem->getName(), "执行旋转", "测试pm流程");
 						break;
 					}
 					logInform(pmSubsystem->getName().c_str(), "第:%d次，执行旋转中---------------", idx);
@@ -578,7 +577,7 @@ namespace FC {
 						cmdToZ1->wait();
 						if (cmdToZ1->hasError() || (d->stopRequested))
 						{
-							//logFailedExcuteCommandHasError(pmSubsystem->getName(), "上升到工艺面", "测试pm流程");
+							logFailedExcuteCommandHasError(pmSubsystem->getName(), "上升到工艺面", "测试pm流程");
 							break;
 						}
 					}

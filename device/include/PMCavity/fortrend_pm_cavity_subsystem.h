@@ -184,6 +184,13 @@ namespace FC{
 		bool getLiftingHomeDone()const;
 		void setLiftingHome(bool enable);
 
+		//Z轴控报警
+		bool getZAxisAlarm() const;
+
+		//R轴控报警
+		bool getRAxisAlarm() const;
+
+
 		//清除Z轴控报警
 		bool getZAxisClearErrorDone()const;
 		void setZAxisClearError(bool enable);
@@ -204,11 +211,19 @@ namespace FC{
 		float getPMCavityZAxleSpeed()const;
 		//Z轴位置
 		float getPMCavityZAxleLocation()const;
+		//Z轴加速度
+		float getPMCavityZAxleAcc()const;
+		//Z轴减速度
+		float getPMCavityZAxleDcc()const;
 
 		//R轴速度
 		double getPMCavityRAxleSpeed()const;
 		//R轴位置
 		double getPMCavityRAxleLocation()const;
+		//R轴加速度
+		float getPMCavityRAxleAcc()const;
+		//R轴减速度
+		float getPMCavityRAxleDcc()const;
 
 		//JOG运行中
 		bool getZAxleJogRunning()const; 
@@ -273,6 +288,7 @@ namespace FC{
 		bool safe_read_float(const std::string& tag, float& output);
 		bool safe_read_double(const std::string& tag, double& output);
 		bool safe_read_int(const std::string&tag,int&output);
+		bool safe_read_short(const std::string &tag, short&output);
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

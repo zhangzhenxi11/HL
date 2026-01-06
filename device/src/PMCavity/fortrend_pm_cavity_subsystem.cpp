@@ -198,6 +198,23 @@ namespace FC{
 		
 		std::string rotating_axis_motor_speed_address;//R轴 jog 速度
 		float rotating_motor_speed;
+
+		std::string lifting_axis_motor_alarm_address; //z轴报警地址
+		short lifting_axis_alarm_code;
+
+
+		std::string rotating_axis_motor_alarm_address; //R轴报警地址
+		short rotating_axis_alarm_code;
+
+		std::string lifting_axis_acce_address; //acc
+		std::string lifting_axis_dece_address; //dcc
+		float lifting_axis_acce_value = 0.0f;
+		float lifting_axis_dece_value = 0.0f;
+
+		std::string rotating_axis_acce_address;//acc
+		std::string rotating_axis_dece_address;//dcc
+		float rotating_axis_acce_value = 0.0f;
+		float rotating_axis_dece_value = 0.0f;
 	};
 
 	/**
@@ -271,6 +288,25 @@ namespace FC{
 		if (tag.empty()) return false;
 		int value;
 		if (KeyencePlcSubSystemHelper::readInt(tag, value))
+		{
+			if (output != value)
+			{
+				output = value;
+				return true;
+			}
+			return false;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool FortrendPMCavitySubsystem::safe_read_short(const std::string& tag, short& output)
+	{
+		if (tag.empty()) return false;
+		short value;
+		if (KeyencePlcSubSystemHelper::readShort(tag, value))
 		{
 			if (output != value)
 			{
@@ -769,6 +805,18 @@ namespace FC{
 
 	}
 
+	bool FortrendPMCavitySubsystem::getZAxisAlarm() const
+	{
+		//!=0 :alarm
+		return d->lifting_axis_alarm_code;
+	}
+
+	bool FortrendPMCavitySubsystem::getRAxisAlarm() const
+	{
+		//!=0 : alarm
+		return d->rotating_axis_alarm_code;
+	}
+
 	bool FortrendPMCavitySubsystem::getZAxisClearErrorDone() const
 	{
 		return d->lifting_axis_clear_done;
@@ -837,6 +885,16 @@ namespace FC{
 		return d->lifting_axis_current_coordinate;
 	}
 
+	float FortrendPMCavitySubsystem::getPMCavityZAxleAcc() const
+	{
+		return d->lifting_axis_acce_value;
+	}
+
+	float FortrendPMCavitySubsystem::getPMCavityZAxleDcc() const
+	{
+		return d->lifting_axis_dece_value;
+	}
+
 	double FortrendPMCavitySubsystem::getPMCavityRAxleSpeed() const
 	{
 		return d->rotating_axis_current_speed;
@@ -847,6 +905,16 @@ namespace FC{
 		//logInform(getName().c_str(), Poco::format("获取r轴位置：address = %s, result = %f", d->rotating_axis_current_coordinate_addresss, 
 		// d->rotating_axis_current_coordinate).c_str());
 		return d->rotating_axis_current_coordinate;
+	}
+
+	float FortrendPMCavitySubsystem::getPMCavityRAxleAcc() const
+	{
+		return d->rotating_axis_acce_value;
+	}
+
+	float FortrendPMCavitySubsystem::getPMCavityRAxleDcc() const
+	{
+		return d->rotating_axis_dece_value;
 	}
 
 	bool FortrendPMCavitySubsystem::getZAxleJogRunning() const
@@ -1222,6 +1290,25 @@ namespace FC{
 			//旋转轴JOG速度
 			io_changed |= safe_read_float(d->rotating_axis_motor_speed_address, d->rotating_motor_speed);
 
+			//Z轴报警
+			io_changed |= safe_read_short(d->lifting_axis_motor_alarm_address, d->lifting_axis_alarm_code);
+
+			//R轴报警
+			io_changed |= safe_read_short(d->rotating_axis_motor_alarm_address, d->rotating_axis_alarm_code);
+
+			//Z轴加速度
+			io_changed |= safe_read_float(d->lifting_axis_acce_address, d->lifting_axis_acce_value);
+
+			//Z轴减速度
+			io_changed |= safe_read_float(d->lifting_axis_dece_address, d->lifting_axis_dece_value);
+
+			//R轴加速度
+			io_changed |= safe_read_float(d->rotating_axis_acce_address, d->rotating_axis_acce_value);
+
+			//R轴减速度
+			io_changed |= safe_read_float(d->rotating_axis_dece_address, d->rotating_axis_dece_value);
+
+
 			if (io_changed)
 			{
 				AbstractIOSubsystem::emitAttributeChanged(this);
@@ -1392,11 +1479,19 @@ namespace FC{
 			d->rotating_axis_current_coordinate_addresss = config->getString("Update.rotating_axis_current_coordinate_addresss", "");
 			d->rotating_axis_current_speed_addresss = config->getString("Update.rotating_axis_current_speed_addresss", "");
 
+			d->lifting_axis_motor_alarm_address = config->getString("Update.lifting_axis_alarm_address","");
+
+			d->rotating_axis_motor_alarm_address = config->getString("Update.rotating_axis_alarm_address","");
+
 		}
 		if (config->has("AxisReadParameters"))
 		{
 			d->lifting_axis_motor_speed_address = config->getString("AxisReadParameters.lifting_axis_jog_speed_address","");
 			d->rotating_axis_motor_speed_address = config->getString("AxisReadParameters.rotating_axis_jog_speed_address","");
+			d->lifting_axis_acce_address = config->getString("AxisReadParameters.lifting_axis_acce_address","");
+			d->lifting_axis_dece_address = config->getString("AxisReadParameters.lifting_axis_dece_address", "");
+			d->rotating_axis_acce_address = config->getString("AxisReadParameters.rotating_axis_acce_address","");
+			d->rotating_axis_dece_address = config->getString("AxisReadParameters.rotating_axis_dece_address", "");
 		}
 
 		if (config->has("Reset"))
