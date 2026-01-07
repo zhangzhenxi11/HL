@@ -662,6 +662,10 @@ namespace FC {
 
 	void QPmRecipeWidget::logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name)
 	{
+		Q_D(QPmRecipeWidget);
+		QMetaObject::invokeMethod(d->ui->start_pm_pbt, "setEnabled", Q_ARG(bool, true));
+		QMetaObject::invokeMethod(d->ui->stop_pm_pbt, "setEnabled", Q_ARG(bool, false));
+
 		logFailed(station_name, Poco::format("%s %s命令执行失败， %s", station_name, command_name, process_name));
 	}
 

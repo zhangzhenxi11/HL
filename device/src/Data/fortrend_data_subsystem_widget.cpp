@@ -38,6 +38,7 @@ namespace FC{
         
         QTimer* timer;
         qint64 startTime;
+        bool isPageLoaded = false;
         
         // Data buffers
         QList<QString> timeList;
@@ -97,10 +98,18 @@ namespace FC{
         d->viewAcc = createTab("Acceleration");
         d->viewVel = createTab("Velocity");
         d->viewPos = createTab("Position");
+
+        //C++ 等待 JS 环境就绪
+        // Wait for page load
+        connect(d->viewAcc, &QWebEngineView::loadFinished, [d](bool ok){ 
+            if(ok) d->isPageLoaded = true; 
+        });
         
         // Timer connection
-        connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
-       
+        // connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
+        connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
+        d->startTime = QDateTime::currentMSecsSinceEpoch();
+        d->timer->start(200);
 	}
 
     DataWidget::~DataWidget()
@@ -139,9 +148,55 @@ namespace FC{
         d->timer->stop();
     }
 
+	void DataWidget::onSimulateTest()
+	{
+		Q_D(DataWidget);
+        if (!d->isPageLoaded) return;
+        
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        double t = (double)(now - d->startTime); // ms
+        QString tStr = QString::number(t, 'f', 0); // Display as string
+        
+        // Generate Random Data
+        double accZ = (qrand() % 200) - 100; // -100 to 100
+        double accR = (qrand() % 200) - 100;
+        
+        double velZ = qrand() % 500; // 0 to 500
+        double velR = qrand() % 500;
+        
+        double posZ = qrand() % 100; // 0 to 100
+        double posR = qrand() % 100;
+        
+        // Append
+        d->timeList.append(tStr);
+        d->accZList.append(accZ);
+        d->accRList.append(accR);
+        d->velZList.append(velZ);
+        d->velRList.append(velR);
+        d->posZList.append(posZ);
+        d->posRList.append(posR);
+        
+        // Prune (Keep last 500 points)
+        if (d->timeList.size() > 500) {
+            d->timeList.removeFirst();
+            d->accZList.removeFirst();
+            d->accRList.removeFirst();
+            d->velZList.removeFirst();
+            d->velRList.removeFirst();
+            d->posZList.removeFirst();
+            d->posRList.removeFirst();
+        }
+        
+        // Update Charts
+        httpUpdate(d->viewAcc, d->timeList, d->accZList, d->accRList, "Z-Acc", "R-Acc");
+        httpUpdate(d->viewVel, d->timeList, d->velZList, d->velRList, "Z-Vel", "R-Vel");
+        httpUpdate(d->viewPos, d->timeList, d->posZList, d->posRList, "Z-Pos", "R-Pos");
+	}
+
 	void DataWidget::onclick()
 	{
 		Q_D(DataWidget);
+        if (!d->isPageLoaded) return;
         if (!d->currentSubsystem) return;
         
         qint64 now = QDateTime::currentMSecsSinceEpoch();
@@ -201,6 +256,9 @@ namespace FC{
 		}
 		jscode += "],";
 
+        // Add legend update to match series names
+        jscode += QString("['%1', '%2'],").arg(zName).arg(rName);
+
 		//线条数据 拼接
         auto buildDataArray = [](const QList<double>& data) -> QString {
             QString str = "[";
@@ -223,7 +281,11 @@ namespace FC{
 
 	//自适应窗体
 	void DataWidget::resizeEvent(QResizeEvent *event){
+        Q_D(DataWidget);
 		QWidget::resizeEvent(event);
         // Views resize automatically with layout
+        if (d->tabWidget) {
+            d->tabWidget->resize(this->size());
+        }
 	}
 }

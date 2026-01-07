@@ -38,6 +38,7 @@ public:
 
 public slots:
     void onclick();
+    void onSimulateTest();
     void onCycleStart(const std::string& pmName);
     void onCycleStop();
 
