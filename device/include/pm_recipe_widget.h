@@ -51,6 +51,7 @@ namespace FC {
 			double rotating_axis_acce3 = 0.0;
 			double rotating_axis_acce4 = 0.0;
 		};
+
 		struct PMParams {
 			double take_position_mm = 0.0;
 			int rotation_angle_deg = 0;

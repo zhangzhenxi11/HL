@@ -885,6 +885,25 @@ namespace FC{
 		return d->lifting_axis_current_coordinate;
 	}
 
+	void FortrendPMCavitySubsystem::setPMCavityZAxleAcc(float accValue)
+	{
+
+		logInform(getName().c_str(), "写Z轴加速度");
+		if (!KeyencePlcSubSystemHelper::writeFloat(d->lifting_axis_acce_address, accValue))
+		{
+			logError(getName().c_str(), Poco::format("写Z轴加速度address = %s 失败!", d->lifting_axis_acce_address).c_str());
+		}
+	}
+
+	void FortrendPMCavitySubsystem::setPMCavityZAxleDcc(float dccValue)
+	{
+		logInform(getName().c_str(), "写Z轴减速度");
+		if (!KeyencePlcSubSystemHelper::writeFloat(d->lifting_axis_dece_address, dccValue))
+		{
+			logError(getName().c_str(), Poco::format("写Z轴减速度address = %s 失败!", d->lifting_axis_dece_address).c_str());
+		}
+	}
+
 	float FortrendPMCavitySubsystem::getPMCavityZAxleAcc() const
 	{
 		return d->lifting_axis_acce_value;
@@ -915,6 +934,24 @@ namespace FC{
 	float FortrendPMCavitySubsystem::getPMCavityRAxleDcc() const
 	{
 		return d->rotating_axis_dece_value;
+	}
+
+	void FortrendPMCavitySubsystem::setPMCavityRAxleAcc(float accValue)
+	{
+		logInform(getName().c_str(), "写R轴加速度");
+		if (!KeyencePlcSubSystemHelper::writeFloat(d->rotating_axis_acce_address, accValue))
+		{
+			logError(getName().c_str(), Poco::format("写R轴加速度address = %s 失败!", d->rotating_axis_acce_address).c_str());
+		}
+	}
+
+	void FortrendPMCavitySubsystem::setPMCavityRAxleDcc(float dccValue)
+	{
+		logInform(getName().c_str(), "写R轴减速度");
+		if (!KeyencePlcSubSystemHelper::writeFloat(d->rotating_axis_dece_address, dccValue))
+		{
+			logError(getName().c_str(), Poco::format("写R轴减速度address = %s 失败!", d->rotating_axis_dece_address).c_str());
+		}
 	}
 
 	bool FortrendPMCavitySubsystem::getZAxleJogRunning() const

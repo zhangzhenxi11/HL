@@ -211,6 +211,13 @@ namespace FC{
 		float getPMCavityZAxleSpeed()const;
 		//Z轴位置
 		float getPMCavityZAxleLocation()const;
+
+		//设置Z轴加速度
+		void setPMCavityZAxleAcc(float accValue);
+
+		//设置Z轴减速度
+		void setPMCavityZAxleDcc(float dccValue);
+
 		//Z轴加速度
 		float getPMCavityZAxleAcc()const;
 		//Z轴减速度
@@ -220,10 +227,17 @@ namespace FC{
 		double getPMCavityRAxleSpeed()const;
 		//R轴位置
 		double getPMCavityRAxleLocation()const;
+
+
 		//R轴加速度
 		float getPMCavityRAxleAcc()const;
 		//R轴减速度
 		float getPMCavityRAxleDcc()const;
+
+		//设置R轴加速度
+		void setPMCavityRAxleAcc(float accValue);
+		//设置R轴减速度
+		void setPMCavityRAxleDcc(float dccValue);
 
 		//JOG运行中
 		bool getZAxleJogRunning()const; 

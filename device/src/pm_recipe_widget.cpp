@@ -144,14 +144,14 @@ namespace FC {
 		// 设置列数和列名
 		tableWidget->setColumnCount(8);
 		QStringList headers = {
-			"liftingAcce1",
-			"liftingAcce2",
-			"liftingAcce3",
-			"liftingAcce4",
-			"rotatingAcce1",
-			"rotatingAcce2",
-			"rotatingAcce3",
-			"rotatingAcce4"
+			"Z轴加速度1",
+			"Z轴加速度2",
+			"Z轴加速度3",
+			"Z轴加速度4",
+			"R轴加速度1",
+			"R轴加速度2",
+			"R轴加速度3",
+			"R轴加速度4"
 		};
 		tableWidget->setHorizontalHeaderLabels(headers);
 	}
@@ -543,6 +543,9 @@ namespace FC {
 					// Update UI
 					QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, idx + 1));
 
+
+					//获取z轴加速度1，2，3，4，在createLiftingActionCommand中设置4个加速度
+
 					if (!pmSubsystem->getRotatingimumPlaneLevelSignal())
 					{
 						// Move to Z2
@@ -556,7 +559,9 @@ namespace FC {
 						}
 						logInform(pmSubsystem->getName().c_str(), "第:%d次，移动到旋转面---------------", idx);
 					}
-						
+					
+					//获取R轴加速度1，2，3，4，在createRotatingActionCommand中设置4个加速度
+					
 					// Rotate at Z2
 					auto cmdRotate = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 					pmSubsystem->startCommand(cmdRotate);
@@ -568,6 +573,7 @@ namespace FC {
 						break;
 					}
 					logInform(pmSubsystem->getName().c_str(), "第:%d次，执行旋转中---------------", idx);
+
 
 					// Move to Z1 (Process)
 
@@ -645,6 +651,8 @@ namespace FC {
 			d->stopRequested = true;
 			d->cycleCv.notify_all();
 			d->ui->stop_pm_pbt->setEnabled(false); // Prevent multiple clicks
+
+            emit cycleStopped();
 
 			//if (d->processElapsed > 0)
 			//{
