@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>FortrendStationStatusVTMWidget</class>
+ <widget class="QWidget" name="FortrendStationStatusVTMWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1985</width>
+    <height>960</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1800</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1985</width>
+    <height>1985</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>VTM设备监控系统</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <layout class="QVBoxLayout" name="mainVerticalLayout">
+   <property name="spacing">
+    <number>5</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QWidget" name="processAreaContainer" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <widget class="QWidget" name="gridLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>360</y>
+        <width>141</width>
+        <height>201</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayoutA"/>
+     </widget>
+     <widget class="QWidget" name="gridLayoutWidget_2">
+      <property name="geometry">
+       <rect>
+        <x>1050</x>
+        <y>380</y>
+        <width>141</width>
+        <height>202</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayoutB"/>
+     </widget>
+     <widget class="QGroupBox" name="groupBox">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>20</y>
+        <width>181</width>
+        <height>131</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>配方设置</string>
+      </property>
+      <widget class="QComboBox" name="recipe_box">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>121</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>25</height>
+        </size>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="recipe_btn">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>70</y>
+         <width>121</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>切换配方</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>170</y>
+        <width>181</width>
+        <height>91</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>EFEM初始化</string>
+      </property>
+      <widget class="QPushButton" name="reset_all_btn">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>40</y>
+         <width>93</width>
+         <height>28</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>EFEM复位</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QStackedWidget" name="stackedWidget">
+      <property name="geometry">
+       <rect>
+        <x>1200</x>
+        <y>10</y>
+        <width>651</width>
+        <height>651</height>
+       </rect>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="page"/>
+      <widget class="QWidget" name="page_2"/>
+     </widget>
+     <widget class="QStackedWidget" name="center_layout">
+      <property name="geometry">
+       <rect>
+        <x>1230</x>
+        <y>670</y>
+        <width>401</width>
+        <height>271</height>
+       </rect>
+      </property>
+      <widget class="QWidget" name="page_3"/>
+      <widget class="QWidget" name="page_4"/>
+     </widget>
+     <widget class="QGroupBox" name="efemAreaGroupBox">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>510</y>
+        <width>800</width>
+        <height>451</height>
+       </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>800</width>
+        <height>430</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>600</width>
+        <height>720</height>
+       </size>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
+      <property name="title">
+       <string>EFEM系统</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="RobotArmWidget" name="ewtr_widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>1</horstretch>
+           <verstretch>1</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>390</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>10</y>
+        <width>801</width>
+        <height>501</height>
+       </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>500</height>
+       </size>
+      </property>
+      <property name="title">
+       <string>VTM系统</string>
+      </property>
+      <widget class="PMGDTWidget" name="pm1_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>220</y>
+         <width>221</width>
+         <height>161</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="TM" name="tm_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>260</x>
+         <y>190</y>
+         <width>291</width>
+         <height>281</height>
+        </rect>
+       </property>
+       <widget class="vtmrobot" name="robot_widget" native="true">
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>30</y>
+          <width>171</width>
+          <height>171</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
+      <widget class="PMGDTWidget" name="pm2_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>170</x>
+         <y>10</y>
+         <width>251</width>
+         <height>261</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="LoadLockA" name="loadlockA_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>340</y>
+         <width>171</width>
+         <height>191</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="PMGDTWidget" name="pm3_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>390</x>
+         <y>10</y>
+         <width>251</width>
+         <height>261</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="PMGDTWidget" name="pm4_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>490</x>
+         <y>220</y>
+         <width>221</width>
+         <height>161</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="LoadLockB" name="loadlockB_widget" native="true">
+       <property name="geometry">
+        <rect>
+         <x>410</x>
+         <y>340</y>
+         <width>171</width>
+         <height>191</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="gridLayoutWidget_3">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>579</y>
+        <width>141</width>
+        <height>361</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayoutC"/>
+     </widget>
+     <widget class="QWidget" name="gridLayoutWidget_4">
+      <property name="geometry">
+       <rect>
+        <x>1050</x>
+        <y>600</y>
+        <width>141</width>
+        <height>351</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayoutD"/>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TM</class>
+   <extends>QWidget</extends>
+   <header location="global">tm.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>vtmrobot</class>
+   <extends>QWidget</extends>
+   <header location="global">vtmrobot.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PMGDTWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">gdt_pmwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LoadLockA</class>
+   <extends>QWidget</extends>
+   <header location="global">loadlockA.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LoadLockB</class>
+   <extends>QWidget</extends>
+   <header location="global">loadlockB.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RobotArmWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">robotarmwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

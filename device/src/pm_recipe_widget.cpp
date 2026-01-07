@@ -504,6 +504,7 @@ namespace FC {
 		d->ui->start_pm_pbt->setEnabled(false);
 		d->ui->stop_pm_pbt->setEnabled(true);
 
+		emit cycleStarted(pmName);
 
 		// Sequence: Z3 -> 执行process_count次（Z2 -> Rotate -> Z1 -> 停留一段工艺时间）-> 执行完总工艺时间->  Z3
 
@@ -631,6 +632,8 @@ namespace FC {
 			// Restore UI state
 			QMetaObject::invokeMethod(d->ui->start_pm_pbt, "setEnabled", Q_ARG(bool, true));
 			QMetaObject::invokeMethod(d->ui->stop_pm_pbt, "setEnabled", Q_ARG(bool, false));
+			
+			QMetaObject::invokeMethod(this, "cycleStopped");
 		});
 		d->cycleThread.detach(); // Detach to let it run independently
 	}

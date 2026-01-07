@@ -1,11 +1,11 @@
-﻿/**
- * @file            pm_recipe_widget.h
- * @brief           pm_recipe_widget
- * @author			xielonghua
- */
+﻿﻿/**
+* @file            pm_recipe_widget.h
+* @brief           pm_recipe_widget
+* @author			xielonghua
+*/
 
- // Library: FortrendUI
- // Package: VTM
+// Library: FortrendUI
+// Package: VTM
 
 #ifndef _PM_RECIPE_WIDGET_INCLUDE_
 #define _PM_RECIPE_WIDGET_INCLUDE_
@@ -20,7 +20,7 @@
 #include <map>
 #include <vector>
 #include "PMCavity/fortrend_pm_cavity_defined.h"
-#pragma execution_character_set("utf-8")
+
 
 namespace FC {
 

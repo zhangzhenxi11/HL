@@ -1,13 +1,4 @@
-﻿/**
-* @file            fortrend_data_subsystem_widget.h
-* @brief           fortrend_data_subsystem_widget
-* @author			xielonghua
-*/
-
-// Library: FortrendUI
-// Package: Data
-
-#ifndef _XLH_FORTREND_DATA_SUBSYSTEM_INCLUDE_
+﻿#ifndef _XLH_FORTREND_DATA_SUBSYSTEM_INCLUDE_
 #define _XLH_FORTREND_DATA_SUBSYSTEM_INCLUDE_
 
 #include <QWidget>
@@ -18,9 +9,10 @@
 #include <QtWebEngine/QtWebEngine>
 #include <QWebEngineSettings>
 
+class IKernel;
+
 namespace FC {
 
-class IKernel;
 class DataWidgetPrivate;
 class DataWidget : public QWidget
 {
