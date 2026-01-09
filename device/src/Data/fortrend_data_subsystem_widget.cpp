@@ -106,7 +106,7 @@ namespace FC{
         });
         
         // Timer connection
-         connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
+        connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
         //connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
         //d->startTime = QDateTime::currentMSecsSinceEpoch();
         //d->timer->start(200);

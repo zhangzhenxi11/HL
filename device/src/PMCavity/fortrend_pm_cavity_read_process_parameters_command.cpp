@@ -16,7 +16,7 @@
 #include "kernel/kernel_command_reject_exception.h"
 #include "Kernel/kernel_log.h"
 #include "kernel/Fortrend/fortrend_cassette_manager.h"
-
+#include <stdint.h>
 
 #include "PMCavity/fortrend_pm_cavity_read_process_parameters_command.h"
 #include "PMCavity/fortrend_pm_cavity_subsystem.h"
@@ -75,6 +75,17 @@ namespace FC{
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
 					Poco::format("address: %s not defined", sub->getName()), this);
+			}
+			//readUnsignedInt 
+			if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
+			{
+				auto & value = axis_parames.*(mapping.member_ptr);
+				uint32_t _value = uint32_t(value);
+				if (!readUnsignedInt(address, _value))
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+						Poco::format(" %s读取%s错误", sub->getName(), mapping.description), this);
+				}
 			}
 
 			float& value = axis_parames.*(mapping.member_ptr);

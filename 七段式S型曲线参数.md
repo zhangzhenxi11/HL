@@ -139,14 +139,6 @@ position;位置
 
 如果要真正实现七段式S型曲线控制：
 
-1. **底层支持**：确认 `FortrendPMCavitySubsystem` 或其下层轴卡/驱动器支持 S-Curve (Jerk) 参数设定。
-
-2. **界面修改**：在配方中增加 **`Jerk` (加加速度)** 或 **`Smoothing Time` (平滑时间)** 参数设置，而不仅仅是加速度。
-
-3. **代码修复**：在 `onStartCycle` 中，务必将界面配置的参数（速度、加速度、Jerk）通过 `setParameter` 或指令参数传递给底层的 `cmd` 对象
-
-   // 伪代码示例
-   auto cmdToZ2 = pmSubsystem->createLiftingActionCommand(z2);
-   cmdToZ2->setAcceleration(cfg.motors[idx].lifting_axis_acce1); // 传递加速度
-   cmdToZ2->setJerk(cfg.params.jerk_value); // 传递S曲线平滑度
-   pmSubsystem->startCommand(cmdToZ2);
+1.  **底层支持**：确认 `FortrendPMCavitySubsystem` 或其下层轴卡/驱动器支持 S-Curve (Jerk) 参数设定。
+2.  **界面修改**：在配方中增加 **`Jerk` (加加速度)** 或 **`Smoothing Time` (平滑时间)** 参数设置，而不仅仅是加速度。
+3.  **代码修复**：在 `onStartCycle` 中，务必将界面配置的参数（速度、加速度、Jerk）通过 `setParameter` 或指令参数传递给底层的 `cmd` 对象。

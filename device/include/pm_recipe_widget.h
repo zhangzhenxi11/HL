@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file            pm_recipe_widget.h
  * @brief           pm_recipe_widget
  * @author			xielonghua
@@ -37,28 +37,25 @@ namespace FC {
 		QPmRecipeWidget(const std::shared_ptr<IKernel>& kernel,QWidget* parent = nullptr);
 		~QPmRecipeWidget();
 		
-		// 公共方法，用于获取pmMotionProcessData
-		std::map<std::string, std::vector<PMMotionProcessParameters>>& getPMMotionProcessData();
-		
 		// 新增：统一 PM 配方数据访问
 		struct PMMotorRow {
-			double lifting_axis_acce1 = 0.0;
-			double lifting_axis_acce2 = 0.0;
-			double lifting_axis_acce3 = 0.0;
-			double lifting_axis_acce4 = 0.0;
-			double rotating_axis_acce1 = 0.0;
-			double rotating_axis_acce2 = 0.0;
-			double rotating_axis_acce3 = 0.0;
-			double rotating_axis_acce4 = 0.0;
+			float lifting_acc = 0.0;
+			float lifting_dec = 0.0;
+			short lifting_jerk = 0.0;
+			float lifting_vel = 0.0;
+			float rotating_acc = 0.0;
+			float rotating_dec = 0.0;
+			short rotating_jerk = 0.0;
+			float rotating_vel = 0.0;
 		};
 
 		struct PMParams {
-			double take_position_mm = 0.0;
+			float take_position_mm = 0.0;
 			int rotation_angle_deg = 0;
 			int process_count = 0;
-			double rotate_position_mm = 0.0;
-			double process_position_mm = 0.0;
-			double process_time_min = 0.0;
+			float rotate_position_mm = 0.0;
+			float process_position_mm = 0.0;
+			float process_time_min = 0.0;
 		};
 		struct PMRecipeConfig {
 			PMParams params;
@@ -80,6 +77,8 @@ namespace FC {
 		void onLoadParameters();
 		void onSetParameters();
 		void onSelectPMChanged(int index);
+		//设置电机定位运动参数,默认z轴
+		void setMontorRealParameters(int index,bool isZAxle = true);
 
 		//初始化PM腔界面
 		void initPMCavityParamEdieTableWidget();
@@ -89,6 +88,9 @@ namespace FC {
 
 		void addTableWidgetItemDoubleSpinBox(int row, int column, double min_value,
 			double max_value, double single_step, double value, int decimals_value = 3, QTableWidget* table = nullptr);
+
+		void addTableWidgetItemSpinBox(int row, int column, int min_value,
+			int max_value, int single_step, int value, QTableWidget* table = nullptr);
 
 		//重载函数
 		void addEditTableWidgetItemDoubleSpinBox(int row, int column, double min_value, 

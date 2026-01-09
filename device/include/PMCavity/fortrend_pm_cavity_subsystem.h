@@ -190,7 +190,6 @@ namespace FC{
 		//R轴控报警
 		bool getRAxisAlarm() const;
 
-
 		//清除Z轴控报警
 		bool getZAxisClearErrorDone()const;
 		void setZAxisClearError(bool enable);
@@ -207,6 +206,7 @@ namespace FC{
 		bool getRotationHomeDone()const;
 		void setRotationHome(bool enable);
 
+		/*=================Z轴========================*/
 		//Z轴速度
 		float getPMCavityZAxleSpeed()const;
 		//Z轴位置
@@ -223,11 +223,16 @@ namespace FC{
 		//Z轴减速度
 		float getPMCavityZAxleDcc()const;
 
+		//Z轴jerk 加加速度
+		uint32_t getPMCavityZAxleJerk() const;
+
+		void setPMCavityZAxleJerk(uint32_t value);
+
+		/*=================R轴========================*/
 		//R轴速度
 		double getPMCavityRAxleSpeed()const;
 		//R轴位置
 		double getPMCavityRAxleLocation()const;
-
 
 		//R轴加速度
 		float getPMCavityRAxleAcc()const;
@@ -238,6 +243,11 @@ namespace FC{
 		void setPMCavityRAxleAcc(float accValue);
 		//设置R轴减速度
 		void setPMCavityRAxleDcc(float dccValue);
+
+		//R轴jerk
+		uint32_t getPMCavityZRxleJerk() const;
+		
+		void setPMCavityRAxleJerk(uint32_t value);
 
 		//JOG运行中
 		bool getZAxleJogRunning()const; 
@@ -268,14 +278,14 @@ namespace FC{
 		
 		double getPMCavityAxleLocation();//z轴位置-->废弃
 
-		//Z轴
+		//Z轴运行速度
 		void setPMCavityAxleSpeed(float speed);
-
+		//Z轴jog速度
 		void setPMCavityTurnSpeed(float speed);
-		//R轴
 
+		//R轴运行速度
 		void setPMCavityRAxleSpeed(float speed);
-
+		//R轴jog速度
 		void setsetPMCavityRAxleTurnSpeed(float speed);
 
 		//Z JOG+
@@ -303,6 +313,8 @@ namespace FC{
 		bool safe_read_double(const std::string& tag, double& output);
 		bool safe_read_int(const std::string&tag,int&output);
 		bool safe_read_short(const std::string &tag, short&output);
+		bool safe_read_unsignedInt(const std::string& tag, uint32_t& output);
+		
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

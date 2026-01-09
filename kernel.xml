@@ -1108,12 +1108,16 @@
 				<lifting_axis_jog_speed_address>DM6632</lifting_axis_jog_speed_address>
 				<!--升降轴寸动移动量-->
 				<lifting_axis_inch_movement_address>DM6636</lifting_axis_inch_movement_address>
+				<!--升降轴jerk-->
+				<lifting_axis_jerk_address>DM6644</lifting_axis_jerk_address>
 				<!--旋转轴加速度-->
 				<rotating_axis_acce_address>DM6800</rotating_axis_acce_address>
 				<!--旋转轴减速度-->
 				<rotating_axis_dece_address>DM6804</rotating_axis_dece_address>
 				<!--旋转轴定位速度 -->
 				<rotating_axis_startup_speed_address>DM6808</rotating_axis_startup_speed_address>
+				<!--旋转轴jerk-->
+				<rotating_axis_jerk_address>DM6840</rotating_axis_jerk_address>
 				<!--旋转轴目标坐标-->
 				<rotating_axis_target_position_address>DM6812</rotating_axis_target_position_address>
 				<!--旋转轴jog速度-->
@@ -1143,12 +1147,16 @@
 				<lifting_axis_jog_speed_address>DM6632</lifting_axis_jog_speed_address>
 				<!--升降轴寸动移动量-->
 				<lifting_axis_inch_movement_address>DM6636</lifting_axis_inch_movement_address>
+				<!--升降轴jerk-->
+				<lifting_axis_jerk_address>DM6644</lifting_axis_jerk_address>
 				<!--旋转轴加速度-->
 				<rotating_axis_acce_address>DM6800</rotating_axis_acce_address>
 				<!--旋转轴减速度-->
 				<rotating_axis_dece_address>DM6804</rotating_axis_dece_address>
 				<!--旋转轴定位速度 -->
 				<rotating_axis_startup_speed_address>DM6808</rotating_axis_startup_speed_address>
+				<!--旋转轴jerk-->
+				<rotating_axis_jerk_address>DM6840</rotating_axis_jerk_address>
 				<!--旋转轴目标坐标-->
 				<rotating_axis_target_position_address>DM6812</rotating_axis_target_position_address>
 				<!--旋转轴jog速度-->
@@ -1168,48 +1176,6 @@
 				<finish_reset_address>D4920</finish_reset_address>
 			<timeout>30000</timeout>
 			</UploadFinished>				
-			<ReadProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</ReadProcessParameters>
-			<WriteProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</WriteProcessParameters>
 			<Update>
 				<open_tm_cavity_door_address>MR30200</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30201</close_tm_cavity_door_address>
@@ -1420,48 +1386,6 @@
 				<finish_reset_address>D4920</finish_reset_address>
 				<timeout>600000000</timeout>
 			</UploadFinished>
-			<ReadProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</ReadProcessParameters>
-			<WriteProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</WriteProcessParameters>
 			<Update>
 				<open_tm_cavity_door_address>MR30202</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30203</close_tm_cavity_door_address>
@@ -1597,48 +1521,6 @@
 				<finish_reset_address>D4920</finish_reset_address>
 				<timeout>600000000</timeout>
 			</UploadFinished>
-			<ReadProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</ReadProcessParameters>
-			<WriteProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</WriteProcessParameters>
 			<Update>
 				<open_tm_cavity_door_address>MR30204</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30205</close_tm_cavity_door_address>
@@ -1775,48 +1657,6 @@
 				<finish_reset_address>D4920</finish_reset_address>
 				<timeout>600000000</timeout>
 			</UploadFinished>
-			<ReadProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</ReadProcessParameters>
-			<WriteProcessParameters>
-				<heating_temperature_address>D2040</heating_temperature_address>
-				<initial_extraction_pressure_address>D2002</initial_extraction_pressure_address>
-				<purified_extraction_pressure_address>D2004</purified_extraction_pressure_address>
-				<sputtering_pressure_address>D2006</sputtering_pressure_address>
-				<sputtering_flow_rate1_address>D2008</sputtering_flow_rate1_address>
-				<sputtering_flow_rate2_address>D2010</sputtering_flow_rate2_address>
-				<sputtering_flow_rate3_address>D2012</sputtering_flow_rate3_address>
-				<sputtering_power1_address>D2014</sputtering_power1_address>
-				<sputtering_power_gear_up1_address>D2016</sputtering_power_gear_up1_address>
-				<sputtering_power2_address>D2018</sputtering_power2_address>
-				<sputtering_power_gear_up2_address>D2020</sputtering_power_gear_up2_address>
-				<sputtering_power3_address>D2022</sputtering_power3_address>
-				<sputtering_power_gear_up3_address>D2024</sputtering_power_gear_up3_address>
-				<pre_sputtering_time_address>D2026</pre_sputtering_time_address>
-				<substrate_speed_address>D2028</substrate_speed_address>
-				<process_sputtering_time_address>D2030</process_sputtering_time_address>
-				<cathode_power_selection_1_address>D5076</cathode_power_selection_1_address>
-				<cathode_power_selection_2_address>D5080</cathode_power_selection_2_address>
-				<cathode_power_selection_3_address>D5084</cathode_power_selection_3_address>
-			</WriteProcessParameters>
 			<Update>
 				<open_tm_cavity_door_address>MR30206</open_tm_cavity_door_address>
 				<close_tm_cavity_door_address>MR30207</close_tm_cavity_door_address>

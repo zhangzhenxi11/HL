@@ -84,17 +84,17 @@
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <layout class="QGridLayout" name="gridLayout_2">
-          <item row="0" column="3">
-           <widget class="QLabel" name="label_19">
-            <property name="text">
-             <string>旋转轴项目</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="3">
            <widget class="QLabel" name="label_20">
             <property name="text">
              <string>加速度：</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLabel" name="label_19">
+            <property name="text">
+             <string>旋转轴项目</string>
             </property>
            </widget>
           </item>
@@ -119,59 +119,10 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="3">
-           <widget class="QLabel" name="label_23">
-            <property name="text">
-             <string>目标坐标</string>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="3">
            <widget class="QLabel" name="label_22">
             <property name="text">
              <string>启动速度：</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="3">
-           <widget class="QLabel" name="label_24">
-            <property name="text">
-             <string>Jog速度</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="4">
-           <widget class="QDoubleSpinBox" name="rotating_axis_dece_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="4">
-           <widget class="QDoubleSpinBox" name="rotating_axis_acce_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="3">
-           <widget class="QLabel" name="label_25">
-            <property name="text">
-             <string>寸动移动量</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="4">
-           <widget class="QDoubleSpinBox" name="rotating_axis_startup_speed_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="4">
-           <widget class="QDoubleSpinBox" name="rotating_axis_target_position_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
             </property>
            </widget>
           </item>
@@ -189,83 +140,17 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="4">
-           <widget class="QDoubleSpinBox" name="rotating_axis_inch_movement_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="label_12">
+          <item row="5" column="3">
+           <widget class="QLabel" name="label_24">
             <property name="text">
-             <string>位置1</string>
+             <string>Jog速度</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_dece_dsp">
+          <item row="3" column="4">
+           <widget class="QDoubleSpinBox" name="rotating_axis_startup_speed_dsp">
             <property name="maximum">
              <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_startup_speed_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_acce_dsp">
-            <property name="maximum">
-             <double>999.990000000000009</double>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_target1_position_dsp">
-            <property name="maximum">
-             <double>9999.000000000000000</double>
-            </property>
-            <property name="singleStep">
-             <double>1.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_target_position_dsp">
-            <property name="maximum">
-             <double>9999.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_target2_position_dsp">
-            <property name="maximum">
-             <double>9999.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_target3_position_dsp">
-            <property name="maximum">
-             <double>9999.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>减速度：</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>启动速度：</string>
             </property>
            </widget>
           </item>
@@ -283,13 +168,6 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_10">
-            <property name="text">
-             <string>目标坐标</string>
-            </property>
-           </widget>
-          </item>
           <item row="10" column="1">
            <widget class="QDoubleSpinBox" name="lifting_axis_inch_movement_dsp">
             <property name="maximum">
@@ -304,10 +182,55 @@
             </property>
            </widget>
           </item>
+          <item row="6" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_target1_position_dsp">
+            <property name="maximum">
+             <double>9999.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>1.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QLabel" name="label_23">
+            <property name="text">
+             <string>目标坐标</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_target3_position_dsp">
+            <property name="maximum">
+             <double>9999.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>减速度：</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4">
+           <widget class="QDoubleSpinBox" name="rotating_axis_dece_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QLabel" name="label_8">
             <property name="text">
              <string>值</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_target2_position_dsp">
+            <property name="maximum">
+             <double>9999.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -318,8 +241,8 @@
             </property>
            </widget>
           </item>
-          <item row="9" column="1">
-           <widget class="QDoubleSpinBox" name="lifting_axis_jog_speed_dsp">
+          <item row="4" column="4">
+           <widget class="QDoubleSpinBox" name="rotating_axis_target_position_dsp">
             <property name="maximum">
              <double>999.990000000000009</double>
             </property>
@@ -332,6 +255,27 @@
             </property>
            </widget>
           </item>
+          <item row="2" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_dece_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>目标坐标</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_jog_speed_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
+            </property>
+           </widget>
+          </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_11">
             <property name="text">
@@ -339,71 +283,64 @@
             </property>
            </widget>
           </item>
-          <item row="10" column="0">
-           <widget class="QLabel" name="label_16">
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_startup_speed_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_target_position_dsp">
+            <property name="maximum">
+             <double>9999.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>启动速度：</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="3">
+           <widget class="QLabel" name="label_25">
             <property name="text">
              <string>寸动移动量</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="label_13">
-            <property name="text">
-             <string>位置2</string>
+          <item row="1" column="4">
+           <widget class="QDoubleSpinBox" name="rotating_axis_acce_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>mm/s²</string>
+          <item row="6" column="4">
+           <widget class="QDoubleSpinBox" name="rotating_axis_inch_movement_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
             </property>
            </widget>
           </item>
-          <item row="2" column="2">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>mm/s²</string>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="lifting_axis_acce_dsp">
+            <property name="maximum">
+             <double>999.990000000000009</double>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
-           <widget class="QLabel" name="label_5">
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_12">
             <property name="text">
-             <string>mm/s</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QLabel" name="label_26">
-            <property name="text">
-             <string>mm</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2">
-           <widget class="QLabel" name="label_27">
-            <property name="text">
-             <string>pa</string>
+             <string>位置1</string>
             </property>
            </widget>
           </item>
           <item row="6" column="2">
            <widget class="QLabel" name="label_28">
-            <property name="text">
-             <string>mm</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="2">
-           <widget class="QLabel" name="label_29">
-            <property name="text">
-             <string>mm</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="2">
-           <widget class="QLabel" name="label_30">
             <property name="text">
              <string>mm</string>
             </property>
@@ -416,10 +353,10 @@
             </property>
            </widget>
           </item>
-          <item row="10" column="2">
-           <widget class="QLabel" name="label_32">
+          <item row="3" column="2">
+           <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>mm</string>
+             <string>mm/s</string>
             </property>
            </widget>
           </item>
@@ -437,6 +374,13 @@
             </property>
            </widget>
           </item>
+          <item row="10" column="2">
+           <widget class="QLabel" name="label_32">
+            <property name="text">
+             <string>mm</string>
+            </property>
+           </widget>
+          </item>
           <item row="3" column="5">
            <widget class="QLabel" name="label_35">
             <property name="text">
@@ -451,10 +395,10 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="5">
-           <widget class="QLabel" name="label_37">
+          <item row="1" column="2">
+           <widget class="QLabel" name="label">
             <property name="text">
-             <string>mm/s</string>
+             <string>mm/s²</string>
             </property>
            </widget>
           </item>
@@ -465,17 +409,107 @@
             </property>
            </widget>
           </item>
-          <item row="7" column="3">
+          <item row="7" column="2">
+           <widget class="QLabel" name="label_29">
+            <property name="text">
+             <string>mm</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>mm/s²</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_26">
+            <property name="text">
+             <string>mm</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2">
+           <widget class="QLabel" name="label_27">
+            <property name="text">
+             <string>pa</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="5">
+           <widget class="QLabel" name="label_37">
+            <property name="text">
+             <string>mm/s</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>位置2</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_16">
+            <property name="text">
+             <string>寸动移动量</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="2">
+           <widget class="QLabel" name="label_30">
+            <property name="text">
+             <string>mm</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="0">
+           <widget class="QLabel" name="label_39">
+            <property name="text">
+             <string>jerk</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="1">
+           <widget class="QSpinBox" name="spinBox"/>
+          </item>
+          <item row="8" column="3">
            <widget class="QPushButton" name="write_process_parameters_btn">
             <property name="text">
              <string>写入</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="4">
+          <item row="8" column="4">
            <widget class="QPushButton" name="read_process_parameters_btn">
             <property name="text">
              <string>读取</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QLabel" name="label_40">
+            <property name="text">
+             <string>jerk</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="4">
+           <widget class="QSpinBox" name="spinBox_2"/>
+          </item>
+          <item row="11" column="2">
+           <widget class="QLabel" name="label_41">
+            <property name="text">
+             <string>mm/s³</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="5">
+           <widget class="QLabel" name="label_42">
+            <property name="text">
+             <string>mm/s³</string>
             </property>
            </widget>
           </item>

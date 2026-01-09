@@ -58,9 +58,6 @@ namespace FC {
 		QTableWidget* pm3TableWidget;
 		QTableWidget* pm4TableWidget;
 
-		// 存储所有PM腔的工艺数据---废弃
-		std::map<std::string, std::vector<PMMotionProcessParameters>> pmMotionProcessData;
-
 		//pm统一的PM腔的工艺数据
 		std::map<std::string, QPmRecipeWidget::PMRecipeConfig> pmRecipeConfigMap;
 
@@ -144,14 +141,14 @@ namespace FC {
 		// 设置列数和列名
 		tableWidget->setColumnCount(8);
 		QStringList headers = {
-			"Z轴加速度1",
-			"Z轴加速度2",
-			"Z轴加速度3",
-			"Z轴加速度4",
-			"R轴加速度1",
-			"R轴加速度2",
-			"R轴加速度3",
-			"R轴加速度4"
+			"Z-Acc",
+			"Z-Dec",
+			"Z-Jerk",
+			"Z-Vel",
+			"R-Acc",
+			"R-Dec",
+			"R-Jerk",
+			"R-Vel"
 		};
 		tableWidget->setHorizontalHeaderLabels(headers);
 	}
@@ -256,12 +253,6 @@ namespace FC {
 
 	}
 	
-	// 获取pmMotionProcessData的公共方法实现
-	std::map<std::string, std::vector<PMMotionProcessParameters>>& QPmRecipeWidget::getPMMotionProcessData()
-	{
-		Q_D(QPmRecipeWidget);
-		return d->pmMotionProcessData;
-	}
 	std::map<std::string, QPmRecipeWidget::PMRecipeConfig>& QPmRecipeWidget::getPMRecipeConfigMap()
 	{
 		Q_D(QPmRecipeWidget);
@@ -351,14 +342,14 @@ namespace FC {
 					for (int k = 0; k < arr.size(); ++k) {
 						auto obj = arr[k].toObject();
 						QPmRecipeWidget::PMMotorRow row;
-						row.lifting_axis_acce1 = obj["lifting_axis_acce1"].toDouble();
-						row.lifting_axis_acce2 = obj["lifting_axis_acce2"].toDouble();
-						row.lifting_axis_acce3 = obj["lifting_axis_acce3"].toDouble();
-						row.lifting_axis_acce4 = obj["lifting_axis_acce4"].toDouble();
-						row.rotating_axis_acce1 = obj["rotating_axis_acce1"].toDouble();
-						row.rotating_axis_acce2 = obj["rotating_axis_acce2"].toDouble();
-						row.rotating_axis_acce3 = obj["rotating_axis_acce3"].toDouble();
-						row.rotating_axis_acce4 = obj["rotating_axis_acce4"].toDouble();
+						row.lifting_acc = obj["lifting_acc"].toDouble();
+						row.lifting_dec = obj["lifting_dec"].toDouble();
+						row.lifting_jerk = obj["lifting_jerk"].toDouble();
+						row.lifting_vel = obj["lifting_vel"].toDouble();
+						row.rotating_acc = obj["rotating_acc"].toDouble();
+						row.rotating_dec = obj["rotating_dec"].toDouble();
+						row.rotating_jerk = obj["rotating_jerk"].toDouble();
+						row.rotating_vel = obj["rotating_vel"].toDouble();
 						cfg.motors.push_back(row);
 					}
 				}
@@ -387,14 +378,14 @@ namespace FC {
 			table->setRowCount(0);
 			for (int r = 0; r < (int)cfg.motors.size(); ++r) {
 				table->insertRow(r);
-				addTableWidgetItemDoubleSpinBox(r, 0, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce1, 3, table);//[0,100]
-				addTableWidgetItemDoubleSpinBox(r, 1, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce2, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 2, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce3, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 3, 0.0, 100.0, 1, cfg.motors[r].lifting_axis_acce4, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 4, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce1, 3, table);//[-50,100]
-				addTableWidgetItemDoubleSpinBox(r, 5, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce2, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 6, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce3, 3, table);
-				addTableWidgetItemDoubleSpinBox(r, 7, -50.0, 100.0, 1, cfg.motors[r].rotating_axis_acce4, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 0, 0.0, 100.0, 1, cfg.motors[r].lifting_acc, 3, table);
+				addTableWidgetItemDoubleSpinBox(r, 1, 0.0, 100.0, 1, cfg.motors[r].lifting_dec, 3, table);
+				addTableWidgetItemSpinBox(r, 2, 0.0, 100.0, 1, cfg.motors[r].lifting_jerk, table);           //jerk 1-100
+				addTableWidgetItemDoubleSpinBox(r, 3, 0.0, 500.0, 1, cfg.motors[r].lifting_vel, 3, table);   // Velocity max 500
+				addTableWidgetItemDoubleSpinBox(r, 4, 0.0, 1000.0, 1, cfg.motors[r].rotating_acc, 3, table); // Rotating acc can be large
+				addTableWidgetItemDoubleSpinBox(r, 5, 0.0, 1000.0, 1, cfg.motors[r].rotating_dec, 3, table); //jerk 1-100
+				addTableWidgetItemSpinBox(r, 6, 0.0, 1000.0, 1, cfg.motors[r].rotating_jerk, table);
+				addTableWidgetItemDoubleSpinBox(r, 7, 0.0, 360.0, 1, cfg.motors[r].rotating_vel, 3, table);
 			}
 		}
 		d->pmRecipeConfigMap[pmName] = cfg;
@@ -436,14 +427,14 @@ namespace FC {
 					QDoubleSpinBox* dsb = qobject_cast<QDoubleSpinBox*>(table->cellWidget(r, col));
 					return dsb ? dsb->value() : 0.0;
 				};
-				obj["lifting_axis_acce1"] = getVal(0);
-				obj["lifting_axis_acce2"] = getVal(1);
-				obj["lifting_axis_acce3"] = getVal(2);
-				obj["lifting_axis_acce4"] = getVal(3);
-				obj["rotating_axis_acce1"] = getVal(4);
-				obj["rotating_axis_acce2"] = getVal(5);
-				obj["rotating_axis_acce3"] = getVal(6);
-				obj["rotating_axis_acce4"] = getVal(7);
+				obj["lifting_acc"] = getVal(0);
+				obj["lifting_dec"] = getVal(1);
+				obj["lifting_jerk"] = getVal(2);
+				obj["lifting_vel"] = getVal(3);
+				obj["rotating_acc"] = getVal(4);
+				obj["rotating_dec"] = getVal(5);
+				obj["rotating_jerk"] = getVal(6);
+				obj["rotating_vel"] = getVal(7);
 				motors.append(obj);
 			}
 			pmObj["motors"] = motors;
@@ -477,6 +468,26 @@ namespace FC {
 		dsb->setValue(value);
 		target->setCellWidget(row, column, dsb);
 	}
+
+	void QPmRecipeWidget::addTableWidgetItemSpinBox(int row, int column, int min_value, int max_value,
+		int single_step, int value, QTableWidget* table)
+	{
+
+		Q_D(QPmRecipeWidget);
+		QTableWidget* target = table ? table : d->getCurrentTableWidget();
+		if (!target)
+			return;
+		QSpinBox* dsb = new QSpinBox();
+		dsb->setMaximum(max_value);
+		dsb->setMinimum(min_value);
+		dsb->setSingleStep(single_step);
+		dsb->setValue(value);
+		target->setCellWidget(row, column, dsb);
+
+
+	}
+
+
 
 	void QPmRecipeWidget::onStartCycle()
 	{
@@ -521,6 +532,7 @@ namespace FC {
 			double z3 = cfg.params.take_position_mm;    //取放片面
 			int rotation_angle_deg = cfg.params.rotation_angle_deg;
 
+
 			double atProcessPosMinutes = cfg.params.process_time_min / max(1, cfg.params.process_count); //eg:  15/6 = 2.5min
 
 			if (!pmSubsystem->getMinimumPlaneLevelSignal())
@@ -543,8 +555,20 @@ namespace FC {
 					// Update UI
 					QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, idx + 1));
 
+					//获取Z轴并设置Velocity ,Acceleration ,Deceleration ,Jerk 
+					//acc
+					float z_acc = cfg.motors[idx].lifting_acc;
+					//dce
+					float z_dec = cfg.motors[idx].lifting_dec;
+					//vec
+					float z_vel = cfg.motors[idx].lifting_vel;
+					//jerk
+					uint32_t z_jerk = uint32_t(cfg.motors[idx].lifting_jerk);
 
-					//获取z轴加速度1，2，3，4，在createLiftingActionCommand中设置4个加速度
+					pmSubsystem->setPMCavityZAxleAcc(z_acc);
+					pmSubsystem->setPMCavityZAxleDcc(z_dec);
+					pmSubsystem->setPMCavityZAxleJerk(z_jerk);
+					pmSubsystem->setPMCavityAxleSpeed(z_vel);
 
 					if (!pmSubsystem->getRotatingimumPlaneLevelSignal())
 					{
@@ -560,8 +584,22 @@ namespace FC {
 						logInform(pmSubsystem->getName().c_str(), "第:%d次，移动到旋转面---------------", idx);
 					}
 					
-					//获取R轴加速度1，2，3，4，在createRotatingActionCommand中设置4个加速度
+					//获取R轴并设置Velocity ,Acceleration ,Deceleration ,Jerk 
 					
+					//acc
+					float r_acc = cfg.motors[idx].rotating_acc;
+					//dce
+					float r_dec = cfg.motors[idx].rotating_dec;
+					//vec
+					float r_vel = cfg.motors[idx].rotating_jerk;
+					//jerk
+					uint32_t r_jerk = uint32_t(cfg.motors[idx].rotating_vel);
+
+					pmSubsystem->setPMCavityRAxleAcc(r_acc);
+					pmSubsystem->setPMCavityRAxleDcc(r_dec);
+					pmSubsystem->setPMCavityRAxleJerk(r_jerk);
+					pmSubsystem->setPMCavityRAxleSpeed(r_vel);
+
 					// Rotate at Z2
 					auto cmdRotate = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 					pmSubsystem->startCommand(cmdRotate);
@@ -576,6 +614,7 @@ namespace FC {
 
 
 					// Move to Z1 (Process)
+					//获取Z轴并设置Velocity ,Acceleration ,Deceleration ,Jerk
 
 					if (!pmSubsystem->getMaximumPlaneLevelSignal())
 					{
@@ -613,6 +652,7 @@ namespace FC {
 				}
 
 				// Move back to Z3 (End of cycle)
+				//获取Z轴并设置Velocity ,Acceleration ,Deceleration ,Jerk 
 
 				if (!pmSubsystem->getMinimumPlaneLevelSignal())
 				{
@@ -682,6 +722,25 @@ namespace FC {
 		Q_D(QPmRecipeWidget);
 		d->ui->tabWidget->setCurrentIndex(index);
 		d->ui->pm1_spx->setValue(0);
+	}
+
+	void QPmRecipeWidget::setMontorRealParameters(int index, bool isZAxle)
+	{
+		//获取Z轴并设置Velocity ,Acceleration ,Deceleration ,Jerk 
+		//acc
+		//float z_acc = cfg.motors[index].lifting_acc;
+		////dce
+		//float z_dec = cfg.motors[index].lifting_dec;
+		////vec
+		//float z_vel = cfg.motors[index].lifting_vel;
+		////jerk
+		//uint32_t z_jerk = uint32_t(cfg.motors[index].lifting_jerk);
+
+		//pmSubsystem->setPMCavityZAxleAcc(z_acc);
+		//pmSubsystem->setPMCavityZAxleDcc(z_dec);
+		//pmSubsystem->setPMCavityZAxleJerk(z_jerk);
+		//pmSubsystem->setPMCavityAxleSpeed(z_vel);
+
 	}
 
 

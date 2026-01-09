@@ -153,9 +153,11 @@ namespace FC {
 		float lifting_axis_target3_position = 0.0F;
 		float lifting_axis_jog_speed = 0.0F;
 		float lifting_axis_inch_movement = 0.0F;
+		float lifting_axis_jerk_value = 0.0F;
 		float rotating_axis_acce = 0.0F;
 		float rotating_axis_dece = 0.0F;
 		float rotating_axis_startup_speed = 0.0F;
+		float rotating_axis_jerk_value = 0.0F;
 		float rotating_axis_target_position = 0.0F;
 		float rotating_axis_jog_speed = 0.0F;
 		float rotating_axis_inch_movement = 0.0F;
@@ -181,10 +183,11 @@ namespace FC {
 		{ "lifting_axis_target3_position_address", &PMCavityAxisSettingParameters::lifting_axis_target3_position, "升降轴位置3" },
 		{ "lifting_axis_jog_speed_address", &PMCavityAxisSettingParameters::lifting_axis_jog_speed, "升降轴Jog速度" },
 		{ "lifting_axis_inch_movement_address", &PMCavityAxisSettingParameters::lifting_axis_inch_movement, "升降轴寸动移动量" },
-		// 旋转轴参数映射
+		{ "lifting_axis_jerk_address",&PMCavityAxisSettingParameters::lifting_axis_jerk_value,"升降轴jerk"},
 		{ "rotating_axis_acce_address", &PMCavityAxisSettingParameters::rotating_axis_acce, "旋转轴加速度" },
 		{ "rotating_axis_dece_address", &PMCavityAxisSettingParameters::rotating_axis_dece, "旋转轴减速度" },
 		{ "rotating_axis_startup_speed_address", &PMCavityAxisSettingParameters::rotating_axis_startup_speed, "旋转轴启动速度" },
+		{ "rotating_axis_jerk_address",&PMCavityAxisSettingParameters::rotating_axis_jerk_value,"旋转轴jerk"},
 		{ "rotating_axis_target_position_address", &PMCavityAxisSettingParameters::rotating_axis_target_position, "旋转轴目标坐标" },
 		{ "rotating_axis_jog_speed_address", &PMCavityAxisSettingParameters::rotating_axis_jog_speed, "旋转轴Jog速度" },
 		{ "rotating_axis_inch_movement_address", &PMCavityAxisSettingParameters::rotating_axis_inch_movement, "旋转轴寸动移动量" }

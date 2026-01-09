@@ -206,15 +206,23 @@ namespace FC{
 		std::string rotating_axis_motor_alarm_address; //R轴报警地址
 		short rotating_axis_alarm_code;
 
-		std::string lifting_axis_acce_address; //acc
-		std::string lifting_axis_dece_address; //dcc
+		std::string lifting_axis_acce_address; //Z轴acc
+		std::string lifting_axis_dece_address; //Z轴dce
 		float lifting_axis_acce_value = 0.0f;
 		float lifting_axis_dece_value = 0.0f;
 
-		std::string rotating_axis_acce_address;//acc
-		std::string rotating_axis_dece_address;//dcc
+		std::string rotating_axis_acce_address;//R轴acc
+		std::string rotating_axis_dece_address;//R轴dce
 		float rotating_axis_acce_value = 0.0f;
 		float rotating_axis_dece_value = 0.0f;
+
+		// z轴jerk
+		std::string lifting_axis_jerk_address;
+		uint32_t lifting_axis_jerk_value;
+
+		// r轴jerk
+		std::string rotating_axis_jerk_address;
+		uint32_t rotating_axis_jerk_value;
 	};
 
 	/**
@@ -307,6 +315,25 @@ namespace FC{
 		if (tag.empty()) return false;
 		short value;
 		if (KeyencePlcSubSystemHelper::readShort(tag, value))
+		{
+			if (output != value)
+			{
+				output = value;
+				return true;
+			}
+			return false;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool FortrendPMCavitySubsystem::safe_read_unsignedInt(const std::string& tag, uint32_t& output)
+	{
+		if (tag.empty()) return false;
+		uint32_t value;
+		if (KeyencePlcSubSystemHelper::readUnsignedInt(tag, value))
 		{
 			if (output != value)
 			{
@@ -914,6 +941,21 @@ namespace FC{
 		return d->lifting_axis_dece_value;
 	}
 
+	uint32_t FortrendPMCavitySubsystem::getPMCavityZAxleJerk() const
+	{
+		logInform(getName().c_str(), "读取R轴jerk");
+		return  d->rotating_axis_jerk_value;
+	}
+
+	void FortrendPMCavitySubsystem::setPMCavityZAxleJerk(uint32_t value)
+	{
+		logInform(getName().c_str(), "设置R轴jerk");
+		if (!KeyencePlcSubSystemHelper::writeUnsignedInt(d->rotating_axis_jerk_address, value))
+		{
+			logError(getName().c_str(), Poco::format("写R轴jerk address = %s 失败!", d->rotating_axis_jerk_address).c_str());
+		}
+	}
+
 	double FortrendPMCavitySubsystem::getPMCavityRAxleSpeed() const
 	{
 		return d->rotating_axis_current_speed;
@@ -951,6 +993,21 @@ namespace FC{
 		if (!KeyencePlcSubSystemHelper::writeFloat(d->rotating_axis_dece_address, dccValue))
 		{
 			logError(getName().c_str(), Poco::format("写R轴减速度address = %s 失败!", d->rotating_axis_dece_address).c_str());
+		}
+	}
+
+	uint32_t FortrendPMCavitySubsystem::getPMCavityZRxleJerk() const
+	{
+		logInform(getName().c_str(),"读取Z轴jerk");
+		return  d->lifting_axis_jerk_value;
+	}
+
+	void FortrendPMCavitySubsystem::setPMCavityRAxleJerk(uint32_t value)
+	{
+		logInform(getName().c_str(), "设置Z轴jerk");
+		if (!KeyencePlcSubSystemHelper::writeUnsignedInt(d->lifting_axis_jerk_address, value))
+		{
+			logError(getName().c_str(), Poco::format("写Z轴jerk address = %s 失败!", d->lifting_axis_jerk_address).c_str());
 		}
 	}
 
@@ -1345,6 +1402,11 @@ namespace FC{
 			//R轴减速度
 			io_changed |= safe_read_float(d->rotating_axis_dece_address, d->rotating_axis_dece_value);
 
+			//jerk
+			io_changed |= safe_read_unsignedInt(d->lifting_axis_jerk_address, d->lifting_axis_jerk_value);
+			//jerk
+			io_changed |= safe_read_unsignedInt(d->rotating_axis_jerk_address, d->rotating_axis_jerk_value);
+
 
 			if (io_changed)
 			{
@@ -1529,6 +1591,8 @@ namespace FC{
 			d->lifting_axis_dece_address = config->getString("AxisReadParameters.lifting_axis_dece_address", "");
 			d->rotating_axis_acce_address = config->getString("AxisReadParameters.rotating_axis_acce_address","");
 			d->rotating_axis_dece_address = config->getString("AxisReadParameters.rotating_axis_dece_address", "");
+			d->lifting_axis_jerk_address = config->getString("AxisReadParameters.lifting_axis_jerk_address","");
+			d->rotating_axis_jerk_address = config->getString("AxisReadParameters.rotating_axis_jerk_address","");
 		}
 
 		if (config->has("Reset"))
