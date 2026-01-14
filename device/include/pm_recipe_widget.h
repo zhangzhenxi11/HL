@@ -39,27 +39,41 @@ namespace FC {
 		
 		// 新增：统一 PM 配方数据访问
 		struct PMMotorRow {
-			float lifting_acc = 0.0;
-			float lifting_dec = 0.0;
-			short lifting_jerk = 0.0;
-			float lifting_vel = 0.0;
-			float rotating_acc = 0.0;
-			float rotating_dec = 0.0;
-			short rotating_jerk = 0.0;
-			float rotating_vel = 0.0;
+			double lifting_acc = 0.0;
+			double lifting_dec = 0.0;
+			double lifting_jerk = 0.0;
+			double lifting_vel = 0.0;
+			double rotating_acc = 0.0;
+			double rotating_dec = 0.0;
+			double rotating_jerk = 0.0;
+			double rotating_vel = 0.0;
+		};
+
+		struct PMRecipeDetails {
+			int process_count = 0;
+			std::vector<PMMotorRow> motors;
+		};
+
+		struct PMStep {
+			std::string from_pos;
+			std::string to_pos;
+			std::string recipe_name;
 		};
 
 		struct PMParams {
-			float take_position_mm = 0.0;
+			double take_position_mm = 0.0;
+			double lift_pin_position_mm = 0.0; // Added LiftPin Position
+			int process_count = 0; // Added Process Count
 			int rotation_angle_deg = 0;
-			int process_count = 0;
-			float rotate_position_mm = 0.0;
-			float process_position_mm = 0.0;
-			float process_time_min = 0.0;
+			double rotate_position_mm = 0.0;
+			double process_position_mm = 0.0;
+			double process_time_min = 0.0;
 		};
+
 		struct PMRecipeConfig {
 			PMParams params;
-			std::vector<PMMotorRow> motors;
+			std::vector<PMStep> steps;
+			std::map<std::string, PMRecipeDetails> recipes;
 		};
 
 		std::map<std::string, PMRecipeConfig>& getPMRecipeConfigMap();
@@ -101,6 +115,13 @@ namespace FC {
 		void logFailed(const std::string station_name, const std::string log);
 
 		void logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name);
+
+		// Helpers for new UI logic
+		void loadRecipeToInnerTable(int pmIndex, int row);
+		void saveInnerTableToRecipe(int pmIndex);
+		void addInnerTableColumn(int pmIndex);
+		void deleteInnerTableColumn(int pmIndex);
+		void updateSequenceTableRow(int pmIndex, int row);
 
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)

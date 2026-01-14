@@ -188,7 +188,7 @@ namespace FC{
         }
         
         // Update Charts
-        httpUpdate(d->viewAcc, d->timeList, d->accZList, d->accRList, "Z-Acc", "R-Acc");
+        //httpUpdate(d->viewAcc, d->timeList, d->accZList, d->accRList, "Z-Acc", "R-Acc");
         httpUpdate(d->viewVel, d->timeList, d->velZList, d->velRList, "Z-Vel", "R-Vel");
         httpUpdate(d->viewPos, d->timeList, d->posZList, d->posRList, "Z-Pos", "R-Pos");
 	}
