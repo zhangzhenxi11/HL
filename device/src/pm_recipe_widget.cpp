@@ -607,6 +607,26 @@ namespace FC {
 					if(auto cb = qobject_cast<QComboBox*>(table->cellWidget(r, 0))) step.from_pos = cb->currentText().toStdString();
 					if(auto cb = qobject_cast<QComboBox*>(table->cellWidget(r, 1))) step.to_pos = cb->currentText().toStdString();
 					if(table->item(r, 2)) step.recipe_name = table->item(r, 2)->text().toStdString();
+					
+					// Validation: From == To
+					if (step.from_pos == step.to_pos && step.from_pos != "Rotate") {
+						QMessageBox::warning(this, "Warning", QString("Row %1: 'From' and 'To' cannot be same (except Rotate).").arg(r + 1));
+						return;
+					}
+
+					// Validation: Process -> Rotate (Check Process Count Consistency)
+					if (step.from_pos == "Process" && step.to_pos == "Rotate") {
+						if (cfg.recipes.count(step.recipe_name)) {
+							int recipeCols = cfg.recipes[step.recipe_name].motors.size();
+							if (recipeCols != cfg.params.process_count) {
+								QMessageBox::warning(this, "Warning", 
+									QString("Row %1 (Process->Rotate): Recipe '%2' steps (%3) must match Global Process Count (%4).")
+									.arg(r + 1).arg(QString::fromStdString(step.recipe_name)).arg(recipeCols).arg(cfg.params.process_count));
+								return;
+							}
+						}
+					}
+
 					cfg.steps.push_back(step);
 				}
 			}
@@ -757,8 +777,6 @@ namespace FC {
 			int rotation_angle_deg = cfg.params.rotation_angle_deg;
 
 			try {
-				// Initial Move to Start of Sequence? 
-				// Or just start executing steps.
 				
 				for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
 					if (d->stopRequested) break;
@@ -767,6 +785,12 @@ namespace FC {
 					std::string from = step.from_pos;
 					std::string to = step.to_pos;
 					std::string rName = step.recipe_name;
+
+                    // Runtime Validation (Blockers)
+                    if (from == to && from != "Rotate") {
+                         logFailed(pmSubsystem->getName(), "Invalid Step: From == To (except Rotate)");
+                         break;
+                    }
 					
 					// Find Recipe
 					auto rIt = cfg.recipes.find(rName);
@@ -774,9 +798,9 @@ namespace FC {
 						logFailed(pmSubsystem->getName(), "Recipe not found: " + rName);
 						break;
 					}
-					const auto& recipe = rIt->second;//PMRecipeDetails
+					const auto& recipe = rIt->second;
 					
-					double targetPos = posMap.count(to) ? posMap[to] : 0.0;
+					double targetPos = posMap.count(to) ? posMap[to] : 0.0; //存在取其值，否则是0
 					
 					// Log Step
 					logInform(pmSubsystem->getName().c_str(), "Step %d: %s -> %s (%s)", sIdx+1, from.c_str(), to.c_str(), rName.c_str());
@@ -802,52 +826,37 @@ namespace FC {
 						pmSubsystem->setPMCavityRAxleJerk((uint32_t)m.rotating_jerk);
 						pmSubsystem->setPMCavityRAxleSpeed(m.rotating_vel);
 						
-						// 1. Z-Axis Move
-						// Execute move if 'from' != 'to' OR if it's a "Move" step
-						// To simplify: Always ensure Z is at Target.
-						// Note: If we are already there, this might be a no-op or a small correction.
-						// Exception: If From==Process && To==Process, maybe we don't move Z, but wait?
-						
-						bool isZMove = true;
-						if (from == "Process" && to == "Process") isZMove = false;
-						if (from == "Rotate" && to == "Rotate") isZMove = false;
-						
-						if (isZMove) {
-							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
-							pmSubsystem->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError() || d->stopRequested) {
-								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
-								throw std::runtime_error("Move Z Failed");
-							}
-						}
-						
-						// 2. Rotation Action (Only if From==Rotate && To==Rotate)
-						if (from == "Rotate" && to == "Rotate") {
-							auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
-							pmSubsystem->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError() || d->stopRequested) {
-								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
-								throw std::runtime_error("Rotate Failed");
-							}
-						}
-						
-						// 3. Process Wait (Only if From==Process && To==Process)
-						if (from == "Process" && to == "Process") {
-							double totalTime = cfg.params.process_time_min;
-							double waitTime = totalTime / max(1, loopCount); // Split time across columns
-							
-							logInform(pmSubsystem->getName().c_str(), "Process Wait: %.2f min (Step %d/%d)", waitTime, i+1, loopCount);
-							
-							d->runTimer(waitTime);
-							{
-								std::unique_lock<std::mutex> lk(d->cycleMutex);
-								d->cycleCv.wait(lk, [&]() {
-									return d->timerFinished.load() || d->stopRequested.load();
-								});
-							}
-						}
+						// Logic Branching
+                        bool isRotateStep = (from == "Rotate");
+                        bool isProcessStep = (to == "Process");
+                        bool isRotateDest = (to == "Rotate");
+
+                        // 1. Rotate Action (Rotate->Process OR Rotate->Rotate)
+                        if (isRotateStep && (isProcessStep || isRotateDest)) {
+                             auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
+							 pmSubsystem->startCommand(cmd);
+							 cmd->wait();
+							 if (cmd->hasError() || d->stopRequested) {
+								 logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
+								 throw std::runtime_error("Rotate Failed");
+							 }
+                        }
+
+                        // 2. Z-Axis Move (Rotate->Process OR Standard From!=To)
+                        if ((isRotateStep && isProcessStep) || (from != to)) {
+                            // If it was Rotate->Rotate, we SKIP Z move.
+                            if (isRotateStep && isRotateDest) {
+                                // Do nothing for Z
+                            } else {
+                                auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
+							    pmSubsystem->startCommand(cmd);
+							    cmd->wait();
+							    if (cmd->hasError() || d->stopRequested) {
+								    logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
+								    throw std::runtime_error("Move Z Failed");
+							    }
+                            }
+                        }
 					}
 				}
 				
