@@ -35,6 +35,7 @@
 
 #include <QSplitter>
 #include <QLineEdit>
+#include <QFileDialog>
 
 namespace FC {
 
@@ -50,7 +51,7 @@ namespace FC {
 		
 		QTableWidget* getSequenceTable(int index);
 		QTableWidget* getInnerTable(int index);
-		void runTimer(double minutes);
+		void runTimer(double second);
 		
 	private:
 		Ui::QPmRecipeWidgetClass* ui;
@@ -67,7 +68,6 @@ namespace FC {
 
 		std::chrono::steady_clock::time_point start_time;//开始时间点
 		const std::chrono::hours timeout = std::chrono::hours(1); //超时时间
-		double processElapsed = 0.0; //工艺耗时（单位：分钟）
 
 		std::string current_pm; //要执行测试的PM
 		std::thread cycleThread;
@@ -106,11 +106,11 @@ namespace FC {
 		delete ui;
 	}
 	
-	void QPmRecipeWidgetPrivate::runTimer(double minutes)
+	void QPmRecipeWidgetPrivate::runTimer(double seconds)
 	{
 		timerFinished.store(false);
-		std::thread([this, minutes]() {
-			auto ms = std::chrono::milliseconds(static_cast<long long>(minutes * 60000.0));
+		std::thread([this, seconds]() {
+			auto ms = std::chrono::milliseconds(static_cast<long long>(seconds * 1000.0));
 			std::this_thread::sleep_for(ms);
 			timerFinished.store(true);
 			cycleCv.notify_all();
@@ -219,10 +219,6 @@ namespace FC {
 			connect(d->sequenceTables[i], &QTableWidget::cellClicked, [this, i](int row, int col) {
 				loadRecipeToInnerTable(i, row);
 			});
-			
-			// If user changes Recipe Name in Combo, update map
-			// This is handled by itemChanged? No, ComboBox needs specific handling if we use setCellWidget
-			// But for simplicity, we reload inner table if row changes.
 			
 			connect(addColBtn, &QPushButton::clicked, [this, i]() {
 				addInnerTableColumn(i);
@@ -448,7 +444,10 @@ namespace FC {
 		Q_D(QPmRecipeWidget);
 
 		// 打开JSON文件
-		QFile file("./config/pm_recipe_parameters.json");
+		QString fileName = QFileDialog::getOpenFileName(this, QStringLiteral("Load Parameters"), "./config", QStringLiteral("JSON Files (*.json)"));
+		if (fileName.isEmpty()) return;
+
+		QFile file(fileName);
 		if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
 			QMessageBox::warning(nullptr, QStringLiteral("load failed"), QStringLiteral("Unable to open file for loading"));
 			return;
@@ -486,6 +485,7 @@ namespace FC {
 					cfg.params.rotate_position_mm = p["rotate_position_mm"].toDouble();
 					cfg.params.process_position_mm = p["process_position_mm"].toDouble();
 					cfg.params.process_time_min = p["process_time_min"].toDouble();
+					cfg.params.last_process_time_s = p["last_process_time_s"].toDouble();
 					cfg.params.lift_pin_position_mm = p["lift_pin_position_mm"].toDouble();
 				}
 				
@@ -539,15 +539,18 @@ namespace FC {
 			
 			// Update UI Global Params
 			if (auto dsb1 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 1))) dsb1->setValue(cfg.params.take_position_mm);
-			if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) {
+			if (auto dsb2 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) dsb2->setValue(cfg.params.lift_pin_position_mm);
+			if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) {
 				int idx = cbx->findData(cfg.params.rotation_angle_deg);
 				cbx->setCurrentIndex(idx >= 0 ? idx : 0);
 			}
-			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) spb->setValue(cfg.params.process_count);
-			if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) dsb4->setValue(cfg.params.rotate_position_mm);
-			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) dsb5->setValue(cfg.params.process_position_mm);
-			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) dsb6->setValue(cfg.params.process_time_min);
-			if (auto dsb7 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 7))) dsb7->setValue(cfg.params.lift_pin_position_mm);
+			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) spb->setValue(cfg.params.process_count);
+			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) dsb5->setValue(cfg.params.rotate_position_mm);
+			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) dsb6->setValue(cfg.params.process_position_mm);
+			if (auto dsb7 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 7))) dsb7->setValue(cfg.params.process_time_min);
+						
+			// Trigger calculation
+			updateProcessTimeDistribution(i);
 
 			// Update Sequence Table
 			if (auto table = d->getSequenceTable(i)) {
@@ -592,12 +595,13 @@ namespace FC {
 			auto& cfg = d->pmRecipeConfigMap[pmName];
 			
 			if (auto dsb1 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 1))) cfg.params.take_position_mm = dsb1->value();
-			if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) cfg.params.rotation_angle_deg = cbx->currentData().toInt();
-			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) cfg.params.process_count = spb->value();
-			if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) cfg.params.rotate_position_mm = dsb4->value();
-			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) cfg.params.process_position_mm = dsb5->value();
-			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) cfg.params.process_time_min = dsb6->value();
-			if (auto dsb7 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 7))) cfg.params.lift_pin_position_mm = dsb7->value();
+			if (auto dsb7 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 2))) cfg.params.lift_pin_position_mm = dsb7->value();
+			if (auto cbx = qobject_cast<QComboBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 3))) cfg.params.rotation_angle_deg = cbx->currentData().toInt();
+			if (auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 4))) cfg.params.process_count = spb->value();
+			if (auto dsb4 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) cfg.params.rotate_position_mm = dsb4->value();
+			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) cfg.params.process_position_mm = dsb5->value();
+			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 7))) cfg.params.process_time_min = dsb6->value();
+			if (auto dsb8 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 8))) cfg.params.last_process_time_s = dsb8->value();
 
 			// Steps
 			cfg.steps.clear();
@@ -640,6 +644,7 @@ namespace FC {
 			params["rotate_position_mm"] = cfg.params.rotate_position_mm;
 			params["process_position_mm"] = cfg.params.process_position_mm;
 			params["process_time_min"] = cfg.params.process_time_min;
+			params["last_process_time_s"] = cfg.params.last_process_time_s;
 			params["lift_pin_position_mm"] = cfg.params.lift_pin_position_mm;
 			pmObj["params"] = params;
 			
@@ -678,8 +683,11 @@ namespace FC {
 			rootObj[QString::fromStdString(pmName)] = pmObj;
 		}
 		
+		QString fileName = QFileDialog::getSaveFileName(this, QStringLiteral("Save Parameters"), "./config/pm_recipe_parameters.json", QStringLiteral("JSON Files (*.json)"));
+		if (fileName.isEmpty()) return;
+
 		QJsonDocument doc(rootObj);
-		QFile file("./config/pm_recipe_parameters.json");
+		QFile file(fileName);
 		if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 			QByteArray out = doc.toJson(QJsonDocument::Indented);
 			out = out.replace("\n", "\r\n");
@@ -775,8 +783,22 @@ namespace FC {
 			posMap["Process"] = cfg.params.process_position_mm;
 			
 			int rotation_angle_deg = cfg.params.rotation_angle_deg;
+			
+			// Calculate Time Distribution
+			double totalTime = cfg.params.process_time_min; // Now in seconds
+			double lastTime = cfg.params.last_process_time_s;
+			int processCount = cfg.params.process_count;
+			double avgTime = 0.0;
+			if (processCount > 1) {
+				avgTime = (totalTime - lastTime) / (double)(processCount - 1);
+				if (avgTime < 0) avgTime = 0;
+			} else {
+				avgTime = totalTime; // Or handle as lastTime only
+			}
 
 			try {
+				// Initial Move to Start of Sequence? 
+				// Or just start executing steps.
 				
 				for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
 					if (d->stopRequested) break;
@@ -827,36 +849,98 @@ namespace FC {
 						pmSubsystem->setPMCavityRAxleSpeed(m.rotating_vel);
 						
 						// Logic Branching
-                        bool isRotateStep = (from == "Rotate");
-                        bool isProcessStep = (to == "Process");
-                        bool isRotateDest = (to == "Rotate");
+                        //bool isRotateStep = (from == "Rotate");
+                        //bool isProcessStep = (to == "Process");
+                        //bool isRotateDest = (to == "Rotate");
+						// 
+						
+						// 1. Z-Axis Move (Standard From!=To)
+						if (from != to)
+						{
+							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
+							pmSubsystem->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError() || d->stopRequested) {
+								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
+								throw std::runtime_error("Move Z Failed");
+							}
+						}
 
-                        // 1. Rotate Action (Rotate->Process OR Rotate->Rotate)
-                        if (isRotateStep && (isProcessStep || isRotateDest)) {
-                             auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
-							 pmSubsystem->startCommand(cmd);
-							 cmd->wait();
-							 if (cmd->hasError() || d->stopRequested) {
-								 logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
-								 throw std::runtime_error("Rotate Failed");
-							 }
+                        // 2. Rotate Action
+						//到达旋转面时且是from：Process to:Rotate
+
+                        if (from =="Process" && to == "Rotate") 
+						{
+							if (pmSubsystem->getRotatingimumPlaneLevelSignal()) //检测是否达到了旋转面
+							{
+								//先旋转一定角度
+								auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
+								pmSubsystem->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError() || d->stopRequested) {
+									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
+									throw std::runtime_error("Rotate Failed");
+								}
+								else
+								{
+									//再Move Z Process面
+									double targetPos = posMap["Process"];
+									auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
+									pmSubsystem->startCommand(cmd);
+									cmd->wait();
+									if (cmd->hasError() || d->stopRequested) {
+										logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
+										throw std::runtime_error("Move Z Failed");
+									}
+								}
+							}
+							else
+							{
+								//Move Z 旋转面
+								double targetPos = posMap["Rotate"];
+								auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
+								pmSubsystem->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError() || d->stopRequested) {
+									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
+									throw std::runtime_error("Move Z Failed");
+								}
+							}
                         }
 
-                        // 2. Z-Axis Move (Rotate->Process OR Standard From!=To)
-                        if ((isRotateStep && isProcessStep) || (from != to)) {
-                            // If it was Rotate->Rotate, we SKIP Z move.
-                            if (isRotateStep && isRotateDest) {
-                                // Do nothing for Z
-                            } else {
-                                auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
-							    pmSubsystem->startCommand(cmd);
-							    cmd->wait();
-							    if (cmd->hasError() || d->stopRequested) {
-								    logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
-								    throw std::runtime_error("Move Z Failed");
-							    }
-                            }
-                        }
+
+					    // 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
+						if (from == "Process" && to == "Rotate")
+						{
+							if (pmSubsystem->getMaximumPlaneLevelSignal())//检测是否达到了工艺面
+							{
+								double waitTime = 0.0;
+								if (i < processCount - 1)
+								{
+									waitTime = avgTime;
+								}
+								else
+								{
+									waitTime = lastTime;
+								}
+
+								logInform(pmSubsystem->getName().c_str(), "Process Wait: %.3f s (Step %d/%d)", waitTime, i + 1, loopCount);
+
+								d->runTimer(waitTime);
+								{
+									std::unique_lock<std::mutex> lk(d->cycleMutex);
+									d->cycleCv.wait(lk, [&]() {
+										return d->timerFinished.load() || d->stopRequested.load();
+										});
+								}
+							}
+							else
+							{
+
+								logInform(pmSubsystem->getName().c_str(), "Process未达到工艺面, (Step %d/%d)", i + 1, loopCount);
+							}
+						}
+						
 					}
 				}
 				
@@ -965,18 +1049,76 @@ namespace FC {
 		item->setFlags(item->flags() & ~Qt::ItemIsEditable);
 		d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
 		addEditTableWidgetItemDoubleSpinBox(row_count, 1, 0.0, 100.0, 1, 100); //电机取放片位置
-		addEditTableWidgetItemComboBox(row_count, 2, 1);						//电机旋转角度/°
+		addEditTableWidgetItemDoubleSpinBox(row_count, 2, 0.0, 100.0, 1, 0.0);	//顶针位置
+		addEditTableWidgetItemComboBox(row_count, 3, 1);						//电机旋转角度/°
 
 		QSpinBox* Rotation_count_spx = new QSpinBox();
 		Rotation_count_spx->setMinimum(0);
 		Rotation_count_spx->setMaximum(6);
 		Rotation_count_spx->setSingleStep(1);
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
+		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 4, Rotation_count_spx);//旋转次数
 
-		addEditTableWidgetItemDoubleSpinBox(row_count, 4, 0.0, 100.0, 1, 100); //电机旋转位置
-		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 0.0, 100.0, 1, 120); //电机工艺位置/mm   max height:100mm
-		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 20.0, 1, 15.0);	//工艺时间		  max:20min
-		addEditTableWidgetItemDoubleSpinBox(row_count, 7, 0.0, 100.0, 1, 0.0);	//顶针位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 5, 0.0, 100.0, 1, 100); //电机旋转位置
+		addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0.0, 100.0, 1, 120); //电机工艺位置/mm   max height:100mm
+		addEditTableWidgetItemDoubleSpinBox(row_count, 7, 0, 10000.0, 1, 15.0);	//总工艺时间
+		
+		addEditTableWidgetItemDoubleSpinBox(row_count, 8, 0.0, 10000.0, 1, 0.0);	//最后一次时间
+		addEditTableWidgetItemDoubleSpinBox(row_count, 9, 0.0, 10000.0, 1, 0.0);	//前n-1次时间
+		
+		// Disable Avg Time Editing
+		if(auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(row_count, 9))) {
+			dsb->setEnabled(false);
+		}
+
+		// Connect Signals for Time Calculation
+		// Row is row_count.
+		// Cols: 3 (Count), 6 (Total Time), 8 (Last Time)
+		auto connectSignal = [&](int col) {
+			if(auto widget = d->ui->pm_cavity_param_edit_tbw->cellWidget(row_count, col)) {
+				if(auto spb = qobject_cast<QSpinBox*>(widget)) {
+					connect(spb, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this, row_count](int){
+						updateProcessTimeDistribution(row_count);
+					});
+				} else if(auto dsb = qobject_cast<QDoubleSpinBox*>(widget)) {
+					connect(dsb, static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this, row_count](double){
+						updateProcessTimeDistribution(row_count);
+					});
+				}
+			}
+		};
+		connectSignal(3);
+		connectSignal(6);
+		connectSignal(8);
+	}
+
+	void QPmRecipeWidget::updateProcessTimeDistribution(int pmIndex)
+	{
+		Q_D(QPmRecipeWidget);
+		// Get Inputs
+		int count = 0;
+		double totalTime = 0.0;
+		double lastTime = 0.0;
+
+		if(auto spb = qobject_cast<QSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(pmIndex, 4))) count = spb->value();
+		if(auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(pmIndex, 7))) totalTime = dsb->value();
+		if(auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(pmIndex, 8))) lastTime = dsb->value();
+
+		double avgTime = 0.0;
+		if (count > 1) {
+			avgTime = (totalTime - lastTime) / (double)(count - 1);
+			if (avgTime < 0) avgTime = 0;
+		} else if (count == 1) {
+			// 如果计数为 1，那么“上次时间”理论上应等于“总时间”，或者“总时间”就是唯一的“时间”。
+			// 逻辑：如果用户设定了“总时间”，那么“上次时间”是否应该更新？反之亦然？
+			// 要求说明：“总时间”是从 TCP 中获取的……“上次时间”是由用户设定的。
+			// 如果计数为 1，就没有“n-1”了。平均时间 = 0。
+             avgTime = 0.0;
+        }
+
+		// Update Avg Time Display
+		if(auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(pmIndex, 9))) {
+			dsb->setValue(avgTime);
+		}
 	}
 	// 增加一项
 	// Removed duplicate onAddAnItem (duplicate definition)

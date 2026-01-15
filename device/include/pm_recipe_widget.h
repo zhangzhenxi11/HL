@@ -68,6 +68,7 @@ namespace FC {
 			double rotate_position_mm = 0.0;
 			double process_position_mm = 0.0;
 			double process_time_min = 0.0;
+			double last_process_time_s = 0.0; // Added Last Process Time
 		};
 
 		struct PMRecipeConfig {
@@ -122,6 +123,7 @@ namespace FC {
 		void addInnerTableColumn(int pmIndex);
 		void deleteInnerTableColumn(int pmIndex);
 		void updateSequenceTableRow(int pmIndex, int row);
+		void updateProcessTimeDistribution(int pmIndex);
 
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)

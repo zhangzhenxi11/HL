@@ -117,6 +117,9 @@
 #define CYCLE_SIM_MODE1
 
 #define DEBUG_LOAD_SNAPSHOT1
+
+#define DEBUG_TEST_PM
+
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
 
@@ -4739,7 +4742,8 @@ namespace FC{
 								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
 
 								pm1_auto_step.store(1010);
-#if 0
+#ifdef DEBUG_TEST_PM
+
 								if (!haswaferpm && haswaferarm1) {//手臂1放料
 									pm1_auto_step = 1010;
 								}
@@ -4769,7 +4773,8 @@ namespace FC{
 								else {
 									logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm1_process_name, pm1_auto_step.load());
 								}
-#endif
+#endif // DEBUG_TEST_PM
+
 							}
 						}
 						else
@@ -4789,7 +4794,7 @@ namespace FC{
 								logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 								pm1_auto_step.store(2000);
 							
-						#if 0	
+						#ifdef DEBUG_TEST_PM
 							{
 							robot_selected_arm = 0; //A手
 								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
@@ -4807,7 +4812,7 @@ namespace FC{
 									pm1_auto_step.store(2000);
 								}
 							}
-						#endif
+						#endif  //DEBUG_TEST_PM
 
 						}
 						else
@@ -4825,7 +4830,7 @@ namespace FC{
 							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 							pm1_auto_step.store(2000);
 							
-							#if  0
+							#ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
@@ -5229,13 +5234,11 @@ namespace FC{
 							}
 							else
 							{
-
-
 								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm中有片
 								bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
 								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
 								pm2_auto_step.store(1010);
-#if 0
+#ifdef DEBUG_TEST_PM
 								if (!haswaferpm && haswaferarm1) {//手臂1放料
 									pm2_auto_step = 1010;
 								}
@@ -5282,7 +5285,7 @@ namespace FC{
 						//TODO:测试阶段，机械手不去PM放晶圆	
 						logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 						pm2_auto_step.store(2000);
-#if 0
+#ifdef DEBUG_TEST_PM
 						robot_selected_arm = 0;
 						auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 						wtr->startCommand(cmd);
@@ -5315,7 +5318,7 @@ namespace FC{
 							//TODO:测试阶段，机械手不去PM放晶圆	
 							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 							pm2_auto_step.store(2000);
-#if 0
+#ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
@@ -5582,7 +5585,7 @@ namespace FC{
 							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
 
 							pm3_auto_step.store(1010);
-#if 0
+#ifdef DEBUG_TEST_PM
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
 								pm3_auto_step.store(1010);
 							}
@@ -5666,7 +5669,7 @@ namespace FC{
 							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 							pm3_allow_get_put_wafer = false;
 							pm3_auto_step.store(2000);
-#if 0
+#ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
@@ -5927,7 +5930,7 @@ namespace FC{
 							bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
 							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
 							pm4_auto_step.store(1010);
-#if 0
+#ifdef DEBUG_TEST_PM
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
 								pm4_auto_step.store(1010);
 							}
@@ -6010,7 +6013,7 @@ namespace FC{
 						{
 							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 							pm4_auto_step.store(2000);
-#if 0
+#ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);

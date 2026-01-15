@@ -182,6 +182,17 @@
          </column>
          <column>
           <property name="text">
+           <string>顶针位置/mm</string>
+          </property>
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+         </column>
+         <column>
+          <property name="text">
            <string>电机旋转角度/°</string>
           </property>
           <property name="font">
@@ -226,7 +237,7 @@
          </column>
          <column>
           <property name="text">
-           <string>工艺时间/min</string>
+           <string>总工艺时间/s</string>
           </property>
           <property name="font">
            <font>
@@ -237,7 +248,18 @@
          </column>
          <column>
           <property name="text">
-           <string>顶针位置/mm</string>
+           <string>最后一次时间/s</string>
+          </property>
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>前n-1次时间/s</string>
           </property>
           <property name="font">
            <font>
