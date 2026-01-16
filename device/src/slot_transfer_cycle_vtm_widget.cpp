@@ -4590,17 +4590,17 @@ namespace FC{
 
 
 	/*
-		PM具体工艺先不写，处理LL腔体取出的wafer，放到PM1腔内，并延迟10s，改变task状态，放回到原先的LL腔体
+		处理LL腔体取出的wafer，放到PM1腔内，执行spindle工艺，改变task状态，放回到原先的LL腔体
 	*/
+
 	void QSlotTransferCycleVTMWidgetPrivate::executePM1Transfer()
 	{
 		try {
-
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
-		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
-		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
+		// std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+		// std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+		// std::shared_ptr<FortrendPMCavitySubsystem> pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
 
 		auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 
@@ -4739,19 +4739,15 @@ namespace FC{
 							{
 								bool haswaferpm = cassManager->getCassette(pm1.get())->getMapping(1) == Cassette::Present;   //pm中有片
 								bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
-								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
-
-								pm1_auto_step.store(1010);
+								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片	
 #ifdef DEBUG_TEST_PM
-
+								//去PM取放片
 								if (!haswaferpm && haswaferarm1) {//手臂1放料
 									pm1_auto_step = 1010;
 								}
 								else if (!haswaferpm && haswaferarm2) {//手臂2放料
 									pm1_auto_step = 1030;
 								}
-								//测试阶段，不去PM取放片
-
 								else if (haswaferpm && !haswaferarm1) //手臂1取料
 								{
 									pm_auto_step = 1040;
@@ -4773,6 +4769,9 @@ namespace FC{
 								else {
 									logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm1_process_name, pm1_auto_step.load());
 								}
+#else
+								//不去PM取放片
+								pm1_auto_step.store(1010);
 #endif // DEBUG_TEST_PM
 
 							}
@@ -4789,14 +4788,9 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							//TODO:测试阶段，机械手不去PM放晶圆
-
-								logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-								pm1_auto_step.store(2000);
-							
 						#ifdef DEBUG_TEST_PM
 							{
-							robot_selected_arm = 0; //A手
+								robot_selected_arm = 0; //A手
 								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 								wtr->startCommand(cmd);
 								cmd->wait();
@@ -4812,6 +4806,11 @@ namespace FC{
 									pm1_auto_step.store(2000);
 								}
 							}
+						#else
+							//TODO:测试阶段，机械手不去PM放晶圆
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							pm1_auto_step.store(2000);
+
 						#endif  //DEBUG_TEST_PM
 
 						}
@@ -4825,27 +4824,26 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							//TODO:测试阶段，机械手不去PM放晶圆
-
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-							pm1_auto_step.store(2000);
-							
 							#ifdef DEBUG_TEST_PM
-							robot_selected_arm = 1;
-							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step);
-							}
-							else
-							{
-								//下层的
-								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-								pm1_allow_get_put_wafer = false;
+								robot_selected_arm = 1;
+								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
+								wtr->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step);
+								}
+								else
+								{
+									//下层的
+									//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+									pm1_allow_get_put_wafer = false;
+									pm1_auto_step.store(2000);
+								}
+							#else
+								//TODO:测试阶段，机械手不去PM放晶圆
+								logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 								pm1_auto_step.store(2000);
-							}
 							#endif
 						}
 						else
@@ -4927,7 +4925,6 @@ namespace FC{
 							else {
 								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
 								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								//pm1_auto_step = 1061;
 								pm1_auto_step.store(1061);
 							}
 						}
@@ -4978,7 +4975,7 @@ namespace FC{
 
 								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
 								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								//可以呼叫loadlocka/loadlockb 走放片流程
+								//可以呼叫loadlocka/loadlockb 走放片到loadlock的流程
 								pm1_auto_step.store(1071);
 							}
 
@@ -5020,7 +5017,7 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
-							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
+							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
 							if (cmd->hasError())
@@ -5030,7 +5027,6 @@ namespace FC{
 							else
 							{
 								pm1_allow_get_put_wafer = false;
-
 								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
 								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
 								pm1_auto_step.store(10);
@@ -5043,11 +5039,17 @@ namespace FC{
 					}
 					break;
 
+					//工艺步骤
 					case 2000:
 					{
+#ifdef DEBUG_TEST_PM
 						Sleep(2000);
 						UpdatePmSubTransferDatas("PM1");
-						logInform("PM1","2s延迟，来模拟做工艺流程.....");
+						logInform("PM1", "2s延迟，来模拟做工艺流程.....");
+#else
+						//发送信号，让spindle启动,onStartCycle
+#endif
+
 						if(pmPendingTasks.size() > 0 )
 						{
 							taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
@@ -5234,10 +5236,10 @@ namespace FC{
 							}
 							else
 							{
-								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm中有片
+								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm2中有片
 								bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
 								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
-								pm2_auto_step.store(1010);
+								
 #ifdef DEBUG_TEST_PM
 								if (!haswaferpm && haswaferarm1) {//手臂1放料
 									pm2_auto_step = 1010;
@@ -5267,14 +5269,16 @@ namespace FC{
 								else {
 									logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm2_process_name, pm2_auto_step);
 								}
-#endif
+#else
+								pm2_auto_step.store(1010);
+#endif // DEBUG_TEST_PM
 							}
 						}
 						else
 						{
 							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
 						}
-						pm2_auto_step.store(1010);
+						//pm2_auto_step.store(1010);
 
 					}
 					break;
@@ -5282,9 +5286,6 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-						//TODO:测试阶段，机械手不去PM放晶圆	
-						logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-						pm2_auto_step.store(2000);
 #ifdef DEBUG_TEST_PM
 						robot_selected_arm = 0;
 						auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
@@ -5292,17 +5293,20 @@ namespace FC{
 						cmd->wait();
 						if (cmd->hasError())
 						{
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm2_auto_step);
+							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
 						}
 						else
 						{
 							//下层的
 							//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-							pm1_allow_get_put_wafer = false;
+							pm2_allow_get_put_wafer = false;	
 							pm2_auto_step.store(2000);
 						}
+#else
+						//TODO:测试阶段，机械手不去PM放晶圆	
+						logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+						pm2_auto_step.store(2000);
 #endif
-
 						}
 						else
 						{
@@ -5314,10 +5318,6 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-
-							//TODO:测试阶段，机械手不去PM放晶圆	
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-							pm2_auto_step.store(2000);
 #ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
@@ -5325,16 +5325,19 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step);
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
 							}
 							else
 							{
 								//下层的
 								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-
 								pm2_allow_get_put_wafer = false;
-								pm2_auto_step = 2000;
+								pm2_auto_step.store(2000);
 							}
+#else
+							//TODO:测试阶段，机械手不去PM放晶圆	
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							pm2_auto_step.store(2000);
 #endif
 						}
 						else
@@ -5399,6 +5402,137 @@ namespace FC{
 						}
 					}
 					break;
+#pragma region 交换料
+					case 1060:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
+							}
+							else {
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10
+								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								pm2_auto_step.store(1061);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+						}
+					}
+					break;
+					case 1061:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 1;
+							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());	
+							}
+							else
+							{
+								pm2_allow_get_put_wafer = false;
+								pm2_allow_goto_craft = true;
+								pm2_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+						}
+					}
+					break;
+					case 1070:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 1;
+							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
+							}
+							else {
+
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10	
+								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								//可以呼叫loadlocka/loadlockb 走放片到loadlock的流程
+								pm2_auto_step.store(1071);
+							}
+
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+						}
+					}
+					break;
+					case 1071:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
+							}
+							else
+							{
+								pm2_allow_get_put_wafer = false;
+								pm2_allow_goto_craft = true; //转工艺
+								pm2_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+						}
+					}
+					break;					
+
+#pragma endregion
+					case 1090:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
+							}
+							else
+							{
+								pm2_allow_get_put_wafer = false;
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10
+								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								pm2_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+						}
+					}
+					break;
+
 					case 2000:
 					{
 						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
@@ -5488,8 +5622,6 @@ namespace FC{
 						//获取待放片晶圆
 						if (pm3_allow_get_put_wafer)
 						{//允许取放
-
-
 							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
 							if (loadLockACompletedTasks.size() > 0)
 							{
@@ -5582,9 +5714,7 @@ namespace FC{
 
 							bool haswaferpm = cassManager->getCassette(pm3.get())->getMapping(1) == Cassette::Present;   //pm中有片
 							bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
-							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
-
-							pm3_auto_step.store(1010);
+							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片						
 #ifdef DEBUG_TEST_PM
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
 								pm3_auto_step.store(1010);
@@ -5614,13 +5744,15 @@ namespace FC{
 							else {
 								logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm3_process_name, pm3_auto_step);
 							}
+#else
+							pm3_auto_step.store(1010);
 #endif
 						}
 						else
 						{
 							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
 						}
-						pm3_auto_step.store(1010);
+						//pm3_auto_step.store(1010);
 
 					}
 					break;
@@ -5628,33 +5760,31 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							////TODO:测试阶段，机械手不去PM放晶圆
-							//if (!wtr->getVacuumEnable())
-							//{
-							//	robot_selected_arm = 0;
-							//	auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-							//	wtr->startCommand(cmd);
-							//	cmd->wait();
-							//	if (cmd->hasError())
-							//	{
-							//		logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step);
-							//	}
-							//	else
-							//	{
-							//		//下层的
-							//		//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-							//		//pm1_allow_get_put_wafer = false;
-							//		pm3_auto_step = 2000;
-							//	}
-							//}
-							//else
-							//{
-							//	logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-							//	pm3_auto_step = 2000;
-							//}
-
+#ifdef DEBUG_TEST_PM
+							
+							robot_selected_arm = 0; //A手
+							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
+							}
+							else
+							{
+								//下层的
+								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+								pm3_allow_get_put_wafer = false;
+								pm3_auto_step.store(2000);
+							}
+							
+#else
+							//TODO:测试阶段，机械手不去PM放晶圆
 							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 							pm3_auto_step.store(2000);
+
+#endif  //DEBUG_TEST_PM
+
 						}
 						else
 						{
@@ -5666,9 +5796,6 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-							pm3_allow_get_put_wafer = false;
-							pm3_auto_step.store(2000);
 #ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
@@ -5684,8 +5811,12 @@ namespace FC{
 								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
 
 								pm3_allow_get_put_wafer = false;
-								pm3_auto_step = 2000;
+								pm3_auto_step.store(2000);
 							}
+#else
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							pm3_allow_get_put_wafer = false;
+							pm3_auto_step.store(2000);
 #endif
 						}
 						else
@@ -5741,6 +5872,134 @@ namespace FC{
 								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm3_allow_get_put_wafer = false;
+								pm3_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+						}
+					}
+					break;
+#pragma region 交换料
+					case 1060:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
+							}
+							else {
+								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
+								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								pm3_auto_step.store(1061);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+						}
+					}
+					break;
+					case 1061:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 1;
+							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
+							}
+							else
+							{
+								pm3_allow_get_put_wafer = false;
+								pm3_allow_goto_craft = true;
+								pm3_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+						}
+					}
+					break;
+					case 1070:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 1;
+							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
+							}
+							else {
+
+								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
+								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								pm3_auto_step.store(1071);
+							}
+
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+						}
+					}
+					break;
+					case 1071:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
+							}
+							else
+							{
+								pm3_allow_get_put_wafer = false;
+								pm3_allow_goto_craft = true; //转工艺
+								pm3_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+						}
+					}
+					break;
+#pragma endregion
+					case 1090:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
+							}
+							else
+							{
+								pm3_allow_get_put_wafer = false;
+								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
+								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
 								pm3_auto_step.store(10);
 							}
 						}
@@ -5929,7 +6188,7 @@ namespace FC{
 							bool haswaferpm = cassManager->getCassette(pm4.get())->getMapping(1) == Cassette::Present;   //pm中有片
 							bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
 							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
-							pm4_auto_step.store(1010);
+
 #ifdef DEBUG_TEST_PM
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
 								pm4_auto_step.store(1010);
@@ -5946,19 +6205,21 @@ namespace FC{
 							{
 								pm4_auto_step.store(1050);
 							}
-							//else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放
-							//	pm4_auto_step = 1050;
-							//}
-							//else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放
-							//	pm4_auto_step = 1070;
-							//}
-							//else if (haswaferpm && !haswaferarm2 && !haswaferarm1) {//两个手臂没料，A手取
-							//	pm4_auto_step = 1090;
-							//}
+							else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放
+								pm4_auto_step = 1050;
+							}
+							else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放
+								pm4_auto_step = 1070;
+							}
+							else if (haswaferpm && !haswaferarm2 && !haswaferarm1) {//两个手臂没料，A手取
+								pm4_auto_step = 1090;
+							}
 
 							else {
 								logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm4_process_name, pm4_auto_step);
 							}
+#else
+							pm4_auto_step.store(1010);
 #endif
 						}
 						else
@@ -5966,7 +6227,7 @@ namespace FC{
 							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step);
 						}
 						//没加，导致出错
-						pm4_auto_step.store(1010);
+						//pm4_auto_step.store(1010);
 
 					}
 					break;
@@ -5974,32 +6235,29 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							////TODO:测试阶段，机械手不去PM放晶圆
-							//if (!wtr->getVacuumEnable())
-							//{
-							//	robot_selected_arm = 0;
-							//	auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-							//	wtr->startCommand(cmd);
-							//	cmd->wait();
-							//	if (cmd->hasError())
-							//	{
-							//		logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step);
-							//	}
-							//	else
-							//	{
-							//		//下层的
-							//		//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-							//		//pm1_allow_get_put_wafer = false;
-							//		pm4_auto_step = 2000;
-							//	}
-							//}
-							//else
-							//{
-							//	logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-							//	pm4_auto_step = 2000;
-							//}
+#ifdef DEBUG_TEST_PM
+								robot_selected_arm = 0; //A手
+								auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
+								wtr->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
+								}
+								else
+								{
+									//下层的
+									//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
+									pm4_allow_get_put_wafer = false;
+									pm4_auto_step.store(2000);
+								}
+#else
+							//TODO:测试阶段，机械手不去PM放晶圆
 							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
 							pm4_auto_step.store(2000);
+
+#endif  //DEBUG_TEST_PM
+
 						}
 						else
 						{
@@ -6011,8 +6269,7 @@ namespace FC{
 					{//放片
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
-							pm4_auto_step.store(2000);
+
 #ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
 							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
@@ -6028,8 +6285,11 @@ namespace FC{
 								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
 
 								pm4_allow_get_put_wafer = false;
-								pm4_auto_step = 2000;
+								pm4_auto_step.store(2000);
 							}
+#else
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							pm4_auto_step.store(2000);
 #endif
 						}
 						else
@@ -6094,6 +6354,136 @@ namespace FC{
 						}
 					}
 					break;
+#pragma region 交换料
+					case 1060:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
+							}
+							else {
+								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
+								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								pm4_auto_step.store(1061);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
+						}
+					}
+					break;
+					case 1061:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 1;
+							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
+							}
+							else
+							{
+								pm4_allow_get_put_wafer = false;
+								pm4_allow_goto_craft = true;
+								pm4_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
+						}
+					}
+					break;
+					case 1070:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 1;
+							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
+							}
+							else {
+
+								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
+								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								//可以呼叫loadlocka/loadlockb 走放片到loadlock的流程
+								pm4_auto_step.store(1071);
+							}
+
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
+						}
+					}
+					break;
+					case 1071:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
+							}
+							else
+							{
+								pm4_allow_get_put_wafer = false;
+								pm4_allow_goto_craft = true; //转工艺
+								pm4_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
+						}
+					}
+					break;
+#pragma endregion
+					case 1090:
+					{
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							robot_selected_arm = 0;
+							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
+							wtr->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
+							}
+							else
+							{
+								pm4_allow_get_put_wafer = false;
+								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
+								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+								pm4_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
+						}
+					}
+					break;
+
 					case 2000:
 					{
 						Sleep(500);
@@ -6444,7 +6834,7 @@ namespace FC{
 				//logWarn("Cyclelog", "LLA有待下料或者还没下料,LLB上料 LoadingInterlock!");
 				return true; //LLA有待下料或者还没下料
 			}
-			//LLA 下料结束 或 LLA上料完成
+			// LLA下料完成 
 			else if (!taskManager.CollectionPassedThroughLL("LLA") && !tool_allow_put_wafer_LLA)
 			{
 				//LLA下料完成或者初始状态
@@ -8579,38 +8969,6 @@ namespace FC{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->resetAction();
 	}
-
-	//void QSlotTransferCycleVTMWidget::initPMCavityParamEdieTableWidget(){
-	//	Q_D(QSlotTransferCycleVTMWidget);
-
-
-	//	//addAnPMItem("PM1");
-	//	//addAnPMItem("PM2");
-	//	//addAnPMItem("PM3");
-	//	//addAnPMItem("PM4");
-	//}
-
-	//void QSlotTransferCycleVTMWidget::addAnPMItem(const QString name){
-	//	Q_D(QSlotTransferCycleVTMWidget);
-		
-		//int row_count = d->ui->pm_cavity_param_edit_tbw->rowCount();
-		//d->ui->pm_cavity_param_edit_tbw->insertRow(row_count);
-
-		//QTableWidgetItem* item = new QTableWidgetItem;
-		//item->setText(name);
-		//item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-		//d->ui->pm_cavity_param_edit_tbw->setItem(row_count, 0, item);
-		//addEditTableWidgetItemDoubleSpinBox(row_count, 1, 60.0, 100.0, 1, 100);//电机取放片位置
-		//addEditTableWidgetItemComboBox(row_count, 2, 1);//电机旋转角度/°
-		//QSpinBox* Rotation_count_spx = new QSpinBox();
-		//Rotation_count_spx->setMinimum(0);
-		//Rotation_count_spx->setMaximum(6);
-		//Rotation_count_spx->setSingleStep(1);
-		//d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 3, Rotation_count_spx);//旋转次数
-		//addEditTableWidgetItemDoubleSpinBox(row_count, 4, 60.0, 100.0, 1, 100);//电机旋转位置
-		//addEditTableWidgetItemDoubleSpinBox(row_count, 5, 60.0, 120.0, 1, 120);//电机工艺位置/mm
-		//addEditTableWidgetItemDoubleSpinBox(row_count, 6, 0, 15.0, 1, 15.0);//工艺时间
-	//}
 
 	void QSlotTransferCycleVTMWidget::executeEFEMTransfer()
 	{
