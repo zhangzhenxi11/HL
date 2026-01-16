@@ -200,8 +200,7 @@ namespace FC{
         if (!d->currentSubsystem) return;
         
         qint64 now = QDateTime::currentMSecsSinceEpoch();
-        double t = (double)(now - d->startTime); // ms
-        QString tStr = QString::number(t, 'f', 0); // Display as string
+        QString tStr = QDateTime::fromMSecsSinceEpoch(now).toString("HH:mm:ss:zzz");
         
         // Fetch Data
         double accZ = d->currentSubsystem->getPMCavityZAxleAcc();
@@ -274,16 +273,20 @@ namespace FC{
 		QString lineDataZ = buildDataArray(dataZ);
         QString lineDataR = buildDataArray(dataR);
 
-		jscode += "[{name:'" + zName + "',data: " + lineDataZ + ",type: 'line',stack: 'Total',smooth: true}";//第一个线条
-		jscode += ",{name:'" + rName + "',data: " + lineDataR + ",type: 'line',stack: 'Total',smooth: true}";//第二个线条
+		jscode += "[{name:'" + zName + "',data: " + lineDataZ + ",type: 'line',smooth: true}";//第一个线条
+		jscode += ",{name:'" + rName + "',data: " + lineDataR + ",type: 'line',smooth: true}";//第二个线条
 		jscode += "])";
+        //jscode += "[{name:'" + zName + "',data: " + lineDataZ + ",type: 'line',stack: 'Total',smooth: true}";//第一个线条
+        //jscode += ",{name:'" + rName + "',data: " + lineDataR + ",type: 'line',stack: 'Total',smooth: true}";//第二个线条
+        //jscode += "])";
+
 		view->page()->runJavaScript(jscode);
 	}
 
 	//自适应窗体
 	void DataWidget::resizeEvent(QResizeEvent *event){
         Q_D(DataWidget);
-		QWidget::resizeEvent(event);
+		/*QWidget::resizeEvent(event);*/
         // Views resize automatically with layout
         if (d->tabWidget) {
             d->tabWidget->resize(this->size());

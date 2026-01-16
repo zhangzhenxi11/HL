@@ -273,6 +273,7 @@ namespace FC{
 		param.lifting_axis_target2_position = d->ui->lifting_axis_target2_position_dsp->value();
 		param.lifting_axis_target3_position = d->ui->lifting_axis_target3_position_dsp->value();
 		param.lifting_axis_target_position = d->ui->lifting_axis_target_position_dsp->value();
+		param.lifting_axis_jerk_value = d->ui->lifting_axis_jerk_dsp->value();
 
 		param.rotating_axis_acce = d->ui->rotating_axis_acce_dsp->value();
 		param.rotating_axis_dece = d->ui->rotating_axis_dece_dsp->value();
@@ -280,6 +281,7 @@ namespace FC{
 		param.rotating_axis_jog_speed = d->ui->rotating_axis_jog_speed_dsp->value();
 		param.rotating_axis_startup_speed = d->ui->rotating_axis_startup_speed_dsp->value();
 		param.rotating_axis_target_position = d->ui->rotating_axis_target_position_dsp->value();
+		param.rotating_axis_jerk_value = d->ui->rotating_axis_jerk_dsp->value();
 
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createWriteProcessParametersCommand(param);
 		executeCommand(getSubsystem(), cmd);
@@ -333,6 +335,8 @@ namespace FC{
 				d->ui->rotating_axis_target_position_dsp->setValue(process_param.rotating_axis_target_position);
 				d->ui->rotating_axis_jog_speed_dsp->setValue(process_param.rotating_axis_jog_speed);
 				d->ui->rotating_axis_inch_movement_dsp->setValue(process_param.rotating_axis_inch_movement);
+				d->ui->rotating_axis_jerk_dsp->setValue(process_param.rotating_axis_jerk_value);
+
 				d->ui->lifting_axis_dece_dsp->setValue(process_param.lifting_axis_dece);
 				d->ui->lifting_axis_startup_speed_dsp->setValue(process_param.lifting_axis_startup_speed);
 				d->ui->lifting_axis_acce_dsp->setValue(process_param.lifting_axis_acce);
@@ -343,6 +347,7 @@ namespace FC{
 				d->ui->lifting_axis_target_pressure_dsp->setValue(process_param.lifting_axis_target_pressure);
 				d->ui->lifting_axis_inch_movement_dsp->setValue(process_param.lifting_axis_inch_movement);
 				d->ui->lifting_axis_jog_speed_dsp->setValue(process_param.lifting_axis_jog_speed);
+				d->ui->lifting_axis_jerk_dsp->setValue(process_param.lifting_axis_jerk_value);
 
 			}
 

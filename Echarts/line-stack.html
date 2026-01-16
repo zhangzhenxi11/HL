@@ -80,6 +80,18 @@
              legend: {
                 data: legendNames
              },
+             dataZoom: [
+               {
+                 show: true,
+                 type: 'slider',
+                 handleSize: 32,
+                 startValue: 0,
+                 endValue: 100 // Default view range
+               },
+               {
+                 type: 'inside'
+               }
+             ],
 			 series:datalen
          };
          setTimeout(function() {

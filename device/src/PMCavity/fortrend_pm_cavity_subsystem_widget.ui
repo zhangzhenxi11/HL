@@ -473,7 +473,11 @@
            </widget>
           </item>
           <item row="11" column="1">
-           <widget class="QSpinBox" name="spinBox"/>
+           <widget class="QSpinBox" name="lifting_axis_jerk_dsp">
+            <property name="maximum">
+             <number>999</number>
+            </property>
+           </widget>
           </item>
           <item row="8" column="3">
            <widget class="QPushButton" name="write_process_parameters_btn">
@@ -497,7 +501,11 @@
            </widget>
           </item>
           <item row="7" column="4">
-           <widget class="QSpinBox" name="spinBox_2"/>
+           <widget class="QSpinBox" name="rotating_axis_jerk_dsp">
+            <property name="maximum">
+             <number>999</number>
+            </property>
+           </widget>
           </item>
           <item row="11" column="2">
            <widget class="QLabel" name="label_41">

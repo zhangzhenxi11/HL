@@ -125,6 +125,12 @@ namespace FC {
 		void updateSequenceTableRow(int pmIndex, int row);
 		void updateProcessTimeDistribution(int pmIndex);
 
+	private slots:
+		void updateSequenceRowHighlight(int pmIndex, int row, QColor color);
+		void updateInnerColumnHighlight(int pmIndex, int col, QColor color);
+		void doLoadRecipeToInnerTable(int pmIndex, int row);
+		void onCycleStoppedState();
+
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)
 		QPmRecipeWidgetPrivate* d_ptr;

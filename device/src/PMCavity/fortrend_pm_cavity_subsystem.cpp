@@ -729,6 +729,20 @@ namespace FC{
 			change = true;
 		}
 
+		//z-jerk
+		if (d->axis_setting_parameters.lifting_axis_jerk_value != pm_param.lifting_axis_jerk_value)
+		{
+			d->axis_setting_parameters.lifting_axis_jerk_value = pm_param.lifting_axis_jerk_value;
+			change = true;
+		}
+
+		//r-jerk
+		if (d->axis_setting_parameters.rotating_axis_jerk_value != pm_param.rotating_axis_jerk_value)
+		{
+			d->axis_setting_parameters.rotating_axis_jerk_value = pm_param.rotating_axis_jerk_value;
+			change = true;
+		}
+		
 		if (change)
 		{
 			d->pm_update_axis_setting_parameters = true;

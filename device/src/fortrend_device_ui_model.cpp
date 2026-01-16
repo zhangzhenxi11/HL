@@ -279,11 +279,11 @@ void FortrendDeviceModel::addMainCompoments(){
 	QObject::connect(pmRecipe_widget, SIGNAL(cycleStarted(std::string)), data_widget, SLOT(onCycleStart(std::string)));
 	QObject::connect(pmRecipe_widget, SIGNAL(cycleStopped()), data_widget, SLOT(onCycleStop()));
 
-	addAutoReleasedObject(new SubSystemWorkPanel(data_widget, "实时数据", "历史曲线", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
+	addAutoReleasedObject(new SubSystemWorkPanel(data_widget, "实时数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
 
 	DataHistoryWidget* datahistoey_widget = new DataHistoryWidget();
 
-	addAutoReleasedObject(new SubSystemWorkPanel(datahistoey_widget, "历史数据", "历史曲线", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
+	addAutoReleasedObject(new SubSystemWorkPanel(datahistoey_widget, "历史数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
 }
 
 void FortrendDeviceModel::addManualCompoments(){
