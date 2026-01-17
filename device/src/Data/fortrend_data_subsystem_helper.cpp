@@ -5,6 +5,10 @@
 #include "Kernel/kernel_exception.h"
 
 #include "Poco/Format.h"
+#include <ctime>
+#include <chrono>
+#include <vector>
+#include <string>
 
 
 //sqlite callback
@@ -19,6 +23,11 @@ static int sql_callback(void *data, int col_count, char **colValue, char **colNa
 		srore.push_back(item);
 	}
 	return 0;
+}
+
+static int insert_callback(void *data, int col_count, char **colValue, char **colName){
+    // For INSERT operations, we typically don't need to process the result rows
+    return 0;
 }
 namespace FC{
 
@@ -94,6 +103,7 @@ namespace FC{
 	DataSubSystemHelper::DataSubSystemHelper():
 		d(new DataSubSystemHelperPrivate(this))
 	{
+	    // 数据库表结构将在opendb后初始化
 	}
 
 	int DataSubSystemHelper::opendb(const std::string& db_file){
@@ -103,6 +113,8 @@ namespace FC{
 			sqlite3_close(d->db);
 			throw KernelSysException(__FILE__, KernelSysException::KR_SYSTEM_DATABASE_ERROR, Poco::format("Can't open database: %s\n", sqlite3_errmsg(d->db)));
 		}
+		// 数据库打开后初始化表结构
+		initializeDatabase();
 		return rc;
 	}
 
@@ -117,6 +129,64 @@ namespace FC{
 
 	void DataSubSystemHelper::createTable(const std::string& create_sql){
 		d->createTable(create_sql);
+	}
+	
+	void DataSubSystemHelper::initializeDatabase() {
+	    // 创建数据表用于存储实时数据
+	    std::string create_table_sql = 
+	        "CREATE TABLE IF NOT EXISTS realtime_data (" 
+	        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+	        "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, "
+	        "pm_name TEXT NOT NULL, "
+	        "acc_z REAL, "
+	        "acc_r REAL, "
+	        "vel_z REAL, "
+	        "vel_r REAL, "
+	        "pos_z REAL, "
+	        "pos_r REAL, "
+	        "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
+	        ");";
+	    
+	    d->createTable(create_table_sql);
+	    
+	    // 创建索引以提高查询性能
+	    std::string create_index_sql = "CREATE INDEX IF NOT EXISTS idx_timestamp ON realtime_data(timestamp);";
+	    d->exceSql(create_index_sql);
+	    
+	    create_index_sql = "CREATE INDEX IF NOT EXISTS idx_pm_name ON realtime_data(pm_name);";
+	    d->exceSql(create_index_sql);
+	}
+	
+	void DataSubSystemHelper::insertRealtimeData(const std::string& pm_name, 
+	                                           double acc_z, double acc_r,
+	                                           double vel_z, double vel_r,
+	                                           double pos_z, double pos_r) {
+	    std::string insert_sql = Poco::format(
+	        "INSERT INTO realtime_data (pm_name, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r) "
+	        "VALUES('%s', %.6f, %.6f, %.6f, %.6f, %.6f, %.6f);",
+	        pm_name, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r);
+	    
+	    d->exceSql(insert_sql);
+	}
+	
+	std::vector<std::vector<std::string>> DataSubSystemHelper::queryHistoricalData(
+	    const std::string& pm_name, 
+	    const std::string& start_time, 
+	    const std::string& end_time) {
+	    std::string query_sql = Poco::format(
+	        "SELECT timestamp, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r "
+	        "FROM realtime_data "
+	        "WHERE pm_name = '%s' AND timestamp BETWEEN '%s' AND '%s' "
+	        "ORDER BY timestamp ASC;",
+	        pm_name, start_time, end_time);
+	    
+	    return d->querySql(query_sql);
+	}
+	
+	std::vector<std::vector<std::string>> DataSubSystemHelper::queryAllPMNames() {
+	    std::string query_sql = "SELECT DISTINCT pm_name FROM realtime_data ORDER BY pm_name ASC;";
+	    
+	    return d->querySql(query_sql);
 	}
 
 	void DataSubSystemHelper::exce(const std::string& sql) throw(KernelException){

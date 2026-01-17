@@ -8,6 +8,7 @@
 #include  "kernel/kernel_subsystem.h"
 #include  "Kernel/Fortrend/fortrend_station.h"
 #include "device/ui_fortrend_data_subsystem_widget.h"
+#include "Data/fortrend_data_subsystem_helper.h"
 
 #include <QVBoxLayout>
 #include <QTabWidget>
@@ -45,6 +46,9 @@ namespace FC{
         QList<double> accZList, accRList;
         QList<double> velZList, velRList;
         QList<double> posZList, posRList;
+        
+        // Database helper
+        std::shared_ptr<DataSubSystemHelper> dataHelper;
 	};
 
 	DataWidgetPrivate::DataWidgetPrivate(DataWidget* p, const std::shared_ptr<IKernel>& k) :
@@ -58,6 +62,10 @@ namespace FC{
         startTime(0)
     {
         timer = new QTimer(p);
+        // Initialize database helper
+        dataHelper = std::make_shared<DataSubSystemHelper>();
+        std::string db_file = "./realtime_data.db";
+        dataHelper->opendb(db_file);
 	}
     
 	DataWidgetPrivate::~DataWidgetPrivate(){
@@ -106,10 +114,10 @@ namespace FC{
         });
         
         // Timer connection
-        connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
-   /*     connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
+       // connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
+        connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
         d->startTime = QDateTime::currentMSecsSinceEpoch();
-        d->timer->start(200);*/
+        d->timer->start(200);
 	}
 
     DataWidget::~DataWidget()
@@ -167,6 +175,9 @@ namespace FC{
         double posZ = qrand() % 100; // 0 to 100
         double posR = qrand() % 100;
         
+        //std::string pmName = d->currentSubsystem->getName();
+        //d->dataHelper->insertRealtimeData(pmName, accZ, accR, velZ, velR, posZ, posR);
+
         // Append
         d->timeList.append(tStr);
         d->accZList.append(accZ);
@@ -211,6 +222,10 @@ namespace FC{
         
         double posZ = d->currentSubsystem->getPMCavityZAxleLocation();
         double posR = d->currentSubsystem->getPMCavityRAxleLocation();
+        
+        // Save to database
+        std::string pmName = d->currentSubsystem->getName();
+        d->dataHelper->insertRealtimeData(pmName, accZ, accR, velZ, velR, posZ, posR);
         
         // Append
         d->timeList.append(tStr);

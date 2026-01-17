@@ -37,6 +37,10 @@ public slots:
     void onclick();
 	void onSelect();
 
+    void onQueryClicked();
+
+    void populatePMChambers();
+
 
 private:
 	Q_DECLARE_PRIVATE(DataHistoryWidget)
