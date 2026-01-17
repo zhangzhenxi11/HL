@@ -9,51 +9,70 @@
 
   <script src="./echarts.js"></script>
   <script type="text/javascript">
-    var dom = document.getElementById('container');
-    var myChart = echarts.init(dom, null, {
-      renderer: 'canvas',
-      useDirtyRect: false
-    });
-    var app = {};
+    var myChart = null;
     
-    var option;
-	
-	option = {
-	  title: {
-		text: 'Stacked Line'
-	  },
-	  tooltip: {
-		trigger: 'axis'
-	  },
-	  legend: {
-		data: []
-	  },
-	  grid: {
-		left: '3%',
-		right: '4%',
-		bottom: '3%',
-		containLabel: true
-	  },
-	  toolbox: {
-		feature: {
-		  saveAsImage: {}
-		}
-	  },
-	  xAxis: {
-		type: 'category',
-		boundaryGap: false,
-		data: []
-	  },
-	  yAxis: {
-		type: 'value'
-	  },
-	  series: [
-		
-	  ]
-	};
-	
+    function initChart() {
+        var dom = document.getElementById('container');
+        if (!dom) return;
+        
+        // Wait for non-zero size
+        if (dom.clientWidth === 0 || dom.clientHeight === 0) {
+            setTimeout(initChart, 100);
+            return;
+        }
+        
+        if (myChart != null) {
+            myChart.dispose();
+        }
+        
+        myChart = echarts.init(dom, null, {
+          renderer: 'canvas',
+          useDirtyRect: false
+        });
+        
+        var option = {
+          title: {
+            text: 'Stacked Line'
+          },
+          tooltip: {
+            trigger: 'axis'
+          },
+          legend: {
+            data: []
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          toolbox: {
+            feature: {
+              saveAsImage: {}
+            }
+          },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: []
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: []
+        };
+        
+        myChart.setOption(option);
+        window.addEventListener('resize', myChart.resize);
+    }
+
+    // Initialize when window loads
+    window.onload = initChart;
+    
 	//数据接收函数，原理就是需要改变数据的地方，重置那部分数据就可以
      function onDataReceived(name, legendNames, datalen) {
+         if (!myChart) return;
+         
          var option = {
              title: {
                  text: 'Stacked Line'
@@ -98,10 +117,6 @@
             myChart.setOption(option, true);
          }, 0);
      }
-         
-      // myChart.setOption(option);
-      window.addEventListener('resize', myChart.resize);
-   
   </script>
 </body>
 </html>

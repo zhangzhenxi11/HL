@@ -107,9 +107,9 @@ namespace FC{
         
         // Timer connection
         connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
-        //connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
-        //d->startTime = QDateTime::currentMSecsSinceEpoch();
-        //d->timer->start(200);
+   /*     connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
+        d->startTime = QDateTime::currentMSecsSinceEpoch();
+        d->timer->start(200);*/
 	}
 
     DataWidget::~DataWidget()
@@ -288,8 +288,5 @@ namespace FC{
         Q_D(DataWidget);
 		/*QWidget::resizeEvent(event);*/
         // Views resize automatically with layout
-        if (d->tabWidget) {
-            d->tabWidget->resize(this->size());
-        }
 	}
 }

@@ -47,6 +47,25 @@ namespace FC{
 		Q_D(DataHistoryWidget);
 		d->ui = new Ui::DataHistoryWidget();
 		d->ui->setupUi(this);
+		
+		// Layout Management
+		// Use existing layout from verticalLayoutWidget if available
+		QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(d->ui->verticalLayoutWidget->layout());
+		if (!layout) {
+			layout = new QVBoxLayout(d->ui->verticalLayoutWidget);
+			layout->setContentsMargins(0,0,0,0);
+		}
+		
+		// Ensure qweb is in the layout
+		if (layout->indexOf(d->ui->qweb) == -1) {
+			layout->addWidget(d->ui->qweb);
+		}
+		
+		// Re-setup main layout to ensure full screen
+		if (this->layout() == nullptr) {
+			QVBoxLayout* mainLayout = new QVBoxLayout(this);
+			mainLayout->addWidget(d->ui->verticalLayoutWidget);
+		}
 
 		//数据加载
 		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/history-line-stack.html";
@@ -112,6 +131,14 @@ namespace FC{
 		}
 		jscode += "],";
 
+        // Add Legend Data
+        jscode += "[";
+        for (int i = 0; i < lineName.size(); i++) {
+            jscode += QString("'%1'").arg(lineName[i]);
+            if (i < lineName.size() - 1) jscode += ",";
+        }
+        jscode += "],";
+
 		//线条数据 拼接
 		QString lineData = "[";
 		for (int i = 0; i < data.size(); i++)
@@ -136,16 +163,5 @@ namespace FC{
 		Q_D(DataHistoryWidget);
 		// 调用父类的resizeEvent
 		QWidget::resizeEvent(event);
-
-		//重新加载
-		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/history-line-stack.html";
-		d->ui->qweb->load(QUrl(appDirPath));
-
-
-		// 获取窗体的大小
-		int width = event->size().width();
-		int height = event->size().height();
-		// 将自定义控件的大小设为窗体的大小
-		d->ui->qweb->setGeometry(0, 0, width, height);
 	}
 }
