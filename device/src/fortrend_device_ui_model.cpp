@@ -281,9 +281,9 @@ void FortrendDeviceModel::addMainCompoments(){
 
 	addAutoReleasedObject(new SubSystemWorkPanel(data_widget, "实时数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
 
-	DataHistoryWidget* datahistoey_widget = new DataHistoryWidget();
+	//DataHistoryWidget* datahistoey_widget = new DataHistoryWidget();
 
-	addAutoReleasedObject(new SubSystemWorkPanel(datahistoey_widget, "历史数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
+	//addAutoReleasedObject(new SubSystemWorkPanel(datahistoey_widget, "历史数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
 }
 
 void FortrendDeviceModel::addManualCompoments(){

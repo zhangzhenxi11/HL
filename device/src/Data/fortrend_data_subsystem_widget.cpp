@@ -39,6 +39,7 @@ namespace FC{
         
         QTimer* timer;
         qint64 startTime;
+        int pagesLoaded = 0;  // 跟踪所有页面加载状态
         bool isPageLoaded = false;
         
         // Data buffers
@@ -59,7 +60,8 @@ namespace FC{
         viewVel(nullptr),
         viewPos(nullptr),
         currentSubsystem(nullptr),
-        startTime(0)
+        startTime(0),
+        pagesLoaded(0)
     {
         timer = new QTimer(p);
         // Initialize database helper
@@ -94,12 +96,25 @@ namespace FC{
             QVBoxLayout* layout = new QVBoxLayout(page);
             layout->setContentsMargins(0,0,0,0);
             QWebEngineView* view = new QWebEngineView(page);
+            
+            // 设置焦点策略，确保能接收鼠标事件
+            view->setFocusPolicy(Qt::StrongFocus);
+            view->setAttribute(Qt::WA_AcceptTouchEvents, true);
+            view->setAttribute(Qt::WA_NativeWindow, true);  // 确保OpenGL正确渲染
+            
             layout->addWidget(view);
             d->tabWidget->addTab(page, title);
             
             // Load HTML
             QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/line-stack.html";
+            //qDebug() << "[DataWidget]" << title << "loading HTML from:" << appDirPath;
+            //qDebug() << "  - File exists:" << QFile::exists(appDirPath);
             view->load(QUrl::fromLocalFile(appDirPath));
+            
+            //qDebug() << "[DataWidget]" << title << "QWebEngineView created";
+            //qDebug() << "  - isEnabled:" << view->isEnabled();
+            //qDebug() << "  - focusPolicy:" << view->focusPolicy();
+            
             return view;
         };
         
@@ -108,16 +123,37 @@ namespace FC{
         d->viewPos = createTab("Position");
 
         //C++ 等待 JS 环境就绪
-        // Wait for page load
-        connect(d->viewAcc, &QWebEngineView::loadFinished, [d](bool ok){ 
-            if(ok) d->isPageLoaded = true; 
+        // Wait for page load - 检测所有页面都加载完成
+        auto onPageLoaded = [d](bool ok){ 
+            if(ok) {
+                d->pagesLoaded++;
+                qDebug() << "[DataWidget] Page loaded successfully. Total:" << d->pagesLoaded << "/3";
+                // 当所有三个页面都加载完成时才设置为true
+                if(d->pagesLoaded >= 3) {
+                    d->isPageLoaded = true;
+                    qDebug() << "[DataWidget] *** All WebEngine pages loaded successfully ***";
+                }
+            } else {
+                qDebug() << "[DataWidget] ERROR: Page load failed!";
+            }
+        };
+        connect(d->viewAcc, &QWebEngineView::loadFinished, onPageLoaded);
+        connect(d->viewVel, &QWebEngineView::loadFinished, onPageLoaded);
+        connect(d->viewPos, &QWebEngineView::loadFinished, onPageLoaded);
+        
+        // 监听加载进度
+        connect(d->viewVel, &QWebEngineView::loadProgress, [](int progress){
+            if(progress % 20 == 0 || progress == 100) {
+                qDebug() << "[DataWidget] Velocity view load progress:" << progress << "%";
+            }
         });
         
         // Timer connection
        // connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
         connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
-        d->startTime = QDateTime::currentMSecsSinceEpoch();
-        d->timer->start(200);
+        //d->startTime = QDateTime::currentMSecsSinceEpoch();
+        //Sleep(2000);
+        //d->timer->start(2000);
 	}
 
     DataWidget::~DataWidget()
@@ -128,6 +164,8 @@ namespace FC{
     void DataWidget::onCycleStart(const std::string& pmName)
     {
         Q_D(DataWidget);
+        qDebug() << "[DataWidget] onCycleStart called for PM:" << QString::fromStdString(pmName);
+        qDebug() << "  - isPageLoaded:" << d->isPageLoaded;
         // Get Subsystem
         
         d->currentSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
@@ -161,10 +199,19 @@ namespace FC{
 		Q_D(DataWidget);
         if (!d->isPageLoaded) return;
         
+        d->currentSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
+
+        if (!d->currentSubsystem) {
+            qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString("PM1");
+            return;
+        }
+
+        //qint64 now = QDateTime::currentMSecsSinceEpoch();
+        //double t = (double)(now - d->startTime); // ms
+        //QString tStr = QString::number(t, 'f', 0); // Display as string
         qint64 now = QDateTime::currentMSecsSinceEpoch();
-        double t = (double)(now - d->startTime); // ms
-        QString tStr = QString::number(t, 'f', 0); // Display as string
-        
+        QString tStr = QDateTime::fromMSecsSinceEpoch(now).toString("HH:mm:ss:zzz");
+
         // Generate Random Data
         double accZ = (qrand() % 200) - 100; // -100 to 100
         double accR = (qrand() % 200) - 100;
@@ -175,8 +222,8 @@ namespace FC{
         double posZ = qrand() % 100; // 0 to 100
         double posR = qrand() % 100;
         
-        //std::string pmName = d->currentSubsystem->getName();
-        //d->dataHelper->insertRealtimeData(pmName, accZ, accR, velZ, velR, posZ, posR);
+        std::string pmName = d->currentSubsystem->getName();
+        d->dataHelper->insertRealtimeData("PM1", accZ, accR, velZ, velR, posZ, posR);
 
         // Append
         d->timeList.append(tStr);
@@ -259,7 +306,20 @@ namespace FC{
                                 const QList<double> &dataZ, const QList<double> &dataR,
                                 const QString& zName, const QString& rName)
 	{
-        if (!view) return;
+        if (!view) {
+            qDebug() << "[DataWidget] ERROR: httpUpdate called with null view!";
+            return;
+        }
+        
+        if (!view->page()) {
+            qDebug() << "[DataWidget] ERROR: QWebEngineView page is null!";
+            return;
+        }
+        
+        qDebug() << "[DataWidget] httpUpdate for" << zName << "/" << rName;
+        qDebug() << "  - view isEnabled:" << view->isEnabled();
+        qDebug() << "  - view isVisible:" << view->isVisible();
+        qDebug() << "  - data points:" << name.size();
         
 		//在QT中我们需要组成一个字符串将数据传过去
 		QString jscode = "onDataReceived([";

@@ -60,8 +60,14 @@ namespace FC{
 		d_ptr(new DataHistoryWidgetPrivate(this))
 	{
 		Q_D(DataHistoryWidget);
+		qDebug() << "[DataHistoryWidget] Constructor called";
+		qDebug() << "  - parent:" << parent;
+		
 		d->ui = new Ui::DataHistoryWidget();
 		d->ui->setupUi(this);
+		
+		// 监听窗口显示、隐藏事件
+		installEventFilter(this);
 		
 		// Layout Management
 		// Use existing layout from verticalLayoutWidget if available
@@ -123,9 +129,34 @@ namespace FC{
 			mainLayout->addWidget(d->ui->verticalLayoutWidget);
 		}
 
-		//数据加载
+		//数据加载 - 使用fromLocalFile确保本地文件正确加载
 		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/history-line-stack.html";
-		d->ui->qweb->load(QUrl(appDirPath));
+		qDebug() << "[DataHistoryWidget] Loading HTML from:" << appDirPath;
+		qDebug() << "[DataHistoryWidget] File exists:" << QFile::exists(appDirPath);
+		
+		d->ui->qweb->load(QUrl::fromLocalFile(appDirPath));
+		
+		// 设置焦点策略，确保能接收鼠标事件
+		d->ui->qweb->setFocusPolicy(Qt::StrongFocus);
+		d->ui->qweb->setAttribute(Qt::WA_AcceptTouchEvents, true);
+		
+		qDebug() << "[DataHistoryWidget] QWebEngineView properties:";
+		qDebug() << "  - isEnabled:" << d->ui->qweb->isEnabled();
+		qDebug() << "  - isVisible:" << d->ui->qweb->isVisible();
+		qDebug() << "  - focusPolicy:" << d->ui->qweb->focusPolicy();
+		qDebug() << "  - geometry:" << d->ui->qweb->geometry();
+		
+		// 监听页面加载完成
+		connect(d->ui->qweb, &QWebEngineView::loadFinished, [](bool ok){
+			qDebug() << "[DataHistoryWidget] Page load finished:" << ok;
+		});
+		
+		// 监听页面加载进度
+		connect(d->ui->qweb, &QWebEngineView::loadProgress, [](int progress){
+			if(progress % 20 == 0 || progress == 100) {
+				qDebug() << "[DataHistoryWidget] Page load progress:" << progress << "%";
+			}
+		});
 		
 		// Initialize line names for different data types
 		lineName.clear();
@@ -139,7 +170,25 @@ namespace FC{
 		d->datahelper->opendb(db_file);
 		
 		// Populate PM chamber combo box
-		//populatePMChambers();
+		/*populatePMChambers();*/
+
+		// 连接按钮点击事件
+		connect(d->ui->select_btn, &QPushButton::clicked, this, &DataHistoryWidget::onQueryClicked);
+		
+		// 连接ComboBox信号 - 添加空指针检查和调试日志
+		if (d->ui->dateType) {
+			qDebug() << "[DataHistoryWidget] Connecting dateType signal, object name:" << d->ui->dateType->objectName();
+			connect(d->ui->dateType, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), 
+			        this, &DataHistoryWidget::populatePMChambers);
+		} else {
+			qDebug() << "[DataHistoryWidget] ERROR: dateType is nullptr!";
+		}
+		
+		// 初始化pmComboBox指针
+		d->pmComboBox = d->ui->dateType;
+		if (!d->pmComboBox) {
+			qDebug() << "[DataHistoryWidget] ERROR: pmComboBox assignment failed!";
+		}
 	}
 	void DataHistoryWidget::onSelect(){
 		
@@ -148,14 +197,21 @@ namespace FC{
 	void DataHistoryWidget::onQueryClicked() {
 	    Q_D(DataHistoryWidget);
 	    
+	    qDebug() << "[DataHistoryWidget] onQueryClicked() called";
+	    qDebug() << "  - qweb isEnabled:" << d->ui->qweb->isEnabled();
+	    qDebug() << "  - qweb isVisible:" << d->ui->qweb->isVisible();
+	    qDebug() << "  - qweb hasFocus:" << d->ui->qweb->hasFocus();
+	    
 	    // Get selected time range and PM chamber
-	    QString startTimeStr = d->startTimeEdit->dateTime().toString("yyyy-MM-dd HH:mm:ss");
-	    QString endTimeStr = d->endTimeEdit->dateTime().toString("yyyy-MM-dd HH:mm:ss");
+	    QString startTimeStr = d->ui->startDatetime->dateTime().toString("yyyy-MM-dd HH:mm");
+	    QString endTimeStr = d->ui->endDatetime->dateTime().toString("yyyy-MM-dd HH:mm");
 	    QString selectedPM = d->pmComboBox->currentText();
 	    
 	    if (selectedPM.isEmpty()) {
+
 	        qDebug() << "Please select a PM chamber";
-	        return;
+	  /*      return;*/
+			selectedPM = "PM1";
 	    }
 	    
 	    // Query historical data from database
@@ -200,10 +256,11 @@ namespace FC{
 	    }
 	    
 	    // Update chart with historical data
+	    qDebug() << "[DataHistoryWidget] Updating chart with" << timestamps.size() << "data points";
 	    httpUpdate(timestamps, displayData);
 	}
 	
-	void DataHistoryWidget::populatePMChambers() {
+	void DataHistoryWidget::populatePMChambers(int index) {
 	    Q_D(DataHistoryWidget);
 	    
 	    // Query all available PM chambers from database
@@ -216,9 +273,14 @@ namespace FC{
 	        }
 	    }
 	    
-	    if (d->pmComboBox->count() > 0) {
-	        d->pmComboBox->setCurrentIndex(0);
-	    }
+	    //if (d->pmComboBox->count() > 0) {
+	    //    d->pmComboBox->setCurrentIndex(0);
+	    //}
+
+		if (index <= d->pmComboBox->count())
+		{
+			d->pmComboBox->setCurrentIndex(index);
+		}
 	}
 	void DataHistoryWidget::onclick()
 	{
@@ -257,6 +319,9 @@ namespace FC{
 	void DataHistoryWidget::httpUpdate(const QList<QString> &name, const QList<int> &data)
 	{
 		Q_D(DataHistoryWidget);
+		
+		qDebug() << "[DataHistoryWidget] httpUpdate called with" << name.size() << "timestamps," << data.size() << "data points";
+		qDebug() << "  - qweb page isNull:" << (d->ui->qweb->page() == nullptr);
 		//在QT中我们需要组成一个字符串将数据传过去
 		QString jscode = "onDataReceived([";
 		for (int i = 0; i < name.size(); i++)
@@ -297,7 +362,49 @@ namespace FC{
 	//自适应窗体
 	void DataHistoryWidget::resizeEvent(QResizeEvent *event){
 		Q_D(DataHistoryWidget);
+		qDebug() << "[DataHistoryWidget] resizeEvent:" << event->size();
 		// 调用父类的resizeEvent
 		QWidget::resizeEvent(event);
+	}
+	
+	void DataHistoryWidget::showEvent(QShowEvent *event) {
+		Q_D(DataHistoryWidget);
+		qDebug() << "[DataHistoryWidget] *** showEvent - Widget is now visible ***";
+		qDebug() << "  - this geometry:" << this->geometry();
+		qDebug() << "  - this size:" << this->size();
+		qDebug() << "  - qweb isEnabled:" << d->ui->qweb->isEnabled();
+		qDebug() << "  - qweb isVisible:" << d->ui->qweb->isVisible();
+		qDebug() << "  - qweb geometry:" << d->ui->qweb->geometry();
+		qDebug() << "  - qweb size:" << d->ui->qweb->size();
+		qDebug() << "  - verticalLayoutWidget geometry:" << d->ui->verticalLayoutWidget->geometry();
+		
+		// 强制更新布局
+		this->updateGeometry();
+		d->ui->qweb->updateGeometry();
+		
+		QWidget::showEvent(event);
+		
+		// 显示后再次检查
+		QTimer::singleShot(100, this, [this, d](){
+			qDebug() << "[DataHistoryWidget] 100ms after showEvent:";
+			qDebug() << "  - qweb geometry:" << d->ui->qweb->geometry();
+			qDebug() << "  - qweb isVisible:" << d->ui->qweb->isVisible();
+		});
+	}
+	
+	void DataHistoryWidget::hideEvent(QHideEvent *event) {
+		qDebug() << "[DataHistoryWidget] hideEvent - Widget is now hidden";
+		QWidget::hideEvent(event);
+	}
+	
+	bool DataHistoryWidget::eventFilter(QObject *obj, QEvent *event) {
+		if (event->type() == QEvent::FocusIn) {
+			qDebug() << "[DataHistoryWidget] FocusIn event on" << obj->objectName();
+		} else if (event->type() == QEvent::FocusOut) {
+			qDebug() << "[DataHistoryWidget] FocusOut event on" << obj->objectName();
+		} else if (event->type() == QEvent::MouseButtonPress) {
+			qDebug() << "[DataHistoryWidget] MouseButtonPress event on" << obj->objectName();
+		}
+		return QWidget::eventFilter(obj, event);
 	}
 }

@@ -21,8 +21,12 @@ class DataHistoryWidget : public QWidget
 public:
     explicit DataHistoryWidget(QWidget *parent = 0);
     ~DataHistoryWidget();
-public:
-    void resizeEvent(QResizeEvent *event);
+    
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
     void httpUpdate(const QList<QString> &name, const QList<int> &data);
 
 	QHash<QString, QHash<QString,int>> Data;
@@ -39,7 +43,7 @@ public slots:
 
     void onQueryClicked();
 
-    void populatePMChambers();
+    void populatePMChambers(int index);
 
 
 private:

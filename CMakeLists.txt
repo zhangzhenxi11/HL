@@ -22,7 +22,7 @@ find_package(xVersionCommon REQUIRED)
 find_package(Poco REQUIRED Foundation Util)
 find_package(Kernel REQUIRED  Core Utils EditorUI CoreUI Fortrend FortrendUI)
 find_package(QtUI REQUIRED) 
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets PrintSupport WebEngineWidgets AxContainer)
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets PrintSupport WebEngine WebEngineWidgets AxContainer)
 include_directories(
 ${CMAKE_BINARY_DIR}  # 鍖呭惈缂栬瘧鐩爣椤剁骇鐩綍锛屼负浜嗚兘鎵惧埌鐗堟湰鍙峰ご鏂囦欢
 ${Qt5AxContainer_INCLUDE_DIRS}
