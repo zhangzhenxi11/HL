@@ -134,6 +134,8 @@ namespace FC {
 		void saveInnerTableToRecipe(int pmIndex);
 		void addInnerTableColumn(int pmIndex);
 		void deleteInnerTableColumn(int pmIndex);
+		void copyInnerTableColumn(int pmIndex);      // 新增：复制列
+		void pasteInnerTableColumnAsNew(int pmIndex); // 新增：粘贴为新列
 		void updateSequenceTableRow(int pmIndex, int row);
 		void updateProcessTimeDistribution(int pmIndex);
 
@@ -169,6 +171,12 @@ namespace FC {
 			PMExecutionContext(const PMExecutionContext&) = delete;
 			PMExecutionContext& operator=(const PMExecutionContext&) = delete;
 		};
+
+		// 列数据剪贴板结构 - 用于复制粘贴功能
+		struct ColumnClipboard {
+			bool hasData = false;
+			PMMotorRow motorData;
+		} columnClipboards[4]; // 每个PM独立的剪贴板
 
 	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)

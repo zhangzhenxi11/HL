@@ -252,8 +252,12 @@ namespace FC {
 			QHBoxLayout* btnLayout = new QHBoxLayout();
 			QPushButton* addColBtn = new QPushButton("Add Step", innerWidget);
 			QPushButton* delColBtn = new QPushButton("Del Step", innerWidget);
+			QPushButton* copyColBtn = new QPushButton("Copy Step", innerWidget);   // 新增
+			QPushButton* pasteColBtn = new QPushButton("Paste Step", innerWidget); // 新增
 			btnLayout->addWidget(new QLabel("Motor Parameters:", innerWidget));
 			btnLayout->addStretch();
+			btnLayout->addWidget(copyColBtn);
+			btnLayout->addWidget(pasteColBtn);
 			btnLayout->addWidget(addColBtn);
 			btnLayout->addWidget(delColBtn);
 			innerLayout->addLayout(btnLayout);
@@ -270,6 +274,12 @@ namespace FC {
 			});
 			connect(delColBtn, &QPushButton::clicked, [this, i]() {
 				deleteInnerTableColumn(i);
+			});
+			connect(copyColBtn, &QPushButton::clicked, [this, i]() {
+				copyInnerTableColumn(i);
+			});
+			connect(pasteColBtn, &QPushButton::clicked, [this, i]() {
+				pasteInnerTableColumnAsNew(i);
 			});
 		}
 
@@ -475,6 +485,80 @@ namespace FC {
 			table->removeColumn(col);
 			saveInnerTableToRecipe(pmIndex);
 		}
+	}
+
+	// 复制选中的列
+	void QPmRecipeWidget::copyInnerTableColumn(int pmIndex)
+	{
+		if (pmIndex < 0 || pmIndex >= 4) return;
+		
+		Q_D(QPmRecipeWidget);
+		QTableWidget* table = d->getInnerTable(pmIndex);
+		if(!table) return;
+		
+		int col = table->currentColumn();
+		if (col < 0) {
+			QMessageBox::warning(this, "警告", "请先选中要复制的列！");
+			return;
+		}
+		
+		// 读取当前列的数据
+		auto getVal = [&](int r) {
+			QDoubleSpinBox* dsb = qobject_cast<QDoubleSpinBox*>(table->cellWidget(r, col));
+			return dsb ? dsb->value() : 0.0;
+		};
+		
+		// 存储到剪贴板
+		columnClipboards[pmIndex].motorData.lifting_acc = getVal(0);
+		columnClipboards[pmIndex].motorData.lifting_dec = getVal(1);
+		columnClipboards[pmIndex].motorData.lifting_jerk = getVal(2);
+		columnClipboards[pmIndex].motorData.lifting_vel = getVal(3);
+		columnClipboards[pmIndex].motorData.rotating_acc = getVal(4);
+		columnClipboards[pmIndex].motorData.rotating_dec = getVal(5);
+		columnClipboards[pmIndex].motorData.rotating_jerk = getVal(6);
+		columnClipboards[pmIndex].motorData.rotating_vel = getVal(7);
+		columnClipboards[pmIndex].hasData = true;
+		
+		QMessageBox::information(this, "提示", QString("已复制 Step %1 的参数！").arg(col + 1));
+	}
+
+	// 粘贴为新的列
+	void QPmRecipeWidget::pasteInnerTableColumnAsNew(int pmIndex)
+	{
+		if (pmIndex < 0 || pmIndex >= 4) return;
+		
+		Q_D(QPmRecipeWidget);
+		
+		// 检查剪贴板是否有数据
+		if (!columnClipboards[pmIndex].hasData) {
+			QMessageBox::warning(this, "警告", "剪贴板为空，请先复制一列！");
+			return;
+		}
+		
+		QTableWidget* table = d->getInnerTable(pmIndex);
+		if(!table) return;
+		
+		// 在最后添加新列
+		int newCol = table->columnCount();
+		table->insertColumn(newCol);
+		QString header = QString("Step %1").arg(newCol + 1);
+		table->setHorizontalHeaderItem(newCol, new QTableWidgetItem(header));
+		
+		// 填充剪贴板的数据
+		const auto& data = columnClipboards[pmIndex].motorData;
+		addTableWidgetItemDoubleSpinBox(0, newCol, 0, 100, 1, data.lifting_acc, 3, table);
+		addTableWidgetItemDoubleSpinBox(1, newCol, 0, 100, 1, data.lifting_dec, 3, table);
+		addTableWidgetItemDoubleSpinBox(2, newCol, 0, 100, 1, data.lifting_jerk, 3, table);
+		addTableWidgetItemDoubleSpinBox(3, newCol, 0, 500, 1, data.lifting_vel, 3, table);
+		addTableWidgetItemDoubleSpinBox(4, newCol, 0, 1000, 1, data.rotating_acc, 3, table);
+		addTableWidgetItemDoubleSpinBox(5, newCol, 0, 1000, 1, data.rotating_dec, 3, table);
+		addTableWidgetItemDoubleSpinBox(6, newCol, 0, 1000, 1, data.rotating_jerk, 3, table);
+		addTableWidgetItemDoubleSpinBox(7, newCol, 0, 360, 1, data.rotating_vel, 3, table);
+		
+		// 保存到内存
+		saveInnerTableToRecipe(pmIndex);
+		
+		QMessageBox::information(this, "提示", QString("已粘贴为新的 Step %1！").arg(newCol + 1));
 	}
 
 		// 清空数据
