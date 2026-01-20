@@ -12,6 +12,7 @@
 
 #include  "Kernel/kernel.h"
 #include "Kernel/FortrendUI/fortrend_ui_macros.h"
+#include "PMCavity/fortrend_pm_cavity_defined.h"
 #include <QWidget>
 #include <string>
 #include <QTableWidget>
@@ -19,8 +20,13 @@
 #include <QVBoxLayout>
 #include <map>
 #include <vector>
-#include "PMCavity/fortrend_pm_cavity_defined.h"
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+
 #pragma execution_character_set("utf-8")
+
 
 namespace FC {
 
@@ -36,6 +42,9 @@ namespace FC {
 	public:
 		QPmRecipeWidget(const std::shared_ptr<IKernel>& kernel,QWidget* parent = nullptr);
 		~QPmRecipeWidget();
+		//单例模式
+		static QPmRecipeWidget* instance(const std::shared_ptr<IKernel>& kernel,QWidget* parent = nullptr);
+		static QPmRecipeWidget* m_instance;
 		
 		// 新增：统一 PM 配方数据访问
 		struct PMMotorRow {
@@ -83,6 +92,11 @@ namespace FC {
 		void cycleStarted(const std::string& pmName);
 		void cycleStopped();
 
+
+	public:
+		void startPmMotorRun(int pmIndex);
+		void stopPmMotor(int pmIndex); // 修改：支持指定PM索引停止
+
 	private slots:
 		void onStartCycle();
 		void onStopCycle();
@@ -92,8 +106,6 @@ namespace FC {
 		void onLoadParameters();
 		void onSetParameters();
 		void onSelectPMChanged(int index);
-		//设置电机定位运动参数,默认z轴
-		void setMontorRealParameters(int index,bool isZAxle = true);
 
 		//初始化PM腔界面
 		void initPMCavityParamEdieTableWidget();
@@ -132,8 +144,38 @@ namespace FC {
 		void onCycleStoppedState();
 
 	private:
+		// PM执行上下文结构体 - 每个PM独立
+		struct PMExecutionContext {
+			std::thread cycleThread;
+			std::atomic<bool> isRunning{false};
+			std::atomic<bool> stopRequested{false};
+			std::atomic<bool> timerFinished{false};
+			std::mutex cycleMutex;
+			std::condition_variable cycleCv;
+			std::string currentRecipeName;
+			
+			PMExecutionContext() = default;
+			~PMExecutionContext() {
+				if (isRunning) {
+					stopRequested = true;
+					cycleCv.notify_all();
+					if (cycleThread.joinable()) {
+						cycleThread.join();
+					}
+				}
+			}
+			
+			// 禁止拷贝
+			PMExecutionContext(const PMExecutionContext&) = delete;
+			PMExecutionContext& operator=(const PMExecutionContext&) = delete;
+		};
+
+	private:
 		Q_DECLARE_PRIVATE(QPmRecipeWidget)
 		QPmRecipeWidgetPrivate* d_ptr;
+		
+		// 4个PM的独立执行上下文
+		PMExecutionContext pmContexts[4];
 	};
 }
 #endif // _PM_RECIPE_WIDGET_INCLUDE_

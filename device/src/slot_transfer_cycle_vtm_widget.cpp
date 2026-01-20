@@ -69,6 +69,7 @@
 #include  "PMCavity/fortrend_pm_cavity_close_tm_cavity_door_command.h"
 #include  "PMCavity/fortrend_pm_cavity_open_tm_cavity_door_command.h"
 #include  "PMCavity/fortrend_pm_cavity_reset_command.h"
+#include  "pm_recipe_widget.h"
 
 #include "EFEM/efem_loadport_reset_command.h"
 #include "EFEM/efem_loadport_openbox_command.h"
@@ -237,6 +238,8 @@ namespace FC{
 		void executeTMTransfer();
 
 		void executeUpdateTransferStatus();
+
+		void executePmMotorRun(int PmIndex);
 
 		void RerunTheFilmCycle();
 
@@ -970,7 +973,17 @@ namespace FC{
 					{
 						logWarn(lk->getName().c_str(), "当前传片模式是:Double_Up_And_Down");
 						lkmaps = station_cass_lk->getAllMapping();
-						count = lkmaps.size(); //lp中有多片下，按loadlock需要的片数，去上料
+
+						//2026-1-19  lp中有多片下，按loadlock空槽数，去上料
+
+						for (int i = 0; i < lkmaps.size(); i++)
+						{
+							if (lkmaps[i] == Cassette::Empty) //空片的槽号
+							{
+								count++; //<=2
+							}
+						}
+						//count = lkmaps.size(); 
 					}
 					else
 					{
@@ -1026,6 +1039,7 @@ namespace FC{
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					efemPendingTasks = taskManager.getEfemPendingTasks();
+					
 					if (efemPendingTasks.size() == 1)
 					{
 						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
@@ -1050,6 +1064,8 @@ namespace FC{
 					}
 					else
 					{//上料完成
+						//上面对task设置状态，数量不是1就是2,那么只要上料动作完成，efemPendingTasks数量只会是0
+						//不管上进下出模式，还是双上双下，这里 efemPendingTasks.count == 0 
 						if (elp == nullptr)
 						{
 							logFailedExcuteCommandHasError(elp->getName(), "elp  is nullptr", efem_process_name, efem_auto_step);
@@ -1057,6 +1073,9 @@ namespace FC{
 
 						if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
+							// 2026-1-09  下料完成步骤去执行关lp！！
+#if 0
+
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								//tool_allow_get_wafer = false; //LP上料完成						
@@ -1075,6 +1094,8 @@ namespace FC{
 							}
 							else
 							{
+								
+
 								if (elp->hasDoorOpend())
 								{
 									auto cmd = elp->createCloseBoxCommand();
@@ -1090,12 +1111,8 @@ namespace FC{
 									}
 								}
 							}
-						}
 
-						if (!elp->hasDoorOpend())
-						{
-							//tool_allow_get_wafer = false; //LP1上料完成
-							
+#endif // 0
 							// 清除当前处理的LoadLock请求标志
 							if (current_loadlock == "LLA") {
 								logWarn("EFEM", "step:110,给TOOL上料 LLA unLock  thread...");
@@ -1107,8 +1124,8 @@ namespace FC{
 								logWarn("EFEM", "step:110,给TOOL上料 LLB unLock  thread...");
 								tool_allow_get_wafer_LLB = false;
 							}
-
 							efem_auto_step = 10; //跳转到开始步骤
+							
 						}
 					}
 				}
@@ -2769,7 +2786,7 @@ namespace FC{
 						//LLA未达到真空设定值且在抽其他腔室
 						if (lk1->getVacuumValueReachesTheSetValue() && loadlock1_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
-							logInform("Cycle", "step:510, lk1真空值已经达到，真空规读取数值波动或者泵在抽其他腔室");
+							logInform("Cycle", "step:510, lk1真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室");
 							loadlock1_get_vacuum = false;
 						}
 						Sleep(1000);
@@ -3793,7 +3810,7 @@ namespace FC{
 				{
 					if (loadlock2_get_vacuum == false)//Loadlock2抽真空完成
 					{
-						if (lk2->getVacuumValueUpperLimitReachesTheSetValue())
+						if (lk2->getVacuumValueUpperLimitReachesTheSetValue())//检测是否达到极限值
 						{
 							loadlock2_auto_step = 800;
 						}
@@ -3804,9 +3821,9 @@ namespace FC{
 					}
 					else
 					{
-						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
+						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock1_get_vacuum || tm_get_vacuum))
 						{
-							logInform("Cycle", "step:510, lk2真空值已经达到，泵在抽其他腔室");
+							logInform("Cycle", "step:510, lk2真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室");
 							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -3917,7 +3934,7 @@ namespace FC{
 						}
 					}
 					else {
-						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
+						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock1_get_vacuum || tm_get_vacuum))
 						{
 							logInform("Cycle", "step:920, lk2真空值已经达到，泵在抽其他腔室或真空数值波动!");
 							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
@@ -5042,14 +5059,14 @@ namespace FC{
 					//工艺步骤
 					case 2000:
 					{
+						UpdatePmSubTransferDatas("PM1");			
 #ifdef DEBUG_TEST_PM
-						Sleep(2000);
-						UpdatePmSubTransferDatas("PM1");
-						logInform("PM1", "2s延迟，来模拟做工艺流程.....");
+						auto PmInstance = QPmRecipeWidget::instance(kernel);
+						PmInstance->startPmMotorRun(1);
 #else
-						//发送信号，让spindle启动,onStartCycle
+						Sleep(2000);
+						logInform("PM1", "2s延迟，来模拟做工艺流程.....");
 #endif
-
 						if(pmPendingTasks.size() > 0 )
 						{
 							taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
@@ -5535,8 +5552,17 @@ namespace FC{
 
 					case 2000:
 					{
-						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
+						
 						UpdatePmSubTransferDatas("PM2");
+
+#ifdef DEBUG_TEST_PM
+						auto PmInstance = QPmRecipeWidget::instance(kernel);
+						PmInstance->startPmMotorRun(2);
+#else
+						Sleep(2000);
+						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
+#endif
+
 						if(pm2PendingTasks.size() > 0)
 						{
 							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
@@ -6014,7 +6040,13 @@ namespace FC{
 						Sleep(500);
 						UpdatePmSubTransferDatas("PM3");
 
-						logInform("PM3", "2s延迟，来模拟做工艺流程.....");
+#ifdef DEBUG_TEST_PM
+						auto PmInstance = QPmRecipeWidget::instance(kernel);
+						PmInstance->startPmMotorRun(3);
+
+#else
+						logInform("PM3", "模拟做工艺流程.....");
+#endif
 						if(pm3PendingTasks.size() >0 )
 						{
 							taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
@@ -6488,7 +6520,16 @@ namespace FC{
 					{
 						Sleep(500);
 						UpdatePmSubTransferDatas("PM4");
+						
+
+#ifdef DEBUG_TEST_PM
+						auto PmInstance = QPmRecipeWidget::instance(kernel);
+						PmInstance->startPmMotorRun(4);
+
+#else
 						logInform("PM4", "模拟做工艺流程.....");
+#endif
+
 						if(pm4PendingTasks.size() >0 )
 						{
 							taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
@@ -6544,6 +6585,28 @@ namespace FC{
 	{
 
 	}
+
+
+	void  QSlotTransferCycleVTMWidgetPrivate::executePmMotorRun(int PmIndex)
+	{
+		try
+		{
+			auto PmInstance = QPmRecipeWidget::instance(kernel);
+			PmInstance->startPmMotorRun(PmIndex);
+
+		}
+		catch (const std::exception& e) {
+			logError("Cyclelog", "executePmMotorRun thread crashed:%s", e.what());
+			qCritical() << "executePmMotorRun thread crashed:" << e.what();
+
+		}
+		catch (...) {
+			logError("Cyclelog", "executePmMotorRun thread crashed: unknown exception");
+			qCritical() << "executePmMotorRun thread crashed: unknown exception";
+		}
+
+	}
+	
 
 	void QSlotTransferCycleVTMWidgetPrivate::executeUpdateTransferStatus()
 	{
@@ -6771,9 +6834,12 @@ namespace FC{
 			running = false; 
 			ispause = true;//add
 
-
-			//if(pump!=nullptr)
-			//	pump->setProcessAbort(true);
+			//2026-1-20 暂停所有的pm电机运动
+			auto PmInstance = QPmRecipeWidget::instance(kernel);
+			for (int i = 0; i < 4; i++)
+			{
+				PmInstance->stopPmMotor(i);
+			}
 			
 		}
 		cv.notify_all();  // 2025-10-28 :唤醒所有等待的线程，让它们重新检查running状态，实现暂停
@@ -7532,18 +7598,18 @@ namespace FC{
 						{
 							vacuum_auto_step = 5000;
 						}
-						else if (loadlock1_get_vacuum&&!loadlock2_get_vacuum)//新增LLA、LLB的抽真空顺序判断
+						else if (loadlock1_get_vacuum && !loadlock2_get_vacuum)//新增LLA、LLB的抽真空顺序判断
 						{
 							vacuum_auto_step = 10000;
 						}
-						else if (loadlock2_get_vacuum&&!loadlock1_get_vacuum)
+						else if (loadlock2_get_vacuum && !loadlock1_get_vacuum)
 						{
 							vacuum_auto_step = 20000;
 						}
-						else if (loadlock1_get_vacuum&&loadlock2_get_vacuum&&lk1->getVacuumValue()<lk2->getVacuumValue()){
+						else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() < lk2->getVacuumValue()){
 							vacuum_auto_step = 10000;
 						}
-						else if (loadlock1_get_vacuum&&loadlock2_get_vacuum&&lk1->getVacuumValue()>lk2->getVacuumValue()){
+						else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() > lk2->getVacuumValue()){
 							vacuum_auto_step = 20000;
 						}
 						else
@@ -8530,6 +8596,8 @@ namespace FC{
 		pm3->setIsRunning(false);
 		pm4->setIsRunning(false);
 
+
+
 		d->pauseAllThreads();
 		//d->running = false;
 		//d->ispause = true;
@@ -9022,6 +9090,13 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->executeUpdateTransferStatus();
+	}
+
+	void QSlotTransferCycleVTMWidget::executePmMotorRun(int PmIndex)
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		d->executePmMotorRun(PmIndex);
+
 	}
 
 	void QSlotTransferCycleVTMWidget::onGetStep(){

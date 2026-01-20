@@ -16,16 +16,12 @@
 #include <QMessageBox>
 #include <QDoubleSpinBox>
 #include <QLabel>
-#include <thread>
-#include <atomic>
 #include <QComboBox>
 #include <QPushButton>
 #include <chrono>
 #include <QSpinBox>
 #include <QMap>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
+
 
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
@@ -39,7 +35,6 @@
 #include <QTimer>
 
 namespace FC {
-
 	class QPmRecipeWidgetPrivate
 	{
 	public:
@@ -52,7 +47,7 @@ namespace FC {
 		
 		QTableWidget* getSequenceTable(int index);
 		QTableWidget* getInnerTable(int index);
-		void runTimer(double second);
+		void runTimer(double second, int pmIndex);
 		
 		void highlightSequenceRow(int pmIndex, int row, QColor color);
 		void highlightInnerColumn(int pmIndex, int col, QColor color);
@@ -75,13 +70,9 @@ namespace FC {
 		const std::chrono::hours timeout = std::chrono::hours(1); //超时时间
 
 		std::string current_pm; //要执行测试的PM
-		std::thread cycleThread;
-		std::atomic<bool> isRunning;
-		std::atomic<bool> stopRequested;
-		std::atomic<int> currentCycleCount;
-		std::atomic<bool> timerFinished{ false };
-		std::condition_variable cycleCv;
-		std::mutex cycleMutex;
+		
+		// 删除原有的共享线程控制变量
+		// 已移动到QPmRecipeWidget::PMExecutionContext中
 
 		friend class QPmRecipeWidget;
 	};
@@ -90,9 +81,6 @@ namespace FC {
 		:q_ptr(p)
 		, kernel(kernel)
 		, ui(new Ui::QPmRecipeWidgetClass)
-		, isRunning(false)
-		, stopRequested(false)
-		, currentCycleCount(0)
 	{
 		for(int i=0; i<4; ++i) {
 			sequenceTables[i] = nullptr;
@@ -102,23 +90,22 @@ namespace FC {
 	
 	QPmRecipeWidgetPrivate::~QPmRecipeWidgetPrivate()
 	{
-		if (isRunning) {
-			stopRequested = true;
-			if (cycleThread.joinable()) {
-				cycleThread.join();
-			}
-		}
+		// PMExecutionContext析构函数会自动处理线程清理
 		delete ui;
 	}
 	
-	void QPmRecipeWidgetPrivate::runTimer(double seconds)
+	void QPmRecipeWidgetPrivate::runTimer(double seconds, int pmIndex)
 	{
-		timerFinished.store(false);
-		std::thread([this, seconds]() {
+		Q_Q(QPmRecipeWidget);
+		if (pmIndex < 0 || pmIndex >= 4) return;
+		
+		auto& ctx = q->pmContexts[pmIndex];
+		ctx.timerFinished.store(false);
+		std::thread([&ctx, seconds]() {
 			auto ms = std::chrono::milliseconds(static_cast<long long>(seconds * 1000.0));
 			std::this_thread::sleep_for(ms);
-			timerFinished.store(true);
-			cycleCv.notify_all();
+			ctx.timerFinished.store(true);
+			ctx.cycleCv.notify_all();
 		}).detach();
 	}
 
@@ -127,8 +114,6 @@ namespace FC {
 		QTableWidget* table = getSequenceTable(pmIndex);
 		if (!table) return;
 		for (int c = 0; c < table->columnCount(); ++c) {
-			// 序列表在第0列和第1列有部件，在第2列有Item。
-			// 为Item设置背景。对于部件，可能需要样式表。
 			if (auto item = table->item(row, c)) {
 				item->setBackground(color);
 			} else {
@@ -148,9 +133,6 @@ namespace FC {
 		if (!table) return;
 		// 高亮表头
 		if (auto item = table->horizontalHeaderItem(col)) {
-			// 表头项背景可能因样式而异不起作用。
-			// 尝试设置字体颜色或加粗以指示活动状态？
-			// 或者仅设置该列中的单元格。
 		}
 		
 		for (int r = 0; r < table->rowCount(); ++r) {
@@ -231,6 +213,9 @@ namespace FC {
 		return nullptr;
 	}
 
+	// 静态成员变量定义
+	QPmRecipeWidget* QPmRecipeWidget::m_instance = nullptr;
+
 	QPmRecipeWidget::QPmRecipeWidget(const std::shared_ptr<IKernel>& kernel,QWidget* parent)
 		: QWidget(parent)
 		, d_ptr(new QPmRecipeWidgetPrivate(this, kernel))
@@ -308,6 +293,14 @@ namespace FC {
 
 	QPmRecipeWidget::~QPmRecipeWidget()
 	{
+	}
+
+	QPmRecipeWidget* QPmRecipeWidget::instance(const std::shared_ptr<IKernel>& kernel, QWidget* parent)
+	{
+		if (!m_instance) {
+			m_instance = new QPmRecipeWidget(kernel, parent);
+		}
+		return m_instance;
 	}
 	
 	std::map<std::string, QPmRecipeWidget::PMRecipeConfig>& QPmRecipeWidget::getPMRecipeConfigMap()
@@ -820,18 +813,29 @@ namespace FC {
 	void QPmRecipeWidget::onStartCycle()
 	{
 		Q_D(QPmRecipeWidget);
-		if (d->isRunning) {
-			QMessageBox::warning(this, "Warning", "Cycle is already running!");
+		int pmIndex = d->ui->pm_selecte_cbx->currentIndex();
+		
+		// 检查该PM是否正在运行
+		if (pmContexts[pmIndex].isRunning) {
+			QMessageBox::warning(this, "Warning", "This PM cycle is already running!");
 			return;
 		}
 
-		// 先保存当前参数以确保我们有最新数据
-		/*onSetParameters();*/
+		startPmMotorRun(pmIndex);
+	}
 
-		int selectedIndex = d->ui->pm_selecte_cbx->currentIndex();
-		std::string pmName = "PM" + std::to_string(selectedIndex + 1);
+	void QPmRecipeWidget::startPmMotorRun(int pmIndex)
+	{
+		Q_D(QPmRecipeWidget);
+		
+		if (pmIndex < 0 || pmIndex >= 4) {
+			QMessageBox::warning(this, "Warning", "Invalid PM Index");
+			return;
+		}
 
-		if (d->pmRecipeConfigMap.find(pmName) == d->pmRecipeConfigMap.end()) 
+		std::string pmName = "PM" + std::to_string(pmIndex + 1);
+
+		if (d->pmRecipeConfigMap.find(pmName) == d->pmRecipeConfigMap.end())
 		{
 			QMessageBox::warning(this, "Warning", "No configuration for " + QString::fromStdString(pmName));
 			return;
@@ -843,34 +847,42 @@ namespace FC {
 			return;
 		}
 
-		d->isRunning = true;
-		d->stopRequested = false;
-		d->currentCycleCount = 0;
+		// 获取该PM的独立执行上下文
+		auto& ctx = pmContexts[pmIndex];
+		
+		// 再次检查是否已经在运行
+		if (ctx.isRunning) {
+			QMessageBox::warning(this, "Warning", QString::fromStdString(pmName) + " is already running!");
+			return;
+		}
+
+		ctx.isRunning = true;
+		ctx.stopRequested = false;
 		d->ui->start_pm_pbt->setEnabled(false);
 		d->ui->stop_pm_pbt->setEnabled(true);
-		
+
 		// 清除高亮
-		d->clearHighlights(selectedIndex);
+		d->clearHighlights(pmIndex);
 
 		emit cycleStarted(pmName);
 
-		d->cycleThread = std::thread([=](){
+		ctx.cycleThread = std::thread([=, &ctx]() {
 			auto pmSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
 			if (!pmSubsystem) {
-				d->isRunning = false;
+				ctx.isRunning = false;
 				QMetaObject::invokeMethod(this, "cycleStopped");
 				return;
 			}
-			
+
 			// 定义位置
 			std::map<std::string, double> posMap;
 			posMap["Transfer"] = cfg.params.take_position_mm;
 			posMap["LiftPin"] = cfg.params.lift_pin_position_mm;
 			posMap["Rotate"] = cfg.params.rotate_position_mm;
 			posMap["Process"] = cfg.params.process_position_mm;
-			
+
 			int rotation_angle_deg = cfg.params.rotation_angle_deg;
-			
+
 			// 计算时间分配
 			double totalTime = cfg.params.process_time_min; // 现在单位为秒
 			double lastTime = cfg.params.last_process_time_s;
@@ -879,25 +891,19 @@ namespace FC {
 			if (processCount > 1) {
 				avgTime = (totalTime - lastTime) / (double)(processCount - 1);
 				if (avgTime < 0) avgTime = 0;
-			} else {
+			}
+			else {
 				avgTime = totalTime; // 或者仅作为最后一次时间处理
 			}
 
 			try {
 				// 初始移动到序列开始？
 				// 或者直接开始执行步骤。
-				
-				for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
-					if (d->stopRequested) break;
-					
-					// 高亮序列表行（绿色）
-					//QTimer::singleShot(0, this, [=]() {
-					//	d->highlightSequenceRow(selectedIndex, sIdx, Qt::green);
-					//	// 如果需要清除上一行高亮，或者保留轨迹
-					//	if (sIdx > 0) d->highlightSequenceRow(selectedIndex, sIdx - 1, Qt::white);
-					//});
 
-					QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), 
+				for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
+					if (ctx.stopRequested) break;
+
+					QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex),
 						Q_ARG(int, sIdx), Q_ARG(QColor, Qt::green));
 
 					const auto& step = cfg.steps[sIdx];
@@ -905,61 +911,49 @@ namespace FC {
 					std::string to = step.to_pos;
 					std::string rName = step.recipe_name;
 
-                    // 运行时校验（阻塞）
-                    if (from == to && from != "Rotate") {
-                         logFailed(pmSubsystem->getName(), "Invalid Step: From == To (except Rotate)");
+					// 运行时校验（阻塞）
+					if (from == to && from != "Rotate") {
+						logFailed(pmSubsystem->getName(), "Invalid Step: From == To (except Rotate)");
 
-						 //QTimer::singleShot(0, this, [=]() {
-							//d->highlightSequenceRow(selectedIndex, sIdx, Qt::red);
-						 //});
-						 QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex),
-							 Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
-                         break;
-                    }
-					
+						QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex),
+							Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+						break;
+					}
+
 					// 查找配方
 					auto rIt = cfg.recipes.find(rName);
 					if (rIt == cfg.recipes.end()) {
 						logFailed(pmSubsystem->getName(), "Recipe not found: " + rName);
-						//QTimer::singleShot(0, this, [=]() {
-						//	d->highlightSequenceRow(selectedIndex, sIdx, Qt::red);
-						//});
-
-						 QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+						QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
 						break;
 					}
 					const auto& recipe = rIt->second;
 
-                    // 加载内表到UI以显示进度（可选但有助于视觉效果）
-                    QTimer::singleShot(0, this, [=]() {
-                        loadRecipeToInnerTable(selectedIndex, sIdx);
-                    });
-					
+					// 加载内表到UI以显示进度（可选但有助于视觉效果）
+					QTimer::singleShot(0, this, [=]() {
+						loadRecipeToInnerTable(pmIndex, sIdx);
+						});
+
 					double targetPos = posMap.count(to) ? posMap[to] : 0.0; //存在取其值，否则是0
-					
+
 					// 记录步骤
-					logInform(pmSubsystem->getName().c_str(), "Step %d: %s -> %s (%s)", sIdx+1, from.c_str(), to.c_str(), rName.c_str());
+					logInform(pmSubsystem->getName().c_str(), "Step %d: %s -> %s (%s)", sIdx + 1, from.c_str(), to.c_str(), rName.c_str());
 
 					// 执行循环（内表列）
 					int loopCount = recipe.motors.size();
 					for (int i = 0; i < loopCount; ++i) {
-						if (d->stopRequested) break;
-						
-						// 高亮内表列（绿色）
-		                /*QTimer::singleShot(0, this, [=]() {
-							d->highlightInnerColumn(selectedIndex, i, Qt::green);
-							if (i > 0) d->highlightInnerColumn(selectedIndex, i - 1, Qt::white);
-						});*/
-						QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::green));
+						if (ctx.stopRequested) break;
+
+						QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::green));
 						if (i > 0)
 						{
-							QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, i-1), Q_ARG(QColor, Qt::white));
+							QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i - 1), Q_ARG(QColor, Qt::white));
 						}
 						// 更新UI进度（可选）
 						QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, i + 1));
-						
+
 						const auto& m = recipe.motors[i];
-						
+
 						// 设置电机参数
 						pmSubsystem->setPMCavityZAxleAcc(m.lifting_acc);
 						pmSubsystem->setPMCavityZAxleDcc(m.lifting_dec);
@@ -970,37 +964,26 @@ namespace FC {
 						pmSubsystem->setPMCavityRAxleDcc(m.rotating_dec);
 						pmSubsystem->setPMCavityRAxleJerk((uint32_t)m.rotating_jerk);
 						pmSubsystem->setPMCavityRAxleSpeed(m.rotating_vel);
-						
-						// 逻辑分支
-                        //bool isRotateStep = (from == "Rotate");
-                        //bool isProcessStep = (to == "Process");
-                        //bool isRotateDest = (to == "Rotate");
-						// 
-						
+
 						// 1. Z轴移动（标准 From!=To）
 						if (from != to)
 						{
 							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
 							pmSubsystem->startCommand(cmd);
 							cmd->wait();
-							if (cmd->hasError() || d->stopRequested) {
+							if (cmd->hasError() || ctx.stopRequested) {
 								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
-								//QTimer::singleShot(0, this, [=]() {
-								//	d->highlightSequenceRow(selectedIndex, sIdx, Qt::red);
-								//	d->highlightInnerColumn(selectedIndex, i, Qt::red);
-								//});
 
-								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
-								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 								throw std::runtime_error("Move Z Failed");
 							}
 						}
-						//logInform(pmSubsystem->getName().c_str(), "Z轴移动到目标位置：%f 成功", targetPos);
 
-                        // 2. Rotate Action
+						// 2. Rotate Action
 						//到达旋转面时且是from：Process to:Rotate
 
-                        if (from =="Process" && to == "Rotate") 
+						if (from == "Process" && to == "Rotate")
 						{
 							//if (pmSubsystem->getRotatingimumPlaneLevelSignal()) //检测是否达到了旋转面
 							{
@@ -1008,14 +991,10 @@ namespace FC {
 								auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 								pmSubsystem->startCommand(cmd);
 								cmd->wait();
-								if (cmd->hasError() || d->stopRequested) {
+								if (cmd->hasError() || ctx.stopRequested) {
 									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
-	/*								QTimer::singleShot(0, this, [=]() {
-										d->highlightSequenceRow(selectedIndex, sIdx, Qt::red);
-										d->highlightInnerColumn(selectedIndex, i, Qt::red);
-									});*/
-									QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
-									QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+									QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+									QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 									throw std::runtime_error("Rotate Failed");
 								}
 								else
@@ -1025,38 +1004,18 @@ namespace FC {
 									auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
 									pmSubsystem->startCommand(cmd);
 									cmd->wait();
-									if (cmd->hasError() || d->stopRequested) {
+									if (cmd->hasError() || ctx.stopRequested) {
 										logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
-										//QTimer::singleShot(0, this, [=]() {
-										//	d->highlightSequenceRow(selectedIndex, sIdx, Qt::red);
-										//	d->highlightInnerColumn(selectedIndex, i, Qt::red);
-										//});
-										QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
-										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+										QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 										throw std::runtime_error("Move Z Failed");
 									}
 								}
 							}
-							//else
-							//{
-							//	//Move Z 旋转面
-							//	double targetPos = posMap["Rotate"];
-							//	auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
-							//	pmSubsystem->startCommand(cmd);
-							//	cmd->wait();
-							//	if (cmd->hasError() || d->stopRequested) {
-							//		logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
-							//		QTimer::singleShot(0, this, [=]() {
-							//			d->highlightSequenceRow(selectedIndex, sIdx, Qt::red);
-							//			d->highlightInnerColumn(selectedIndex, i, Qt::red);
-							//		});
-							//		throw std::runtime_error("Move Z Failed");
-							//	}
-							//}
-                        }
+						}
 
 
-					    // 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
+						// 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
 						if (from == "Process" && to == "Rotate")
 						{
 							//if (pmSubsystem->getMaximumPlaneLevelSignal())//检测是否达到了工艺面
@@ -1073,75 +1032,99 @@ namespace FC {
 
 								logInform(pmSubsystem->getName().c_str(), "Process Wait: %.3f s (Step %d/%d)", waitTime, i + 1, loopCount);
 
-								d->runTimer(waitTime);
+								d->runTimer(waitTime, pmIndex);
 								{
-									std::unique_lock<std::mutex> lk(d->cycleMutex);
-									d->cycleCv.wait(lk, [&]() {
-										return d->timerFinished.load() || d->stopRequested.load();
+									std::unique_lock<std::mutex> lk(ctx.cycleMutex);
+									ctx.cycleCv.wait(lk, [&]() {
+										return ctx.timerFinished.load() || ctx.stopRequested.load();
 										});
 								}
 							}
-							//else
-							//{
-
-							//	logInform(pmSubsystem->getName().c_str(), "Process未达到工艺面, (Step %d/%d)", i + 1, loopCount);
-							//}
 						}
-						
-						// Clear Inner Column Highlight (if needed)
-						//QTimer::singleShot(0, this, [=]() {
-						//	d->highlightInnerColumn(selectedIndex, i, Qt::white);
-						//});
-						QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::white));
+
+						QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::white));
 
 					}
-					// Clear Sequence Row Highlight
-					//QTimer::singleShot(0, this, [=]() {
-					//	d->highlightSequenceRow(selectedIndex, sIdx, Qt::white);
-					//});
-					QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, selectedIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::white));
-					
+					QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::white));
+
 				}
-				
+
 				logInform(pmSubsystem->getName().c_str(), "Sequence Completed");
-				
-			} catch (const std::exception& e) {
+
+			}
+			catch (const std::exception& e) {
 				// Logged already
-			} catch (...) {
+			}
+			catch (...) {
 				logFailed(pmSubsystem->getName(), "Unknown Exception");
 			}
 
-			d->isRunning = false;
+			ctx.isRunning = false;
 			QMetaObject::invokeMethod(d->ui->start_pm_pbt, "setEnabled", Q_ARG(bool, true));
 			QMetaObject::invokeMethod(d->ui->stop_pm_pbt, "setEnabled", Q_ARG(bool, false));
-			
+
 			QMetaObject::invokeMethod(this, "cycleStopped");
-		});
-		d->cycleThread.detach();
+			});
+		ctx.cycleThread.detach();
+
+
+	}
+
+	void QPmRecipeWidget::stopPmMotor(int pmIndex)
+	{
+		if (pmIndex < 0 || pmIndex >= 4) return;
+		
+		auto& ctx = pmContexts[pmIndex];
+		if (ctx.isRunning) {
+			ctx.stopRequested = true;
+			ctx.cycleCv.notify_all();
+		}
 	}
 
 	void QPmRecipeWidget::onStopCycle()
 	{
 		Q_D(QPmRecipeWidget);
-		if (d->isRunning) {
-			d->stopRequested = true;
-			d->cycleCv.notify_all();
-			d->ui->stop_pm_pbt->setEnabled(false); // Prevent multiple clicks
-
-            emit cycleStopped();
-
-			//if (d->processElapsed > 0)
-			//{
-			//	d->processElapsed = 0.0;
-			//}
-		}
+		int pmIndex = d->ui->pm_selecte_cbx->currentIndex();
+		stopPmMotor(pmIndex);
+		
+		d->ui->stop_pm_pbt->setEnabled(false); // 防止多次点击
+		emit cycleStopped();
 	}
 	
 	void QPmRecipeWidget::logFailed(const std::string station_name, const std::string log) {
 		Q_D(QPmRecipeWidget);
 		logError(station_name.c_str(), log.c_str());
-		d->stopRequested = true;
+		//pmIndex范围: 0-3对应PM1-PM4
+		if(station_name == "PM1")
+		{
+			auto& ctx = pmContexts[0];
+			if (ctx.isRunning) {
+				ctx.stopRequested = true;
+			}
+		}
+		else if(station_name == "PM2")
+		{
+			auto& ctx = pmContexts[1];
+			if (ctx.isRunning) {
+				ctx.stopRequested = true;
+			}
+		}
+		else if (station_name == "PM3")
+		{
+			auto& ctx = pmContexts[2];
+			if (ctx.isRunning) {
+				ctx.stopRequested = true;
+			}
+		}
+		else
+		{
+			auto& ctx = pmContexts[3];
+			if (ctx.isRunning) {
+				ctx.stopRequested = true;
+			}
+		}
 		d->ui->stop_pm_pbt->setEnabled(false);
+
 	}
 
 	void QPmRecipeWidget::logFailedExcuteCommandHasError(const std::string station_name, const std::string command_name, const std::string process_name)
@@ -1159,26 +1142,6 @@ namespace FC {
 		d->ui->tabWidget->setCurrentIndex(index);
 		d->ui->pm1_spx->setValue(0);
 	}
-
-	void QPmRecipeWidget::setMontorRealParameters(int index, bool isZAxle)
-	{
-		//获取Z轴并设置Velocity ,Acceleration ,Deceleration ,Jerk 
-		//acc
-		//float z_acc = cfg.motors[index].lifting_acc;
-		////dce
-		//float z_dec = cfg.motors[index].lifting_dec;
-		////vec
-		//float z_vel = cfg.motors[index].lifting_vel;
-		////jerk
-		//uint32_t z_jerk = uint32_t(cfg.motors[index].lifting_jerk);
-
-		//pmSubsystem->setPMCavityZAxleAcc(z_acc);
-		//pmSubsystem->setPMCavityZAxleDcc(z_dec);
-		//pmSubsystem->setPMCavityZAxleJerk(z_jerk);
-		//pmSubsystem->setPMCavityAxleSpeed(z_vel);
-
-	}
-
 
 	void QPmRecipeWidget::initPMCavityParamEdieTableWidget()
 	{
