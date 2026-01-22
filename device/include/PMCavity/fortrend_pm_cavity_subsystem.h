@@ -100,6 +100,7 @@ namespace FC{
 		double getVacuumValue()const;
 		double getTemperatureValue()const;
 		void setVacuumEnable(const bool value);
+		bool getVacuumEnable()const;
 		void setWithWaferModeEnable(const bool value);
 		bool getVacuumValueReachesTheSetValue() const;
 		bool getExhaustVacuumValueReachesTheSetValue() const;

@@ -100,51 +100,52 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "传输腔类型错误", this);
 		}
 
+		//2026-1-21 加上真空模式判断
+		if (sub->getVacuumEnable()) {
 
-#if 0
-		if (!tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "TM传输腔当前的的真空值未达到上限设定值", this);
-		}
-		if (!sub->getVacuumValueReachesTheSetValue())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔当前的的真空值未达到设定值", this);
-		}
-		if (!sub->getTemperatureValueReachesTheSetValue())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔当前的的温度值未达到设定值", this);
-		}
-		if (!sub->getPMCavityRemoteMode())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔未处于远程模式状态", this);
-		}
-		if (!sub->getPMCavitySafeSignal())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔未发出安全信号", this);
-		}
-		if (sub->getPMCavityHasAlarm())
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔内部报警中", this);
-		}
-		if (tm->getVacuumEnable())
-		{
-			if ((tm->getTMCavityVacuumValue() * sub->getPMCavityMagnitude() - sub->getVacuumValue()) < 0.0)
+			if (!tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "传输腔和PM腔的压差未达到设定值", this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "TM传输腔当前的的真空值未达到上限设定值", this);
+			}
+			if (!sub->getVacuumValueReachesTheSetValue())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔当前的的真空值未达到设定值", this);
+			}
+			if (!sub->getTemperatureValueReachesTheSetValue())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔当前的的温度值未达到设定值", this);
+			}
+			if (!sub->getPMCavityRemoteMode())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔未处于远程模式状态", this);
+			}
+			if (!sub->getPMCavitySafeSignal())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔未发出安全信号", this);
+			}
+			if (sub->getPMCavityHasAlarm())
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "PM腔内部报警中", this);
+			}
+			if (tm->getVacuumEnable())
+			{
+				if ((tm->getTMCavityVacuumValue() * sub->getPMCavityMagnitude() - sub->getVacuumValue()) < 0.0)
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "传输腔和PM腔的压差未达到设定值", this);
+				}
+			}
+			else
+			{
+				if (!sub->getExhaustVacuumValueReachesTheSetValue())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "传输腔当前的的真空值未达到正常气压设定值", this);
+				}
+				/*if (tm->getTMCavityVacuumPressureGageState())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误），请检查压力是否正常", tm->getName()), this);
+				}*/
 			}
 		}
-		else
-		{
-			if (!sub->getExhaustVacuumValueReachesTheSetValue())
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, "传输腔当前的的真空值未达到正常气压设定值", this);
-			}
-			/*if (tm->getTMCavityVacuumPressureGageState())
-			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误），请检查压力是否正常", tm->getName()), this);
-			}*/
-		}
-#endif
 		//check modules
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass
@@ -152,8 +153,9 @@ namespace FC{
 		if (!station_cass){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
 		}
-		//调试注释
-#if 0
+
+//调试宏
+#ifdef SIM_PM 
 		if (station_cass->getMapping(1) == Cassette::Mapping::Present)
 		{
 			if (sub->getPMCavityGetRequest() == false)
@@ -178,7 +180,9 @@ namespace FC{
 			std::string message = sub->getPMCavityAlarmMessage();
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, message, this);
 		}
-#endif
+#endif // SIM_PM
+
+
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 

@@ -442,6 +442,11 @@ namespace FC{
 			d->vacuum_enable = value;
 		}
 	}
+
+	bool  FortrendPMCavitySubsystem::getVacuumEnable()const {
+		return d->vacuum_enable;
+	}
+
 	void FortrendPMCavitySubsystem::setWithWaferModeEnable(const bool value){
 		if (d->with_wafer_mode != value)
 		{
