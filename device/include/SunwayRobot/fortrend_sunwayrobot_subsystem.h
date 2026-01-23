@@ -19,8 +19,8 @@
 #include "SunwayRobot/sunway_subsystem_helper.h"
 #include "SunwayRobot/sunway_command_executer.h"
 #include "SunwayRobot/fortrend_sunwayrobot_set_axis_z_speed_command.h"
-
 #include "SunwayRobot/fortrend_sunwayrobot_home_command.h"
+#include "SunwayRobot/fortrend_sunwayrobot_set_load_command.h"
 //special commands
 #include "fortrend_sunwayrobot_get_wafer_command.h"
 #include "fortrend_sunwayrobot_check_load_command.h"
@@ -76,6 +76,7 @@ namespace FC{
 		
 		std::shared_ptr<SunwayRobotCheckLoadCommand> createCheckLoadCommand(int arm,int station_id)const;
 		std::shared_ptr<SunwayRobotRQLoadCommand> createRQLoadCommand(int arm)const;
+		std::shared_ptr<SunwayRobotSetLoadCommand> createSetLoadCommand(int arm, int state)const;
 		std::shared_ptr<SunwayRobotClearErrorCommand> createClearErrorCommand()const;
 		std::shared_ptr<SunwayRobotSetAxisZSpeedCommand> createSetAxisZSpeedCommand(uint8_t percentage)const;
 		std::shared_ptr<SunwayRobotHomeCommand> createHomeCommand()const;
@@ -99,6 +100,10 @@ namespace FC{
 		bool getHasResetFlag()const;
 		void setHasResetFlag(const bool value);
 
+		//2026-1-23 设置机械手上有无晶圆
+		bool getHasArmWafer(int arm)const;
+		void setHasArmWafer(const int arm);
+
 		//获取安全信号到位
 		bool getSafeSignalInPlace(const std::string & subsystem);
 		void setSafeSignalInPlace(const std::string& subsystem,bool status);
@@ -106,8 +111,6 @@ namespace FC{
 		std::mutex external_mtx;
 
 		std::mutex robot_mutex; //全局变量
-
-
 	protected:
 		virtual void onInitialize()throw(KernelException)override;
 		virtual void onUnInitialize()override;

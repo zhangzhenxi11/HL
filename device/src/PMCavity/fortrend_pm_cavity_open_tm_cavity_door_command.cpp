@@ -100,6 +100,8 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "传输腔类型错误", this);
 		}
 
+#ifdef SIM_PM 
+
 		//2026-1-21 加上真空模式判断
 		if (sub->getVacuumEnable()) {
 
@@ -146,6 +148,8 @@ namespace FC{
 				}*/
 			}
 		}
+		
+#endif // SIM_PM 		
 		//check modules
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass

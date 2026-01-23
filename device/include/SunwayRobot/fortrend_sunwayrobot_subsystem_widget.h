@@ -43,6 +43,7 @@ private slots:
 	void onCheckLoadCommand();
 	void onClearErrorCommand();
 	void onHomeCommand();
+	void onSetLoadCommand(int arm, int state);
 	void onAttributeUpdate()throw(KernelException);
 private:
 	void init();

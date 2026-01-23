@@ -59,7 +59,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 			Poco::format("超时:%s回到home位超时参数错误", sub->getName()), this);
 	}
 	//HOME
-	std::string command = "MOV:HOME;";
+	std::string command = "MOV:ALLAXISHOMESAFE;";
 	std::string error_message = "";
 	int error_type = 1;
 	int error_code = 0;
@@ -101,7 +101,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 		Sleep(200);
 	}
 
-	if (res != std::string("ACK;") && res!= std::string("RPS:HOME;"))
+	if (res != std::string("ACK;") && res!= std::string("RPS:ALLAXISHOMESAFE;"))
 	{
 		logError(sub->getName().c_str(), "机械手HOME时存在一个错误");
 		int error_type = 1;
@@ -157,7 +157,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 			Sleep(200);
 		}
 
-		std::string recvMessage = "RPS:HOME;";
+		std::string recvMessage = "RPS:ALLAXISHOMESAFE;";
 		auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
 		if (found != res.end())
 		{

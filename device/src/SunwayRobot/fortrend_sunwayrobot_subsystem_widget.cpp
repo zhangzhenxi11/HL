@@ -18,6 +18,7 @@
 #include  "Kernel/kernel_subsystem_reset_command.h"
 #include  "Kernel/kernel_subsystem_update_command.h"
 #include  "Kernel/Fortrend/abstract_output_command.h"
+#include "Kernel/kernel_log.h"
 #include  "device/ui_fortrend_sunwayrobot_subsystem_widget.h" 
 #include  "SunwayRobot/fortrend_sunwayrobot_subsystem_widget.h"
 #include <QRadioButton>
@@ -97,6 +98,24 @@ namespace FC{
 		connect(d->ui->set_speed_btn_z, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onSetAxisZSpeedCommand);
 		connect(d->ui->home_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onHomeCommand);
 
+		//for (int i = 0; i < d->arm_stat.size(); i++)
+		//{
+		//	connect(d->arm_stat.at(i), &QCheckBox::stateChanged, this, [this, i](int state) {
+		//		onSetLoadCommand(i, state);
+		//	});
+		//}
+
+		//设置手指有无片按钮
+		connect(d->ui->set_has_wafer_btn, &QAbstractButton::clicked, this, [this]() {
+			int arm = d_ptr->ui->arm_a_radio->isChecked() ? 0 : 1;
+			onSetLoadCommand(arm, 1);  //state=1 有片
+		});
+		connect(d->ui->set_no_wafer_btn, &QAbstractButton::clicked, this, [this]() {
+			int arm = d_ptr->ui->arm_a_radio->isChecked() ? 0 : 1;
+			onSetLoadCommand(arm, 0);  //state=0 无片
+		});
+
+
 	}
 
 	QSunwayRobotSubsystemWidget::~QSunwayRobotSubsystemWidget(){
@@ -162,6 +181,7 @@ namespace FC{
 			selectBtn->setProperty("index", i);
 			//status 
 			QCheckBox* stat = new QCheckBox;
+			//QString armObj = "arm_" + QString::number(i);
 			stat->setObjectName("io_object");
 			stat->setEnabled(false);
 
@@ -216,8 +236,10 @@ namespace FC{
 	}
 
 	int QSunwayRobotSubsystemWidget::getSelectArmId()const{
-		for (int i = 0; i < d_ptr->arm_select.size(); i++){
-			if (d_ptr->arm_select.at(i)->isChecked()){
+		for (int i = 0; i < d_ptr->arm_select.size(); i++)
+		{
+			if (d_ptr->arm_select.at(i)->isChecked())
+			{
 				return i;
 			}
 		}
@@ -261,6 +283,9 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onGetWaferCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
+		/*arm = (arm == 0) ? 1 : 0;*/
+		logInform(getSubsystem()->getName().c_str(), "arm:%d", arm);
+
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 		int slot = getSelectSlotId();
 
@@ -283,6 +308,9 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onPutWaferCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
+		//arm = (arm == 0) ? 1 : 0;
+		logInform(getSubsystem()->getName().c_str(), "arm:%d", arm);
+
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 		int slot = getSelectSlotId();
 
@@ -305,6 +333,8 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onReadyGetWaferCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
+		arm = (arm == 0) ? 1 : 0;
+		logInform(getSubsystem()->getName().c_str(), "arm:%s", arm == 0 ? "B" : "A");
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 		int slot = getSelectSlotId();
 		if (!station){
@@ -326,6 +356,8 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onReadyPutWaferCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
+		arm = (arm == 0) ? 1 : 0;
+		logInform(getSubsystem()->getName().c_str(), "arm:%s", arm == 0 ? "B" : "A");
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 		int slot = getSelectSlotId();
 		if (!station){
@@ -359,6 +391,7 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onCheckLoadCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
+		arm = (arm == 0) ? 1 : 0;
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 
 		/*if (!station){
@@ -418,6 +451,23 @@ namespace FC{
 		executeCommand(getSubsystem(), cmd);
 	}
 
+	void QSunwayRobotSubsystemWidget::onSetLoadCommand(int arm, int state)
+	{
+		Q_D(QSunwayRobotSubsystemWidget);
+		arm = (arm == 0) ? 1 : 0;
+		logInform(getSubsystem()->getName().c_str(), "arm:%s,state:%d", arm == 0 ? "B" : "A", state);
+
+		if (getSubsystem()->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (state == 0 || state == 1)
+			{
+				KernelSubsystemCommand::Ptr cmd = getSubsystem()->createSetLoadCommand(arm, state);
+
+				executeCommand(getSubsystem(), cmd);
+			}
+		}
+	}
+
 	void QSunwayRobotSubsystemWidget::onAttributeUpdate()throw(KernelException){
 		Q_D(QSunwayRobotSubsystemWidget);
 		try{
@@ -430,7 +480,9 @@ namespace FC{
 			//update object state
 			for (int i = 0; i < d->arm_stat.size(); i++)
 			{
+				//d->arm_stat.at(i)->blockSignals(true);
 				d->arm_stat.at(i)->setChecked(getSubsystem()->hasObject(i));
+				//d->arm_stat.at(i)->blockSignals(false);
 			}
 
 			//update awc record data

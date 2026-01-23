@@ -80,7 +80,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	std::string res;
 	//send
 	clearRobotMessage();
-	if (!sendRequest("ACT:RESET;"))
+	if (!sendRequest("ALARM:CLEAR;"))
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, 
 			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
@@ -115,7 +115,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		res = recvResponseRobotMessage(timeout);
 		Sleep(200);
 	}
-	if (res != "ACK;" && res != "RPS:RESET;")
+	if (res != "ACK;" && res != "RPS:CLEAR;")
 	{
 		logError(robot->getName().c_str(), "机械手复位命令发生错误");
 
@@ -181,7 +181,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			Sleep(200);
 		}
 
-		std::string recvMessage = "RPS:RESET;";
+		std::string recvMessage = "RPS:CLEAR;";
 		auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
 
 		if (found != res.end())

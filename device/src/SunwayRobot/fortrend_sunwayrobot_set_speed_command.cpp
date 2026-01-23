@@ -64,8 +64,6 @@ public:
 				Poco::format("超时: %s 设置速度超时参数设置错误", sub->getName()), this);
 		}
 
-		
-
 		//SET:RUN_SPEED/50;
 		std::string macro = "SET:RUN_SPEED/";
 		macro.append(std::to_string(d->percentage));

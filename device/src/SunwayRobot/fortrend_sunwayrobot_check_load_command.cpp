@@ -100,7 +100,7 @@ namespace FC{
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
-		std::string str_arm = (d->arm == 0) ? "A" : "B";
+		std::string str_arm = (d->arm == 0) ? "B" : "A";
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 

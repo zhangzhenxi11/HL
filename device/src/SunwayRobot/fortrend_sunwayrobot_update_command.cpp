@@ -72,7 +72,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取状态超时参数设置错误", sub->getName()), this);
 	}
 
-	std::string command = "SET:SERVOS/ON;";
+	std::string command = "SET:SERVOS/1;";
 	std::string error_message = "";
 	int error_type = 1;
 	int error_code = 0;

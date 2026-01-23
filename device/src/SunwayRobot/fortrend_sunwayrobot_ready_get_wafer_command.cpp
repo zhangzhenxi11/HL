@@ -38,8 +38,32 @@ SunwayRobotReadyGetWaferCommand::SunwayRobotReadyGetWaferCommand(const std::shar
 	//setMessageName("Ready_get_wafer");
 	//setDescription("Ready_get_wafer on SunwayRobot");
 
-};
+}
+std::vector<IKernelResources*> SunwayRobotReadyGetWaferCommand::resources() const
+{
+	std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
+	ret.push_back(getStation().get());
+	return ret;
+}
 
+SunwayRobotReadyGetWaferCommand::RunResult SunwayRobotReadyGetWaferCommand::performRobotOperation(
+	const std::function<std::string()>& commandBuilder,
+	const std::function<bool()>& onSuccess)
+{
+	return RunResult::RUN_OK;
+
+}
+bool SunwayRobotReadyGetWaferCommand::updateWaferMapping()
+{
+
+	return true;
+}
+
+SunwayRobotReadyGetWaferCommand::RunResult SunwayRobotReadyGetWaferCommand::robotRobotOperation(const std::function<std::string()>& commandBuilder)
+{
+
+	return RunResult::RUN_OK;
+}
 
 
 SunwayRobotReadyGetWaferCommand::RunResult SunwayRobotReadyGetWaferCommand::onRun() throw(KernelException){

@@ -119,7 +119,7 @@
 
 #define DEBUG_LOAD_SNAPSHOT1
 
-#define DEBUG_TEST_PM
+#define DEBUG_TEST_PM1
 
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
@@ -238,8 +238,6 @@ namespace FC{
 		void executeTMTransfer();
 
 		void executeUpdateTransferStatus();
-
-		void executePmMotorRun(int PmIndex);
 
 		void RerunTheFilmCycle();
 
@@ -373,8 +371,13 @@ namespace FC{
 		std::vector<UnifiedWaferTask> efemReturnCompletedTasks; //工艺后，下料完成的数组
 
 		std::vector<UnifiedWaferTask> efemAllocationLLAInitTasks;
-
+		
 		std::vector<UnifiedWaferTask> efemAllocationLLBInitTasks;
+			
+		//2026-1-23 双上料时缓存两个任务的完整信息，避免case 157更新状态后数组变化
+		UnifiedWaferTask cached_task_first;  // 第一片料缓存
+		UnifiedWaferTask cached_task_second; // 第二片料缓存
+			
 		/************************loadLock*********************************/
 
 		std::vector<UnifiedWaferTask> loadLockPendingTasks;
@@ -1205,7 +1208,7 @@ namespace FC{
 							}
 						}
 						else {
-							Sleep(2000);
+							//Sleep(200);
 							efem_auto_step = 131;
 						}
 
@@ -1243,7 +1246,7 @@ namespace FC{
 						}
 						else
 						{
-							Sleep(2000);
+							Sleep(200);
 						}
 					}
 					else
@@ -1271,7 +1274,7 @@ namespace FC{
 								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
 							}
 							else {
-								Sleep(2000);
+								Sleep(200);
 								efem_auto_step = 133;
 							}
 						}
@@ -1429,7 +1432,10 @@ namespace FC{
 						}
 						else
 						{
-							efem_auto_step = 1540;
+							//efem_auto_step = 1540;
+							
+							//2026-1-23 跳过寻边
+							efem_auto_step = 155;
 						}
 					}
 					else {
@@ -1471,7 +1477,7 @@ namespace FC{
 							}
 							else
 							{
-								Sleep(2000);
+								Sleep(200);
 							}
 						}
 						else
@@ -1512,7 +1518,7 @@ namespace FC{
 								logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
 							}
 							else {
-								Sleep(2000);
+								Sleep(200);
 								efem_auto_step = 1542;
 							}
 						}
@@ -1582,7 +1588,7 @@ namespace FC{
 							}
 							else
 							{
-								Sleep(2000);
+								Sleep(200);
 							}
 						}
 						else
@@ -1617,7 +1623,7 @@ namespace FC{
 									logFailedExcuteCommandHasError(ealigner->getName(), "晶圆寻边", efem_process_name, efem_auto_step);
 								}
 								else {
-									Sleep(2000);
+									//Sleep(200);
 									efem_auto_step = 1546;
 								}
 							}
@@ -1657,8 +1663,19 @@ namespace FC{
 				case 155:
 				{
 					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
-					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
-
+					//2026-1-23 双上料必须先缓存两个任务的信息，因为case 157更新状态后数组会变化
+					if (efemPendingTasks.size() < 2)
+					{
+						logError("EFEM", "efem_auto_step:155, efemPendingTasks size < 2, size=%d", efemPendingTasks.size());
+						efem_auto_step = 110;
+						break;
+					}
+					// 缓存两个任务的完整信息，避免case 157更新状态后数组变化导致访问错误
+					cached_task_first = efemPendingTasks.at(0);  // 第一片料信息
+					cached_task_second = efemPendingTasks.at(1); // 第二片料信息
+								
+					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = cached_task_first.target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+				
 					if (get_lk && get_lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (!get_lk->getCassetteDoorOpend())
@@ -1672,7 +1689,7 @@ namespace FC{
 							}
 						}
 						else {
-							Sleep(2000);
+							//Sleep(2000);
 							efem_auto_step = 156;
 						}
 					}
@@ -1684,8 +1701,9 @@ namespace FC{
 				case 156:
 				{
 					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
-					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
-
+					// 使用缓存的第二个任务信息
+					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = cached_task_second.target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+				
 					if (get_lk && get_lk->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (!get_lk->getCassetteDoorOpend())
@@ -1699,7 +1717,7 @@ namespace FC{
 							}
 						}
 						else {
-							Sleep(2000);
+							//Sleep(2000);
 							efem_auto_step = 157;
 						}
 					}
@@ -1711,10 +1729,11 @@ namespace FC{
 				case 157:
 				{
 					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
-					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+					// 使用缓存的第一个任务信息：放第一片料
+					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = cached_task_first.target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd2 = ewtr->createPutCommand(get_lk, 1, efemPendingTasks.at(0).targetFeedingSlot);
+						auto cmd2 = ewtr->createPutCommand(get_lk, 1, cached_task_first.targetFeedingSlot);
 						ewtr->startCommand(cmd2);
 						cmd2->wait();
 						if (cmd2->hasError())
@@ -1722,9 +1741,11 @@ namespace FC{
 							logFailedExcuteCommandHasError(ewtr->getName(), "A手臂放LL晶圆", efem_process_name, efem_auto_step);
 						}
 						else {//放料完成
+							logInform("EFEM", "A手臂放料：taskId=%d, target=%s, slot=%d", cached_task_first.taskId, 
+								UnifiedWaferTask::locationToString(cached_task_first.target).c_str(), cached_task_first.targetFeedingSlot);
 							efem_auto_step = 158;
-							taskManager.updateTaskStatus(efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-							taskManager.updateTaskStatus(efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+							taskManager.updateTaskStatus(cached_task_first.taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(cached_task_first.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 						}
 					}
 					else {
@@ -1735,10 +1756,11 @@ namespace FC{
 				case 158:
 				{
 					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
-					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = efemPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+					// 使用缓存的第二个任务信息：放第二片料（关键修复！）
+					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = cached_task_second.target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd2 = ewtr->createPutCommand(get_lk, 2, efemPendingTasks.at(1).targetFeedingSlot);
+						auto cmd2 = ewtr->createPutCommand(get_lk, 2, cached_task_second.targetFeedingSlot);
 						ewtr->startCommand(cmd2);
 						cmd2->wait();
 						if (cmd2->hasError())
@@ -1746,8 +1768,10 @@ namespace FC{
 							logFailedExcuteCommandHasError(ewtr->getName(), "B手臂放LL晶圆", efem_process_name, efem_auto_step);
 						}
 						else {//放料完成
-							taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
-							taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
+							logInform("EFEM", "B手臂放料：taskId=%d, target=%s, slot=%d", cached_task_second.taskId, 
+								UnifiedWaferTask::locationToString(cached_task_second.target).c_str(), cached_task_second.targetFeedingSlot);
+							taskManager.updateTaskStatus(cached_task_second.taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
+							taskManager.updateTaskStatus(cached_task_second.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 							efem_auto_step = 110;
 						}
 					}
@@ -1791,6 +1815,13 @@ namespace FC{
 
 					UpdateEfemSubTransferDatas();
 
+					// 防止数组越界
+					if (efemReturnPendingTasks.size() < 1)
+					{
+						logError("EFEM", "step:200, efemReturnPendingTasks size < 1, size=%d", efemReturnPendingTasks.size());
+						efem_auto_step = 10;
+						break;
+					}
 					elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//下料，实际源头和目标互换
 					lk = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
@@ -2015,12 +2046,12 @@ namespace FC{
 							}
 							else {
 								efem_auto_step = 243;
-								Sleep(2000);
+								Sleep(200);
 							}
 						}
 						else {
 							efem_auto_step = 243;
-							Sleep(2000);
+							Sleep(200);
 						}
 					}
 					else {
@@ -2141,6 +2172,13 @@ namespace FC{
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					UpdateEfemSubTransferDatas();
+					// 防止数组越界：双取LK双放LP需要至少两个任务
+					if (efemReturnPendingTasks.size() < 2)
+					{
+						logError("EFEM", "efem_auto_step:250, efemReturnPendingTasks size < 2, size=%d", efemReturnPendingTasks.size());
+						efem_auto_step = 10;
+						break;
+					}
 					std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 					std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingTasks.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
@@ -2199,6 +2237,13 @@ namespace FC{
 				case 251:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
+					// 防止数组越界
+					if (efemReturnPendingTasks.size() < 2)
+					{
+						logError("EFEM", "efem_auto_step:251, efemReturnPendingTasks size < 2, size=%d", efemReturnPendingTasks.size());
+						efem_auto_step = 10;
+						break;
+					}
 					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingTasks.at(0).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
@@ -2217,13 +2262,13 @@ namespace FC{
 							else {
 								lkopen = true;
 
-								Sleep(2000);
+								Sleep(200);
 							}
 						}
 						else {
 							lkopen = true;
 
-							Sleep(2000);
+							Sleep(200);
 						}
 					}
 					else {
@@ -2242,12 +2287,12 @@ namespace FC{
 							}
 							else {
 								lk2open = true;
-								Sleep(2000);
+								Sleep(200);
 							}
 						}
 						else {
 							lk2open = true;
-							Sleep(2000);
+							Sleep(200);
 						}
 					}
 					else {
@@ -2287,6 +2332,13 @@ namespace FC{
 				case 254:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
+					// 防止数组越界
+					if (efemReturnPendingTasks.size() < 2)
+					{
+						logError("EFEM", "efem_auto_step:254, efemReturnPendingTasks size < 2, size=%d", efemReturnPendingTasks.size());
+						efem_auto_step = 10;
+						break;
+					}
 					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingTasks.at(1).target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -2311,6 +2363,13 @@ namespace FC{
 				case 256:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
+					// 防止数组越界
+					if (efemReturnPendingTasks.size() < 2)
+					{
+						logError("EFEM", "efem_auto_step:256, efemReturnPendingTasks size < 2, size=%d", efemReturnPendingTasks.size());
+						efem_auto_step = 10;
+						break;
+					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
@@ -2351,6 +2410,13 @@ namespace FC{
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
 					UpdateEfemSubTransferDatas();
+					// 防止数组越界
+					if (efemReturnPendingTasks.size() < 2)
+					{
+						logError("EFEM", "efem_auto_step:257, efemReturnPendingTasks size < 2, size=%d", efemReturnPendingTasks.size());
+						efem_auto_step = 201;
+						break;
+					}
 					taskManager.updateTaskStatus(efemReturnPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
 					taskManager.updateTaskStatus(efemReturnPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
 
@@ -2373,7 +2439,7 @@ namespace FC{
 
 					if (efemUnkownStatusTasks.size() == 0 && efemReturnPendingTasks.size() == 0 && efemReturnCompletedTasks.size() == originTaskSize)
 					{
-						if (efemReturnCompletedTasks.size() > 0)
+						if (efemReturnCompletedTasks.size() >= 2)
 						{
 
 							//来自同一个lp1
@@ -2430,7 +2496,7 @@ namespace FC{
 					taskManager.updateTaskStatus(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 					taskManager.updateTaskStatus(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 
-					Sleep(5000);
+					Sleep(500);
 					logWarn("SimCycle", "EFEM给LL单上料完成");
 					efem_auto_step = 110; //跳转到110
 
@@ -2446,7 +2512,7 @@ namespace FC{
 					taskManager.updateTaskStatus(efemPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 					taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 					taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
-					Sleep(5000);
+					Sleep(500);
 					logWarn("SimCycle", "EFEM给LL双上料完成");
 					efem_auto_step = 110;
 				}
@@ -2588,7 +2654,7 @@ namespace FC{
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							Sleep(2000);
+							Sleep(200);
 							if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 							{ //大气
 								loadlock1_auto_step = 300;
@@ -2678,7 +2744,7 @@ namespace FC{
 						if ((wait_count++ % 20) == 0) {  // 每20次循环打印一次
 							logInform(lk1->getName().c_str(), "等待EFEM上料中...");
 						}
-						Sleep(1000);
+						Sleep(500);
 					}
 				}
 				break;
@@ -2789,7 +2855,7 @@ namespace FC{
 							logInform("Cycle", "step:510, lk1真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室");
 							loadlock1_get_vacuum = false;
 						}
-						Sleep(1000);
+						Sleep(500);
 					}
 				}
 				break;
@@ -3628,7 +3694,7 @@ namespace FC{
 
 						if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							Sleep(2000);
+							Sleep(200);
 							if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 							{ //大气
 								loadlock2_auto_step = 300;
@@ -3716,7 +3782,7 @@ namespace FC{
 						if ((wait_count++ % 20) == 0) {  // 每20次循环打印一次
 							logInform(lk2->getName().c_str(), "等待EFEM上料中...");
 						}
-						Sleep(2000);
+						Sleep(200);
 					}
 				}
 				break;
@@ -5028,7 +5094,7 @@ namespace FC{
 						}
 					}
 					break;
-#pragma endregion
+
 					case 1090:
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -5055,7 +5121,7 @@ namespace FC{
 						}
 					}
 					break;
-
+#pragma endregion
 					//工艺步骤
 					case 2000:
 					{
@@ -5064,7 +5130,7 @@ namespace FC{
 						auto PmInstance = QPmRecipeWidget::instance(kernel);
 						PmInstance->startPmMotorRun(1);
 #else
-						Sleep(2000);
+						Sleep(200);
 						logInform("PM1", "2s延迟，来模拟做工艺流程.....");
 #endif
 						if(pmPendingTasks.size() > 0 )
@@ -5559,7 +5625,7 @@ namespace FC{
 						auto PmInstance = QPmRecipeWidget::instance(kernel);
 						PmInstance->startPmMotorRun(2);
 #else
-						Sleep(2000);
+						//Sleep(2000);
 						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
 #endif
 
@@ -5710,7 +5776,6 @@ namespace FC{
 							auto cmd1 = wtr->createCheckLoadCommand(0, 2); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
-
 
 							auto cmd2 = wtr->createCheckLoadCommand(1, 2); //1手
 							wtr->startCommand(cmd2);
@@ -6586,28 +6651,6 @@ namespace FC{
 
 	}
 
-
-	void  QSlotTransferCycleVTMWidgetPrivate::executePmMotorRun(int PmIndex)
-	{
-		try
-		{
-			auto PmInstance = QPmRecipeWidget::instance(kernel);
-			PmInstance->startPmMotorRun(PmIndex);
-
-		}
-		catch (const std::exception& e) {
-			logError("Cyclelog", "executePmMotorRun thread crashed:%s", e.what());
-			qCritical() << "executePmMotorRun thread crashed:" << e.what();
-
-		}
-		catch (...) {
-			logError("Cyclelog", "executePmMotorRun thread crashed: unknown exception");
-			qCritical() << "executePmMotorRun thread crashed: unknown exception";
-		}
-
-	}
-	
-
 	void QSlotTransferCycleVTMWidgetPrivate::executeUpdateTransferStatus()
 	{
 		try {
@@ -6684,7 +6727,7 @@ namespace FC{
 						}
 					}
 					else {
-						Sleep(1000);
+						Sleep(500);
 					}
 				}
 				break;
@@ -6808,7 +6851,7 @@ namespace FC{
 		needReset_PM4.store(true);
 		needReset_Update.store(true);
 		update_auto_step = 10;
-		Sleep(1000);
+		Sleep(500);
 
 		startAllThreads(); //重新唤醒
 		//running = true;
@@ -7725,7 +7768,7 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::onGetStep()
 	{
-		Sleep(1000);
+		Sleep(500);
 		logInform("Cycle", Poco::format("%s = %d", loadlock1_process_name, loadlock1_auto_step).c_str());
 		logInform("Cycle", Poco::format("%s = %d", loadlock2_process_name, loadlock2_auto_step).c_str());
 		logInform("Cycle", Poco::format("%s = %d", robot_process_name, robot_auto_step).c_str());
@@ -9090,13 +9133,6 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->executeUpdateTransferStatus();
-	}
-
-	void QSlotTransferCycleVTMWidget::executePmMotorRun(int PmIndex)
-	{
-		Q_D(QSlotTransferCycleVTMWidget);
-		d->executePmMotorRun(PmIndex);
-
 	}
 
 	void QSlotTransferCycleVTMWidget::onGetStep(){

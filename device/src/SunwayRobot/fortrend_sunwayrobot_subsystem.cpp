@@ -201,6 +201,16 @@ namespace FC{
 		d->has_reset_flag = value;
 	}
 
+	bool FortrendSunwayRobotSubsystem::getHasArmWafer(int arm) const
+	{
+		return false;
+	}
+
+	void FortrendSunwayRobotSubsystem::setHasArmWafer(const int arm)
+	{
+
+	}
+
 	bool FortrendSunwayRobotSubsystem::getSafeSignalInPlace(const std::string& subsystem)
 	{
 		bool is_safe_inplace = false;
@@ -413,6 +423,13 @@ namespace FC{
 	std::shared_ptr<SunwayRobotRQLoadCommand> FortrendSunwayRobotSubsystem::createRQLoadCommand(int arm)const{
 		FortrendSunwayRobotSubsystem* self = const_cast<FortrendSunwayRobotSubsystem*>(this);
 		SunwayRobotRQLoadCommand::Ptr ret(new SunwayRobotRQLoadCommand(arm, self));
+		return ret;
+	}
+
+	std::shared_ptr<SunwayRobotSetLoadCommand> FortrendSunwayRobotSubsystem::createSetLoadCommand(int arm, int state) const
+	{
+		FortrendSunwayRobotSubsystem* self = const_cast<FortrendSunwayRobotSubsystem*>(this);
+		SunwayRobotSetLoadCommand::Ptr ret(new SunwayRobotSetLoadCommand(arm, state, self));
 		return ret;
 	}
 

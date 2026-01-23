@@ -22,8 +22,8 @@
 KERNEL_NS_BEGIN
 class KernelConfiguration;
 
-#define SIM_MODE 1
-#define SIM_PM_   
+#define SIM_MODE 0
+#define SIM_PM_
 /**
 *@brief  helper for rnd protocol subsystem
 */

@@ -194,6 +194,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
 		std::string str_arm = (getArm() == 0) ? "A" : "B";
+		//写机械手的傻逼，把0代表B,1代表A ,去他妈个逼,六百六十六！！！！真是小母牛坐飞机——牛逼上天了  ^*^ 
 		int timeout = command_config->getInt("timeout", 300000);
 		std::string command = "";
 		std::string station_name = getStation()->getName();
@@ -203,21 +204,24 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		std::string res;
 		if (station_name == "LLA" || station_name == "LLB")
 		{
-			//MOV:GET/2/A/1;B
-			//MOV:GET/[P1]/[P2]/[P3];
-			//[P1]	工位，范围：1~30
-			//[P2]	手指，A或B
-			//[P3]	槽号（默认1）。范围：1~25
+			//MOV:GETOBJECT/3/1/1/0/0;[CR]
+			//2026-1-22 MOV:GETOBJECT/[P1]/[P2]/[P3]/[P4]/[P5];
+			//[P1] 工位，范围：1~30(int)
+			//[P2]	槽位（默认1）。范围：1~25(int)
+			//[P3]	手指(0:B, 1 : A)(int)
+			//[P4]	默认为0
+			//[P5]	默认为0
 
-			command = "MOV:GET/";
+			command = "MOV:GETOBJECT/";
 			command.append(std::to_string(getStation()->getStationId(robot->getName())));
 			command.append("/");
-			command.append(str_arm);
-			command.append("/");
 			command.append(std::to_string(mapping_slot));
+			command.append("/");
+			command.append(str_arm);
+			command.append("/0/0");
 			command.append(";");
 
-			logInform(robot->getName().c_str(), "取晶圆命令开始");
+			logInform(robot->getName().c_str(), "取晶圆命令:%s,开始", command);
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 		
@@ -318,7 +322,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 				logInform(robot->getName().c_str(), "获取取晶圆RPS：%s", res.c_str());
 
-				std::string recvMessage = "RPS:GET;";
+				std::string recvMessage = "RPS:GETOBJECT;";
 				auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
 				if (found != res.end())
 				{
@@ -362,9 +366,10 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 
 
 				int slot = 1;
-				robot->setObject(getArm(), true);
+				logInform(robot->getName().c_str(), "取晶圆手指Arm indenx： %d", getArm());
 				station_cass->setMapping(mapping_slot, Cassette::Mapping::Empty);
 
+				robot->setObject(getArm(), true);
 				auto robot_cass = cassManager->getCassette(robot);
 				robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Present);
 
@@ -379,15 +384,13 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		{
 			int stationid = getStation()->getStationId(robot->getName()); 
 			//if (station_name == "PM")stationid = 15;
-
-			//2为工位，A为手臂,1:槽号
-			//MOV:PUT/2/A/1;
-			command = "MOV:GET/";
+			command = "MOV:GETOBJECT/";
 			command.append(std::to_string(stationid));
 			command.append("/");
-			command.append(str_arm);
-			command.append("/");
 			command.append(std::to_string(getSlot()));
+			command.append("/");
+			command.append(str_arm);
+			command.append("/0/0");
 			command.append(";");
 
 			//robot->getKernel()->getKernelBlockManager()->createBlock(robot->getName(), robot, { (FortrendStation*)getStation().get() }, 0);
@@ -486,7 +489,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				logInform(robot->getName().c_str(), "取晶圆RPS：%s", res.c_str());
 				//res = recvResponseRobotMessage(timeout);
 
-				std::string recvMessage = "RPS:GET;";
+				std::string recvMessage = "RPS:GETOBJECT;";
 				auto found = search(res.begin(), res.end(), recvMessage.begin(), recvMessage.end());
 				if (found != res.end())
 				{
@@ -535,7 +538,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 
 				robot->setObject(getArm(), true);
 				auto robot_cass = cassManager->getCassette(robot);
-				robot_cass->setMapping(getArm(), Cassette::Mapping::Present);
+				robot_cass->setMapping(getArm()+1, Cassette::Mapping::Present);
 
 				robot_cass->setPodSize(station_cass->getPodSize());
 

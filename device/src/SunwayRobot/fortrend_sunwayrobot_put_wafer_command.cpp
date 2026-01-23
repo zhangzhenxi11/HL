@@ -124,7 +124,8 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 	else {
 		station_cass->setMapping(1, Cassette::Present);
 	}
-	
+	logInform(robot->getName().c_str(), "放晶圆手指Arm indenx： %d", getArm());
+
 	robot->setObject(getArm(), false);
 
 	//对机械手的虚拟cassette，放晶圆完成后，更新状态
@@ -139,8 +140,6 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 	//robot_cass->setMapping(robot_all_alots, robot_mapping_res); //应该单槽置位
 
 	robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Empty);
-
-
 	station_cass->setPodSize(robot_cass->getPodSize());//PM腔的工艺次数，需要本地存储，暂时使用PodSize字段
 
 	//Loadlock的cassete状态会自动更新
@@ -196,7 +195,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 
 	if (prefix == "MOV")
 	{
-		VerificationMessage = "RPS:PUT;";
+		VerificationMessage = "RPS:PUTOBJECT;";
 		error_message = "放晶圆命令执行失败";
 	}
 	else if(prefix == "QRY")
@@ -460,19 +459,28 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	}
 	//fill params
 	d->station_name = getStation()->getName();
+	//写机械手的傻逼，把0代表B,1代表A ,六百六十六！！！！真是小母牛坐飞机——牛逼上天了 ^*^ 
 	std::string str_arm = (getArm() == 0) ? "A" : "B";
 	// LL 工位处理
+
+	//MOV:PUTOBJECT/1/1/1;\r
+	//[P1]	工位，范围：1~30(int)
+	//[P2]	槽位（默认1）。范围：1~25(int)
+	//[P3]	手指(0:B, 1 : A)(int)
 	if (getStation()->getName().find("LL") != std::string::npos)
 	{
 		d->result_ = performRobotOperation(
 
 		[this, robot,str_arm]()->std::string {
 			//指令回调函数
-			std::string command = "MOV:PUT/";
+			std::string command = "MOV:PUTOBJECT/";
 			command.append(std::to_string(getStation()->getStationId(robot->getName())));
-			command.append("/").append(str_arm).append("/");
-			command.append(std::to_string(getSlot())).append(";");
-			return command;   // MOV:PUT/2/A/1;\r
+			command.append("/");
+			command.append(std::to_string(getSlot()));
+			command.append("/");
+			command.append(str_arm);
+			command.append(";");
+			return command;
 		},
 
 		[this, robot]()->bool {
@@ -493,11 +501,14 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		[this, robot, str_arm]() -> std::string {
 			int stationId = getStation()->getStationId(robot->getName());
 
-			std::string command = "MOV:PUT/";
+			std::string command = "MOV:PUTOBJECT/";
 
-			command.append(std::to_string(stationId))
-				.append("/").append(str_arm).append("/")
-				.append(std::to_string(getSlot())).append(";");
+			command.append(std::to_string(stationId));
+			command.append("/");
+			command.append(std::to_string(getSlot()));
+			command.append("/");
+			command.append(str_arm);
+			command.append(";");
 
 			return command;
 		},
@@ -518,6 +529,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 
 	if(d->result_ == RunResult::RUN_OK)
 	{
+		//2026-1-22 不加AWC
+#if 0
 		return performRobotOperation(
 			[this, robot]()->std::string {
 			int stationId = getStation()->getStationId(robot->getName());
@@ -535,6 +548,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			return updateAwcData();
 			}
 		);
+#endif
 		return RunResult::RUN_OK;
 	}
 }
