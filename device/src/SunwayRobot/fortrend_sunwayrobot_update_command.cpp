@@ -83,7 +83,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	clearRobotMessage();
 	sendRequest(command);
 
-	logInform(sub->getName().c_str(), "机械手上使能命令开始");
+	logInform(sub->getName().c_str(), "机械手上使能命令开始.");
 	Sleep(500);
 
 	res = recvResponseRobotMessage(timeout);
@@ -110,7 +110,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 
 	if (res != "ACK;" && res != "RPS:SERVOS;")
 	{
-		logError(sub->getName().c_str(), "上使能命令发生错误");
+		logError(sub->getName().c_str(), "上使能命令发生错误.");
 
 		std::string error_str = "ERR";
 		if (!handleErrorCode(res, error_str, error_type, error_code)) {
@@ -121,7 +121,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		}
 		else
 		{
-			logError(sub->getName().c_str(), "执行上使能时存在一个错误");
+			logError(sub->getName().c_str(), "执行上使能时存在一个错误.");
 			auto error_strucct = getErrorCode(error_type, error_code);
 			error_type = error_strucct->type;
 			error_code = error_strucct->code;
@@ -172,7 +172,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
 					Poco::format("%s 机械手通讯错误", sub->getName()), this);
 			}
-			logInform(sub->getName().c_str(), "机械手上使能命令执行结束");
+			logInform(sub->getName().c_str(), "机械手上使能命令执行结束.");
 		}
 
 	}

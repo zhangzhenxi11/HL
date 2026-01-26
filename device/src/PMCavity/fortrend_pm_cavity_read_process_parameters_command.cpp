@@ -60,7 +60,7 @@ namespace FC{
 		}
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-		logInform(sub->getName().c_str(), "读参数命令开始执行");
+		logInform(sub->getName().c_str(), "读参数命令开始执行.");
 		PMCavityAxisSettingParameters axis_parames;
 
 		// 2025-10-28: 直接使用getMappingTable()返回的static const引用，避免从成员变量读取
@@ -101,7 +101,7 @@ namespace FC{
 		}
 	
 		sub->setPMCavityAxisParameters(axis_parames);
-		logInform(sub->getName().c_str(), "读取电机参数命令执行结束");
+		logInform(sub->getName().c_str(), "读取电机参数命令执行结束.");
 		return IKernelCommand::RunResult::RUN_OK;
 
 	}

@@ -65,7 +65,7 @@ namespace FC{
 		
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-		logInform(sub->getName().c_str(), "写参数命令开始执行");
+		logInform(sub->getName().c_str(), "写参数命令开始执行.");
 
 		// 使用循环读取所有参数
 		for (const auto& mapping : d->_mapping_table)
@@ -97,7 +97,7 @@ namespace FC{
 			}	
 		}
 
-		logInform(sub->getName().c_str(), "写工艺参数命令执行结束");
+		logInform(sub->getName().c_str(), "写工艺参数命令执行结束.");
 		return IKernelCommand::RunResult::RUN_OK;
 
 	}

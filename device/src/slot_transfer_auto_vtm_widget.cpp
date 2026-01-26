@@ -232,7 +232,7 @@ namespace FC{
 		}
 		if (setTransferSequenceRobot() && setTransferSequenceLoadLock1() && setTransferSequenceLoadLock2())
 		{
-			logInform("Auto", "Auto开始");
+			logInform("Auto", "Auto开始.");
 			return true;
 		}
 		return false;
@@ -252,7 +252,7 @@ namespace FC{
 			sequence_loadlock1_transfer_wafer.push_back(select_slot);
 		}
 
-		logInform("Auto", "LoadLock1流程添加完成");
+		logInform("Auto", "LoadLock1流程添加完成.");
 		return true;
 	}
 
@@ -269,7 +269,7 @@ namespace FC{
 			}
 			sequence_loadlock2_transfer_wafer.push_back(select_slot);
 		}
-		logInform("Auto", "LoadLock2流程添加完成");
+		logInform("Auto", "LoadLock2流程添加完成.");
 		return true;
 	}
 
@@ -371,7 +371,7 @@ namespace FC{
 
 			sequence_robot_transfer_wafer.push_back(robot);
 		}
-		logInform("Auto", "机械手流程添加完成");
+		logInform("Auto", "机械手流程添加完成.");
 		return true;
 	}
 
@@ -435,7 +435,7 @@ namespace FC{
 			{
 				if (wtr->getState() != IKernelSubSystem::State::SUB_UNKNOWN)
 				{
-					logInform(reset_process_name.c_str(), "整机复位开始");
+					logInform(reset_process_name.c_str(), "整机复位开始.");
 					auto cmd = wtr->createResetCommand();
 					wtr->startCommand(cmd);
 					cmd->wait();
@@ -656,7 +656,7 @@ namespace FC{
 
 			case 10000:
 			{
-				logInform(reset_process_name.c_str(), "整机复位完成");
+				logInform(reset_process_name.c_str(), "整机复位完成.");
 				robot_auto_step = 10;
 				loadlock1_auto_step = 10;
 				loadlock2_auto_step = 10;
@@ -669,7 +669,7 @@ namespace FC{
 			break;
 			case 15000:
 			{
-				logInform(reset_process_name.c_str(), "整机复位失败");
+				logInform(reset_process_name.c_str(), "整机复位失败.");
 				reset_loop = false;
 				reset_finish = false;
 				rest_step = -1;
@@ -908,7 +908,7 @@ namespace FC{
 							}
 							else
 							{
-								logInform(pump->getName().c_str(), "打开机械泵成功");
+								logInform(pump->getName().c_str(), "打开机械泵成功.");
 							}
 						}
 						else
@@ -935,7 +935,7 @@ namespace FC{
 									}
 									else
 									{
-										logInform(lk1->getName().c_str(), "关闭隔膜阀成功步骤15");
+										logInform(lk1->getName().c_str(), "关闭隔膜阀成功步骤15.");
 									}
 								}
 								if (lk1->getAngleValveOpend() == false)
@@ -950,7 +950,7 @@ namespace FC{
 									}
 									else
 									{
-										logInform(lk1->getName().c_str(), "打开角阀成功步骤20");
+										logInform(lk1->getName().c_str(), "打开角阀成功步骤20.");
 									}
 								}
 							}
@@ -981,7 +981,7 @@ namespace FC{
 									}
 									else
 									{
-										logInform(lk2->getName().c_str(), "关闭隔膜阀成功步骤25");
+										logInform(lk2->getName().c_str(), "关闭隔膜阀成功步骤25.");
 									}
 								}
 								if (lk2->getAngleValveOpend() == false)
@@ -996,7 +996,7 @@ namespace FC{
 									}
 									else
 									{
-										logInform(lk2->getName().c_str(), "打开角阀成功步骤30");
+										logInform(lk2->getName().c_str(), "打开角阀成功步骤30.");
 									}
 								}
 							}
@@ -1026,7 +1026,7 @@ namespace FC{
 									}
 									else
 									{
-										logInform(tm->getName().c_str(), "关闭隔膜阀成功步骤45");
+										logInform(tm->getName().c_str(), "关闭隔膜阀成功步骤45.");
 									}
 								}
 								else{
@@ -1046,7 +1046,7 @@ namespace FC{
 										logFailedExcuteCommandHasError(tm->getName(), "打开角阀", vacuum_process_name, 50);
 									}
 									else{
-										logInform(tm->getName().c_str(), "打开角阀成功步骤50");
+										logInform(tm->getName().c_str(), "打开角阀成功步骤50.");
 									}
 								}
 								else{
@@ -1127,7 +1127,7 @@ namespace FC{
 											}
 											else
 											{
-												logInform(pump->getName().c_str(), "打开分子泵完成");
+												logInform(pump->getName().c_str(), "打开分子泵完成.");
 											}
 										}
 										else{
@@ -2889,7 +2889,7 @@ namespace FC{
 						robot_auto_step = 10360;
 					}
 					else{
-						logError(wtr->getName().c_str(), "机械手臂晶圆检测异常");
+						logError(wtr->getName().c_str(), "机械手臂晶圆检测异常.");
 						robot_auto_step = 10340;
 					}
 				}
@@ -5045,7 +5045,7 @@ namespace FC{
 		{
 			if (d->setTransferSequence() == false)
 			{
-				logError("Auto", "流程配置错误");
+				logError("Auto", "流程配置错误.");
 				return;
 			}
 		}

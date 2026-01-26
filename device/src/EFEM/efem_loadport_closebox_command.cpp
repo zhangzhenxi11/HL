@@ -1,4 +1,4 @@
-// Library: Fortrend
+ï»¿// Library: Fortrend
 // Package: CommandImp/Hex/LoadPort
 //
 // closebox command for fortrend loadport
@@ -51,7 +51,7 @@ EFEMLoadPortCloseBoxCommand::RunResult EFEMLoadPortCloseBoxCommand::onRun() thro
 	std::shared_ptr<KernelConfiguration> command_config = lp->getConfigure()->createView(getName());
 	//if (SIM_MODE == 1)
 	//{
-	//	logInform("lp:", "EFEMLoadPortCloseBoxCommand Ä£Äâ²âÊÔ");
+	//	logInform("lp:", "EFEMLoadPortCloseBoxCommand æ¨¡æ‹Ÿæµ‹è¯•.");
 	//	return RunResult::RUN_OK;
 	//}
 
@@ -61,7 +61,7 @@ EFEMLoadPortCloseBoxCommand::RunResult EFEMLoadPortCloseBoxCommand::onRun() thro
 	if (timeout > 0){
 		lp->timeout = timeout;
 	}
-	lp->timestamp = std::chrono::system_clock::now();//¶àÏß³ÌÏÂ£¬ÓÐ¸ÅÂÊÌø¹ýÅÐ¶Ï£¬Ôì³ÉÃë³¬Ê±±¨¾¯£¬´ýÓÅ»¯
+	lp->timestamp = std::chrono::system_clock::now();//å¤šçº¿ç¨‹ä¸‹ï¼Œæœ‰æ¦‚çŽ‡è·³è¿‡åˆ¤æ–­ï¼Œé€ æˆç§’è¶…æ—¶æŠ¥è­¦ï¼Œå¾…ä¼˜åŒ–
 	lp->primaryMessageName = this->getName();
 	//std::string str = Poco::format("ACK:%s", );
 	int lpn = lp->getName() == "ELP1" ? 1 : 2;

@@ -60,7 +60,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭角阀命令地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "关闭PID命令开始");
+		logInform(sub->getName().c_str(), "关闭PID命令开始.");
 		if (!writeBit(open_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到打开PID地址错误", sub->getName()), this);
@@ -70,7 +70,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到关闭PID地址错误", sub->getName()), this);
 		}
 		sub->setPIDOpend(false);
-		logInform(sub->getName().c_str(), "关闭PID命令执行完成");
+		logInform(sub->getName().c_str(), "关闭PID命令执行完成.");
 		return  IKernelCommand::RunResult::RUN_OK;;
 
 	}

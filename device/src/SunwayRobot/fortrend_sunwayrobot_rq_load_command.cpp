@@ -94,7 +94,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取手指状态超时参数设置错误", robot->getName()), this);
 		}
 		
-		logInform(robot->getName().c_str(), Poco::format("获取手指%s有无晶圆命令开始执行", str_arm).c_str());
+		logInform(robot->getName().c_str(), Poco::format("获取手指%s有无晶圆命令开始执行.", str_arm).c_str());
 		if (str_arm == "A")
 		{
 			//ARM A

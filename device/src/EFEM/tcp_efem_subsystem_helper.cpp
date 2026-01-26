@@ -146,7 +146,7 @@ bool TcpEfemSubSystemHelperPrivate::initialize()
 	serverAddr.sin_port = htons(port);
 	if (inet_pton(AF_INET, ip_address.c_str(), &(serverAddr.sin_addr)) <= 0)
 	{
-		logError(name.c_str(), "无效的地址");
+		logError(name.c_str(), "无效的地址.");
 		closesocket(*client);
 		WSACleanup();
 		return false;

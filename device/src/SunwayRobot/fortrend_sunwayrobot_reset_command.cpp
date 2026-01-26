@@ -67,7 +67,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	//测试
 	//if(SIMULATION_TEST == 1)
 	//{
-	//	logInform(getName().c_str(), "模拟复位命令执行");
+	//	logInform(getName().c_str(), "模拟复位命令执行.");
 	//	return RunResult::RUN_OK;
 	//}
 
@@ -76,7 +76,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	int error_type = 1;
 	int error_code = 0;
 
-	logInform(getName().c_str(), "复位命令开始执行");
+	logInform(getName().c_str(), "复位命令开始执行.");
 	std::string res;
 	//send
 	clearRobotMessage();
@@ -117,7 +117,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	}
 	if (res != "ACK;" && res != "RPS:CLEAR;")
 	{
-		logError(robot->getName().c_str(), "机械手复位命令发生错误");
+		logError(robot->getName().c_str(), "机械手复位命令发生错误.");
 
 		if (res == std::string("NAK"))
 		{
@@ -140,7 +140,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		}
 		else
 		{
-			logError(robot->getName().c_str(), "机械手复位时存在一个错误");
+			logError(robot->getName().c_str(), "机械手复位时存在一个错误.");
 			auto error_strucct = getErrorCode(error_type, error_code);
 			error_type = error_strucct->type;
 			error_code = error_strucct->code;
@@ -204,7 +204,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			return RunResult::RUN_FAILD;
 		}
 		robot->setHasResetFlag(true);
-		logInform(getName().c_str(), "复位命令执行结束");
+		logInform(getName().c_str(), "复位命令执行结束.");
 
 		return RunResult::RUN_OK;
 

@@ -72,7 +72,7 @@ namespace FC{
 				Poco::format("超时: %s 关闭机械泵超时参数错误", sub->getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "关闭机械泵命令开始");
+		logInform(sub->getName().c_str(), "关闭机械泵命令开始.");
 		if (!writeBit(address, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, 
@@ -99,7 +99,7 @@ namespace FC{
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setMechanicalPumpOpened(false);
-			logInform(sub->getName().c_str(), "关闭机械泵命令执行结束");
+			logInform(sub->getName().c_str(), "关闭机械泵命令执行结束.");
 
 		}
 		else if (readRes2)

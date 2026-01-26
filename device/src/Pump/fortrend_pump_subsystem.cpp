@@ -300,7 +300,7 @@ void FortrendPumpSubsystem::onProcess(){
 			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - d->angle_valve_close_time_clock_tm).count();
 			if (pass > (40 * 60 * 1000))
 			{
-				logError(getName().c_str(), "检测到TM分子泵在角阀关闭时的运行时长已超过20分钟，为防止分子泵异常，关闭分子泵");
+				logError(getName().c_str(), "检测到TM分子泵在角阀关闭时的运行时长已超过20分钟，为防止分子泵异常，关闭分子泵.");
 				//关闭TM分子泵
 				auto cmd = createMolecularCloseCommand("TM");
 				cmd->setClient(this);
@@ -368,7 +368,7 @@ void FortrendPumpSubsystem::onProcess(){
 			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - d->angle_valve_close_time_clock_lla).count();
 			if (pass > (40 * 60 * 1000))
 			{
-				logError(getName().c_str(), "检测到LoadLock1分子泵在角阀关闭时的运行时长已超过20分钟，为防止分子泵异常，关闭分子泵");
+				logError(getName().c_str(), "检测到LoadLock1分子泵在角阀关闭时的运行时长已超过20分钟，为防止分子泵异常，关闭分子泵.");
 
 				//关闭TM分子泵
 				auto cmd = createMolecularCloseCommand("LLA");
@@ -437,7 +437,7 @@ void FortrendPumpSubsystem::onProcess(){
 			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - d->angle_valve_close_time_clock_llb).count();
 			if (pass > (40 * 60 * 1000))
 			{
-				logError(getName().c_str(), "检测到LoadLock2分子泵在角阀关闭时的运行时长已超过20分钟，为防止分子泵异常，关闭分子泵");
+				logError(getName().c_str(), "检测到LoadLock2分子泵在角阀关闭时的运行时长已超过20分钟，为防止分子泵异常，关闭分子泵.");
 
 				//关闭TM分子泵
 				auto cmd = createMolecularCloseCommand("LLB");

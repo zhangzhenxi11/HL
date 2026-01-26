@@ -78,7 +78,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 复位命令地址未定义", getName()), this);
 		}
 		sub->setBoxPlacement(false);
-		logInform(sub->getName().c_str(), "复位命令开始");
+		logInform(sub->getName().c_str(), "复位命令开始.");
 		if (!writeBit(start_address, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到复位命令地址错误", sub->getName()), this);

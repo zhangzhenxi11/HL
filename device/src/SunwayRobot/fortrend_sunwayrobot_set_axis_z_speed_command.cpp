@@ -67,7 +67,7 @@ public:
 		macro.append(std::to_string(d->percentage));
 		macro.append(";");
 
-		logInform(sub->getName().c_str(), "设置Z轴速度命令执行开始");
+		logInform(sub->getName().c_str(), "设置Z轴速度命令执行开始.");
 		//ALG
 		sendRequest(macro);
 		std::string res = recvResponse(timeout);
@@ -111,7 +111,7 @@ public:
 						Poco::format("%s 机械手通讯错误", sub->getName()), this);
 				}
 			}
-			logInform(sub->getName().c_str(), "设置Z轴速度命令执行完成");
+			logInform(sub->getName().c_str(), "设置Z轴速度命令执行完成.");
 			return RunResult::RUN_OK;
 		}
 		else
@@ -125,7 +125,7 @@ public:
 			}
 			else
 			{
-				logError(sub->getName().c_str(), "设置Z轴速度命令时存在一个错误");
+				logError(sub->getName().c_str(), "设置Z轴速度命令时存在一个错误.");
 				auto error_strucct = getErrorCode(error_type, error_code);
 				error_type = error_strucct->type;
 				error_code = error_strucct->code;

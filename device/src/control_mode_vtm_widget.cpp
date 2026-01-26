@@ -180,7 +180,7 @@ namespace FC{
 		if (!pm)
 		{
 			//QMessageBox::information(this, "警告", "子系统未找到");
-			logInform("ControlMode","子系统未找到");
+			logInform("ControlMode","子系统未找到.");
 			return;
 		}
 		pm->setPMCavityEnable(value);
@@ -208,7 +208,7 @@ namespace FC{
 		auto lk = kernel->getKernelModule<FortrendLoadLockSubsystem>(ll_name);
 		if (!lk)
 		{
-			logError("SaveConfig", "子系统未找到");
+			logError("SaveConfig", "子系统未找到.");
 			return;
 		}
 		double uppper = 0.0;
@@ -256,7 +256,7 @@ namespace FC{
 		if (!tm)
 		{
 			//QMessageBox::information(this, "警告", "子系统未找到");
-			logError("SaveConfig", "子系统未找到");
+			logError("SaveConfig", "子系统未找到.");
 			return;
 		}
 		tm_vacuum_delay_time = tm_cavity_vacuum_delay_time_dsb->value();
@@ -281,7 +281,7 @@ namespace FC{
 		//if (!pm)
 		//{
 		//	//QMessageBox::information(this, "警告", "子系统未找到");
-		//	logError("SaveConfig", "子系统未找到");
+		//	logError("SaveConfig", "子系统未找到.");
 		//	return;
 		//}
 		//double uppper = 0.0;

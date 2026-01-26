@@ -542,7 +542,7 @@ namespace FC{
 			{
 				if (!(pmPtr->getState() == IKernelSubSystem::State::SUB_NORMAL))
 				{
-					logError(pmPtr.get()->getName().c_str(), "当前PM状态异常");
+					logError(pmPtr.get()->getName().c_str(), "当前PM状态异常.");
 					addSubsystemNotNormalAlarmMessage(step, pmPtr.get()->getName());
 					step = 10000;
 					break;
@@ -570,7 +570,7 @@ namespace FC{
 			}
 			else
 			{
-				logError(pmPtr.get()->getName().c_str(), "获取当前PM不存在,请检查PM的是否实例化");
+				logError(pmPtr.get()->getName().c_str(), "获取当前PM不存在,请检查PM的是否实例化.");
 				step = 10000;
 				break;
 			}
@@ -646,7 +646,7 @@ namespace FC{
 	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepEND()
 	{
 		d->ret = IKernelCommand::RunResult::RUN_OK;
-		logInform(d->tm->getName().c_str(), "抽真空循环结束");
+		logInform(d->tm->getName().c_str(), "抽真空循环结束.");
 		d->loop = false;
 
 		int step = 10;

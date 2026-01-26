@@ -65,7 +65,7 @@ IKernelCommand::RunResult EFEMAlignerAlignCommand::onRun() throw(KernelException
 			Poco::format("超时: 寻边超时参数设置失败", sub->getName()), this);
 	}
 
-	logInform(sub->getName().c_str(), "寻边命令开始执行");
+	logInform(sub->getName().c_str(), "寻边命令开始执行.");
 	// MOV:ALIGN;
 	std::string command = "MOV:";
 	//EALIGNER
@@ -100,7 +100,7 @@ IKernelCommand::RunResult EFEMAlignerAlignCommand::onRun() throw(KernelException
 		
 	}
 	sub->getKernel()->getKernelBlockManager()->releaseBlock(sub);
-	logInform(sub->getName().c_str(), "寻边命令执行结束");
+	logInform(sub->getName().c_str(), "寻边命令执行结束.");
 	return ret;
 
 }

@@ -639,7 +639,7 @@ namespace FC{
 
 	int PumpOpenLoadLock1AutoVacuumCommand::handleStep10000()
 	{
-		logInform(d->lk1->getName().c_str(), "抽真空循环结束");
+		logInform(d->lk1->getName().c_str(), "抽真空循环结束.");
 		loop = false;
 		return -1;
 	}

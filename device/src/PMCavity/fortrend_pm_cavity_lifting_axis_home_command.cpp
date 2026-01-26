@@ -72,7 +72,7 @@ PMCavityLiftingAxisHomeCommand::RunResult PMCavityLiftingAxisHomeCommand::onRun(
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 升降轴回原命令地址未定义", getName()), this);
     }
-    logInform(sub->getName().c_str(), "升降轴回原命令开始执行");
+    logInform(sub->getName().c_str(), "升降轴回原命令开始执行.");
 
     if (!writeBit(start_address, true))
     {
@@ -104,7 +104,7 @@ PMCavityLiftingAxisHomeCommand::RunResult PMCavityLiftingAxisHomeCommand::onRun(
     if (readRes)
     {
         ret = IKernelCommand::RunResult::RUN_OK;
-        logInform(sub->getName().c_str(), "升降轴回原命令执行完成");
+        logInform(sub->getName().c_str(), "升降轴回原命令执行完成.");
     }
     else if(!readRes)
     {

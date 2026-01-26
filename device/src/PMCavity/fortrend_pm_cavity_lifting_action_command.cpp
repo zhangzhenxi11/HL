@@ -73,7 +73,7 @@ PMCavityLiftingActionCommand::RunResult PMCavityLiftingActionCommand::onRun() th
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 升降轴动作命令地址未定义", getName()), this);
     }
-    logInform(sub->getName().c_str(), "升降轴动作命令开始执行");
+    logInform(sub->getName().c_str(), "升降轴动作命令开始执行.");
     sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
     float abs_pos = float(d->_targetPos);
@@ -118,7 +118,7 @@ PMCavityLiftingActionCommand::RunResult PMCavityLiftingActionCommand::onRun() th
         }
 
         ret = IKernelCommand::RunResult::RUN_OK;
-        logInform(sub->getName().c_str(), "升降轴定位开始命令执行完成");
+        logInform(sub->getName().c_str(), "升降轴定位开始命令执行完成.");
     }
     else if(!readRes || alarmCode != 0)
     {

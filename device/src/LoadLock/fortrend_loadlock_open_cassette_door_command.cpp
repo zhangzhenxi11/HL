@@ -52,7 +52,7 @@ namespace FC{
 		//}
 		if (sub->getVacuumEnable())
 		{
-			logInform(sub->getName().c_str(), "真空模式下，检测互锁条件");
+			logInform(sub->getName().c_str(), "真空模式下，检测互锁条件.");
 			if (sub->getTMCavityDoorOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 真空模式下,传输腔门阀已打开（逻辑错误）", sub->getName()), this);
@@ -93,7 +93,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开晶圆盒门阀地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "打开晶圆盒门阀命令开始");
+		logInform(sub->getName().c_str(), "打开晶圆盒门阀命令开始.");
 		if (!writeBit(close_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 0 到关闭晶圆盒门阀地址错误", sub->getName()), this);
@@ -126,7 +126,7 @@ namespace FC{
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setCassetteDoorOpend(true);
-			logInform(sub->getName().c_str(), "打开放晶圆盒门阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开放晶圆盒门阀命令执行结束.");
 
 		}
 		else if (readFailedState && failedRes)
@@ -134,13 +134,13 @@ namespace FC{
 
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开放晶圆盒门阀执行失败，打开晶圆盒门阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开放晶圆盒门阀执行失败，打开晶圆盒门阀到位信号异常");
+			logError(sub->getName().c_str(), "打开放晶圆盒门阀执行失败，打开晶圆盒门阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开晶圆盒门阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开晶圆盒门阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开晶圆盒门阀命令通讯超时.");
 		}
 		return ret;
 

@@ -268,7 +268,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			//if (res != "ACK;" && res != "RPS:GET;")
 			if (res != "ACK;")
 			{
-				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
+				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误.");
 				int error_type = 1;
 				int error_code = 0;
 				std::string error_message;
@@ -281,7 +281,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 				else
 				{
-					logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
+					logError(robot->getName().c_str(), "执行取晶圆时存在一个错误.");
 					auto error_strucct = getErrorCode(error_type, error_code);
 					error_type = error_strucct->type;
 					error_code = error_strucct->code;
@@ -354,7 +354,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					}
 					catch (const std::invalid_argument& e) {
 						error_message = "处理字符串失败";
-						logError(getName().c_str(), "处理字符串失败");
+						logError(getName().c_str(), "处理字符串失败.");
 					}
 
 					//set alarm data
@@ -394,7 +394,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			command.append(";");
 
 			//robot->getKernel()->getKernelBlockManager()->createBlock(robot->getName(), robot, { (FortrendStation*)getStation().get() }, 0);
-			logInform(robot->getName().c_str(), "取晶圆命令开始");
+			logInform(robot->getName().c_str(), "取晶圆命令开始.");
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
@@ -431,7 +431,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 
 			if (res != std::string("ACK;"))
 			{
-				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误");
+				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误.");
 
 				std::string error_str = "ERR";
 				try {
@@ -452,7 +452,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 				catch (const std::invalid_argument& e) {
 					error_message = "处理字符串失败";
-					logError(getName().c_str(), "处理字符串失败");
+					logError(getName().c_str(), "处理字符串失败.");
 				}
 
 				//set alarm data
@@ -522,7 +522,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					}
 					catch (const std::invalid_argument& e) {
 						error_message = "处理字符串失败";
-						logError(getName().c_str(), "处理字符串失败");
+						logError(getName().c_str(), "处理字符串失败.");
 					}
 
 					//set alarm data

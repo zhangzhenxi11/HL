@@ -827,12 +827,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setLiftingAxisPower(bool enable)
 	{
-		logInform(getName().c_str(), "写Z轴使能开始");
+		logInform(getName().c_str(), "写Z轴使能开始.");
 		if(!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_enable_address, enable)) 
 		{
 			logError(getName().c_str(), Poco::format("写Z轴使能address = %s 失败!", d->lifting_axis_enable_address).c_str());
 		}
-		logInform(getName().c_str(), "触发Z轴使能结束");
+		logInform(getName().c_str(), "触发Z轴使能结束.");
 	}
 
 	bool FortrendPMCavitySubsystem::getLiftingHomeDone() const
@@ -842,12 +842,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setLiftingHome(bool enable)
 	{
-		logInform(getName().c_str(),"Z轴回原开始");
+		logInform(getName().c_str(),"Z轴回原开始.");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_rest_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写Z轴回原address = %s 失败!", d->lifting_axis_rest_address).c_str());
 		}
-		logInform(getName().c_str(), "触发Z轴回原结束");
+		logInform(getName().c_str(), "触发Z轴回原结束.");
 
 	}
 
@@ -870,12 +870,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setZAxisClearError(bool enable)
 	{
-		logInform(getName().c_str(), "写清除Z轴控报警开始");
+		logInform(getName().c_str(), "写清除Z轴控报警开始.");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->lifting_axis_clear_error_address, enable)) {
 		
 			logError(getName().c_str(), Poco::format("写清除Z轴控报警address = %s 失败!", d->lifting_axis_clear_error_address).c_str());
 		}
-		logInform(getName().c_str(), "触发清除Z轴控报警完成");
+		logInform(getName().c_str(), "触发清除Z轴控报警完成.");
 	}
 
 	bool FortrendPMCavitySubsystem::getRAxisClearErrorDone() const
@@ -885,12 +885,12 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setRAxisClearError(bool enable)
 	{
-		logInform(getName().c_str(), "写清除R轴控报警开始");
+		logInform(getName().c_str(), "写清除R轴控报警开始.");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_clear_error_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写清除R轴控报警address = %s 失败!", d->rotating_axis_clear_error_address).c_str());
 		}
-		logInform(getName().c_str(), "触发清除R轴控报警完成");
+		logInform(getName().c_str(), "触发清除R轴控报警完成.");
 	}
 
 	bool FortrendPMCavitySubsystem::getRotationAxisPowerDone() const
@@ -899,12 +899,12 @@ namespace FC{
 	}
 	void FortrendPMCavitySubsystem::setRotationAxisPower(bool enable)
 	{
-		logInform(getName().c_str(), "触发R轴使能开始");
+		logInform(getName().c_str(), "触发R轴使能开始.");
 		if (KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_enable_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写R轴控使能address = %s 失败!", d->rotating_axis_enable_address).c_str());
 		}
-		logInform(getName().c_str(), "触发R轴使能结束");
+		logInform(getName().c_str(), "触发R轴使能结束.");
 	}
 
 	bool FortrendPMCavitySubsystem::getRotationHomeDone() const
@@ -914,7 +914,7 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setRotationHome(bool enable)
 	{
-		logInform(getName().c_str(), "写R轴回原开始");
+		logInform(getName().c_str(), "写R轴回原开始.");
 		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
 		{
 			logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
@@ -934,7 +934,7 @@ namespace FC{
 	void FortrendPMCavitySubsystem::setPMCavityZAxleAcc(float accValue)
 	{
 
-		logInform(getName().c_str(), "写Z轴加速度");
+		logInform(getName().c_str(), "写Z轴加速度.");
 		if (!KeyencePlcSubSystemHelper::writeFloat(d->lifting_axis_acce_address, accValue))
 		{
 			logError(getName().c_str(), Poco::format("写Z轴加速度address = %s 失败!", d->lifting_axis_acce_address).c_str());
@@ -943,7 +943,7 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setPMCavityZAxleDcc(float dccValue)
 	{
-		logInform(getName().c_str(), "写Z轴减速度");
+		logInform(getName().c_str(), "写Z轴减速度.");
 		if (!KeyencePlcSubSystemHelper::writeFloat(d->lifting_axis_dece_address, dccValue))
 		{
 			logError(getName().c_str(), Poco::format("写Z轴减速度address = %s 失败!", d->lifting_axis_dece_address).c_str());
@@ -962,13 +962,13 @@ namespace FC{
 
 	uint32_t FortrendPMCavitySubsystem::getPMCavityZAxleJerk() const
 	{
-		logInform(getName().c_str(), "读取R轴jerk");
+		logInform(getName().c_str(), "读取R轴jerk.");
 		return  d->rotating_axis_jerk_value;
 	}
 
 	void FortrendPMCavitySubsystem::setPMCavityZAxleJerk(uint32_t value)
 	{
-		logInform(getName().c_str(), "设置R轴jerk");
+		logInform(getName().c_str(), "设置R轴jerk.");
 		if (!KeyencePlcSubSystemHelper::writeUnsignedInt(d->rotating_axis_jerk_address, value))
 		{
 			logError(getName().c_str(), Poco::format("写R轴jerk address = %s 失败!", d->rotating_axis_jerk_address).c_str());
@@ -999,7 +999,7 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setPMCavityRAxleAcc(float accValue)
 	{
-		logInform(getName().c_str(), "写R轴加速度");
+		logInform(getName().c_str(), "写R轴加速度.");
 		if (!KeyencePlcSubSystemHelper::writeFloat(d->rotating_axis_acce_address, accValue))
 		{
 			logError(getName().c_str(), Poco::format("写R轴加速度address = %s 失败!", d->rotating_axis_acce_address).c_str());
@@ -1008,7 +1008,7 @@ namespace FC{
 
 	void FortrendPMCavitySubsystem::setPMCavityRAxleDcc(float dccValue)
 	{
-		logInform(getName().c_str(), "写R轴减速度");
+		logInform(getName().c_str(), "写R轴减速度.");
 		if (!KeyencePlcSubSystemHelper::writeFloat(d->rotating_axis_dece_address, dccValue))
 		{
 			logError(getName().c_str(), Poco::format("写R轴减速度address = %s 失败!", d->rotating_axis_dece_address).c_str());
@@ -1017,13 +1017,13 @@ namespace FC{
 
 	uint32_t FortrendPMCavitySubsystem::getPMCavityZRxleJerk() const
 	{
-		logInform(getName().c_str(),"读取Z轴jerk");
+		logInform(getName().c_str(),"读取Z轴jerk.");
 		return  d->lifting_axis_jerk_value;
 	}
 
 	void FortrendPMCavitySubsystem::setPMCavityRAxleJerk(uint32_t value)
 	{
-		logInform(getName().c_str(), "设置Z轴jerk");
+		logInform(getName().c_str(), "设置Z轴jerk.");
 		if (!KeyencePlcSubSystemHelper::writeUnsignedInt(d->lifting_axis_jerk_address, value))
 		{
 			logError(getName().c_str(), Poco::format("写Z轴jerk address = %s 失败!", d->lifting_axis_jerk_address).c_str());

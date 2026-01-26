@@ -1,4 +1,4 @@
-// Library: Fortrend
+ï»¿// Library: Fortrend
 // Package: CommandImp/Hex/LoadPort
 //
 // openbox command for fortrend loadport
@@ -59,7 +59,7 @@ EFEMLoadPortOpenBoxCommand::RunResult EFEMLoadPortOpenBoxCommand::onRun() throw(
 	
 	//if (SIM_MODE == 1)
 	//{
-	//	logInform("lp1:","EFEMLoadPortOpenBoxCommand Ä£Äâ²âÊÔ");
+	//	logInform("lp1:","EFEMLoadPortOpenBoxCommand æ¨¡æ‹Ÿæµ‹è¯•.");
 	//	return RunResult::RUN_OK;
 	//}
 
@@ -96,14 +96,14 @@ EFEMLoadPortOpenBoxCommand::RunResult EFEMLoadPortOpenBoxCommand::onRun() throw(
 	else if (lp->getCommandState() == EFEMAsciiApi::State::TRANS_REQUEST_FAILD){
 		if (lp->map_double != "" || lp->map_crossed != "" || lp->map_unknown != ""){
 			d->isNeedReset = false;
-			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, Poco::format("¹¤Î»: %s É¨Ãè³ö¾§Ô²Òì³£%s %s %s", getName(), 
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, Poco::format("å·¥ä½: %s æ‰«æå‡ºæ™¶åœ†å¼‚å¸¸%s %s %s", getName(), 
 				lp->map_double, lp->map_crossed, lp->map_unknown)));
 			setAlarm(alarm);
 		}
 		else{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
 				KernelSysException::KR_MODULE_STATE_EXCEPTION,
-				Poco::format("%s %s ÃüÁîÊ§°Ü", lp->getName(), getName())));
+				Poco::format("%s %s å‘½ä»¤å¤±è´¥", lp->getName(), getName())));
 			setAlarm(alarm);
 		}
 

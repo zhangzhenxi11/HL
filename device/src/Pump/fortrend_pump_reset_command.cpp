@@ -60,7 +60,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 机械泵报警复位地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "复位命令开始执行");
+		logInform(sub->getName().c_str(), "复位命令开始执行.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (writeBit(mechanical_reset_address, true))
 		{
@@ -68,7 +68,7 @@ namespace FC{
 			if (writeBit(mechanical_reset_address, false))
 			{
 				ret = IKernelCommand::RunResult::RUN_OK;
-				logInform(sub->getName().c_str(), "复位命令执行结束");
+				logInform(sub->getName().c_str(), "复位命令执行结束.");
 			}
 			else{
 				AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, "复位命令执行结束错误,原因：写0到机械泵报警复位地址失败。"));

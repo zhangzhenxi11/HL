@@ -46,7 +46,7 @@ IKernelCommand::RunResult EFEMAlignerResetCommand::onRun() throw(KernelException
 	}
 	//get command configure
 	std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-	logInform(sub->getName().c_str(), "复位命令开始执行");
+	logInform(sub->getName().c_str(), "复位命令开始执行.");
 
     /*ALIGN参数说明\n注意：参数可为空。若参数为空，
     边缘查找器将在完成边缘搜索后自动调用默认角度。
@@ -81,7 +81,7 @@ IKernelCommand::RunResult EFEMAlignerResetCommand::onRun() throw(KernelException
 	}
 	
 	sub->getKernel()->getKernelBlockManager()->releaseBlock(sub);
-    logInform(sub->getName().c_str(), "复位命令执行结束");
+    logInform(sub->getName().c_str(), "复位命令执行结束.");
 
     return ret;
 

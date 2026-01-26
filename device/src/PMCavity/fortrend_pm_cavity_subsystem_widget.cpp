@@ -296,7 +296,7 @@ namespace FC{
 		{
 			return;
 		}
-		logInform(getSubsystem()->getName().c_str(), "确定清除腔室内部有片标记");
+		logInform(getSubsystem()->getName().c_str(), "确定清除腔室内部有片标记.");
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createClearStateCommand();
 		executeCommand(getSubsystem(), cmd);
 	}

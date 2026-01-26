@@ -479,7 +479,7 @@ namespace FC{
 
 	int PumpOpenLoadLock2AutoVacuumCommand::handleStep10000()
 	{
-		logInform(d->lk2->getName().c_str(), "抽真空循环结束");
+		logInform(d->lk2->getName().c_str(), "抽真空循环结束.");
 		d->loop = false;
 		return -1;
 	}

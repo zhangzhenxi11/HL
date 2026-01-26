@@ -72,7 +72,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 复位指令地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "复位指令开始");
+		logInform(sub->getName().c_str(), "复位指令开始.");
 		if (!writeBit(start_address, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到复位指令地址错误", sub->getName()), this);
@@ -99,7 +99,7 @@ namespace FC{
 		if (readRes[0])
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "复位指令执行结束");
+			logInform(sub->getName().c_str(), "复位指令执行结束.");
 
 		}
 		else if (readRes[1])
@@ -109,13 +109,13 @@ namespace FC{
 			auto code_message = getErrorCode(1, code);
 			AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "复位指令执行失败");
+			logError(sub->getName().c_str(), "复位指令执行失败.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "复位指令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "复位指令通讯超时");
+			logError(sub->getName().c_str(), "复位指令通讯超时.");
 		}
 		return ret;
 		

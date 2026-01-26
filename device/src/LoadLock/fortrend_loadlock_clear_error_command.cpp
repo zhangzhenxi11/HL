@@ -54,7 +54,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s:请先子系统复位", sub->getName()).c_str(), this);
 		}
-		logInform(getName().c_str(), "清除错误命令开始完成");
+		logInform(getName().c_str(), "清除错误命令开始完成.");
 		return IKernelCommand::RunResult::RUN_OK;
 
 	}

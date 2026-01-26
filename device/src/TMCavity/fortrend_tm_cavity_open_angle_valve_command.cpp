@@ -137,7 +137,7 @@ namespace FC{
 				Poco::format("地址: 打开角阀命令定义未定义", getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "打开角阀命令执行开始");
+		logInform(sub->getName().c_str(), "打开角阀命令执行开始.");
 		if (!writeBit(address_1, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
@@ -150,7 +150,7 @@ namespace FC{
 		}
 
 		Sleep(500);
-		logInform(sub->getName().c_str(),"打开角阀命令开始执行");
+		logInform(sub->getName().c_str(),"打开角阀命令开始执行.");
 		int loopCount = timeout / 20;
 		int count = 0;
 		bool readRes = false;
@@ -173,21 +173,21 @@ namespace FC{
 		{
 			sub->setAngleValveOpend(true);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "打开角阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开角阀命令执行结束.");
 
 		}
 		else if (readRes_failed)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开角阀命令执行失败，打开角阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开角阀命令执行失败，打开角阀到位信号异常");
+			logError(sub->getName().c_str(), "打开角阀命令执行失败，打开角阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
 				KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开角阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开角阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开角阀命令通讯超时.");
 		}
 		return ret;
 	}

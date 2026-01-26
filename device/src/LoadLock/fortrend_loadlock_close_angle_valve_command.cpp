@@ -76,7 +76,7 @@ namespace FC{
 		//	return RunResult::RUN_OK;
 		//}
 
-		logInform(sub->getName().c_str(), "关闭角阀命令开始执行");
+		logInform(sub->getName().c_str(), "关闭角阀命令开始执行.");
 
 		if (!writeBit(address_1, true))
 		{
@@ -106,20 +106,20 @@ namespace FC{
 		{
 			sub->setAngleValveOpend(false);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "关闭角阀命令执行完成");
+			logInform(sub->getName().c_str(), "关闭角阀命令执行完成.");
 			
 		}
 		else if (readState)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "关闭角阀命令执行失败，关闭角阀到位信号异常"));
 			setAlarm(alarm);
-			//logError(sub->getName().c_str(), "关闭角阀命令执行失败，关闭角阀到位信号异常");
+			//logError(sub->getName().c_str(), "关闭角阀命令执行失败，关闭角阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "关闭角阀命令通讯超时"));
 			setAlarm(alarm);
-			//logError(sub->getName().c_str(), "关闭角阀命令通讯超时");
+			//logError(sub->getName().c_str(), "关闭角阀命令通讯超时.");
 		}
 		return ret;
 	}

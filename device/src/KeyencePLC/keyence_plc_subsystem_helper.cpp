@@ -182,7 +182,7 @@ bool KeyencePlcSubSystemHelperPrivate::initialize()
 	serverAddr.sin_port = htons(port);
 	if (inet_pton(AF_INET, ip_address.c_str(), &(serverAddr.sin_addr)) <= 0)
 	{
-		logError(name.c_str(), "IP地址验证失败");
+		logError(name.c_str(), "IP地址验证失败.");
 		closesocket(*client);
 		WSACleanup();
 		return false;
@@ -208,7 +208,7 @@ bool KeyencePlcSubSystemHelperPrivate::initialize()
 		}
 		else
 		{
-			logError(name.c_str(), "连接到PLC失败");
+			logError(name.c_str(), "连接到PLC失败.");
 			closesocket(*client);
 			return false;
 		}

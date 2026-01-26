@@ -95,7 +95,7 @@ namespace FC{
 		[P1]：手指，A或B
 		[P2]：STATE,0机械手上无晶圆,1机械手上有晶圆 (int)
 		*/
-		logInform(robot->getName().c_str(), Poco::format("设置手指%s有无晶圆命令开始执行", str_arm).c_str());
+		logInform(robot->getName().c_str(), Poco::format("设置手指%s有无晶圆命令开始执行.", str_arm).c_str());
 		std::string error_message;
 		int error_code = 0;
 		int error_type = 1;

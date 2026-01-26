@@ -204,7 +204,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开传输腔插板门阀地址未定义", getName()), this);
 		}
 		
-		logInform(sub->getName().c_str(), "打开传输腔插板门阀命令开始");
+		logInform(sub->getName().c_str(), "打开传输腔插板门阀命令开始.");
 		if (!KeyencePlcCommandExecuter::writeBit(close_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到关闭传输腔门阀命令地址错误", sub->getName()), this);
@@ -237,20 +237,20 @@ namespace FC{
 		{
 			sub->setDoorOpen(true);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "打开传输腔插板门阀命令完成");
+			logInform(sub->getName().c_str(), "打开传输腔插板门阀命令完成.");
 
 		}
 		else if (failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "打开传输腔门阀命令执行失败，打开传输腔门阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开传输腔门阀命令执行失败，打开传输腔门阀到位信号异常");
+			logError(sub->getName().c_str(), "打开传输腔门阀命令执行失败，打开传输腔门阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开传输腔插板阀超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开传输腔插板阀超时");
+			logError(sub->getName().c_str(), "打开传输腔插板阀超时.");
 		}
 		return ret;
 

@@ -85,7 +85,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s PM-机械手抓放料完成信号未到位", sub->getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "关闭传输腔门阀命令开始");
+		logInform(sub->getName().c_str(), "关闭传输腔门阀命令开始.");
 		if (!writeBit(open_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 0 到打开传输腔门阀命令地址错误", sub->getName()), this);
@@ -119,20 +119,20 @@ namespace FC{
 		{
 			sub->setDoorOpen(false);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "关闭传输腔门阀命令执行结束");
+			logInform(sub->getName().c_str(), "关闭传输腔门阀命令执行结束.");
 			
 		}
 		else if (failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常");
+			logError(sub->getName().c_str(), "关闭传输腔门阀命令执行失败，关闭传输腔门阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "关闭传输腔门阀命令超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "关闭传输腔门阀命令超时");
+			logError(sub->getName().c_str(), "关闭传输腔门阀命令超时.");
 		}
 		return ret;
 

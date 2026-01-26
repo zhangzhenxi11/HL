@@ -55,7 +55,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 清除状态地址未定义", getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_OK;
-		logInform(sub->getName().c_str(), "清除状态命令执行开始");
+		logInform(sub->getName().c_str(), "清除状态命令执行开始.");
 		if (!writeBit(clear_state_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到清除状态地址错误", sub->getName()), this);
@@ -72,7 +72,7 @@ namespace FC{
 		all_slot.push_back(1);
 		all_mapping.push_back(Cassette::Mapping::Empty);
 		station_cass->setMapping(all_slot, all_mapping);
-		logInform(sub->getName().c_str(), "清除状态命令执行结束");
+		logInform(sub->getName().c_str(), "清除状态命令执行结束.");
 		return ret;
 
 

@@ -83,7 +83,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 复位命令地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "复位命令开始");
+		logInform(sub->getName().c_str(), "复位命令开始.");
 		sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 		int32_t lifting_axis_alarm_code = 0;
 		int32_t rotating_axis_alarm_code = 0;
@@ -125,12 +125,12 @@ namespace FC{
 			if (readZaxisRes)
 			{
 				ret = IKernelCommand::RunResult::RUN_OK;
-				logInform(sub->getName().c_str(), "清除升降轴错误命令执行结束");
+				logInform(sub->getName().c_str(), "清除升降轴错误命令执行结束.");
 
 			}
 			else
 			{
-				logError(sub->getName().c_str(), "清除升降轴错误命令执行失败");
+				logError(sub->getName().c_str(), "清除升降轴错误命令执行失败.");
 				auto code_message = getErrorCode(3, lifting_axis_alarm_code); 
 				AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
 				setAlarm(alarm);
@@ -163,11 +163,11 @@ namespace FC{
 			if (readRaxisRes)
 			{
 				ret = IKernelCommand::RunResult::RUN_OK;
-				logInform(sub->getName().c_str(), "清除旋转轴错误命令执行结束");
+				logInform(sub->getName().c_str(), "清除旋转轴错误命令执行结束.");
 			}
 			else
 			{
-				logError(sub->getName().c_str(), "清除旋转轴错误命令执行失败");
+				logError(sub->getName().c_str(), "清除旋转轴错误命令执行失败.");
 				auto code_message = getErrorCode(2, rotating_axis_alarm_code); //待定
 				AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
 				setAlarm(alarm);
@@ -178,7 +178,7 @@ namespace FC{
 		else
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "复位命令执行结束");
+			logInform(sub->getName().c_str(), "复位命令执行结束.");
 		}
 
 		return ret;

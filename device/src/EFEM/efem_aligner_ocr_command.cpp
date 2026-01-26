@@ -59,7 +59,7 @@ IKernelCommand::RunResult EFEMAlignerOcrCommand::onRun() throw(KernelException)
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
 			Poco::format("超时: 读码超时参数设置失败", sub->getName()), this);
 	}
-	logInform(sub->getName().c_str(), "读码命令开始执行");
+	logInform(sub->getName().c_str(), "读码命令开始执行.");
 
 	// MOV:TRIGGER/OCR1;  MOV:TRIGGER/OCR2;   上：OCR1  下：OCR2
 
@@ -98,7 +98,7 @@ IKernelCommand::RunResult EFEMAlignerOcrCommand::onRun() throw(KernelException)
 
 	}
 	sub->getKernel()->getKernelBlockManager()->releaseBlock(sub);
-	logInform(sub->getName().c_str(), "读码命令执行结束");
+	logInform(sub->getName().c_str(), "读码命令执行结束.");
     return RunResult::RUN_OK;
 }
 

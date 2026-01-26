@@ -154,7 +154,7 @@ namespace FC{
 			sub->setBoxPlacement(false);
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "移动到指定槽号命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "移动到指定槽号命令通讯超时");
+			logError(sub->getName().c_str(), "移动到指定槽号命令通讯超时.");
 		}
 		return ret;
 

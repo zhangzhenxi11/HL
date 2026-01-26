@@ -87,7 +87,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭放晶圆盒门阀地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令开始");
+		logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令开始.");
 
 
 		//if (SIMULATION_TEST == 1)
@@ -128,20 +128,20 @@ namespace FC{
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setCassetteDoorOpend(false);
-			logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令执行完成");
+			logInform(sub->getName().c_str(), "关闭放晶圆盒门阀命令执行完成.");
 			
 		}
 		else if (readFailedState && failedRes)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(0, 2, "关闭放晶圆盒门阀执行失败，关闭晶圆盒门阀到位信号异常"));
 			setAlarm(alarm);
-			//logError(sub->getName().c_str(), "关闭放晶圆盒门阀执行失败");
+			//logError(sub->getName().c_str(), "关闭放晶圆盒门阀执行失败.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "关闭放晶圆盒门阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "关闭放晶圆盒门阀命令通讯超时");
+			logError(sub->getName().c_str(), "关闭放晶圆盒门阀命令通讯超时.");
 		}
 		
 		return ret;

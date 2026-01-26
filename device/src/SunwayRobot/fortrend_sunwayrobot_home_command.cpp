@@ -77,7 +77,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 		setAlarm(alarm);
 		return RunResult::RUN_FAILD;
 	};
-	logInform(sub->getName().c_str(), "机械手HOME命令开始");
+	logInform(sub->getName().c_str(), "机械手HOME命令开始.");
 	res = recvResponseRobotMessage(timeout);
 
 	while (true)
@@ -103,7 +103,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 
 	if (res != std::string("ACK;") && res!= std::string("RPS:ALLAXISHOMESAFE;"))
 	{
-		logError(sub->getName().c_str(), "机械手HOME时存在一个错误");
+		logError(sub->getName().c_str(), "机械手HOME时存在一个错误.");
 		int error_type = 1;
 		int error_code = 0;
 		std::string error_message;
@@ -116,7 +116,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 		}
 		else
 		{
-			logError(sub->getName().c_str(), "执行机械手HOME时存在一个错误");
+			logError(sub->getName().c_str(), "执行机械手HOME时存在一个错误.");
 			auto error_strucct = getErrorCode(error_type, error_code);
 			error_type = error_strucct->type;
 			error_code = error_strucct->code;
@@ -189,7 +189,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 			}
 			catch (const std::invalid_argument& e) {
 				error_message = "处理字符串失败";
-				logError(getName().c_str(), "处理字符串失败");
+				logError(getName().c_str(), "处理字符串失败.");
 			}
 
 			//set alarm data
@@ -200,7 +200,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 
 		}
 
-		logInform(sub->getName().c_str(), "机械手HOME命令结束");
+		logInform(sub->getName().c_str(), "机械手HOME命令结束.");
 		return RunResult::RUN_OK;
 	}
 

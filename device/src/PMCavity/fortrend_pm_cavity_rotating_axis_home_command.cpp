@@ -72,7 +72,7 @@ PMCavityRotatingAxisHomeCommand::RunResult PMCavityRotatingAxisHomeCommand::onRu
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:旋转轴回原命令地址未定义", getName()), this);
     }
-    logInform(sub->getName().c_str(), "旋转轴回原命令开始执行");
+    logInform(sub->getName().c_str(), "旋转轴回原命令开始执行.");
     if (!writeBit(start_address, true))
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format("%s回原开始命令地址错误,地址:%s", 
@@ -107,7 +107,7 @@ PMCavityRotatingAxisHomeCommand::RunResult PMCavityRotatingAxisHomeCommand::onRu
     if (readRes)
     {
         ret = IKernelCommand::RunResult::RUN_OK;
-        logInform(sub->getName().c_str(), "旋转轴回原命令执行完成");
+        logInform(sub->getName().c_str(), "旋转轴回原命令执行完成.");
     }
     else if(!readRes)
     {

@@ -61,19 +61,19 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开流量计隔膜阀命令地址未定义", getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "打开流量计隔膜阀命令开始");
+		logInform(sub->getName().c_str(), "打开流量计隔膜阀命令开始.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (writeBit(address1, true) && writeBit(address2, true) && writeBit(address3, true))
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "打开流量计隔膜阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开流量计隔膜阀命令执行结束.");
 		}
 
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, "打开流量计隔膜阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开流量计隔膜阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开流量计隔膜阀命令通讯超时.");
 		}
 		return ret;
 

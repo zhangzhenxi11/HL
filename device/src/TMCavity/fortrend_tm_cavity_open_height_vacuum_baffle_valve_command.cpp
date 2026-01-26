@@ -109,7 +109,7 @@ namespace FC{
 		}
 		
 		
-		logInform(sub->getName().c_str(), "打开高真空挡板阀命令开始");
+		logInform(sub->getName().c_str(), "打开高真空挡板阀命令开始.");
 		if (!writeBit(address, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空挡板阀地址错误", sub->getName()), this);
@@ -134,20 +134,20 @@ namespace FC{
 		{
 			sub->setHeightVacuumBaffleValveOpend(true);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束.");
 		}
 		else if (readState)
 		{
 
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "打开高真空挡板阀命令执行失败，打开高真空挡板阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开高真空挡板阀命令执行失败，打开高真空挡板阀到位信号异常");
+			logError(sub->getName().c_str(), "打开高真空挡板阀命令执行失败，打开高真空挡板阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开高真空挡板阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开高真空挡板阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开高真空挡板阀命令通讯超时.");
 		}
 		return ret;
 
@@ -162,13 +162,13 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s : 传输腔当前真空压力大于粗抽压力设定值无法打开高真空挡板阀（逻辑错误）", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "打开高真空挡板阀命令开始");
+		logInform(sub->getName().c_str(), "打开高真空挡板阀命令开始.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (writeBit(address, true))
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setHeightVacuumBaffleValveOpend(true);
-			logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束.");
 
 		}
 
@@ -176,7 +176,7 @@ namespace FC{
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, "打开高真空挡板阀命令通讯错误"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开高真空挡板阀命令通讯错误");
+			logError(sub->getName().c_str(), "打开高真空挡板阀命令通讯错误.");
 		}
 		return ret;*/
 

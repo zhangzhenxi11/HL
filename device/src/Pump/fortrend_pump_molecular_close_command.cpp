@@ -133,7 +133,7 @@ namespace FC{
 			else if (moduleName == "TM"){
 				sub->setMolecularPumpOpenedTM(false);
 			}
-			logInform(sub->getName().c_str(), "关闭分子泵命令执行完成");
+			logInform(sub->getName().c_str(), "关闭分子泵命令执行完成.");
 
 		}
 		else if (readRes2)

@@ -75,7 +75,7 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 旋转轴命令地址未定义", getName()), this);
     }
-    logInform(sub->getName().c_str(), "旋转轴动作命令开始执行");
+    logInform(sub->getName().c_str(), "旋转轴动作命令开始执行.");
     sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
     if (!writeFloat(relative_position_address, d->_degree))
@@ -114,7 +114,7 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
         }
 
         ret = IKernelCommand::RunResult::RUN_OK;
-        logInform(sub->getName().c_str(), "旋转轴定位开始命令执行完成");
+        logInform(sub->getName().c_str(), "旋转轴定位开始命令执行完成.");
     }
     else if (!readRes || failedRes)
     {

@@ -97,7 +97,7 @@ namespace FC{
 		//	logInform(sub->getName().c_str(), "模拟打开隔膜阀命令执行完成...");
 		//	return RunResult::RUN_OK;
 		//}
-		logInform(sub->getName().c_str(), "打开隔膜阀命令开始");
+		logInform(sub->getName().c_str(), "打开隔膜阀命令开始.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		bool write_result = false;
 		
@@ -130,13 +130,13 @@ namespace FC{
 			//	sub->setFastDiaphragmValveOpend(true);
 			//}
 			
-			logInform(sub->getName().c_str(), "打开隔膜阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开隔膜阀命令执行结束.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, "打开隔膜阀命令执行错误"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开隔膜阀命令执行错误");
+			logError(sub->getName().c_str(), "打开隔膜阀命令执行错误.");
 		}
 		return ret;
 

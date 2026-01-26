@@ -62,7 +62,7 @@ namespace FC{
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 复位指令超时时间设置错误", sub->getName()), this);
 		}
-		logInform(sub->getName().c_str(), "复位指令开始");
+		logInform(sub->getName().c_str(), "复位指令开始.");
 		
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (sendRequest("ALGN RESET "))
@@ -71,7 +71,7 @@ namespace FC{
 			if (recv_data == "_RDY ")
 			{
 				ret = IKernelCommand::RunResult::RUN_OK;
-				logInform(sub->getName().c_str(), "复位指令执行结束");
+				logInform(sub->getName().c_str(), "复位指令执行结束.");
 			}
 			else{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("子系统: 接收命令错误,返回数据：%s", recv_data), this);

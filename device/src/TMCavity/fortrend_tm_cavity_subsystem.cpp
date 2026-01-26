@@ -648,7 +648,7 @@ namespace FC{
 		d->tm_cavity_pid_set_value = pid_value;
 		if (writeTMCavityPIDValue(pid_value) == false)
 		{
-			logError(getName().c_str(), "PID设定值地址写入失败");
+			logError(getName().c_str(), "PID设定值地址写入失败.");
 		}
 		logInform(getName().c_str(), Poco::format("%s 设置PID设定值：%f", getName(), d->tm_cavity_pid_set_value).c_str());
 	}
@@ -657,7 +657,7 @@ namespace FC{
 		{
 			return writeDouble(d->tm_cavity_pid_set_value_address, d->tm_cavity_pid_set_value);
 		}
-		logError(getName().c_str(), "PID设定值地址未设置");
+		logError(getName().c_str(), "PID设定值地址未设置.");
 		return false;
 		
 	}

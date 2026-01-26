@@ -66,7 +66,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 清除错误超时参数设置错误", robot->getName()), this);
 		}
 
-		logInform(getName().c_str(), "清除错误命令开始执行");
+		logInform(getName().c_str(), "清除错误命令开始执行.");
 
 		auto cmd_reset = robot->createResetCommand();
 		robot->startCommand(cmd_reset);
@@ -100,7 +100,7 @@ namespace FC{
 			}
 			else
 			{
-				logError(robot->getName().c_str(), "执行移动至机械手的原点位置时存在一个错误");
+				logError(robot->getName().c_str(), "执行移动至机械手的原点位置时存在一个错误.");
 				auto error_strucct = getErrorCode(error_type, error_code);
 				error_type = error_strucct->type;
 				error_code = error_strucct->code;
@@ -115,7 +115,7 @@ namespace FC{
 		else
 		{
 			Sleep(500);
-			logInform(getName().c_str(), "清除命令执行结束");
+			logInform(getName().c_str(), "清除命令执行结束.");
 		}
 #endif
 		return RunResult::RUN_OK;

@@ -58,19 +58,19 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭排气阀地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "关闭排气阀命令开始");
+		logInform(sub->getName().c_str(), "关闭排气阀命令开始.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (writeBit(address, false))
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setExhaustValveOpend(false);
-			logInform(sub->getName().c_str(), "关闭排气阀命令结束。");
+			logInform(sub->getName().c_str(), "关闭排气阀命令结束.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, "关闭排气阀命令通讯错误"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "关闭排气阀命令通讯错误");
+			logError(sub->getName().c_str(), "关闭排气阀命令通讯错误.");
 		}
 		return ret;
 

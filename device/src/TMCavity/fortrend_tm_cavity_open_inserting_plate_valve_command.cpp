@@ -100,7 +100,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开插板阀地址未定义", getName()), this);
 		}
-		logInform(sub->getName().c_str(), "打开插板阀命令开始");
+		logInform(sub->getName().c_str(), "打开插板阀命令开始.");
 		if (!writeBit(close_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写0到关闭插板阀地址错误", sub->getName()), this);
@@ -130,20 +130,20 @@ namespace FC{
 		{
 			sub->setInsertingPlateValveOpend(true);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "打开插板阀命令执行结束");
+			logInform(sub->getName().c_str(), "打开插板阀命令执行结束.");
 		}
 		else if (readState)
 		{
 
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "打开插板阀命令执行失败，打开插板阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开插板阀命令执行失败，打开插板阀到位信号异常");
+			logError(sub->getName().c_str(), "打开插板阀命令执行失败，打开插板阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开插板阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开插板阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开插板阀命令通讯超时.");
 		}
 		return ret;
 	}

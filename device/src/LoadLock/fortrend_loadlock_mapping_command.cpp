@@ -104,7 +104,7 @@ namespace FC{
 		//return IKernelCommand::RunResult::RUN_OK;
 
 		sub->setBoxPlacement(false);
-		logInform(sub->getName().c_str(), "检测槽是否有wafer命令开始");
+		logInform(sub->getName().c_str(), "检测槽是否有wafer命令开始.");
 
 		bool nfirst_res = false;
 		bool nSecond_res = false;
@@ -196,7 +196,7 @@ namespace FC{
 
 		//AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "扫描命令通讯超时"));
 		//setAlarm(alarm);
-		//logError(sub->getName().c_str(), "扫描命令通讯超时");
+		//logError(sub->getName().c_str(), "扫描命令通讯超时.");
 	}
 
 }

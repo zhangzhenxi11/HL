@@ -84,7 +84,7 @@ namespace FC{
 				Poco::format("超时: %s 打开机械泵超时参数错误", sub->getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "打开机械泵命令开始");
+		logInform(sub->getName().c_str(), "打开机械泵命令开始.");
 
 		if (!writeBit(address, true))
 		{
@@ -113,7 +113,7 @@ namespace FC{
 		{
 			ret = IKernelCommand::RunResult::RUN_OK;
 			sub->setMechanicalPumpOpened(true);
-			logInform(sub->getName().c_str(), "打开机械泵命令执行结束");
+			logInform(sub->getName().c_str(), "打开机械泵命令执行结束.");
 
 		}
 		else if (readRes2)

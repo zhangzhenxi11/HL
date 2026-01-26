@@ -94,7 +94,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::performRobotOp
 			if (!robot) {
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 			}
-			logError(robot->getName().c_str(), "更新晶圆状态失败");
+			logError(robot->getName().c_str(), "更新晶圆状态失败.");
 			std::string error_message = "机械手更新晶圆状态失败";
 			int error_code = 0x101;
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));

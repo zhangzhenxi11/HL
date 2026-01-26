@@ -791,7 +791,7 @@ namespace FC{
 				if (needReset_EFEM.load()) {
 					efem_auto_step = 10;
 					needReset_EFEM = false;
-					logWarn("EFEM", "重置，跳过本次循环剩余部分");
+					logWarn("EFEM", "重置，跳过本次循环剩余部分.");
 					continue; // 跳过本次循环剩余部分
 				}
 
@@ -811,7 +811,7 @@ namespace FC{
 							{
 								if (!lp1_cycle_one_time_finished)
 								{
-									logWarn("cycle", "当前一次lp1循环完成");
+									logWarn("cycle", "当前一次lp1循环完成.");
 									lp1_cycle_one_time_finished = true;//一次lp1循环完成
 								}
 							}
@@ -819,7 +819,7 @@ namespace FC{
 							{
 								if (!lp2_cycle_one_time_finished)
 								{
-									logWarn("cycle", "当前一次lp2循环完成");
+									logWarn("cycle", "当前一次lp2循环完成.");
 									lp2_cycle_one_time_finished = true;//一次lp2循环完成
 								}
 							}
@@ -967,14 +967,14 @@ namespace FC{
 							if (lkmaps[i] == Cassette::Empty) //空片的槽号
 							{
 								count = 1; 
-								logWarn(lk->getName().c_str(),"当前传片模式是:Go_Up_And_Down");
+								logWarn(lk->getName().c_str(),"当前传片模式是:Go_Up_And_Down.");
 								break;
 							}
 						}	
 					}
 					else if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
 					{
-						logWarn(lk->getName().c_str(), "当前传片模式是:Double_Up_And_Down");
+						logWarn(lk->getName().c_str(), "当前传片模式是:Double_Up_And_Down.");
 						lkmaps = station_cass_lk->getAllMapping();
 
 						//2026-1-19  lp中有多片下，按loadlock空槽数，去上料
@@ -1941,7 +1941,7 @@ namespace FC{
 							if (efemReturnPendingTasks.size() == 0 && efemReturnCompletedTasks.size() == originTaskSize)
 							{
 								//整个lp下料完成
-								logWarn(elp1->getName().c_str(), "整个lp下料完成");
+								logWarn(elp1->getName().c_str(), "整个lp下料完成.");
 
 								if (elp1 && elp1->getState() == IKernelSubSystem::State::SUB_NORMAL) {
 									if (elp1->hasDoorOpend()) {
@@ -2497,7 +2497,7 @@ namespace FC{
 					taskManager.updateTaskStatus(efemPendingTasks[0].taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 
 					Sleep(500);
-					logWarn("SimCycle", "EFEM给LL单上料完成");
+					logWarn("SimCycle", "EFEM给LL单上料完成.");
 					efem_auto_step = 110; //跳转到110
 
 				}
@@ -2513,7 +2513,7 @@ namespace FC{
 					taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 					taskManager.updateTaskStatus(efemPendingTasks.at(1).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::QUEUED);
 					Sleep(500);
-					logWarn("SimCycle", "EFEM给LL双上料完成");
+					logWarn("SimCycle", "EFEM给LL双上料完成.");
 					efem_auto_step = 110;
 				}
 				break;
@@ -2544,7 +2544,7 @@ namespace FC{
 					taskManager.updateTaskStatus(efemReturnPendingTasks[0].taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
 
 					efem_auto_step = 201;
-					logWarn("SimCycle", "EFEM给LL单下料完成 ");
+					logWarn("SimCycle", "EFEM给LL单下料完成 .");
 				}
 				break;
 				#pragma endregion
@@ -2553,7 +2553,7 @@ namespace FC{
 				case 4001:
 				{
 					efem_auto_step = 257;
-					logWarn("SimCycle", "EFEM给LL双下料完成 ");
+					logWarn("SimCycle", "EFEM给LL双下料完成 .");
 				}
 				break;
 
@@ -2610,7 +2610,7 @@ namespace FC{
 				if (needReset_LLA.load()) {
 					loadlock1_auto_step = 10;
 					needReset_LLA = false;
-					logWarn(lk1->getName().c_str(), "重置，跳过本次循环剩余部分");
+					logWarn(lk1->getName().c_str(), "重置，跳过本次循环剩余部分.");
 					continue; // 跳过本次循环剩余部分
 				}
 
@@ -2631,13 +2631,13 @@ namespace FC{
 					bool isInterlock = isLoadingInterlock("LLA");
 					if (isInterlock)
 					{
-						//logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLA上料互锁");
+						//logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLA上料互锁.");
 					}
 
 					//在LLA槽中，没有传输任务,说明没有上料需求，所有wafer都完成下料到LP中
 					if (loadLockAPendingTasks.size() == 0 && current_lp_cycle)
 					{
-						logInform(lk1->getName().c_str(), "此时current_lp_cycle循环");
+						logInform(lk1->getName().c_str(), "此时current_lp_cycle循环.");
 						loadlock1_auto_step = 6000;
 					}
 
@@ -2679,7 +2679,7 @@ namespace FC{
 				{
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logInform("Cycle", "step 20:大气cycle,跳过真空检测");
+						logInform("Cycle", "step 20:大气cycle,跳过真空检测.");
 						loadlock1_auto_step = 300;
 					}
 					else
@@ -2726,7 +2726,7 @@ namespace FC{
 				case 301:
 				{
 					tool_allow_get_wafer_LLA = true;
-					logInform(lk1->getName().c_str(), "已发送上料请求");
+					logInform(lk1->getName().c_str(), "已发送上料请求.");
 					loadlock1_auto_step = 302;
 				}
 				break;
@@ -2777,7 +2777,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "step:400, 大气cycle，跳过真空检测");
+							logInform("Cycle", "step:400, 大气cycle，跳过真空检测.");
 							loadlock1_auto_step = 800;
 						}
 						else
@@ -2852,7 +2852,7 @@ namespace FC{
 						//LLA未达到真空设定值且在抽其他腔室
 						if (lk1->getVacuumValueReachesTheSetValue() && loadlock1_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
-							logInform("Cycle", "step:510, lk1真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室");
+							logInform("Cycle", "step:510, lk1真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室.");
 							loadlock1_get_vacuum = false;
 						}
 						Sleep(500);
@@ -2866,7 +2866,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle","step:800,大气cycle，跳过真空检测");
+							logInform("Cycle","step:800,大气cycle，跳过真空检测.");
 							loadlock1_auto_step = 810;
 						}
 						else
@@ -2928,7 +2928,7 @@ namespace FC{
 				{
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logInform("Cycle", "step: 901,大气cycle，跳过真空检测");
+						logInform("Cycle", "step: 901,大气cycle，跳过真空检测.");
 						loadlock1_auto_step = 950;
 					}
 					else
@@ -2968,7 +2968,7 @@ namespace FC{
 					{
 						if (lk1->getVacuumValueReachesTheSetValue() && loadlock1_get_vacuum && (loadlock2_get_vacuum || tm_get_vacuum))
 						{
-							logInform("Cycle", "step:920, lk1真空值已经达到，真空规读取数值波动或者泵在抽其他腔室");
+							logInform("Cycle", "step:920, lk1真空值已经达到，真空规读取数值波动或者泵在抽其他腔室.");
 							loadlock1_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -3127,7 +3127,7 @@ namespace FC{
 						}
 						else
 						{
-							logInform(lk1->getName().c_str(), "此时Tm腔真空波动，导致触发TM自动抽真空流程");
+							logInform(lk1->getName().c_str(), "此时Tm腔真空波动，导致触发TM自动抽真空流程.");
 							loadlock1_auto_step = 1050;
 						}
 					}
@@ -3186,7 +3186,7 @@ namespace FC{
 							{
 								logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
 							}
-							logInform(lk1->getName().c_str(), "呼叫:%s 取放片", pmName.c_str());
+							logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
 						}
 						else
 						{
@@ -3229,7 +3229,7 @@ namespace FC{
 								{
 									logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
 								}
-								logInform(lk1->getName().c_str(), "呼叫:%s 取放片", pmName.c_str());
+								logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
 							}
 							else
 							{
@@ -3468,7 +3468,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "step:5000 ,大气cycle，跳过破真空");
+							logInform("Cycle", "step:5000 ,大气cycle，跳过破真空.");
 							loadlock1_auto_step = 5022;
 						}
 						else
@@ -3507,7 +3507,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "大气cycle，跳过破真空");
+							logInform("Cycle", "大气cycle，跳过破真空.");
 							loadlock1_auto_step = 5023;
 						}
 						else
@@ -3538,14 +3538,14 @@ namespace FC{
 				{
 					//tool_allow_put_wafer = true;//呼叫EFEM下料
 					tool_allow_put_wafer_LLA = true;
-					logWarn(lk1->getName().c_str(), "LLA 呼叫EFEM下料");
+					logWarn(lk1->getName().c_str(), "LLA 呼叫EFEM下料.");
 					loadlock1_auto_step = 5024;
 				}
 				break;
 				case 5024:
 				{
 					if (!tool_allow_put_wafer_LLA) {//下料完成
-						logWarn(lk1->getName().c_str(), "LLA 呼叫EFEM下料完成");
+						logWarn(lk1->getName().c_str(), "LLA 呼叫EFEM下料完成.");
 						loadlock1_auto_step = 5025;
 					}
 					else {
@@ -3650,7 +3650,7 @@ namespace FC{
 				if (needReset_LLB.load()) {
 					loadlock2_auto_step = 10;
 					needReset_LLB = false;
-					logWarn(lk2->getName().c_str(), "重置，跳过本次循环剩余部分");
+					logWarn(lk2->getName().c_str(), "重置，跳过本次循环剩余部分.");
 					continue; // 跳过本次循环剩余部分
 				}
 
@@ -3670,13 +3670,13 @@ namespace FC{
 					bool isInterlock = isLoadingInterlock("LLB");
 					if (isInterlock)
 					{
-						//logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLB上料互锁");
+						//logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLB上料互锁.");
 					}
 
 					//判断是否lp2循环
 					if (loadLockBPendingTasks.size() == 0 && current_lp_cycle)
 					{
-						logInform(lk2->getName().c_str(), "此时current_lp_cycle循环");
+						logInform(lk2->getName().c_str(), "此时current_lp_cycle循环.");
 						loadlock2_auto_step = 6000;
 					}
 
@@ -3715,7 +3715,7 @@ namespace FC{
 				{
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logInform("Cycle", "step 20:大气cycle,跳过真空检测");
+						logInform("Cycle", "step 20:大气cycle,跳过真空检测.");
 						loadlock2_auto_step = 300;
 					}
 					else
@@ -3764,7 +3764,7 @@ namespace FC{
 				case 301:
 				{
 					tool_allow_get_wafer_LLB = true;//呼叫LP上料
-					logInform(lk2->getName().c_str(), "已发送上料请求");
+					logInform(lk2->getName().c_str(), "已发送上料请求.");
 					loadlock2_auto_step = 302;
 				}
 				break;
@@ -3772,7 +3772,7 @@ namespace FC{
 				{
 					if (!tool_allow_get_wafer_LLB)
 					{	//EFEM上料完成
-						logInform(lk2->getName().c_str(), "EFEM上料完成");
+						logInform(lk2->getName().c_str(), "EFEM上料完成.");
 						loadlock2_auto_step = 350;
 						loadlock2_put_cassette_finished = true; //放料到loadlock2完成
 					}
@@ -3816,7 +3816,7 @@ namespace FC{
 
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "step:400, 大气cycle，跳过真空检测");
+							logInform("Cycle", "step:400, 大气cycle，跳过真空检测.");
 							loadlock2_auto_step = 800;
 						}
 						else
@@ -3889,7 +3889,7 @@ namespace FC{
 					{
 						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock1_get_vacuum || tm_get_vacuum))
 						{
-							logInform("Cycle", "step:510, lk2真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室");
+							logInform("Cycle", "step:510, lk2真空值已经达到设定值，真空规读取数值波动或者泵在抽其他腔室.");
 							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -3903,7 +3903,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "step:800,大气cycle，跳过真空检测");
+							logInform("Cycle", "step:800,大气cycle，跳过真空检测.");
 							loadlock2_auto_step = 810;
 						}
 						else
@@ -3964,7 +3964,7 @@ namespace FC{
 				{
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logInform("Cycle", "step: 901,大气cycle，跳过真空检测");
+						logInform("Cycle", "step: 901,大气cycle，跳过真空检测.");
 						loadlock2_auto_step = 950;
 					}
 					else
@@ -4002,7 +4002,7 @@ namespace FC{
 					else {
 						if (lk2->getVacuumValueReachesTheSetValue() && loadlock2_get_vacuum && (loadlock1_get_vacuum || tm_get_vacuum))
 						{
-							logInform("Cycle", "step:920, lk2真空值已经达到，泵在抽其他腔室或真空数值波动!");
+							logInform("Cycle", "step:920, lk2真空值已经达到，泵在抽其他腔室或真空数值波动!.");
 							loadlock2_get_vacuum = false;//真空值已经达到，泵在抽其他腔室
 						}
 						Sleep(100);
@@ -4160,7 +4160,7 @@ namespace FC{
 						}
 						else
 						{
-							logInform(lk2->getName().c_str(), "此时Tm腔真空波动导致触发自动抽真空流程");
+							logInform(lk2->getName().c_str(), "此时Tm腔真空波动导致触发自动抽真空流程.");
 							loadlock2_auto_step = 1050;
 						}
 					}
@@ -4512,7 +4512,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "step:5000 ,大气cycle，跳过破真空");
+							logInform("Cycle", "step:5000 ,大气cycle，跳过破真空.");
 							loadlock2_auto_step = 5022;
 						}
 						else
@@ -4551,7 +4551,7 @@ namespace FC{
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logInform("Cycle", "大气cycle，跳过破真空");
+							logInform("Cycle", "大气cycle，跳过破真空.");
 							loadlock2_auto_step = 5023;
 						}
 						else
@@ -4582,14 +4582,14 @@ namespace FC{
 				{
 					//tool_allow_put_wafer = true;//呼叫EFEM下料
 					tool_allow_put_wafer_LLB = true;
-					logWarn(lk2->getName().c_str(), "LLB 呼叫EFEM下料");
+					logWarn(lk2->getName().c_str(), "LLB 呼叫EFEM下料.");
 					loadlock2_auto_step = 5024;
 				}
 				break;
 				case 5024:
 				{
 					if (!tool_allow_put_wafer_LLB) {//下料完成
-						logWarn(lk2->getName().c_str(), "LLB 呼叫EFEM下料完成");
+						logWarn(lk2->getName().c_str(), "LLB 呼叫EFEM下料完成.");
 						loadlock2_auto_step = 5025;
 					}
 					else {
@@ -4721,7 +4721,7 @@ namespace FC{
 							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
 							if (loadLockACompletedTasks.size() > 0)
 							{
-								logInform("PM1", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM1", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockACompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -4731,7 +4731,7 @@ namespace FC{
 							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
 							if (loadLockBCompletedTasks.size() > 0)
 							{
-								logInform("PM1", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM1", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockBCompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -5220,7 +5220,7 @@ namespace FC{
 							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
 							if (loadLockACompletedTasks.size() > 0)
 							{
-								logInform("PM2", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM2", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockACompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -5230,7 +5230,7 @@ namespace FC{
 							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
 							if (loadLockBCompletedTasks.size() > 0)
 							{
-								logInform("PM2", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM2", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockBCompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -5717,7 +5717,7 @@ namespace FC{
 							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
 							if (loadLockACompletedTasks.size() > 0)
 							{
-								logInform("PM3", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM3", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockACompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -5728,7 +5728,7 @@ namespace FC{
 							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
 							if (loadLockBCompletedTasks.size() > 0)
 							{
-								logInform("PM3", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM3", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockBCompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -6198,7 +6198,7 @@ namespace FC{
 							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
 							if (loadLockACompletedTasks.size() > 0)
 							{
-								logInform("PM4", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM4", "更新LLA:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockACompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -6208,7 +6208,7 @@ namespace FC{
 							loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");
 							if (loadLockBCompletedTasks.size() > 0)
 							{
-								logInform("PM4", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED");
+								logInform("PM4", "更新LLB:LOADLOCK_TRANSFER/COMPLETED ------>PM_PROCESS/QUEUED.");
 								for (auto& task : loadLockBCompletedTasks)
 								{
 									taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -6693,7 +6693,7 @@ namespace FC{
 					running = false; //阻塞，此时EFEM线程下料完成，wait case 201处！！
 					//pauseAllThreads();
 
-					logInform("Cycle", "整机流程结束！");
+					logInform("Cycle", "整机流程结束.");
 				}
 
 				{
@@ -6832,7 +6832,7 @@ namespace FC{
 		//running = false; //不停
 		pauseAllThreads(); //暂停，只会阻塞所有线程，不退出
 
-		logInform(reset_process_name.c_str(), "重新跑片开始");
+		logInform(reset_process_name.c_str(), "重新跑片开始.");
 		loadlock1_auto_step = 10;
 		loadlock2_auto_step = 10;
 		vacuum_auto_step = 10;
@@ -6947,12 +6947,12 @@ namespace FC{
 			else if (!taskManager.CollectionPassedThroughLL("LLA") && !tool_allow_put_wafer_LLA)
 			{
 				//LLA下料完成或者初始状态
-				//logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁");
+				//logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁.");
 				return false;
 			}
 			else
 			{
-				logWarn("Cyclelog", "未知情况,对LLB上料不上锁");
+				logWarn("Cyclelog", "未知情况,对LLB上料不上锁.");
 				return false;
 			}
 		}
@@ -6968,12 +6968,12 @@ namespace FC{
 			else if (!taskManager.CollectionPassedThroughLL("LLB") && !tool_allow_put_wafer_LLB)
 			{
 				//LLA下料完成或者初始状态
-				//logWarn("Cyclelog", "LLB下料完成,对LLA上料不上锁");
+				//logWarn("Cyclelog", "LLB下料完成,对LLA上料不上锁.");
 				return false;
 			}
 			else
 			{
-				logWarn("Cyclelog", " 未知情况,对LLA上料不上锁");
+				logWarn("Cyclelog", " 未知情况,对LLA上料不上锁.");
 				return false;
 			}
 		}
@@ -7209,7 +7209,7 @@ namespace FC{
 					 ui->disabledefem->checkState() == Qt::CheckState::Checked)
 					)
 				{
-					logInform(reset_process_name.c_str(), "整机复位开始");
+					logInform(reset_process_name.c_str(), "整机复位开始.");
 					//wtr
 					auto cmd = wtr->createResetCommand();
 					wtr->startCommand(cmd);
@@ -7550,7 +7550,7 @@ namespace FC{
 
 			case 10000:
 			{
-				logInform(reset_process_name.c_str(), "整机复位完成");
+				logInform(reset_process_name.c_str(), "整机复位完成.");
 				/*robot_auto_step = 10;*/
 				loadlock1_auto_step = 10;
 				loadlock2_auto_step = 10;
@@ -7570,7 +7570,7 @@ namespace FC{
 			break;
 			case 15000:
 			{
-				logInform(reset_process_name.c_str(), "整机复位失败");
+				logInform(reset_process_name.c_str(), "整机复位失败.");
 				reset_loop = false;
 				reset_finish = false;
 				rest_step = -1;
@@ -7818,7 +7818,7 @@ namespace FC{
 		}
 		else
 		{
-			logInform("Cycle:", "当前传片模式配置错误");
+			logInform("Cycle:", "当前传片模式配置错误.");
 			return false;
 		}
 
@@ -7962,7 +7962,7 @@ namespace FC{
 		if (ui->sequence_edit_tbw->rowCount() > 0)
 		{
 			onUpdateProcessControlEnabled(false);
-			logInform("Cycle", "传输序列生成完成");
+			logInform("Cycle", "传输序列生成完成.");
 			return true;
 		}
 		return false;
@@ -8050,9 +8050,9 @@ namespace FC{
 			bool success = CycleStateSnapshot::saveSnapshot(snapshot);
 			
 			if (success) {
-				logWarn("Cycle", "✅ 状态快照已保存，可用于调试恢复");
+				logWarn("Cycle", "✅ 状态快照已保存，可用于调试恢复.");
 			} else {
-				logError("Cycle", "⚠️ 保存状态快照失败");
+				logError("Cycle", "⚠️ 保存状态快照失败.");
 			}
 		}
 		catch (const std::exception& e) {
@@ -8299,20 +8299,20 @@ namespace FC{
 				}
 				else
 				{
-					logError(d->module_name.c_str(), "解析配方错误");
+					logError(d->module_name.c_str(), "解析配方错误.");
 					return;
 				}
 			}
 			else
 			{
-				logError(d->module_name.c_str(), "解析配方错误");
+				logError(d->module_name.c_str(), "解析配方错误.");
 				return;
 
 			}
 			if (d->filmTransferMode == "")
 			{
 				QMessageBox::warning(this, tr("警告信息"), tr("解析配方错误"));
-				logError(d->module_name.c_str(), "解析配方错误");
+				logError(d->module_name.c_str(), "解析配方错误.");
 				return;
 			}
 			logInform(d->module_name.c_str(), "current filmTransferMode:%s", d->filmTransferMode.c_str());
@@ -8324,7 +8324,7 @@ namespace FC{
 			int columnCount = settings.value("columnCount", 0).toInt();
 			if (rowCount == 0 || columnCount == 0)
 			{
-				logError(d->module_name.c_str(), "解析配方错误");
+				logError(d->module_name.c_str(), "解析配方错误.");
 				QMessageBox::warning(this, tr("警告信息"), tr("配方内容错误"));
 				return;
 			}
@@ -8352,7 +8352,7 @@ namespace FC{
 			int pm_columnCount = settings.value("pm_columnCount", 0).toInt();
 			if (pm_rowCount == 0 || pm_columnCount == 0)
 			{
-				logError(d->module_name.c_str(), "解析配方错误");
+				logError(d->module_name.c_str(), "解析配方错误.");
 				QMessageBox::warning(this, tr("警告信息"), tr("配方内容错误"));
 				return;
 			}
@@ -8735,7 +8735,7 @@ namespace FC{
 			{
 				if (d->loadStateSnapshot(snapshots.back()))
 				{
-					logWarn("Cycle", "🔄 已从快照恢复，直接跳到错误位置");
+					logWarn("Cycle", "🔄 已从快照恢复，直接跳到错误位置.");
 				}
 			}
 #else
@@ -8744,7 +8744,7 @@ namespace FC{
 			{
 				d->ui->cycle_finished_times_spx->setValue(0);
 				d->ui->cycle_finished_times_spx_2->setValue(0);
-				logInform("Cycle", "传送HL流程配置成功。");
+				logInform("Cycle", "传送HL流程配置成功.");
 				//return;
 			}
 			else
@@ -8787,7 +8787,7 @@ namespace FC{
 		}
 		else
 		{
-			logError("Cycle","无任务配置，无暂停，才执行解析流程配方");
+			logError("Cycle","无任务配置，无暂停，才执行解析流程配方.");
 		}
 	}
 
@@ -8886,10 +8886,10 @@ namespace FC{
 				d->hasUPS = ups;
 				changed = true;
 				if (d->hasUPS){
-					logError("Cycle", "检测到断电，等待动作执行完后停止cycle");
+					logError("Cycle", "检测到断电，等待动作执行完后停止cycle.");
 				}
 				else{
-					logError("Cycle", "检测到断电恢复，重新开始cycle");
+					logError("Cycle", "检测到断电恢复，重新开始cycle.");
 				}
 			}
 
@@ -8899,7 +8899,7 @@ namespace FC{
 				if (d->robot_step_wafer_finished)
 				{
 					d->robot_step_wafer_finished = false;
-					logError("Cycle", "动作已完成，暂停cycle");
+					logError("Cycle", "动作已完成，暂停cycle.");
 					onPause();
 					/*d->running = false;
 					d->onUpdateControlEnabled("reset_pbt", true);

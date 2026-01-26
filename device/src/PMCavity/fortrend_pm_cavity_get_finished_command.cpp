@@ -82,7 +82,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 取片完成地址未定义", getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "取片完成命令开始执行");
+		logInform(sub->getName().c_str(), "取片完成命令开始执行.");
 		if (!writeBit(write_address, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到取片完成(%s)地址失败", sub->getName(), write_address), this);
@@ -127,20 +127,20 @@ namespace FC{
 		{
 
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "取片完成命令执行完成");
+			logInform(sub->getName().c_str(), "取片完成命令执行完成.");
 
 		}
 		else if (allow_reset)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "复位取片完成命令执行失败"));
 			setAlarm(alarm);
-			//logError(sub->getName().c_str(), "复位取片完成命令执行失败");
+			//logError(sub->getName().c_str(), "复位取片完成命令执行失败.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "复位取片完成信号超时"));
 			setAlarm(alarm);
-			//logError(sub->getName().c_str(), "复位取片完成信号超时");
+			//logError(sub->getName().c_str(), "复位取片完成信号超时.");
 		}
 		return ret;
 	}

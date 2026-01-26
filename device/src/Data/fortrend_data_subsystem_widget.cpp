@@ -1,4 +1,4 @@
-#include "Data/fortrend_data_subsystem_widget.h"
+﻿#include "Data/fortrend_data_subsystem_widget.h"
 #include "PMCavity/fortrend_pm_cavity_subsystem.h"
 #include "Kernel/kernel_api.h"
 #include  "Kernel/kernel.h"
@@ -16,7 +16,9 @@
 #include <QTimer>
 #include <QDebug>
 #include <QCoreApplication>
+#include <QLabel>
 
+#define USE_WEBENGINE
 namespace FC{
 
 	class DataWidgetPrivate{
@@ -92,6 +94,7 @@ namespace FC{
         
         // Helper to create tab
         auto createTab = [&](const QString& title) -> QWebEngineView* {
+#ifdef USE_WEBENGINE
             QWidget* page = new QWidget();
             QVBoxLayout* layout = new QVBoxLayout(page);
             layout->setContentsMargins(0,0,0,0);
@@ -116,41 +119,58 @@ namespace FC{
             //qDebug() << "  - focusPolicy:" << view->focusPolicy();
             
             return view;
+#else
+            // 临时禁用WebEngine，显示占位符
+            QWidget* page = new QWidget();
+            QVBoxLayout* layout = new QVBoxLayout(page);
+            QLabel* label = new QLabel("Chart disabled (WebEngine not available)", page);
+            label->setAlignment(Qt::AlignCenter);
+            layout->addWidget(label);
+            d->tabWidget->addTab(page, title);
+            return nullptr;
+#endif
         };
         
         d->viewAcc = createTab("Acceleration");
         d->viewVel = createTab("Velocity");
         d->viewPos = createTab("Position");
 
+#ifdef USE_WEBENGINE
         //C++ 等待 JS 环境就绪
         // Wait for page load - 检测所有页面都加载完成
         auto onPageLoaded = [d](bool ok){ 
             if(ok) {
                 d->pagesLoaded++;
-                qDebug() << "[DataWidget] Page loaded successfully. Total:" << d->pagesLoaded << "/3";
+                //qDebug() << "[DataWidget] Page loaded successfully. Total:" << d->pagesLoaded << "/3";
                 // 当所有三个页面都加载完成时才设置为true
                 if(d->pagesLoaded >= 3) {
                     d->isPageLoaded = true;
-                    qDebug() << "[DataWidget] *** All WebEngine pages loaded successfully ***";
+                    //qDebug() << "[DataWidget] *** All WebEngine pages loaded successfully ***";
                 }
             } else {
-                qDebug() << "[DataWidget] ERROR: Page load failed!";
+                //qDebug() << "[DataWidget] ERROR: Page load failed!";
             }
         };
-        connect(d->viewAcc, &QWebEngineView::loadFinished, onPageLoaded);
-        connect(d->viewVel, &QWebEngineView::loadFinished, onPageLoaded);
-        connect(d->viewPos, &QWebEngineView::loadFinished, onPageLoaded);
+        if(d->viewAcc) connect(d->viewAcc, &QWebEngineView::loadFinished, onPageLoaded);
+        if(d->viewVel) connect(d->viewVel, &QWebEngineView::loadFinished, onPageLoaded);
+        if(d->viewPos) connect(d->viewPos, &QWebEngineView::loadFinished, onPageLoaded);
         
         // 监听加载进度
-        connect(d->viewVel, &QWebEngineView::loadProgress, [](int progress){
-            if(progress % 20 == 0 || progress == 100) {
-                qDebug() << "[DataWidget] Velocity view load progress:" << progress << "%";
-            }
-        });
+        if(d->viewVel) {
+            connect(d->viewVel, &QWebEngineView::loadProgress, [](int progress){
+                if(progress % 20 == 0 || progress == 100) {
+                    //qDebug() << "[DataWidget] Velocity view load progress:" << progress << "%";
+                }
+            });
+        }
+#else
+        // WebEngine禁用时直接标记为已加载
+        d->isPageLoaded = true;
+#endif
         
         // Timer connection
-       // connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
-        connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
+        connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
+        //connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
         //d->startTime = QDateTime::currentMSecsSinceEpoch();
         //Sleep(2000);
         //d->timer->start(2000);
@@ -164,14 +184,14 @@ namespace FC{
     void DataWidget::onCycleStart(const std::string& pmName)
     {
         Q_D(DataWidget);
-        qDebug() << "[DataWidget] onCycleStart called for PM:" << QString::fromStdString(pmName);
-        qDebug() << "  - isPageLoaded:" << d->isPageLoaded;
+        //qDebug() << "[DataWidget] onCycleStart called for PM:" << QString::fromStdString(pmName);
+        //qDebug() << "  - isPageLoaded:" << d->isPageLoaded;
         // Get Subsystem
         
         d->currentSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
 
         if (!d->currentSubsystem) {
-            qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString(pmName);
+            //qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString(pmName);
             return;
         }
         
@@ -202,7 +222,7 @@ namespace FC{
         d->currentSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 
         if (!d->currentSubsystem) {
-            qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString("PM1");
+            //qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString("PM1");
             return;
         }
 
@@ -306,20 +326,21 @@ namespace FC{
                                 const QList<double> &dataZ, const QList<double> &dataR,
                                 const QString& zName, const QString& rName)
 	{
+#ifdef USE_WEBENGINE
         if (!view) {
-            qDebug() << "[DataWidget] ERROR: httpUpdate called with null view!";
+            //qDebug() << "[DataWidget] ERROR: httpUpdate called with null view!";
             return;
         }
         
         if (!view->page()) {
-            qDebug() << "[DataWidget] ERROR: QWebEngineView page is null!";
+            //qDebug() << "[DataWidget] ERROR: QWebEngineView page is null!";
             return;
         }
         
-        qDebug() << "[DataWidget] httpUpdate for" << zName << "/" << rName;
-        qDebug() << "  - view isEnabled:" << view->isEnabled();
-        qDebug() << "  - view isVisible:" << view->isVisible();
-        qDebug() << "  - data points:" << name.size();
+        //qDebug() << "[DataWidget] httpUpdate for" << zName << "/" << rName;
+        //qDebug() << "  - view isEnabled:" << view->isEnabled();
+        //qDebug() << "  - view isVisible:" << view->isVisible();
+        //qDebug() << "  - data points:" << name.size();
         
 		//在QT中我们需要组成一个字符串将数据传过去
 		QString jscode = "onDataReceived([";
@@ -356,6 +377,15 @@ namespace FC{
         //jscode += "])";
 
 		view->page()->runJavaScript(jscode);
+#else
+        // WebEngine禁用时不执行
+        Q_UNUSED(view);
+        Q_UNUSED(name);
+        Q_UNUSED(dataZ);
+        Q_UNUSED(dataR);
+        Q_UNUSED(zName);
+        Q_UNUSED(rName);
+#endif
 	}
 
 	//自适应窗体

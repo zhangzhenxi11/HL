@@ -99,7 +99,7 @@ IKernelCommand::RunResult EFEMAlignerRotateCommand::onRun() throw(KernelExceptio
 
 	}
 	aligner->getKernel()->getKernelBlockManager()->releaseBlock(aligner);
-	logInform(aligner->getName().c_str(), "Ñ°±ßÃüÁîÖ´ĞĞ½áÊø");
+	logInform(aligner->getName().c_str(), "Ñ°±ßÃüÁîÖ´ĞĞ½áÊø.");
 	return ret;
 }
 

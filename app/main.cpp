@@ -17,7 +17,9 @@
 int main(int argc, char *argv[])
 {
 	//首先设置 OpenGL 上下文共享(必须在第一行)
-	QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+	//QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+	  // 在 main 函数开始处添加
+  	QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL); 
 #ifdef _WIN32
 	SetConsoleOutputCP(CP_UTF8);
 #endif
@@ -26,7 +28,7 @@ int main(int argc, char *argv[])
 	
 	// 创建应用程序对象
 	 FC::CoreRunner app(argc, argv);
-	
+		
 	// 初始化QtWebEngine - 必须在QApplication创建之后调用
 	QtWebEngine::initialize();
 	 CCreateDump::Instance()->DeclarDumpFile("app_dump");

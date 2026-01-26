@@ -85,7 +85,7 @@ namespace FC{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 去取料位命令地址未定义", getName()), this);
 		}
 
-		logInform(sub->getName().c_str(), "去取料位命令开始执行");
+		logInform(sub->getName().c_str(), "去取料位命令开始执行.");
 		sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
 		float axis_target1_pos = 0.0F;
@@ -131,7 +131,7 @@ namespace FC{
 		{
 			sub->setPMCavitySafeSignal(true);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "去取料位命令执行完成");
+			logInform(sub->getName().c_str(), "去取料位命令执行完成.");
 
 		}
 		else if (!readRes || alarmCode != 0)

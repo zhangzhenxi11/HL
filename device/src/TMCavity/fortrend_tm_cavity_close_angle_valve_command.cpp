@@ -70,7 +70,7 @@ namespace FC{
 		//	logInform(sub->getName().c_str(), "模拟关闭角阀命令...");
 		//	return RunResult::RUN_OK;
 		//}
-		logInform(sub->getName().c_str(), "关闭角阀命令开始");
+		logInform(sub->getName().c_str(), "关闭角阀命令开始.");
 		if (!writeBit(address_1, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到关闭角阀命令地址1错误", sub->getName()), this);
@@ -102,20 +102,20 @@ namespace FC{
 		{
 			sub->setAngleValveOpend(false);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), "关闭角阀命令执行完成");
+			logInform(sub->getName().c_str(), "关闭角阀命令执行完成.");
 		}
 		else if (readRes_failed)
 		{
 
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "关闭角阀命令执行失败，关闭角阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "关闭角阀命令执行失败，关闭角阀到位信号异常");
+			logError(sub->getName().c_str(), "关闭角阀命令执行失败，关闭角阀到位信号异常.");
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "关闭角阀命令执行超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "关闭角阀命令执行超时");
+			logError(sub->getName().c_str(), "关闭角阀命令执行超时.");
 		}
 		return ret;
 

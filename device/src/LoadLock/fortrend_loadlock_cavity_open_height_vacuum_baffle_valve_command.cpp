@@ -100,7 +100,7 @@ namespace FC{
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s : 当前真空压力大于粗抽压力设定值无法打开高真空挡板阀（逻辑错误）", getName()), this);
 		}*/
-		logInform(sub->getName().c_str(), "打开高真空慢抽挡板阀命令开始");
+		logInform(sub->getName().c_str(), "打开高真空慢抽挡板阀命令开始.");
 		if (!writeBit(close_address, false))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写0到关闭高真空挡板阀地址错误", sub->getName()), this);
@@ -132,20 +132,20 @@ namespace FC{
 		{
 			sub->setHeightVacuumBaffleValveOpend(true);
 			//ret = IKernelCommand::RunResult::RUN_OK;
-			//logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束");
+			//logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束.");
 		}
 		else if (readState)
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "打开高真空慢抽挡板阀命令执行失败，打开高真空慢抽挡板阀到位信号异常"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开高真空慢抽挡板阀命令执行失败，打开高真空慢抽挡板阀到位信号异常");
+			logError(sub->getName().c_str(), "打开高真空慢抽挡板阀命令执行失败，打开高真空慢抽挡板阀到位信号异常.");
 			return ret;
 		}
 		else
 		{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开高真空慢抽挡板阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开高真空慢抽挡板阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开高真空慢抽挡板阀命令通讯超时.");
 			return ret;
 		}
 
@@ -165,7 +165,7 @@ namespace FC{
 		}
 
 		if (readRes){
-			logInform(sub->getName().c_str(), "打开高真空快抽挡板阀命令开始");
+			logInform(sub->getName().c_str(), "打开高真空快抽挡板阀命令开始.");
 
 			Sleep(20);
 			if (!writeBit(open_address, true))
@@ -193,13 +193,13 @@ namespace FC{
 			{
 				sub->setHeightVacuumBaffleValveOpend(true);
 				ret = IKernelCommand::RunResult::RUN_OK;
-				logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束");
+				logInform(sub->getName().c_str(), "打开高真空挡板阀命令执行结束.");
 			}
 			else if (readState)
 			{
 				AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "打开高真空挡板阀命令执行失败，打开高真空挡板阀到位信号异常"));
 				setAlarm(alarm);
-				logError(sub->getName().c_str(), "打开高真空挡板阀命令执行失败，打开高真空挡板阀到位信号异常");
+				logError(sub->getName().c_str(), "打开高真空挡板阀命令执行失败，打开高真空挡板阀到位信号异常.");
 			}
 			
 			
@@ -207,7 +207,7 @@ namespace FC{
 		else{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "打开高真空挡板阀命令通讯超时"));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), "打开高真空挡板阀命令通讯超时");
+			logError(sub->getName().c_str(), "打开高真空挡板阀命令通讯超时.");
 		}
 
 		return ret;
