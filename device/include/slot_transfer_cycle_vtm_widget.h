@@ -71,6 +71,11 @@ namespace  FC {
 		void updateControlEnabled(const QString control,const bool enabled);
 		void updateLightButtonStatus(const QString control, const int color);
 
+		// WPH测试相关槽函数
+		void onWphTestStart();
+		void onWphTestStop();
+		void updateWphCompletedCount(int count);
+
 		//新增 流程启动
 		void startProcessingThreads();
 
@@ -99,6 +104,9 @@ namespace  FC {
 		void executeTMTransfer();
 
 		void executeUpdateTransferStatus();
+
+		// WPH测试执行函数
+		void executeWphTest();
 		
 	protected:
 		Q_DECLARE_PRIVATE(QSlotTransferCycleVTMWidget)

@@ -261,8 +261,8 @@ signals:
 
 public:
 
-    QSequentialAnimationGroup* animationGroup;
-    QParallelAnimationGroup*   parallelAnimationGroup;
+    QSequentialAnimationGroup* animationGroup;         //串行
+    QParallelAnimationGroup*   parallelAnimationGroup; //并行
 
     enum ActionType {
         IDLE,

@@ -1,4 +1,4 @@
-
+﻿
 #include  "BreakVacuum/fortrend_breakvacuum_subsystem_widget.h"
 #include  "device/ui_fortrend_breakvacuum_subsystem_widget.h"
 
@@ -285,7 +285,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onTMGMFKClicked(bool status){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位", d->tm->getName().c_str());
+			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位.", d->tm->getName().c_str());
 			return;
 		}
 		if (status){
@@ -304,7 +304,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onTMGMFMClicked(bool status){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位", d->tm->getName().c_str());
+			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位.", d->tm->getName().c_str());
 			return;
 		}
 		if (status){
@@ -323,7 +323,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onLLAGMFKClicked(bool status){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->lk1->getName().c_str(), "模组：%s状态异常，请先复位", d->lk1->getName().c_str());
+			logError(d->lk1->getName().c_str(), "模组：%s状态异常，请先复位.", d->lk1->getName().c_str());
 			return;
 		}
 		if (status){
@@ -342,7 +342,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onLLAGMFMClicked(bool status){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->lk1->getName().c_str(), "模组：%s状态异常，请先复位", d->lk1->getName().c_str());
+			logError(d->lk1->getName().c_str(), "模组：%s状态异常，请先复位.", d->lk1->getName().c_str());
 			return;
 		}
 		if (status){
@@ -361,7 +361,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onLLBGMFKClicked(bool status){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->lk2->getName().c_str(), "模组：%s状态异常，请先复位", d->lk2->getName().c_str());
+			logError(d->lk2->getName().c_str(), "模组：%s状态异常，请先复位.", d->lk2->getName().c_str());
 			return;
 		}
 		if (status){
@@ -380,7 +380,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onLLBGMFMClicked(bool status){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->lk2->getName().c_str(), "模组：%s状态异常，请先复位", d->lk2->getName().c_str());
+			logError(d->lk2->getName().c_str(), "模组：%s状态异常，请先复位.", d->lk2->getName().c_str());
 			return;
 		}
 		if (status){
@@ -510,7 +510,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onOpenTMCavityAutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位", d->tm->getName().c_str());
+			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位.", d->tm->getName().c_str());
 			return;
 		}
 		//KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
@@ -521,7 +521,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->lk1->getName().c_str(), "模组：%s状态异常，请先复位", d->lk1->getName().c_str());
+			logError(d->lk1->getName().c_str(), "模组：%s状态异常，请先复位.", d->lk1->getName().c_str());
 			return;
 		}
 		KernelSubsystemCommand::Ptr cmd = d->lk1->createAutoBreakVacuumCommand();
@@ -532,7 +532,7 @@ namespace FC{
 	void QBreakVacuumSubsystemWidget::onOpenLoadLock2AutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);
 		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL){
-			logError(d->lk2->getName().c_str(), "模组：%s状态异常，请先复位", d->lk2->getName().c_str());
+			logError(d->lk2->getName().c_str(), "模组：%s状态异常，请先复位.", d->lk2->getName().c_str());
 			return;
 		}
 		KernelSubsystemCommand::Ptr cmd = d->lk2->createAutoBreakVacuumCommand();

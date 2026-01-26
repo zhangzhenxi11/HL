@@ -244,7 +244,7 @@ bool SunwaySubSystemHelperPrivate::sendRequest(const std::string& command) throw
 	int err = send(*client, data.c_str(), data.size(), 0);
 	if (err == SOCKET_ERROR || err == 0)
 	{
-		logError(name.c_str(), "发送命令: %s 失败", command.c_str());
+		logError(name.c_str(), "发送命令: %s 失败.", command.c_str());
 		is_busy = false;
 		isConnected = false; // 连接已断开
 		

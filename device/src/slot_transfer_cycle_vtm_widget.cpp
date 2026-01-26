@@ -601,6 +601,16 @@ namespace FC{
 	public:
 		const std::string module_name = "Cycle";
 
+		// WPH测试相关变量
+		std::atomic<bool> wph_test_running{ false };
+		std::atomic<bool> wph_test_stop_requested{ false };
+		int wph_cycle_count = 10;
+		int wph_completed_count = 0;
+		std::thread wph_test_thread;
+
+		// WPH测试执行函数
+		void executeWphTest();
+
 	private:
 		void logFailed(const std::string station_name, const std::string log);
 
@@ -1495,7 +1505,7 @@ namespace FC{
 				{
 					//寻边
 					if (elp == nullptr) {
-						logError("EFEM", "step:%d, elp指针为空，重新获取失败", efem_auto_step);
+						logError("EFEM", "step:%d, elp指针为空，重新获取失败.", efem_auto_step);
 						break;
 					}
 
@@ -3596,7 +3606,7 @@ namespace FC{
 						{
 							lp2_cycle_one_time_finished = true;
 						}
-						logInform(lk1->getName().c_str(), "当前一次:%s循环完成", is_lp1_cycle ? "is_lp1_cycle" : "is_lp2_cycle");
+						logInform(lk1->getName().c_str(), "当前一次:%s循环完成.", is_lp1_cycle ? "is_lp1_cycle" : "is_lp2_cycle");
 					}
 					else
 					{
@@ -4214,7 +4224,7 @@ namespace FC{
 									pm4_allow_get_put_wafer = true;
 									
 								}
-								logInform(lk2->getName().c_str(), "呼叫:%s 取放片", pmName.c_str());
+								logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
 							}
 							else
 							{
@@ -4256,7 +4266,7 @@ namespace FC{
 									pm4_allow_get_put_wafer = true;
 									
 								}
-								logInform(lk2->getName().c_str(), "呼叫:%s 取放片", pmName.c_str());
+								logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
 							}
 							else
 							{
@@ -4642,7 +4652,7 @@ namespace FC{
 						else
 							lp1_cycle_one_time_finished = true;
 
-						logInform(lk2->getName().c_str(), "当前一次:%s循环完成", is_lp2_cycle? "is_lp2_cycle":"is_lp1_cycle");
+						logInform(lk2->getName().c_str(), "当前一次:%s循环完成.", is_lp2_cycle? "is_lp2_cycle":"is_lp1_cycle");
 					}
 					else
 					{
@@ -6913,7 +6923,7 @@ namespace FC{
 
 	bool QSlotTransferCycleVTMWidgetPrivate::isLoadingInterlock(const std::string &LLName)
 	{
-		//logInform("check Interlock","检查LLName:%s 上料互锁",LLName.c_str());
+		//logInform("check Interlock","检查LLName:%s 上料互锁.",LLName.c_str());
 
 		UpdateLLBSubTransferDatas();
 		UpdateLLASubTransferDatas();			
@@ -7050,7 +7060,7 @@ namespace FC{
 			
 			if (elapsed >= std::chrono::minutes(30))
 			{
-				logError("cycle", "sub:%s,检测LL真空和TM真空超时", llName.c_str());
+				logError("cycle", "sub:%s,检测LL真空和TM真空超时.", llName.c_str());
 				return false;
 			}
 
@@ -8178,6 +8188,10 @@ namespace FC{
 		//connect(d->ui->loadlock2_put_cassette_finished_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onLoadLock2PutCassetteFinished);
 
 		connect(d->ui->get_step_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onGetStep);
+
+		// WPH测试信号槽连接
+		connect(d->ui->wph_start_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onWphTestStart);
+		connect(d->ui->wph_stop_pbt, &QPushButton::clicked, this, &QSlotTransferCycleVTMWidget::onWphTestStop);
 
 		//connect(s_ptr, &QFortrendStationStatusVTMWidget::signalUpdateRecipe, this, &QSlotTransferCycleVTMWidget::onUpdateRecipe);
 		//2025-10-29 改成选择模式
@@ -9324,6 +9338,252 @@ namespace FC{
 		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM3Transfer, this);
 		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM4Transfer, this);
 		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeUpdateTransferStatus, this);
+	}
+
+	//=============================================================================
+	// WPH测试功能实现 - 大气环境下LoadLock之间传片测试
+	//=============================================================================
+
+	void QSlotTransferCycleVTMWidget::onWphTestStart()
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+
+		if (d->wph_test_running.load()) {
+			QMessageBox::warning(this, "警告", "WPH测试正在运行中");
+			return;
+		}
+
+		// 获取循环次数
+		d->wph_cycle_count = d->ui->wph_cycle_count_sbx->value();
+		d->wph_completed_count = 0;
+		d->ui->wph_completed_count_sbx->setValue(0);
+
+		d->wph_test_running = true;
+		d->wph_test_stop_requested = false;
+
+		// 启动WPH测试线程
+		d->wph_test_thread = std::thread(&QSlotTransferCycleVTMWidgetPrivate::executeWphTest, d);
+		d->wph_test_thread.detach();
+
+		d->ui->wph_start_pbt->setEnabled(false);
+		d->ui->wph_stop_pbt->setEnabled(true);
+
+		logInform("WPH_TEST", "WPH测试启动，目标循环次数：%d", d->wph_cycle_count);
+	}
+
+	void QSlotTransferCycleVTMWidget::onWphTestStop()
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+
+		d->wph_test_stop_requested = true;
+		logInform("WPH_TEST", "WPH测试停止请求已发送.");
+
+		d->ui->wph_start_pbt->setEnabled(true);
+		d->ui->wph_stop_pbt->setEnabled(false);
+	}
+
+	void QSlotTransferCycleVTMWidget::updateWphCompletedCount(int count)
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		d->ui->wph_completed_count_sbx->setValue(count);
+	}
+
+	void QSlotTransferCycleVTMWidget::executeWphTest()
+	{
+		Q_D(QSlotTransferCycleVTMWidget);
+		d->executeWphTest();
+	}
+
+	void QSlotTransferCycleVTMWidgetPrivate::executeWphTest()
+	{
+		/*
+		 * WPH测试流程（大气环境下）：
+		 * 晶圆默认在LoadlockA的一槽
+		 * 循环流程：
+		 * 1. VTM机械手A手从LLA槽1取片
+		 * 2. VTM机械手A手放片到LLB槽1
+		 * 3. VTM机械手A手从LLB槽1取片
+		 * 4. VTM机械手A手放片回LLA槽1
+		 * 完成一个循环，打印日志
+		 */
+
+		try {
+			// 获取子系统
+			auto wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+			auto lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+			auto lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+
+			if (!wtr || !lk1 || !lk2) {
+				logError("WPH_TEST", "无法获取机械手或LoadLock子系统.");
+				wph_test_running = false;
+				QMetaObject::invokeMethod(q_ptr, "updateWphCompletedCount", Qt::QueuedConnection, Q_ARG(int, wph_completed_count));
+				return;
+			}
+
+			// 记录开始时间
+			auto test_start_time = std::chrono::steady_clock::now();
+
+			logInform("WPH_TEST", "========== WPH测试开始 ==========");
+			logInform("WPH_TEST", "测试条件：大气环境，一片晶圆.");
+			logInform("WPH_TEST", "传输路径：LLA槽2 <-> LLB槽2.");
+			logInform("WPH_TEST", "目标循环次数：%d", wph_cycle_count);
+
+			for (int cycle = 0; cycle < wph_cycle_count && !wph_test_stop_requested.load(); cycle++)
+			{
+				auto cycle_start_time = std::chrono::steady_clock::now();
+
+				logInform("WPH_TEST", "---------- 循环 %d/%d 开始 ----------", cycle + 1, wph_cycle_count);
+
+				// 检查子系统状态
+				if (wtr->getState() != IKernelSubSystem::State::SUB_NORMAL) {
+					logError("WPH_TEST", "机械手状态异常，测试中止.");
+					break;
+				}
+				if (lk1->getState() != IKernelSubSystem::State::SUB_NORMAL) {
+					logError("WPH_TEST", "LLA状态异常，测试中止.");
+					break;
+				}
+				if (lk2->getState() != IKernelSubSystem::State::SUB_NORMAL) {
+					logError("WPH_TEST", "LLB状态异常，测试中止.");
+					break;
+				}
+
+				// 步骤1：从LLA槽1取片（A手）
+				logInform("WPH_TEST", "[步骤1] A手从LLA槽2取片...");
+				{
+					if (!lk1->getTMCavityDoorOpend()) {
+						auto cmd_open = lk1->createOpenTMCavityDoorCommand();
+						lk1->startCommand(cmd_open);
+						cmd_open->wait();
+						if (cmd_open->hasError()) {
+							logError("WPH_TEST", "打开LLA TM门失败.");
+							break;
+						}
+					}
+
+					auto cmd_get = wtr->createGetCommand(lk1, 0, 2); // A手=0, 槽2
+					wtr->startCommand(cmd_get);
+					cmd_get->wait();
+					if (cmd_get->hasError()) {
+						logError("WPH_TEST", "A手从LLA取片失败.");
+						break;
+					}
+					logInform("WPH_TEST", "[步骤1] 完成.");
+				}
+
+				if (wph_test_stop_requested.load()) break;
+
+				// 步骤2：放片到LLB槽1（A手）
+				logInform("WPH_TEST", "[步骤2] A手放片到LLB槽2...");
+				{
+					if (!lk2->getTMCavityDoorOpend()) {
+						auto cmd_open = lk2->createOpenTMCavityDoorCommand();
+						lk2->startCommand(cmd_open);
+						cmd_open->wait();
+						if (cmd_open->hasError()) {
+							logError("WPH_TEST", "打开LLB TM门失败.");
+							break;
+						}
+					}
+
+					auto cmd_put = wtr->createPutCommand(lk2, 0, 2); // A手=0, 槽2
+					wtr->startCommand(cmd_put);
+					cmd_put->wait();
+					if (cmd_put->hasError()) {
+						logError("WPH_TEST", "A手放片到LLB失败.");
+						break;
+					}
+					logInform("WPH_TEST", "[步骤2] 完成.");
+				}
+
+				if (wph_test_stop_requested.load()) break;
+
+				// 步骤3：从LLB槽1取片（A手）
+				logInform("WPH_TEST", "[步骤3] A手从LLB槽2取片...");
+				{
+					auto cmd_get = wtr->createGetCommand(lk2, 0, 2); // A手=0, 槽2
+					wtr->startCommand(cmd_get);
+					cmd_get->wait();
+					if (cmd_get->hasError()) {
+						logError("WPH_TEST", "A手从LLB取片失败.");
+						break;
+					}
+					logInform("WPH_TEST", "[步骤3] 完成.");
+				}
+
+				if (wph_test_stop_requested.load()) break;
+
+				// 步骤4：放片回LLA槽1（A手）
+				logInform("WPH_TEST", "[步骤4] A手放片回LLA槽2...");
+				{
+					auto cmd_put = wtr->createPutCommand(lk1, 0, 2); // A手=0, 槽2
+					wtr->startCommand(cmd_put);
+					cmd_put->wait();
+					if (cmd_put->hasError()) {
+						logError("WPH_TEST", "A手放片回LLA失败.");
+						break;
+					}
+					logInform("WPH_TEST", "[步骤4] 完成.");
+				}
+
+				// 计算本循环耗时
+				auto cycle_end_time = std::chrono::steady_clock::now();
+				auto cycle_duration = std::chrono::duration_cast<std::chrono::milliseconds>(cycle_end_time - cycle_start_time).count();
+
+				wph_completed_count = cycle + 1;
+
+				// 更新UI
+				QMetaObject::invokeMethod(q_ptr, "updateWphCompletedCount", Qt::QueuedConnection, Q_ARG(int, wph_completed_count));
+
+				logInform("WPH_TEST", "---------- 循环 %d/%d 完成，耗时：%lld ms ----------", 
+					cycle + 1, wph_cycle_count, cycle_duration);
+			}
+
+			// 计算总耗时和WPH
+			auto test_end_time = std::chrono::steady_clock::now();
+			auto total_duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(test_end_time - test_start_time).count();
+			double total_duration_sec = total_duration_ms / 1000.0;
+			double total_duration_hours = total_duration_ms / 3600000.0;
+
+			// WPH计算方式：WPH = 3600秒 / 平均循环时间（秒）
+			// 一次循环 = LLA->LLB->LLA 完整往返
+			double avg_cycle_time_sec = (wph_completed_count > 0) ? (total_duration_sec / wph_completed_count) : 0;
+			double wph = (avg_cycle_time_sec > 0) ? (3600.0 / avg_cycle_time_sec) : 0;
+
+			// 如果总时间超过1小时，也可以用实际数据验证：实际WPH = 完成循环数 / 总时间（小时）
+			double actual_wph = (total_duration_hours > 0) ? (wph_completed_count / total_duration_hours) : 0;
+
+			logInform("WPH_TEST", "========== WPH测试结束 ==========");
+			logInform("WPH_TEST", "完成循环数：%d/%d", wph_completed_count, wph_cycle_count);
+			logInform("WPH_TEST", "总耗时：%.2f 秒 (%.4f 小时)", total_duration_sec, total_duration_hours);
+			logInform("WPH_TEST", "平均单次循环时间：%.2f 秒.", avg_cycle_time_sec);
+			logInform("WPH_TEST", "计算WPH（3600/平均循环时间）：%.2f 片/小时.", wph);
+			
+			if (total_duration_hours >= 1.0) {
+				logInform("WPH_TEST", "实际WPH（循环数/总时间）：%.2f 片/小时.", actual_wph);
+			}
+
+			if (wph >= 150) {
+				logInform("WPH_TEST", "结果：【通过】WPH >= 150片/小时要求.");
+			} else {
+				logWarn("WPH_TEST", "结果：【未达标】WPH < 150片/小时要求（需要单次循环时间 <= 24秒）");
+			}
+
+			wph_test_running = false;
+
+			// 恢复UI状态
+			QMetaObject::invokeMethod(q_ptr->d_ptr->ui->wph_start_pbt, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, true));
+			QMetaObject::invokeMethod(q_ptr->d_ptr->ui->wph_stop_pbt, "setEnabled", Qt::QueuedConnection, Q_ARG(bool, false));
+
+		}
+		catch (const std::exception& e) {
+			logError("WPH_TEST", "WPH测试异常：%s", e.what());
+			wph_test_running = false;
+		}
+		catch (...) {
+			logError("WPH_TEST", "WPH测试未知异常.");
+			wph_test_running = false;
+		}
 	}
 
 }

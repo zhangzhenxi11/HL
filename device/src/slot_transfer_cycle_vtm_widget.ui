@@ -488,6 +488,64 @@
          </item>
         </layout>
        </widget>
+       <widget class="QGroupBox" name="wph_test_gbx">
+        <property name="title">
+         <string>WPH测试（大气LL传片）</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_wph">
+         <item>
+          <widget class="QLabel" name="wph_cycle_label">
+           <property name="text">
+            <string>循环次数</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="wph_cycle_count_sbx">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+           <property name="value">
+            <number>10</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="wph_completed_label">
+           <property name="text">
+            <string>已完成次数</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="wph_completed_count_sbx">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="wph_start_pbt">
+           <property name="text">
+            <string>启动WPH测试</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="wph_stop_pbt">
+           <property name="text">
+            <string>停止WPH测试</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
        <widget class="QGroupBox" name="groupBox_2">
         <property name="title">
          <string>流程状态</string>

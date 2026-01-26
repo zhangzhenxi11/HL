@@ -224,11 +224,11 @@ namespace FC{
 			{
 				std::string safeSignal_address = it->second;
 
-				logInform("WTR", "读:%s机械手安全地址", safeSignal_address.c_str());
+				logInform("WTR", "读:%s机械手安全地址.", safeSignal_address.c_str());
 
 				if (!KeyencePlcSubSystemHelper::readBit(safeSignal_address, is_safe_inplace)) {
 
-					logError("WTR", "读:%s机械手安全地址失败", (it->second).c_str());
+					logError("WTR", "读:%s机械手安全地址失败.", (it->second).c_str());
 				}
 				else
 				{
@@ -240,7 +240,7 @@ namespace FC{
 			}
 			return is_safe_inplace;
 		}
-		logError("WTR", "找：%s机械手安全地址失败", it->second);
+		logError("WTR", "找：%s机械手安全地址失败.", it->second);
 		return false;
 	}
 
@@ -251,7 +251,7 @@ namespace FC{
 		{
 			if (!writeBit(it->second, status))
 			{
-				logError("WTR", "写:%s机械手安全地址失败", it->second);
+				logError("WTR", "写:%s机械手安全地址失败.", it->second);
 			}		
 		}
 	}

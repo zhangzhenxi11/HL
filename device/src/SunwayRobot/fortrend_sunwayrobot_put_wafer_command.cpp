@@ -417,7 +417,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 
 			if (!sub->getPMCavitySafeSignal())
 			{
-				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
+				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测.", sub->getPMCavitySafeSignal());
 				Sleep(50);
 				if (!sub->getPMCavitySafeSignal())
 				{
@@ -437,7 +437,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 
 			if (!sub->getLoadLockCavitySafeSignal())
 			{
-				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
+				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测.", sub->getLoadLockCavitySafeSignal());
 				Sleep(50);
 				if (!sub->getLoadLockCavitySafeSignal())
 				{

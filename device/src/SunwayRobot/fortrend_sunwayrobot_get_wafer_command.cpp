@@ -138,7 +138,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			}
 			if (!sub->getPMCavitySafeSignal())
 			{
-				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getPMCavitySafeSignal());
+				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测.", sub->getPMCavitySafeSignal());
 				Sleep(50);
 				if (!sub->getPMCavitySafeSignal())
 				{
@@ -159,7 +159,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			}
 			if (!sub->getLoadLockCavitySafeSignal())
 			{
-				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测", sub->getLoadLockCavitySafeSignal());
+				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测.", sub->getLoadLockCavitySafeSignal());
 				Sleep(50);
 				if (!sub->getLoadLockCavitySafeSignal())
 				{
@@ -221,7 +221,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			command.append("/0/0");
 			command.append(";");
 
-			logInform(robot->getName().c_str(), "取晶圆命令:%s,开始", command);
+			logInform(robot->getName().c_str(), "取晶圆命令:%s,开始.", command);
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 		

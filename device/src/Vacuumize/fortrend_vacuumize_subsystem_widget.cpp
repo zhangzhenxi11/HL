@@ -1,4 +1,4 @@
-
+ï»¿
 /**
 * @file    fortrend_tmCartoon_subsystem.h
 * @brief   Fortrend tmCartoon widget
@@ -126,16 +126,16 @@ public:
 	//pipeLineWidget::getInstance().start(30);
 	//pipeLine90Widget::getInstance().start(20);
 
-	//d->ui->widget_18->angle = 90;//90¶ÈĞı×ª
-	//d->ui->widget_pbv_llb->angle = 90;//90¶ÈĞı×ª
-	//d->ui->widget_21->angle = 90;//90¶ÈĞı×ª
-//	d->ui->widget_24->angle = 90;//90¶ÈĞı×ª
-	//d->ui->widget_46->angle = 90;//90¶ÈĞı×ª
-//	d->ui->widget_72->angle = 90;//90¶ÈĞı×ª
-	d->ui->widget_54->angle = 90;//90¶ÈĞı×ª
+	//d->ui->widget_18->angle = 90;//90åº¦æ—‹è½¬
+	//d->ui->widget_pbv_llb->angle = 90;//90åº¦æ—‹è½¬
+	//d->ui->widget_21->angle = 90;//90åº¦æ—‹è½¬
+//	d->ui->widget_24->angle = 90;//90åº¦æ—‹è½¬
+	//d->ui->widget_46->angle = 90;//90åº¦æ—‹è½¬
+//	d->ui->widget_72->angle = 90;//90åº¦æ—‹è½¬
+	d->ui->widget_54->angle = 90;//90åº¦æ—‹è½¬
     //init samethong
-	//d->ui->widget_13->setWaterDirection(0);//ÉèÖÃ´ÓÏÂÍùÉÏÁ÷¶¯
-	//d->ui->widget_53->setWaterDirection(1);//ÉèÖÃ´ÓÓÒÍù×óÁ÷¶¯
+	//d->ui->widget_13->setWaterDirection(0);//è®¾ç½®ä»ä¸‹å¾€ä¸ŠæµåŠ¨
+	//d->ui->widget_53->setWaterDirection(1);//è®¾ç½®ä»å³å¾€å·¦æµåŠ¨
 
 	//d->ui->gmfm_lla_progress->setTextColor(QColor(250, 250, 250));
 	//d->ui->gmfm_lla_progress->setBarBgColor(QColor(30, 30, 30));
@@ -173,8 +173,8 @@ public:
 
 	d->ui->verticalLayout->insertWidget(0, status_widget_pump);
 
-	//d->ui->widget_13->setWaterDirection(2);//ÉèÖÃ´ÓÏÂÍùÉÏÁ÷¶¯
-	//d->ui->widget_4->setWaterDirection(2);//ÉèÖÃ´ÓÏÂÍùÉÏÁ÷¶¯
+	//d->ui->widget_13->setWaterDirection(2);//è®¾ç½®ä»ä¸‹å¾€ä¸ŠæµåŠ¨
+	//d->ui->widget_4->setWaterDirection(2);//è®¾ç½®ä»ä¸‹å¾€ä¸ŠæµåŠ¨
 
 	
 	//d->ui->widget_tm_tmp->colorLine = QColor(153, 194, 255);
@@ -183,57 +183,57 @@ public:
 	d->ui->widget_vp->colorLine = QColor(153, 194, 255);
 	
 	//d->ui->widget_vp->open();
-	//d->ui->widget_vp->isDisableClick(true);//½ûÓÃµã»÷ÊÂ¼ş
+	//d->ui->widget_vp->isDisableClick(true);//ç¦ç”¨ç‚¹å‡»äº‹ä»¶
 
-	QRadialGradient gradient(width() / 2, height() / 2, width() / 2 * 1.5); // ÖĞĞÄµãºÍ°ë¾¶
-	gradient.setColorAt(0, Qt::darkBlue); // ÆğÊ¼ÑÕÉ«£¨ÖĞĞÄ£©
-	gradient.setColorAt(1, Qt::black); // ½áÊøÑÕÉ«£¨±ßÔµ£©
+	QRadialGradient gradient(width() / 2, height() / 2, width() / 2 * 1.5); // ä¸­å¿ƒç‚¹å’ŒåŠå¾„
+	gradient.setColorAt(0, Qt::darkBlue); // èµ·å§‹é¢œè‰²ï¼ˆä¸­å¿ƒï¼‰
+	gradient.setColorAt(1, Qt::black); // ç»“æŸé¢œè‰²ï¼ˆè¾¹ç¼˜ï¼‰
 
 
-	// ÉèÖÃQPalette²¢Ó¦ÓÃ½¥±ä
+	// è®¾ç½®QPaletteå¹¶åº”ç”¨æ¸å˜
 	QPalette palette;
 	palette.setBrush(backgroundRole(), gradient);
 	setPalette(palette);
 
-	// ÉèÖÃ´°¿ÚÊôĞÔ£¬Ê¹±³¾°É«¿ÉÒÔ×Ô¶¯Ìî³äÕû¸ö´°¿Ú
+	// è®¾ç½®çª—å£å±æ€§ï¼Œä½¿èƒŒæ™¯è‰²å¯ä»¥è‡ªåŠ¨å¡«å……æ•´ä¸ªçª—å£
 	setAutoFillBackground(true);
 
-	//QObject::connect(d->ui->widget_tm_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPTMClicked);//TMÇ»·Ö×Ó±Ã
-	//QObject::connect(d->ui->widget_lla_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLAClicked);//LoadLockAÇ»·Ö×Ó±Ã
-	//QObject::connect(d->ui->widget_llb_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLBClicked);//LoadLockBÇ»·Ö×Ó±Ã
-	QObject::connect(d->ui->widget_vp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onVPClicked);//¸É±Ã
+	//QObject::connect(d->ui->widget_tm_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPTMClicked);//TMè…”åˆ†å­æ³µ
+	//QObject::connect(d->ui->widget_lla_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLAClicked);//LoadLockAè…”åˆ†å­æ³µ
+	//QObject::connect(d->ui->widget_llb_tmp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onTMPLLBClicked);//LoadLockBè…”åˆ†å­æ³µ
+	QObject::connect(d->ui->widget_vp, &ValveWheel::signalClicked, this, &QVacuumizeSubsystemWidget::onVPClicked);//å¹²æ³µ
 
-	QObject::connect(d->ui->widget_pav_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVTMClicked);//Æø¶¯½Ç·§
+	QObject::connect(d->ui->widget_pav_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVTMClicked);//æ°”åŠ¨è§’é˜€
 	QObject::connect(d->ui->widget_pav_lla, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVLLAClicked);//
 	QObject::connect(d->ui->widget_pav_llb, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPAVLLBClicked);//
 	
-	//QObject::connect(d->ui->widget_ppv_tm, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVTMClicked);//²å°å·§
+	//QObject::connect(d->ui->widget_ppv_tm, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVTMClicked);//æ’æ¿é˜€
 	//QObject::connect(d->ui->widget_ppv_lla, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVLLAClicked);//
 	//QObject::connect(d->ui->widget_ppv_llb, &AngleValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPPVLLBClicked);//
 
-	//QObject::connect(d->ui->widget_pbv_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVTMClicked);//¸ßÕæ¿Õµ²°å·§
+	//QObject::connect(d->ui->widget_pbv_tm, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVTMClicked);//é«˜çœŸç©ºæŒ¡æ¿é˜€
 	//QObject::connect(d->ui->widget_pbv_lla, &RoughExtractionValve::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLAClicked);//
 	//QObject::connect(d->ui->widget_pbv_llb, &SlideValveWidget::signalClicked, this, &QVacuumizeSubsystemWidget::onPBVLLBClicked);//
 
-	QObject::connect(d->ui->open_loadlock1_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand);//Ò»¼ü³éÕæ¿Õ£¨´ò¿ªÕæ¿Õ£©
+	QObject::connect(d->ui->open_loadlock1_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand);//ä¸€é”®æŠ½çœŸç©ºï¼ˆæ‰“å¼€çœŸç©ºï¼‰
 	QObject::connect(d->ui->open_loadlock2_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenLoadLock2AutoVacuumCommand);//
 	QObject::connect(d->ui->open_tm_cavity_vacuum_btn, &QAbstractButton::clicked, this, &QVacuumizeSubsystemWidget::onOpenTMCavityAutoVacuumCommand);//
 
 	QObject::connect(d->ui->abort_process_btn, &QAbstractButton::clicked, this, [=]() {d->pump->setProcessAbort(true); });
 
-	//d->widget_tm_tmp_ckb = new QCheckBox("TM·Ö×Ó±Ã");
-	//d->widget_lla_tmp_ckb = new QCheckBox("LLA·Ö×Ó±Ã");
-	//d->widget_llb_tmp_ckb = new QCheckBox("LLB·Ö×Ó±Ã");
-	//d->widget_vp_ckb = new QCheckBox("¸É±Ã");
-	d->widget_pav_tm_ckb = new QCheckBox("TM½Ç·§");
-	d->widget_pav_lla_ckb = new QCheckBox("LLA½Ç·§");
-	d->widget_pav_llb_ckb = new QCheckBox("LLB½Ç·§");
-	//d->widget_ppv_tm_ckb = new QCheckBox("TM²å°å·§");
-	//d->widget_ppv_lla_ckb = new QCheckBox("LLA²å°å·§");
-	//d->widget_ppv_llb_ckb = new QCheckBox("LLB²å°å·§");
-	//d->widget_pbv_tm_ckb = new QCheckBox("TMµ²°å·§");
-	//d->widget_pbv_lla_ckb = new QCheckBox("LLAµ²°å·§");
-	//d->widget_pbv_llb_ckb = new QCheckBox("LLBµ²°å·§");
+	//d->widget_tm_tmp_ckb = new QCheckBox("TMåˆ†å­æ³µ");
+	//d->widget_lla_tmp_ckb = new QCheckBox("LLAåˆ†å­æ³µ");
+	//d->widget_llb_tmp_ckb = new QCheckBox("LLBåˆ†å­æ³µ");
+	//d->widget_vp_ckb = new QCheckBox("å¹²æ³µ");
+	d->widget_pav_tm_ckb = new QCheckBox("TMè§’é˜€");
+	d->widget_pav_lla_ckb = new QCheckBox("LLAè§’é˜€");
+	d->widget_pav_llb_ckb = new QCheckBox("LLBè§’é˜€");
+	//d->widget_ppv_tm_ckb = new QCheckBox("TMæ’æ¿é˜€");
+	//d->widget_ppv_lla_ckb = new QCheckBox("LLAæ’æ¿é˜€");
+	//d->widget_ppv_llb_ckb = new QCheckBox("LLBæ’æ¿é˜€");
+	//d->widget_pbv_tm_ckb = new QCheckBox("TMæŒ¡æ¿é˜€");
+	//d->widget_pbv_lla_ckb = new QCheckBox("LLAæŒ¡æ¿é˜€");
+	//d->widget_pbv_llb_ckb = new QCheckBox("LLBæŒ¡æ¿é˜€");
 
 	//d->widget_tm_tmp_ckb->setObjectName("io_object");
 	//d->widget_lla_tmp_ckb->setObjectName("io_object");
@@ -400,7 +400,7 @@ QVacuumizeSubsystemWidget::~QVacuumizeSubsystemWidget(){
 void QVacuumizeSubsystemWidget::onOpenTMCavityAutoVacuumCommand(){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 	KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
@@ -411,7 +411,7 @@ void QVacuumizeSubsystemWidget::onOpenTMCavityAutoVacuumCommand(){
 void QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand(){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 	KernelSubsystemCommand::Ptr cmd = d->pump->createOpenLoadLock1AutoVacuumCommand();
@@ -422,7 +422,7 @@ void QVacuumizeSubsystemWidget::onOpenLoadLock1AutoVacuumCommand(){
 void QVacuumizeSubsystemWidget::onOpenLoadLock2AutoVacuumCommand(){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 	KernelSubsystemCommand::Ptr cmd = d->pump->createOpenLoadLock2AutoVacuumCommand();
@@ -444,7 +444,7 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
 
-	//½ø¶ÈÌõ
+	//è¿›åº¦æ¡
 	//d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumUpperlimitValue(),d->lk1->getVacuumValue()));
 	//d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumUpperlimitValue(),d->tm->getTMCavityVacuumValue()));
 	//d->ui->gmfm_llb_progress->setValue(convertRange(d->lk2->getVacuumUpperlimitValue(), d->lk2->getVacuumValue()));
@@ -452,7 +452,7 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	if (d->lk1->getAngleValveOpend()) {
 		d->ui->widget_pav_lla->open();
 		d->widget_pav_lla_ckb->setChecked(true);
-		d->ui->pav_lla_w_1->setWaterDirection(1);//lla ½Ç·§
+		d->ui->pav_lla_w_1->setWaterDirection(1);//lla è§’é˜€
 	}
 	else {
 		d->ui->widget_pav_lla->close();
@@ -463,7 +463,7 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	if (d->lk2->getAngleValveOpend()) {
 		d->ui->widget_pav_llb->open();
 		d->widget_pav_llb_ckb->setChecked(true);
-		d->ui->pav_llb_w_1->setWaterDirection(1);//llb ½Ç·§
+		d->ui->pav_llb_w_1->setWaterDirection(1);//llb è§’é˜€
 	}
 	else {
 		d->ui->widget_pav_llb->close();
@@ -474,12 +474,12 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	if (d->tm->getAngleValveOpend()){
 		d->ui->widget_pav_tm->open();
 		d->widget_pav_tm_ckb->setChecked(true);
-		d->ui->pav_tm_w_1->setWaterDirection(1);//½Ç·§
+		d->ui->pav_tm_w_1->setWaterDirection(1);//è§’é˜€
 	}
 	else{
 		d->ui->widget_pav_tm->close();
 		d->widget_pav_tm_ckb->setChecked(false);
-		d->ui->pav_tm_w_1->setWaterDirection(2);//½Ç·§
+		d->ui->pav_tm_w_1->setWaterDirection(2);//è§’é˜€
 	}
 
 	if (d->lk1->getTMCavityDoorOpend()) {
@@ -496,9 +496,9 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 		d->ui->tm__llb_door->setWaterDirection(2);
 	}
 
-	//³õÊ¼»¯¹ÜµÀµÄÁ÷¶¯×´Ì¬
+	//åˆå§‹åŒ–ç®¡é“çš„æµåŠ¨çŠ¶æ€
 	if (d->pump->getMechanicalPumpOpened()){
-		//¸É±Ã¿ªÆô×´Ì¬
+		//å¹²æ³µå¼€å¯çŠ¶æ€
 		d->ui->widget_vp->open();
 	}
 	else{
@@ -514,20 +514,20 @@ int QVacuumizeSubsystemWidget::convertRange(double targetValue, double vacuumVal
 {
 	int progressValue;
 
-	// Õæ¿ÕÖµ¡Ü100PaÊ±£¬½ø¶ÈÌõÂúÖµ100
+	// çœŸç©ºå€¼â‰¤100Paæ—¶ï¼Œè¿›åº¦æ¡æ»¡å€¼100
 	if (vacuumValue <= targetValue) {
 		progressValue = targetValue;
 	}
-	// Õæ¿ÕÖµ¡İ99999.0Ê±£¬½ø¶ÈÌõ0Öµ
+	// çœŸç©ºå€¼â‰¥99999.0æ—¶ï¼Œè¿›åº¦æ¡0å€¼
 	else if (vacuumValue >= 99999.0) {
 		progressValue = 0;
 	}
-	// ÖĞ¼ä·¶Î§·´ÏòÓ³Éä£ºÕæ¿ÕÖµÔ½Ğ¡£¬½ø¶ÈÌõÖµÔ½´ó
+	// ä¸­é—´èŒƒå›´åå‘æ˜ å°„ï¼šçœŸç©ºå€¼è¶Šå°ï¼Œè¿›åº¦æ¡å€¼è¶Šå¤§
 	else
 	{
-		// ¼ÆËãÏà¶ÔÖµ£¨100~99999.0·¶Î§ÖĞµÄÎ»ÖÃ£©
+		// è®¡ç®—ç›¸å¯¹å€¼ï¼ˆ100~99999.0èŒƒå›´ä¸­çš„ä½ç½®ï¼‰
 		double relative = (vacuumValue - targetValue) / (99999.0 - 100.0);
-		// ·´ÏòÓ³Éäµ½0~100
+		// åå‘æ˜ å°„åˆ°0~100
 		progressValue = static_cast<int>(round(100.0 - relative * 100.0));
 	}
 
@@ -547,7 +547,7 @@ void QVacuumizeSubsystemWidget::onOutput(){
 void QVacuumizeSubsystemWidget::onTMPTMClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 		if (status){
@@ -555,7 +555,7 @@ void QVacuumizeSubsystemWidget::onTMPTMClicked(bool status){
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			//d->ui->tmp_tm_w_1->setWaterDirection(1);//·Ö×Ó±Ã
+			//d->ui->tmp_tm_w_1->setWaterDirection(1);//åˆ†å­æ³µ
 			//d->ui->widget_tm_tmp->open();
 		}
 		else{
@@ -563,14 +563,14 @@ void QVacuumizeSubsystemWidget::onTMPTMClicked(bool status){
 			cmd->setOrigin("GUI");
 			cmd->addListener(d);
 			d->pump->startCommand(cmd);
-			//d->ui->tmp_tm_w_1->setWaterDirection(2);//¹Ø±Õ·Ö×Ó±Ã
+			//d->ui->tmp_tm_w_1->setWaterDirection(2);//å…³é—­åˆ†å­æ³µ
 			//d->ui->widget_tm_tmp->close();
 		}
 }
 void QVacuumizeSubsystemWidget::onTMPLLAClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 		if (status){
@@ -593,7 +593,7 @@ void QVacuumizeSubsystemWidget::onTMPLLAClicked(bool status){
 void QVacuumizeSubsystemWidget::onTMPLLBClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 		if (status){
@@ -616,7 +616,7 @@ void QVacuumizeSubsystemWidget::onTMPLLBClicked(bool status){
 void QVacuumizeSubsystemWidget::onVPClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->pump->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->pump->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->pump->getName().c_str());
+		logError(d->pump->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->pump->getName().c_str());
 		return;
 	}
 	if (status){
@@ -634,11 +634,11 @@ void QVacuumizeSubsystemWidget::onVPClicked(bool status){
 		d->ui->widget_vp->close();
 	}
 }
-//½Ç·§
+//è§’é˜€
 void QVacuumizeSubsystemWidget::onPAVTMClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->tm->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->tm->getName().c_str());
+		logError(d->tm->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->tm->getName().c_str());
 		return;
 	}
 		if (status){
@@ -658,7 +658,7 @@ void QVacuumizeSubsystemWidget::onPAVTMClicked(bool status){
 void QVacuumizeSubsystemWidget::onPAVLLAClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->lk1->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->lk1->getName().c_str());
+		logError(d->lk1->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->lk1->getName().c_str());
 		return;
 	}
 	if (status){
@@ -677,7 +677,7 @@ void QVacuumizeSubsystemWidget::onPAVLLAClicked(bool status){
 void QVacuumizeSubsystemWidget::onPAVLLBClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->lk2->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->lk2->getName().c_str());
+		logError(d->lk2->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->lk2->getName().c_str());
 		return;
 	}
 	if (status){
@@ -693,11 +693,11 @@ void QVacuumizeSubsystemWidget::onPAVLLBClicked(bool status){
 		d->lk2->startCommand(cmd);
 	}
 }
-//²å°å·§
+//æ’æ¿é˜€
 void QVacuumizeSubsystemWidget::onPPVTMClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->tm->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->tm->getName().c_str());
+		logError(d->tm->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->tm->getName().c_str());
 		return;
 	}
 	if (status){
@@ -716,7 +716,7 @@ void QVacuumizeSubsystemWidget::onPPVTMClicked(bool status){
 void QVacuumizeSubsystemWidget::onPPVLLAClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->lk1->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->lk1->getName().c_str());
+		logError(d->lk1->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->lk1->getName().c_str());
 		return;
 	}
 	if (status){
@@ -735,7 +735,7 @@ void QVacuumizeSubsystemWidget::onPPVLLAClicked(bool status){
 void QVacuumizeSubsystemWidget::onPPVLLBClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->lk2->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->lk2->getName().c_str());
+		logError(d->lk2->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->lk2->getName().c_str());
 		return;
 	}
 	if (status){
@@ -751,11 +751,11 @@ void QVacuumizeSubsystemWidget::onPPVLLBClicked(bool status){
 		d->lk2->startCommand(cmd);
 	}
 }
-//¸ßÕæ¿Õµ²°å·§
+//é«˜çœŸç©ºæŒ¡æ¿é˜€
 void QVacuumizeSubsystemWidget::onPBVTMClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->tm->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->tm->getName().c_str());
+		logError(d->tm->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->tm->getName().c_str());
 		return;
 	}
 
@@ -775,7 +775,7 @@ void QVacuumizeSubsystemWidget::onPBVTMClicked(bool status){
 void QVacuumizeSubsystemWidget::onPBVLLAClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->lk1->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->lk1->getName().c_str());
+		logError(d->lk1->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->lk1->getName().c_str());
 		return;
 	}
 	if (status){
@@ -794,7 +794,7 @@ void QVacuumizeSubsystemWidget::onPBVLLAClicked(bool status){
 void QVacuumizeSubsystemWidget::onPBVLLBClicked(bool status){
 	Q_D(QVacuumizeSubsystemWidget);
 	if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		logError(d->lk2->getName().c_str(), "Ä£×é£º%s×´Ì¬Òì³££¬ÇëÏÈ¸´Î»", d->lk2->getName().c_str());
+		logError(d->lk2->getName().c_str(), "æ¨¡ç»„ï¼š%sçŠ¶æ€å¼‚å¸¸ï¼Œè¯·å…ˆå¤ä½.", d->lk2->getName().c_str());
 		return;
 	}
 	if (status){

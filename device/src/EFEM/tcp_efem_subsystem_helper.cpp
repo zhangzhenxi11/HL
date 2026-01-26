@@ -232,7 +232,7 @@ bool TcpEfemSubSystemHelperPrivate::sendRequest(const std::string& command) thro
 	}
 
 	if (err == SOCKET_ERROR || err == 0) {
-		logError(name.c_str(), "发送命令: %s 失败", data.c_str());
+		logError(name.c_str(), "发送命令: %s 失败.", data.c_str());
 		is_busy = false;
 		isConnected = false; // 连接已断开
 

@@ -173,7 +173,7 @@ bool KYKYSubSystemHelperPrivate::readData(int addr, uint16_t* data)throw(KernelE
 		logInform1(name.c_str(), "地址: %d, 数据: %s 读取成功", addr, message.c_str());
 		return true;
 	};
-	logError(name.c_str(), "地址: %d 读取失败", addr);
+	logError(name.c_str(), "地址: %d 读取失败.", addr);
 	return false;
 	
 	
@@ -186,7 +186,7 @@ bool KYKYSubSystemHelperPrivate::writeData(int addr, uint16_t data)throw(KernelE
 		logInform1(name.c_str(), "地址: %d, 数据: %d 写入成功", addr, data);
 		return true;
 	}
-	logError(name.c_str(), "地址：%d ,数据：%d 写入失败", addr, data);
+	logError(name.c_str(), "地址：%d ,数据：%d 写入失败.", addr, data);
 	return false;
 }
 
