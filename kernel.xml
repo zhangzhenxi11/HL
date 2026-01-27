@@ -1107,6 +1107,8 @@
 				<lifting_axis_target2_position_address>DM6604</lifting_axis_target2_position_address>
 				<!--升降轴位置3-->
 				<lifting_axis_target3_position_address>DM6608</lifting_axis_target3_position_address>
+				<!--升降轴位置4-->
+				<lifting_axis_target4_position_address>DM6590</lifting_axis_target4_position_address>
 				<!--升降轴jog速度-->
 				<lifting_axis_jog_speed_address>DM6632</lifting_axis_jog_speed_address>
 				<!--升降轴寸动移动量-->
@@ -1146,6 +1148,8 @@
 				<lifting_axis_target2_position_address>DM6604</lifting_axis_target2_position_address>
 				<!--升降轴位置3-->
 				<lifting_axis_target3_position_address>DM6608</lifting_axis_target3_position_address>
+				<!--升降轴位置4-->
+				<lifting_axis_target4_position_address>DM6590</lifting_axis_target4_position_address>				
 				<!--升降轴jog速度-->
 				<lifting_axis_jog_speed_address>DM6632</lifting_axis_jog_speed_address>
 				<!--升降轴寸动移动量-->

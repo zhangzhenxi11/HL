@@ -45,7 +45,7 @@ public slots:
 
     void populatePMChambers(int index);
 
-
+    void populatePMChambers();
 private:
 	Q_DECLARE_PRIVATE(DataHistoryWidget)
 	DataHistoryWidgetPrivate *d_ptr;

@@ -151,6 +151,7 @@ namespace FC {
 		float lifting_axis_target1_position = 0.0F;
 		float lifting_axis_target2_position = 0.0F;
 		float lifting_axis_target3_position = 0.0F;
+		float lifting_axis_target4_position = 0.0F;
 		float lifting_axis_jog_speed = 0.0F;
 		float lifting_axis_inch_movement = 0.0F;
 		float lifting_axis_jerk_value = 0.0F;
@@ -181,6 +182,7 @@ namespace FC {
 		{ "lifting_axis_target1_position_address", &PMCavityAxisSettingParameters::lifting_axis_target1_position, "升降轴位置1" },
 		{ "lifting_axis_target2_position_address", &PMCavityAxisSettingParameters::lifting_axis_target2_position, "升降轴位置2" },
 		{ "lifting_axis_target3_position_address", &PMCavityAxisSettingParameters::lifting_axis_target3_position, "升降轴位置3" },
+		{ "lifting_axis_target4_position_address", &PMCavityAxisSettingParameters::lifting_axis_target4_position, "升降轴位置4" },
 		{ "lifting_axis_jog_speed_address", &PMCavityAxisSettingParameters::lifting_axis_jog_speed, "升降轴Jog速度" },
 		{ "lifting_axis_inch_movement_address", &PMCavityAxisSettingParameters::lifting_axis_inch_movement, "升降轴寸动移动量" },
 		{ "lifting_axis_jerk_address",&PMCavityAxisSettingParameters::lifting_axis_jerk_value,"升降轴jerk"},

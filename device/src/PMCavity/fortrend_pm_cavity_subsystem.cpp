@@ -107,9 +107,12 @@ namespace FC{
 		std::string minimum_plane_level_detection_address = "MR34000"; //最低面位检测
 		std::string rotating_plane_level_detection_address= "MR34001"; //中间旋转面位检测
 		std::string maximum_plane_level_detection_address = "MR34002"; //最高面位检测
+		std::string liftpin_plane_level_detection_address = "MR34003"; //顶升销面位检测
+
 		bool pm_cavity_motor_minimum_plane_signal = false;
 		bool pm_cavity_motor_rotating_plane_signal = false;
 		bool pm_cavity_motor_maximum_plane_signal = false;
+		bool pm_cavity_motor_liftpin_plane_signal = false;
 
 		std::string open_tm_cavity_door_address = "";
 		std::string close_tm_cavity_door_address = "";
@@ -684,6 +687,11 @@ namespace FC{
 			d->axis_setting_parameters.lifting_axis_target3_position = pm_param.lifting_axis_target3_position;
 			change = true;
 		}
+		if (d->axis_setting_parameters.lifting_axis_target4_position != pm_param.lifting_axis_target4_position)
+		{
+			d->axis_setting_parameters.lifting_axis_target4_position = pm_param.lifting_axis_target4_position;
+			change = true;
+		}
 
 		if (d->axis_setting_parameters.lifting_axis_jog_speed != pm_param.lifting_axis_jog_speed)
 		{
@@ -774,6 +782,10 @@ namespace FC{
 	bool FortrendPMCavitySubsystem::getRotatingimumPlaneLevelSignal() const
 	{
 		return d->pm_cavity_motor_rotating_plane_signal;
+	}
+	bool FortrendPMCavitySubsystem::getLiftingPinPlaneLevelSignal() const
+	{
+		return d->pm_cavity_motor_liftpin_plane_signal;
 	}
 	float FortrendPMCavitySubsystem::getPmLiftingTargetPos() const
 	{
@@ -1378,6 +1390,8 @@ namespace FC{
 			io_changed |= safe_read_bit(d->rotating_plane_level_detection_address, d->pm_cavity_motor_rotating_plane_signal);
 			//最高面位检测
 			io_changed |= safe_read_bit(d->maximum_plane_level_detection_address, d->pm_cavity_motor_maximum_plane_signal);
+			//顶升销面位检测
+			io_changed |= safe_read_bit(d->liftpin_plane_level_detection_address, d->pm_cavity_motor_liftpin_plane_signal);
 			//清除轴错误完成
 			io_changed |= safe_read_bit(d->rotating_axis_clear_error_completion_address, d->rotating_axis_clear_error_done);
 			//轴停止完成

@@ -6,7 +6,9 @@
 #include "Kernel/kernel_exception.h"
 
 #include "Poco/Format.h"
-
+#include <vector>
+#include <memory>
+#include <string>
 #include <QDir>
 #include <QDebug>
 #include <QTimer>
@@ -21,6 +23,7 @@
 #include <QUrl>
 #include <QDateTime>
 #include <QCoreApplication>
+#include <qmessagebox.h>
 
 namespace FC{
 
@@ -49,6 +52,8 @@ namespace FC{
 		q_ptr(p),
 		datahelper(new DataSubSystemHelper()){
 
+		
+
 	}
 	DataHistoryWidgetPrivate::~DataHistoryWidgetPrivate(){
 		
@@ -60,8 +65,8 @@ namespace FC{
 		d_ptr(new DataHistoryWidgetPrivate(this))
 	{
 		Q_D(DataHistoryWidget);
-		qDebug() << "[DataHistoryWidget] Constructor called";
-		qDebug() << "  - parent:" << parent;
+		//qDebug() << "[DataHistoryWidget] Constructor called";
+		//qDebug() << "  - parent:" << parent;
 		
 		d->ui = new Ui::DataHistoryWidget();
 		d->ui->setupUi(this);
@@ -69,6 +74,12 @@ namespace FC{
 		// 监听窗口显示、隐藏事件
 		installEventFilter(this);
 		
+		// 初始化pmComboBox指针
+		d->pmComboBox = d->ui->dateType;
+		if (!d->pmComboBox) {
+			qDebug() << "[DataHistoryWidget] ERROR: pmComboBox assignment failed!";
+		}
+
 		// Layout Management
 		// Use existing layout from verticalLayoutWidget if available
 		QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(d->ui->verticalLayoutWidget->layout());
@@ -76,48 +87,8 @@ namespace FC{
 			layout = new QVBoxLayout(d->ui->verticalLayoutWidget);
 			layout->setContentsMargins(0,0,0,0);
 		}
-		
-		// // Create control panel for date/time selection
-		// QWidget* controlPanel = new QWidget();
-		// controlPanel->setFixedHeight(60);
-		// QHBoxLayout* controlLayout = new QHBoxLayout(controlPanel);
-		// controlLayout->setContentsMargins(5,5,5,5);
-		
-		
-		// // Add date/time controls
-		// QLabel* startLabel = new QLabel("Start Time:");
-		// QLabel* endLabel = new QLabel("End Time:");
-		// QLabel* pmLabel = new QLabel("PM Chamber:");
-		
-		// d->startTimeEdit = new QDateTimeEdit();
-		// d->endTimeEdit = new QDateTimeEdit();
-		// d->pmComboBox = new QComboBox();
-		
-		// // Set default datetime
-		// QDateTime currentDateTime = QDateTime::currentDateTime();
-		// d->startTimeEdit->setDateTime(currentDateTime.addDays(-1)); // Default to 1 day ago
-		// d->endTimeEdit->setDateTime(currentDateTime);
-		// d->startTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm:ss");
-		// d->endTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm:ss");
-		// d->startTimeEdit->setCalendarPopup(true);
-		// d->endTimeEdit->setCalendarPopup(true);
-		
-		// QPushButton* queryButton = new QPushButton("Query History");
-		// connect(queryButton, &QPushButton::clicked, this, &DataHistoryWidget::onQueryClicked);
-		
-		// // Add widgets to control layout
-		// controlLayout->addWidget(startLabel);
-		// controlLayout->addWidget(d->startTimeEdit);
-		// controlLayout->addWidget(endLabel);
-		// controlLayout->addWidget(d->endTimeEdit);
-		// controlLayout->addWidget(pmLabel);
-		// controlLayout->addWidget(d->pmComboBox);
-		// controlLayout->addWidget(queryButton);
-		// controlLayout->addStretch();
-		
-		// // Insert control panel at the top
-		// layout->insertWidget(0, controlPanel);
-		
+
+
 		// Ensure qweb is in the layout
 		if (layout->indexOf(d->ui->qweb) == -1) {
 			layout->addWidget(d->ui->qweb);
@@ -136,8 +107,8 @@ namespace FC{
 		
 		d->ui->qweb->load(QUrl::fromLocalFile(appDirPath));
 		
-		// 设置焦点策略，确保能接收鼠标事件
-		d->ui->qweb->setFocusPolicy(Qt::StrongFocus);
+		// 设置焦点策略，确保能接收鼠标事件但不拦截父窗口事件
+		d->ui->qweb->setFocusPolicy(Qt::ClickFocus);
 		d->ui->qweb->setAttribute(Qt::WA_AcceptTouchEvents, true);
 		
 		qDebug() << "[DataHistoryWidget] QWebEngineView properties:";
@@ -170,24 +141,14 @@ namespace FC{
 		d->datahelper->opendb(db_file);
 		
 		// Populate PM chamber combo box
-		/*populatePMChambers();*/
+		populatePMChambers();
 
-		// 连接按钮点击事件
-		connect(d->ui->select_btn, &QPushButton::clicked, this, &DataHistoryWidget::onQueryClicked);
-		
-		// 连接ComboBox信号 - 添加空指针检查和调试日志
-		if (d->ui->dateType) {
-			qDebug() << "[DataHistoryWidget] Connecting dateType signal, object name:" << d->ui->dateType->objectName();
-			connect(d->ui->dateType, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), 
-			        this, &DataHistoryWidget::populatePMChambers);
+		// 连接按钮点击事件 - 添加连接检查
+		bool connected = connect(d->ui->select_btn, &QPushButton::clicked, this, &DataHistoryWidget::onQueryClicked);
+		if (!connected) {
+			qDebug() << "[DataHistoryWidget] ERROR: Failed to connect select_btn clicked signal!";
 		} else {
-			qDebug() << "[DataHistoryWidget] ERROR: dateType is nullptr!";
-		}
-		
-		// 初始化pmComboBox指针
-		d->pmComboBox = d->ui->dateType;
-		if (!d->pmComboBox) {
-			qDebug() << "[DataHistoryWidget] ERROR: pmComboBox assignment failed!";
+			qDebug() << "[DataHistoryWidget] Successfully connected select_btn clicked signal";
 		}
 	}
 	void DataHistoryWidget::onSelect(){
@@ -210,8 +171,7 @@ namespace FC{
 	    if (selectedPM.isEmpty()) {
 
 	        qDebug() << "Please select a PM chamber";
-	  /*      return;*/
-			selectedPM = "PM1";
+	        return;
 	    }
 	    
 	    // Query historical data from database
@@ -222,6 +182,7 @@ namespace FC{
 	    );
 	    
 	    if (results.empty()) {
+			QMessageBox::warning(this, "No Data", "No historical data found for the selected period.");
 	        qDebug() << "No historical data found for the selected period";
 	        return;
 	    }
@@ -263,15 +224,15 @@ namespace FC{
 	void DataHistoryWidget::populatePMChambers(int index) {
 	    Q_D(DataHistoryWidget);
 	    
-	    // Query all available PM chambers from database
-	    std::vector<std::vector<std::string>> results = d->datahelper->queryAllPMNames();
-	    
-	    d->pmComboBox->clear();
-	    for (const auto& row : results) {
-	        if (!row.empty()) {
-	            d->pmComboBox->addItem(QString::fromStdString(row[0]));
-	        }
-	    }
+	    //// Query all available PM chambers from database
+	    //std::vector<std::vector<std::string>> results = d->datahelper->queryAllPMNames();
+	    //
+	    //d->pmComboBox->clear();
+	    //for (const auto& row : results) {
+	    //    if (!row.empty()) {
+	    //        d->pmComboBox->addItem(QString::fromStdString(row[0]));
+	    //    }
+	    //}
 	    
 	    //if (d->pmComboBox->count() > 0) {
 	    //    d->pmComboBox->setCurrentIndex(0);
@@ -280,6 +241,29 @@ namespace FC{
 		if (index <= d->pmComboBox->count())
 		{
 			d->pmComboBox->setCurrentIndex(index);
+		}
+	}
+	void DataHistoryWidget::populatePMChambers()
+	{
+		Q_D(DataHistoryWidget);
+
+		// Query all available PM chambers from database
+		std::vector<std::vector<std::string>> results = d->datahelper->queryAllPMNames();
+		d->ui->dateType->clear();
+		//d->pmComboBox->clear();
+
+		if (!results.empty())
+		{
+			for (const auto& row : results) 
+			{
+				if (!row.empty()) {
+					d->pmComboBox->addItem(QString::fromStdString(row[0]));
+				}
+			}
+		}
+		
+		if (d->pmComboBox->count() > 0) {
+		    d->pmComboBox->setCurrentIndex(0);
 		}
 	}
 	void DataHistoryWidget::onclick()

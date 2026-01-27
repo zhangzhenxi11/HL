@@ -303,8 +303,8 @@ namespace FC{
         d->posZList.append(posZ);
         d->posRList.append(posR);
         
-        // Prune (Keep last 500 points)
-        if (d->timeList.size() > 500) {
+        // Prune (Keep last 1000 points)
+        if (d->timeList.size() > 1000) {
             d->timeList.removeFirst();
             d->accZList.removeFirst();
             d->accRList.removeFirst();

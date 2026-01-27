@@ -58,8 +58,10 @@ public:
 	QCheckBox* pm_min_plane_Level_ckb,
 		* pm_max_plane_Level_ckb,
 		* pm_rotating_plane_Level_ckb,
+		* pm_lift_pin_Level_ckb,
 		* pm_liftting_alarm_ckb,
 		* pm_rotating_alarm_ckb;
+		
 
 };
 
@@ -162,6 +164,10 @@ void QMainPMCavitySubsystemWidget::init(){
 	d->pm_min_plane_Level_ckb->setObjectName("io_object");
 	d->pm_min_plane_Level_ckb->setEnabled(false);
 
+	d->pm_lift_pin_Level_ckb = new QCheckBox(QString("升降销到位检测信号"));
+	d->pm_lift_pin_Level_ckb->setObjectName("io_object");
+	d->pm_lift_pin_Level_ckb->setEnabled(false);
+
 	d->pm_max_plane_Level_ckb = new QCheckBox(QString("最高面位检测信号"));
 	d->pm_max_plane_Level_ckb->setObjectName("io_object");
 	d->pm_max_plane_Level_ckb->setEnabled(false);
@@ -180,6 +186,7 @@ void QMainPMCavitySubsystemWidget::init(){
 
 	d->ui->operation_state_gridLayout->addWidget(d->tm_cavity_door_ckb, 0, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_home_ckb, 0, 1);
+	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_alarm_ckb, 0, 2);
 	//d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_forward_ckb, 1, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_running_ckb, 1, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_raxis_motor_running_ckb, 1, 1);
@@ -189,7 +196,7 @@ void QMainPMCavitySubsystemWidget::init(){
 	d->ui->operation_state_gridLayout->addWidget(d->pm_min_plane_Level_ckb, 2, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_max_plane_Level_ckb, 2, 1);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_plane_Level_ckb, 2, 2);
-	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_alarm_ckb, 2, 3);
+	d->ui->operation_state_gridLayout->addWidget(d->pm_lift_pin_Level_ckb, 2, 3);
 
 	d->ui->label_50->hide();
 }
@@ -339,6 +346,7 @@ void QMainPMCavitySubsystemWidget::onAttributeUpdate(){
 	d->pm_min_plane_Level_ckb->setChecked(getSubsystem()->getMinimumPlaneLevelSignal());
 	d->pm_max_plane_Level_ckb->setChecked(getSubsystem()->getMaximumPlaneLevelSignal());
 	d->pm_rotating_plane_Level_ckb->setChecked(getSubsystem()->getRotatingimumPlaneLevelSignal());
+	d->pm_lift_pin_Level_ckb->setChecked(getSubsystem()->getLiftingPinPlaneLevelSignal());
 	d->pm_cavity_motor_running_ckb->setChecked(getSubsystem()->getZAxleJogRunning());
 
 	d->pm_cavity_raxis_motor_home_ckb->setChecked(getSubsystem()->getRotationHomeDone());

@@ -159,6 +159,9 @@ namespace FC{
 		//中间旋转面位检测
 		bool getRotatingimumPlaneLevelSignal()const;
 
+		//顶升销面位检测
+		bool getLiftingPinPlaneLevelSignal()const;
+
 		//z轴定位坐标
 		float getPmLiftingTargetPos()const;
 		//r轴定位坐标

@@ -274,6 +274,7 @@ namespace FC{
 		param.lifting_axis_target1_position = d->ui->lifting_axis_target1_position_dsp->value();
 		param.lifting_axis_target2_position = d->ui->lifting_axis_target2_position_dsp->value();
 		param.lifting_axis_target3_position = d->ui->lifting_axis_target3_position_dsp->value();
+		param.lifting_axis_target4_position = d->ui->lifting_axis_target4_position_dsp->value();
 		param.lifting_axis_target_position = d->ui->lifting_axis_target_position_dsp->value();
 		param.lifting_axis_jerk_value = d->ui->lifting_axis_jerk_dsp->value();
 
@@ -346,6 +347,7 @@ namespace FC{
 				d->ui->lifting_axis_target_position_dsp->setValue(process_param.lifting_axis_target_position);
 				d->ui->lifting_axis_target2_position_dsp->setValue(process_param.lifting_axis_target2_position);
 				d->ui->lifting_axis_target3_position_dsp->setValue(process_param.lifting_axis_target3_position);
+				d->ui->lifting_axis_target4_position_dsp->setValue(process_param.lifting_axis_target4_position);
 				d->ui->lifting_axis_target_pressure_dsp->setValue(process_param.lifting_axis_target_pressure);
 				d->ui->lifting_axis_inch_movement_dsp->setValue(process_param.lifting_axis_inch_movement);
 				d->ui->lifting_axis_jog_speed_dsp->setValue(process_param.lifting_axis_jog_speed);
