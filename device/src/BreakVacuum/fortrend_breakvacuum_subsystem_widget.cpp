@@ -1,4 +1,4 @@
-﻿
+
 #include  "BreakVacuum/fortrend_breakvacuum_subsystem_widget.h"
 #include  "device/ui_fortrend_breakvacuum_subsystem_widget.h"
 
@@ -29,7 +29,7 @@
 
 #include <QMessageBox>
 #include <QCheckBox>
-
+#include <QTextCodec>
 #include <iostream>
 
 namespace FC{
@@ -135,6 +135,7 @@ namespace FC{
 		QObject::connect(d->ui->open_loadlock2_break_vacuum_btn, &QAbstractButton::clicked, this, &QBreakVacuumSubsystemWidget::onOpenLoadLock2AutoBreakVacuumCommand);//
 		QObject::connect(d->ui->open_tm_cavity_break_vacuum_btn, &QAbstractButton::clicked, this, &QBreakVacuumSubsystemWidget::onOpenTMCavityAutoBreakVacuumCommand);//
 		
+
 		d->gmfk_tm_ckb = new QCheckBox("快充隔膜阀");
 		d->gmfm_tm_ckb = new QCheckBox("慢充隔膜阀");
 		d->gmfk_lla_ckb = new QCheckBox("快充隔膜阀");

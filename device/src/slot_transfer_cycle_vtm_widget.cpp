@@ -3339,16 +3339,24 @@ namespace FC{
 				{
 					if (tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = tm->createCloseDiaphragmValveCommand(TMCavityValveOpening::TMCavity_Both);
-						tm->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
-							logFailedExcuteCommandHasError(lk1->getName(), "关闭隔膜阀失败！", loadlock1_process_name, loadlock1_auto_step);
+							logInform("cycle", "大气模式，不关闭隔膜阀!");
+							loadlock1_auto_step = 2060; //直接放片
 						}
-						else
+						else 
 						{
-							loadlock1_auto_step = 2050;
+							auto cmd = tm->createCloseDiaphragmValveCommand(TMCavityValveOpening::TMCavity_Both);
+							tm->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(lk1->getName(), "关闭隔膜阀失败！", loadlock1_process_name, loadlock1_auto_step);
+							}
+							else
+							{
+								loadlock1_auto_step = 2050;
+							}
 						}
 					}
 					else
@@ -4374,7 +4382,7 @@ namespace FC{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "大气模式，不关闭隔膜阀!");
-							loadlock2_auto_step = 2050;
+							loadlock2_auto_step = 2060; //直接放片
 						}
 						else
 						{
@@ -9553,15 +9561,20 @@ namespace FC{
 			// 如果总时间超过1小时，也可以用实际数据验证：实际WPH = 完成循环数 / 总时间（小时）
 			double actual_wph = (total_duration_hours > 0) ? (wph_completed_count / total_duration_hours) : 0;
 
+			//logInform("WPH_TEST", Poco::format("...：%f", wph)); （使用了 Poco 的格式化）
+
 			logInform("WPH_TEST", "========== WPH测试结束 ==========");
 			logInform("WPH_TEST", "完成循环数：%d/%d", wph_completed_count, wph_cycle_count);
-			logInform("WPH_TEST", "总耗时：%.2f 秒 (%.4f 小时)", total_duration_sec, total_duration_hours);
-			logInform("WPH_TEST", "平均单次循环时间：%.2f 秒.", avg_cycle_time_sec);
-			logInform("WPH_TEST", "计算WPH（3600/平均循环时间）：%.2f 片/小时.", wph);
+
+			//logInform("WPH_TEST", Poco::format("总耗时：%.2f 秒 (%.4f 小时)", total_duration_sec, total_duration_hours));
+
+			//logInform("WPH_TEST", "平均单次循环时间：%.2f 秒.", avg_cycle_time_sec);
+
+			//logInform("WPH_TEST", "计算WPH（3600/平均循环时间）：%.2f 片/小时.", wph);
 			
-			if (total_duration_hours >= 1.0) {
-				logInform("WPH_TEST", "实际WPH（循环数/总时间）：%.2f 片/小时.", actual_wph);
-			}
+			//if (total_duration_hours >= 1.0) {
+			//	logInform("WPH_TEST", "实际WPH（循环数/总时间）：%.2f 片/小时.", actual_wph);
+			//}
 
 			if (wph >= 150) {
 				logInform("WPH_TEST", "结果：【通过】WPH >= 150片/小时要求.");
