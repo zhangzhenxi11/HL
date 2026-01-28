@@ -28,6 +28,11 @@ protected:
     void hideEvent(QHideEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event) override;
     void httpUpdate(const QList<QString> &name, const QList<int> &data);
+    void httpUpdateMultiple(const QList<QString> &timestamps, 
+                           const QList<int> &dataZ, 
+                           const QList<int> &dataR,
+                           const QString &nameZ,
+                           const QString &nameR);
 
 	QHash<QString, QHash<QString,int>> Data;
 

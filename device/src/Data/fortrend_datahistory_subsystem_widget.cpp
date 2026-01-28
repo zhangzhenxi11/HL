@@ -169,7 +169,6 @@ namespace FC{
 	    QString selectedPM = d->pmComboBox->currentText();
 	    
 	    if (selectedPM.isEmpty()) {
-
 	        qDebug() << "Please select a PM chamber";
 	        return;
 	    }
@@ -209,16 +208,32 @@ namespace FC{
 	        }
 	    }
 	    
-	    // For demo purposes, let's display velocity data (you can modify to show other data)
-	    // We'll show Z-axis velocity as primary data
-	    QList<int> displayData;
+	    // Convert velocity data to int for display
+	    QList<int> displayvelZData;
+		QList<int> displayvelRData;
 	    for (double val : velZData) {
-	        displayData.append(static_cast<int>(val));
+			displayvelZData.append(static_cast<int>(val));
 	    }
+		for (double val : velRData) {
+			displayvelRData.append(static_cast<int>(val));
+		}
 	    
-	    // Update chart with historical data
-	    qDebug() << "[DataHistoryWidget] Updating chart with" << timestamps.size() << "data points";
-	    httpUpdate(timestamps, displayData);
+	    // Convert position data to int for display
+	    QList<int> displayposZData;
+		QList<int> displayposRData;
+	    for (double val : posZData) {
+			displayposZData.append(static_cast<int>(val));
+	    }
+		for (double val : posRData) {
+			displayposRData.append(static_cast<int>(val));
+		}
+	    
+	    // Update charts with correct data
+	    qDebug() << "[DataHistoryWidget] Updating velocity chart with" << timestamps.size() << "data points";
+	    httpUpdateMultiple(timestamps, displayvelZData, displayvelRData, "Z-Axis Velocity", "R-Axis Velocity");
+	    
+	    qDebug() << "[DataHistoryWidget] Updating position chart with" << timestamps.size() << "data points";
+	    httpUpdateMultiple(timestamps, displayposZData, displayposRData, "Z-Axis Position", "R-Axis Position");
 	}
 	
 	void DataHistoryWidget::populatePMChambers(int index) {
@@ -390,5 +405,65 @@ namespace FC{
 			qDebug() << "[DataHistoryWidget] MouseButtonPress event on" << obj->objectName();
 		}
 		return QWidget::eventFilter(obj, event);
+	}
+
+	//新增：多数据序列的数据解析函数
+	void DataHistoryWidget::httpUpdateMultiple(const QList<QString> &timestamps,
+	                                           const QList<int> &dataZ,
+	                                           const QList<int> &dataR,
+	                                           const QString &nameZ,
+	                                           const QString &nameR)
+	{
+		Q_D(DataHistoryWidget);
+		
+		qDebug() << "[DataHistoryWidget] httpUpdateMultiple called with" << timestamps.size() << "timestamps";
+		qDebug() << "  - dataZ points:" << dataZ.size() << "dataR points:" << dataR.size();
+		qDebug() << "  - qweb page isNull:" << (d->ui->qweb->page() == nullptr);
+		
+		if (d->ui->qweb->page() == nullptr) {
+			qDebug() << "[DataHistoryWidget] ERROR: qweb page is null!";
+			return;
+		}
+		
+		// 构建时间戳数组
+		QString jscode = "onDataReceived([";
+		for (int i = 0; i < timestamps.size(); i++)
+		{
+			jscode += QString("\"%1\"").arg(timestamps[i]);
+			if (i < timestamps.size() - 1)
+				jscode += ",";
+		}
+		jscode += "],";
+
+		// 构建图例
+		jscode += QString("[\'%1\', \'%2\'],").arg(nameZ).arg(nameR);
+
+		// 构建Z轴数据数组
+		QString lineDataZ = "[";
+		for (int i = 0; i < dataZ.size(); i++)
+		{
+			lineDataZ += QString::number(dataZ[i]);
+			if (i < dataZ.size() - 1)
+				lineDataZ += ",";
+		}
+		lineDataZ += "]";
+
+		// 构建R轴数据数组
+		QString lineDataR = "[";
+		for (int i = 0; i < dataR.size(); i++)
+		{
+			lineDataR += QString::number(dataR[i]);
+			if (i < dataR.size() - 1)
+				lineDataR += ",";
+		}
+		lineDataR += "]";
+
+		// 构建图表配置，分别传入Z和R的数据
+		jscode += "[{name:'" + nameZ + "',data: " + lineDataZ + ",type: 'line',smooth: true}";
+		jscode += ",{name:'" + nameR + "',data: " + lineDataR + ",type: 'line',smooth: true}";
+		jscode += "])";
+		
+		qDebug() << "[DataHistoryWidget] Executing JavaScript for" << nameZ << "and" << nameR;
+		d->ui->qweb->page()->runJavaScript(jscode);
 	}
 }
