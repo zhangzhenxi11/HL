@@ -33,6 +33,11 @@ protected:
                            const QList<int> &dataR,
                            const QString &nameZ,
                            const QString &nameR);
+    void httpUpdateMultipleSeries(const QList<QString> &timestamps,
+                                 const QList<int> &velZ,
+                                 const QList<int> &velR,
+                                 const QList<int> &posZ,
+                                 const QList<int> &posR);
 
 	QHash<QString, QHash<QString,int>> Data;
 

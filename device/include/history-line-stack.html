@@ -2,32 +2,9 @@
 <html lang="en" style="height: 100%">
 <head>
     <meta charset="utf-8">
-    <style>
-        body { height: 100%; margin: 0; background: transparent; position: relative; }
-        #container { height: 100%; background: transparent; }
-        #zoom-tip {
-            position: absolute;
-            bottom: 80px;
-            right: 20px;
-            background: rgba(255, 165, 0, 0.95);
-            padding: 10px 18px;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #fff;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.2);
-            z-index: 1000;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            font-weight: 500;
-        }
-        #zoom-tip.hidden {
-            opacity: 0;
-        }
-    </style>
 </head>
 <body style="height: 100%; margin: 0">
     <div id="container" style="height: 100%"></div>
-    <div id="zoom-tip">💡 按住 Ctrl + 滚轮缩放图表</div>
 
     <script src="./echarts.js"></script>
     <script type="text/javascript">
@@ -57,8 +34,7 @@
                     text: 'Stacked Line'
                 },
                 tooltip: {
-                    trigger: 'axis',
-                    confine: true  // 限制tooltip在图表区域内，避免溢出拦截鼠标
+                    trigger: 'axis'
                 },
                 dataZoom: [
                     {
@@ -69,8 +45,7 @@
                         endValue: 10
                     },
                     {
-                        type: 'inside',
-                        zoomOnMouseWheel: 'ctrl'  // 只有按住Ctrl才能滚轮缩放，减少误触
+                        type: 'inside'
                     }
                 ],
                 legend: {
@@ -105,34 +80,6 @@
         // Initialize when window loads
         window.onload = initChart;
 
-        // 智能提示：监听滚轮事件，当用户尝试滚轮但没按Ctrl时显示提示
-        var tipTimer = null;
-        var tipElement = null;
-        window.addEventListener('load', function() {
-            tipElement = document.getElementById('zoom-tip');
-            // 初始时隐藏提示
-            if (tipElement) {
-                tipElement.classList.add('hidden');
-            }
-        });
-
-        document.addEventListener('wheel', function(e) {
-            if (!tipElement) return;
-            
-            // 如果用户在图表区域滚轮但没按Ctrl，显示提示
-            if (!e.ctrlKey) {
-                tipElement.classList.remove('hidden');
-                
-                // 清除之前的定时器
-                if (tipTimer) clearTimeout(tipTimer);
-                
-                // 3秒后自动隐藏
-                tipTimer = setTimeout(function() {
-                    tipElement.classList.add('hidden');
-                }, 3000);
-            }
-        }, { passive: true });
-
         // Listen for postMessage from host to update chart in renderer context
         window.addEventListener('message', function(event) {
             try {
@@ -141,9 +88,6 @@
                 var timestamps = payload.timestamps || [];
                 var legends = payload.legends || [];
                 var seriesArray = payload.series || [];
-
-                console.log('Received postMessage with', timestamps.length, 'timestamps');
-                console.log('Series count:', seriesArray.length);
 
                 // Normalize series
                 var normalized = seriesArray.map(function(s, idx) {
@@ -158,30 +102,18 @@
                     return obj;
                 });
 
-                // 使用 requestAnimationFrame 确保在渲染帧中更新，避免主进程调用
-                requestAnimationFrame(function() {
-                    if (!myChart) {
-                        console.warn('postMessage: chart not initialized yet');
-                        return;
-                    }
-                    
-                    var option = {
-                        legend: { data: legends },
-                        xAxis: { 
-                            type: 'category',
-                            boundaryGap: false,
-                            data: timestamps 
-                        },
-                        yAxis: {
-                            type: 'value'
-                        },
-                        series: normalized
-                    };
+                var option = {
+                    legend: { data: legends },
+                    xAxis: { data: timestamps },
+                    series: normalized
+                };
 
-                    console.log('Calling setOption with', normalized.length, 'series');
-                    myChart.setOption(option, false);  // notMerge=false 合并选项
-                    console.log('Chart updated successfully');
-                });
+                // Update chart now in page (renderer) context
+                if (myChart) {
+                    myChart.setOption(option, true);
+                } else {
+                    console.warn('postMessage: chart not initialized yet');
+                }
 
             } catch (e) {
                 console.error('postMessage handler error:', e);

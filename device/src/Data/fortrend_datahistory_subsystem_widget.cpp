@@ -24,6 +24,9 @@
 #include <QDateTime>
 #include <QCoreApplication>
 #include <qmessagebox.h>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 namespace FC{
 
@@ -88,17 +91,35 @@ namespace FC{
 			layout->setContentsMargins(0,0,0,0);
 		}
 
+		// 确保verticalLayoutWidget不覆盖顶部控件
+		// UI文件中设置了verticalLayoutWidget的geometry为(50, 80, 1091, 551)
+		// 这意味着它不应该覆盖y=30处的顶部控件
+		d->ui->verticalLayoutWidget->setGeometry(50, 80, 1091, 551);
+		
+		// 确保qweb在verticalLayoutWidget内部，不会溢出
+		d->ui->qweb->setMaximumHeight(551);
+		
+		// 确保顶部控件在最上层，不会被qweb覆盖
+		d->ui->startDatetime->raise();
+		d->ui->endDatetime->raise();
+		d->ui->label->raise();
+		d->ui->label_2->raise();
+		d->pmComboBox->raise();  // dateType
+		d->ui->select_btn->raise();
+
 
 		// Ensure qweb is in the layout
 		if (layout->indexOf(d->ui->qweb) == -1) {
 			layout->addWidget(d->ui->qweb);
 		}
 		
+		// 不要设置主窗口的layout，因为UI文件使用的是绝对定位
+		// 如果设置了主窗口的layout，会导致verticalLayoutWidget被拉伸覆盖整个窗口
 		// Re-setup main layout to ensure full screen
-		if (this->layout() == nullptr) {
-			QVBoxLayout* mainLayout = new QVBoxLayout(this);
-			mainLayout->addWidget(d->ui->verticalLayoutWidget);
-		}
+		// if (this->layout() == nullptr) {
+		//     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+		//     mainLayout->addWidget(d->ui->verticalLayoutWidget);
+		// }
 
 		//数据加载 - 使用fromLocalFile确保本地文件正确加载
 		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/history-line-stack.html";
@@ -108,8 +129,11 @@ namespace FC{
 		d->ui->qweb->load(QUrl::fromLocalFile(appDirPath));
 		
 		// 设置焦点策略，确保能接收鼠标事件但不拦截父窗口事件
-		d->ui->qweb->setFocusPolicy(Qt::ClickFocus);
-		d->ui->qweb->setAttribute(Qt::WA_AcceptTouchEvents, true);
+		d->ui->qweb->setFocusPolicy(Qt::NoFocus);
+		// 设置透明背景，允许鼠标穿透非图表区域
+		d->ui->qweb->page()->setBackgroundColor(Qt::transparent);
+		// 注意：QWebEngineView会拦截鼠标事件用于图表交互
+		// 如果需要父窗口可点击，需要调整布局，不要让qweb覆盖整个父窗口
 		
 		qDebug() << "[DataHistoryWidget] QWebEngineView properties:";
 		qDebug() << "  - isEnabled:" << d->ui->qweb->isEnabled();
@@ -197,15 +221,14 @@ namespace FC{
 	    QList<double> posZData, posRData;
 	    
 	    for (const auto& row : results) {
-	        if (row.size() >= 7) { // timestamp, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r
-	            timestamps.append(QString::fromStdString(row[0])); // timestamp
-	            accZData.append(std::stod(row[1])); // acc_z
-	            accRData.append(std::stod(row[2])); // acc_r
-	            velZData.append(std::stod(row[3])); // vel_z
-	            velRData.append(std::stod(row[4])); // vel_r
-	            posZData.append(std::stod(row[5])); // pos_z
-	            posRData.append(std::stod(row[6])); // pos_r
-	        }
+	        if (row.size() >= 7) // timestamp, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r
+	            timestamps.append(QString::fromStdString(row[0])) // timestamp
+	                            , accZData.append(std::stod(row[1])) // acc_z
+	                            , accRData.append(std::stod(row[2])) // acc_r
+	                            , velZData.append(std::stod(row[3])) // vel_z
+	                            , velRData.append(std::stod(row[4])) // vel_r
+	                            , posZData.append(std::stod(row[5])) // pos_z
+	                            , posRData.append(std::stod(row[6])); // pos_r
 	    }
 	    
 	    // Convert velocity data to int for display
@@ -228,12 +251,11 @@ namespace FC{
 			displayposRData.append(static_cast<int>(val));
 		}
 	    
-	    // Update charts with correct data
-	    qDebug() << "[DataHistoryWidget] Updating velocity chart with" << timestamps.size() << "data points";
-	    httpUpdateMultiple(timestamps, displayvelZData, displayvelRData, "Z-Axis Velocity", "R-Axis Velocity");
-	    
-	    qDebug() << "[DataHistoryWidget] Updating position chart with" << timestamps.size() << "data points";
-	    httpUpdateMultiple(timestamps, displayposZData, displayposRData, "Z-Axis Position", "R-Axis Position");
+	    // 在同一个图表中显示所有4条曲线：Z速度、R速度、Z位置、R位置
+	    qDebug() << "[DataHistoryWidget] Updating chart with 4 series and" << timestamps.size() << "data points";
+	    httpUpdateMultipleSeries(timestamps, 
+	        displayvelZData, displayvelRData, 
+	        displayposZData, displayposRData);
 	}
 	
 	void DataHistoryWidget::populatePMChambers(int index) {
@@ -425,45 +447,114 @@ namespace FC{
 			return;
 		}
 		
-		// 构建时间戳数组
-		QString jscode = "onDataReceived([";
-		for (int i = 0; i < timestamps.size(); i++)
-		{
-			jscode += QString("\"%1\"").arg(timestamps[i]);
-			if (i < timestamps.size() - 1)
-				jscode += ",";
-		}
-		jscode += "],";
+		// 使用 QJsonDocument 构建 JSON 参数，避免手工拼接
+		QJsonArray jsTimestamps;
+		for (const QString &t : timestamps) jsTimestamps.append(t);
 
-		// 构建图例
-		jscode += QString("[\'%1\', \'%2\'],").arg(nameZ).arg(nameR);
+		QJsonArray jsLegends;
+		jsLegends.append(nameZ);
+		jsLegends.append(nameR);
 
-		// 构建Z轴数据数组
-		QString lineDataZ = "[";
-		for (int i = 0; i < dataZ.size(); i++)
-		{
-			lineDataZ += QString::number(dataZ[i]);
-			if (i < dataZ.size() - 1)
-				lineDataZ += ",";
-		}
-		lineDataZ += "]";
+		// series 对象数组
+		QJsonArray jsSeries;
+		QJsonObject seriesZ;
+		seriesZ.insert("name", nameZ);
+		QJsonArray arrZ;
+		for (int v : dataZ) arrZ.append(v);
+		seriesZ.insert("data", arrZ);
+		jsSeries.append(seriesZ);
 
-		// 构建R轴数据数组
-		QString lineDataR = "[";
-		for (int i = 0; i < dataR.size(); i++)
-		{
-			lineDataR += QString::number(dataR[i]);
-			if (i < dataR.size() - 1)
-				lineDataR += ",";
-		}
-		lineDataR += "]";
+		QJsonObject seriesR;
+		seriesR.insert("name", nameR);
+		QJsonArray arrR;
+		for (int v : dataR) arrR.append(v);
+		seriesR.insert("data", arrR);
+		jsSeries.append(seriesR);
 
-		// 构建图表配置，分别传入Z和R的数据
-		jscode += "[{name:'" + nameZ + "',data: " + lineDataZ + ",type: 'line',smooth: true}";
-		jscode += ",{name:'" + nameR + "',data: " + lineDataR + ",type: 'line',smooth: true}";
-		jscode += "])";
+		QString jsonT = QString::fromUtf8(QJsonDocument(jsTimestamps).toJson(QJsonDocument::Compact));
+		QString jsonL = QString::fromUtf8(QJsonDocument(jsLegends).toJson(QJsonDocument::Compact));
+		QString jsonS = QString::fromUtf8(QJsonDocument(jsSeries).toJson(QJsonDocument::Compact));
+
+		// 使用 window.postMessage 将数据传入页面渲染上下文，避免直接在主进程调用 setOption
+		QString jscode = QString("(function(){ try{ var payload = { type: 'data_update', timestamps: %1, legends: %2, series: %3 }; window.postMessage(payload, '*'); }catch(e){ console.error('postMessage wrapper error', e); } })();")
+				.arg(jsonT).arg(jsonL).arg(jsonS);
+
+		qDebug() << "[DataHistoryWidget] Executing JavaScript (postMessage) for" << nameZ << "and" << nameR;
+		d->ui->qweb->page()->runJavaScript(jscode);
+	}
+
+	//新增：支持4条曲线的数据解析函数
+	void DataHistoryWidget::httpUpdateMultipleSeries(const QList<QString> &timestamps,
+	                                                const QList<int> &velZ,
+	                                                const QList<int> &velR,
+	                                                const QList<int> &posZ,
+	                                                const QList<int> &posR)
+	{
+		Q_D(DataHistoryWidget);
 		
-		qDebug() << "[DataHistoryWidget] Executing JavaScript for" << nameZ << "and" << nameR;
+		qDebug() << "[DataHistoryWidget] httpUpdateMultipleSeries called with" << timestamps.size() << "timestamps";
+		qDebug() << "  - velZ:" << velZ.size() << "velR:" << velR.size() 
+		         << "posZ:" << posZ.size() << "posR:" << posR.size();
+		
+		if (d->ui->qweb->page() == nullptr) {
+			qDebug() << "[DataHistoryWidget] ERROR: qweb page is null!";
+			return;
+		}
+		
+		// 使用 QJsonDocument 构建 JSON 参数
+		QJsonArray jsTimestamps;
+		for (const QString &t : timestamps) jsTimestamps.append(t);
+
+		QJsonArray jsLegends;
+		jsLegends.append("Z-Axis Velocity");
+		jsLegends.append("R-Axis Velocity");
+		jsLegends.append("Z-Axis Position");
+		jsLegends.append("R-Axis Position");
+
+		// 创建4个series对象
+		QJsonArray jsSeries;
+		
+		// Series 1: Z速度
+		QJsonObject s1;
+		s1.insert("name", "Z-Axis Velocity");
+		QJsonArray arr1;
+		for (int v : velZ) arr1.append(v);
+		s1.insert("data", arr1);
+		jsSeries.append(s1);
+		
+		// Series 2: R速度
+		QJsonObject s2;
+		s2.insert("name", "R-Axis Velocity");
+		QJsonArray arr2;
+		for (int v : velR) arr2.append(v);
+		s2.insert("data", arr2);
+		jsSeries.append(s2);
+		
+		// Series 3: Z位置
+		QJsonObject s3;
+		s3.insert("name", "Z-Axis Position");
+		QJsonArray arr3;
+		for (int v : posZ) arr3.append(v);
+		s3.insert("data", arr3);
+		jsSeries.append(s3);
+		
+		// Series 4: R位置
+		QJsonObject s4;
+		s4.insert("name", "R-Axis Position");
+		QJsonArray arr4;
+		for (int v : posR) arr4.append(v);
+		s4.insert("data", arr4);
+		jsSeries.append(s4);
+
+		QString jsonT = QString::fromUtf8(QJsonDocument(jsTimestamps).toJson(QJsonDocument::Compact));
+		QString jsonL = QString::fromUtf8(QJsonDocument(jsLegends).toJson(QJsonDocument::Compact));
+		QString jsonS = QString::fromUtf8(QJsonDocument(jsSeries).toJson(QJsonDocument::Compact));
+
+		// 使用 window.postMessage 将数据传入页面渲染上下文
+		QString jscode = QString("(function(){ try{ var payload = { type: 'data_update', timestamps: %1, legends: %2, series: %3 }; window.postMessage(payload, '*'); }catch(e){ console.error('postMessage wrapper error', e); } })();")
+				.arg(jsonT).arg(jsonL).arg(jsonS);
+
+		qDebug() << "[DataHistoryWidget] Executing JavaScript (postMessage) for 4 series";
 		d->ui->qweb->page()->runJavaScript(jscode);
 	}
 }

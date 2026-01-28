@@ -242,8 +242,10 @@ namespace FC{
         double posZ = qrand() % 100; // 0 to 100
         double posR = qrand() % 100;
         
+        // 使用实际时间戳保存数据（格式：yyyy-MM-dd HH:mm:ss）
+        QString timestampStr = QDateTime::fromMSecsSinceEpoch(now).toString("yyyy-MM-dd HH:mm:ss");
         std::string pmName = d->currentSubsystem->getName();
-        d->dataHelper->insertRealtimeData("PM1", accZ, accR, velZ, velR, posZ, posR);
+        d->dataHelper->insertRealtimeDataWithTimestamp("PM1", accZ, accR, velZ, velR, posZ, posR, timestampStr.toStdString());
 
         // Append
         d->timeList.append(tStr);
@@ -290,9 +292,10 @@ namespace FC{
         double posZ = d->currentSubsystem->getPMCavityZAxleLocation();
         double posR = d->currentSubsystem->getPMCavityRAxleLocation();
         
-        // Save to database
+        // 使用实际时间戳保存数据（格式：yyyy-MM-dd HH:mm:ss）
+        QString timestampStr = QDateTime::fromMSecsSinceEpoch(now).toString("yyyy-MM-dd HH:mm:ss");
         std::string pmName = d->currentSubsystem->getName();
-        d->dataHelper->insertRealtimeData(pmName, accZ, accR, velZ, velR, posZ, posR);
+        d->dataHelper->insertRealtimeDataWithTimestamp(pmName, accZ, accR, velZ, velR, posZ, posR, timestampStr.toStdString());
         
         // Append
         d->timeList.append(tStr);

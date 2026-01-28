@@ -169,6 +169,20 @@ namespace FC{
 	    d->exceSql(insert_sql);
 	}
 	
+	// 新增：带时间戳的插入方法
+	void DataSubSystemHelper::insertRealtimeDataWithTimestamp(const std::string& pm_name, 
+	                                           double acc_z, double acc_r,
+	                                           double vel_z, double vel_r,
+	                                           double pos_z, double pos_r,
+	                                           const std::string& timestamp) {
+	    std::string insert_sql = Poco::format(
+	        "INSERT INTO realtime_data (timestamp, pm_name, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r) "
+	        "VALUES('%s', '%s', %.6f, %.6f, %.6f, %.6f, %.6f, %.6f);",
+	        timestamp, pm_name, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r);
+	    
+	    d->exceSql(insert_sql);
+	}
+	
 	std::vector<std::vector<std::string>> DataSubSystemHelper::queryHistoricalData(
 	    const std::string& pm_name, 
 	    const std::string& start_time, 

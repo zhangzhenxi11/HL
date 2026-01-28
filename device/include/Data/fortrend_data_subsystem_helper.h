@@ -28,10 +28,17 @@ public:
     
     // 新增方法用于历史数据管理
     void initializeDatabase();
+    // 插入实时数据（不指定时间戳，使用数据库默认值）
     void insertRealtimeData(const std::string& pm_name, 
                            double acc_z, double acc_r,
                            double vel_z, double vel_r,
                            double pos_z, double pos_r);
+    // 插入实时数据（指定时间戳）
+    void insertRealtimeDataWithTimestamp(const std::string& pm_name, 
+                           double acc_z, double acc_r,
+                           double vel_z, double vel_r,
+                           double pos_z, double pos_r,
+                           const std::string& timestamp);
     std::vector<std::vector<std::string>> queryHistoricalData(
         const std::string& pm_name, 
         const std::string& start_time, 
