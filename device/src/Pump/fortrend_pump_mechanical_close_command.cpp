@@ -65,18 +65,18 @@ namespace FC{
 		if (address == "" || finish_address == "" || failed_address=="")
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
-				Poco::format("地址: 关闭机械泵地址未定义", getName()), this);
+				Poco::format("地址: 关闭机械泵地址未定义.", getName()), this);
 		}
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
-				Poco::format("超时: %s 关闭机械泵超时参数错误", sub->getName()), this);
+				Poco::format("超时: %s 关闭机械泵超时参数错误.", sub->getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "关闭机械泵命令开始.");
 		if (!writeBit(address, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, 
-				Poco::format(" %s 写1到关闭机械泵地址错误", sub->getName()), this);
+				Poco::format(" %s 写1到关闭机械泵地址错误.", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;

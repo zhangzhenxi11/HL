@@ -104,7 +104,7 @@ namespace FC{
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
-				Poco::format("超时: %s 查询手指有位晶圆超时参数错误", robot->getName()), this);
+				Poco::format("超时: %s 查询手指有位晶圆超时参数错误.", robot->getName()), this);
 		}
 		std::string command = "";
 		//std::string station_name = d->station->getName();
@@ -117,7 +117,7 @@ namespace FC{
 		command.append(str_arm);
 		command.append(";");
 
-		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行", str_arm).c_str());
+		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行.", str_arm).c_str());
 
 		clearRobotMessage();
 		sendRequest(command);
@@ -125,7 +125,7 @@ namespace FC{
 		std::string res = recvResponseRobotMessage(timeout);
 		if (res != std::string("ACK;") && res.find("QRY:LOAD") == std::string::npos)
 		{
-			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误", str_arm).c_str());
+			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 			
 			std::string error_str = "ERR";
 			if (!handleErrorCode(res, error_str, error_type, error_code)) {
@@ -203,13 +203,13 @@ namespace FC{
 				if (robot_staus == "ON")
 				{
 					robot->setObject(0,true);
-					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆", str_arm).c_str());
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
 					robot_cass->setMapping(1, Cassette::Mapping::Present);
 				}
 				else if (robot_staus == "OFF")
 				{
 					robot->setObject(0, false);
-					logInform(robot->getName().c_str(), Poco::format("查询手指%s无晶圆", str_arm).c_str());
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s无晶圆.", str_arm).c_str());
 					robot_cass->setMapping(1, Cassette::Mapping::Empty);
 				}
 				else
@@ -225,13 +225,13 @@ namespace FC{
 				if (robot_staus == "ON")
 				{
 					robot->setObject(1, true);
-					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆", str_arm).c_str());
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
 					robot_cass->setMapping(2, Cassette::Mapping::Present);
 				}
 				else if (robot_staus == "OFF")
 				{
 					robot->setObject(1, false);
-					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆", str_arm).c_str());
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
 					robot_cass->setMapping(2, Cassette::Mapping::Empty);
 				}
 				else
@@ -246,7 +246,7 @@ namespace FC{
 
 			Sleep(200);
 			
-			logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令执行结束", str_arm).c_str());
+			logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令执行结束.", str_arm).c_str());
 		}
 		return RunResult::RUN_OK;
 

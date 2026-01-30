@@ -96,17 +96,17 @@ namespace FC{
 		std::string finish_address = command_config->getString("finish_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开角阀命令设置超时参数错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开角阀命令设置超时参数错误.", sub->getName()), this);
 		}
 
 		if ((address_1 == "") || (address_2 == "") || (finish_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开角阀命令地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开角阀命令地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "打开角阀命令开始.");
 		if (!writeBit(address_1, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址1错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址1错误.", sub->getName()), this);
 		}
 		auto start = std::chrono::steady_clock::now();
 		const auto angle_timeout = std::chrono::hours(1); //1h
@@ -136,7 +136,7 @@ namespace FC{
 		{
 			if (!writeBit(address_2, true))
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址2错误", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到打开角阀命令地址2错误.", sub->getName()), this);
 			}
 		}
 		else

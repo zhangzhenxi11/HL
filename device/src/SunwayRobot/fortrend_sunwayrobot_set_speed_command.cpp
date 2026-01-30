@@ -61,7 +61,7 @@ public:
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
-				Poco::format("超时: %s 设置速度超时参数设置错误", sub->getName()), this);
+				Poco::format("超时: %s 设置速度超时参数设置错误.", sub->getName()), this);
 		}
 
 		//SET:RUN_SPEED/50;
@@ -138,7 +138,7 @@ public:
 				if (!sendRequest("ACK;"))
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-						Poco::format("%s 机械手通讯错误", sub->getName()), this);
+						Poco::format("%s 机械手通讯错误.", sub->getName()), this);
 				}
 			}
 			logInform(sub->getName().c_str(), "设置速度命令执行完成.");

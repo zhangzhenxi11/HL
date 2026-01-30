@@ -60,28 +60,28 @@ namespace FC{
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 关闭传输腔门阀超时参数设置失败", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 关闭传输腔门阀超时参数设置失败.", sub->getName()), this);
 		}
 
 		if ((open_address == "") || (close_address == "") || (finish_address == "")||(failed_address == "")||(safe_Interlock_signal_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭传输腔门阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭传输腔门阀地址未定义.", getName()), this);
 		}
 
 		bool is_safe = false;
 		if (!readBit(safe_Interlock_signal_address, is_safe))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LLA-机械手抓放料完成信号命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LLA-机械手抓放料完成信号命令地址错误.", sub->getName()), this);
 		}
 		if (!is_safe)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s LLA-机械手抓放料完成信号未到位", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s LLA-机械手抓放料完成信号未到位.", sub->getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "关闭传输腔门阀命令开始.");
 		if (!writeBit(open_address, false))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到打开传输腔门阀命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到打开传输腔门阀命令地址错误.", sub->getName()), this);
 		}
 		Sleep(20);
 
@@ -89,7 +89,7 @@ namespace FC{
 
 		if (!writeBit(close_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到关闭传输腔门阀命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到关闭传输腔门阀命令地址错误.", sub->getName()), this);
 		}
 		
 		Sleep(500);

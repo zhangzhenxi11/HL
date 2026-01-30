@@ -450,7 +450,7 @@ namespace FC{
 				}
 				else{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s处于未知状态", wtr->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s处于未知状态.", wtr->getName()).c_str());
 				}
 
 			}
@@ -529,31 +529,31 @@ namespace FC{
 					rest_step = 15000;
 					if (wtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", wtr->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", wtr->getName()).c_str());
 					}
 					if (lk1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk1->getName()).c_str());
 					}
 					if (lk2->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk2->getName()).c_str());
 					}
 					/*if (pm1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm1->getName()).c_str());
 					}*/
 					if (pm2->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm2->getName()).c_str());
 					}
 					/*if (pm3->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm3->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm3->getName()).c_str());
 					}*/
 					if (tm->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", tm->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", tm->getName()).c_str());
 					}
 				}
 			}
@@ -575,28 +575,28 @@ namespace FC{
 				{
 					if (lk1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk1->getName()).c_str());
 					}
 
 					if (lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk2->getName()).c_str());
 					}
 					/*if (pm1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm1->getName()).c_str());
 					}*/
 					if (pm2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm2->getName()).c_str());
 					}
 					/*if (pm3->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm3->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm3->getName()).c_str());
 					}*/
 					if (tm->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", tm->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", tm->getName()).c_str());
 					}
 					rest_step = 15000;
 				}
@@ -3226,7 +3226,7 @@ namespace FC{
 
 				case 50000:
 				{
-					logInform("Auto", "机械手工艺流程结束。");
+					logInform("Auto", "机械手工艺流程结束.");
 					robot_process_finished = true;
 					robot_auto_step = 10;
 				}
@@ -3716,7 +3716,7 @@ namespace FC{
 					}
 					else
 					{
-						logFailed(lk1->getName(), Poco::format("%s 第%d槽不存在正常片", lk1->getName(), loadlock1_move_slot_index));
+						logFailed(lk1->getName(), Poco::format("%s 第%d槽不存在正常片.", lk1->getName(), loadlock1_move_slot_index));
 					}
 				}
 				break;
@@ -5033,7 +5033,7 @@ namespace FC{
 		settings.setValue("PM3TatgetSite2", d->ui->target_site_2_pm3_let->text());
 		settings.setValue("PM3TatgetSite3", d->ui->target_site_3_pm3_let->text());*/
 
-		logInform("Auto", "目标靶位保存成功！");
+		logInform("Auto", "目标靶位保存成功.");
 	}
 
 	void QSlotTransferAutoVTMWidget::onStart(){

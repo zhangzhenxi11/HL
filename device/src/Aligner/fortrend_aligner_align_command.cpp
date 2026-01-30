@@ -60,7 +60,7 @@ namespace FC{
 		RunResult ret = RunResult::RUN_FAILD;
 		int timeout = command_config->getInt("timeout", 120000);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("超时: 寻边命令超时时间设置错误", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("超时: 寻边命令超时时间设置错误.", getName()), this);
 		}
 
 		if (sendRequest("ALGN RSLT 0 "))
@@ -90,7 +90,7 @@ namespace FC{
 				}
 			}
 			else{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 接收结果错误", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 接收结果错误.", sub->getName()), this);
 			}
 
 		}

@@ -144,7 +144,7 @@ namespace FC{
 				}
 				/*if (tm->getTMCavityVacuumPressureGageState())
 				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误），请检查压力是否正常", tm->getName()), this);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 真空压力表有信号（逻辑错误），请检查压力是否正常.", tm->getName()), this);
 				}*/
 			}
 		}
@@ -197,22 +197,22 @@ namespace FC{
 		std::string failed_address = command_config->getString("failed_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开传输腔插板门阀超时参数设置异常", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开传输腔插板门阀超时参数设置异常.", sub->getName()), this);
 		}
 		if ((open_address == "") || (close_address == "") || (finish_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开传输腔插板门阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开传输腔插板门阀地址未定义.", getName()), this);
 		}
 		
 		logInform(sub->getName().c_str(), "打开传输腔插板门阀命令开始.");
 		if (!KeyencePlcCommandExecuter::writeBit(close_address, false))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到关闭传输腔门阀命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到关闭传输腔门阀命令地址错误.", sub->getName()), this);
 		}
 		Sleep(20);
 		if (!KeyencePlcCommandExecuter::writeBit(open_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开传输腔门阀命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开传输腔门阀命令地址错误.", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;

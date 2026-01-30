@@ -58,7 +58,7 @@ namespace FC{
 		std::string mechanical_reset_address = command_config->getString("mechanical_reset_address", "");
 		if (mechanical_reset_address == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 机械泵报警复位地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 机械泵报警复位地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "复位命令开始执行.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;

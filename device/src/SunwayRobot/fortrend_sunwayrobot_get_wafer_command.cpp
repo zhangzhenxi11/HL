@@ -143,7 +143,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				if (!sub->getPMCavitySafeSignal())
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-						Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+						Poco::format("%s腔未发出安全信号.", getStation()->getName()).c_str(), this);
 				}
 			}
 		}
@@ -163,7 +163,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				Sleep(50);
 				if (!sub->getLoadLockCavitySafeSignal())
 				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,Poco::format("%s腔未发出安全信号", getStation()->getName()).c_str(), this);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,Poco::format("%s腔未发出安全信号.", getStation()->getName()).c_str(), this);
 				}
 			}	
 		}
@@ -185,7 +185,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		if (getSlot() != mapping_slot)
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-				Poco::format("取%s工位时升降轴位置与指定的槽号不匹配", getStation()->getName()), this);
+				Poco::format("取%s工位时升降轴位置与指定的槽号不匹配.", getStation()->getName()), this);
 		}
 	}
 
@@ -233,7 +233,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			{
 				AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
 					KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-					Poco::format("%s 机械手通讯错误", robot->getName())));
+					Poco::format("%s 机械手通讯错误.", robot->getName())));
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			};
@@ -330,7 +330,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					if (!sendRequest("ACK;"))
 					{
 						throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-							Poco::format("%s 机械手通讯错误", robot->getName()), this);
+							Poco::format("%s 机械手通讯错误.", robot->getName()), this);
 					}
 				}
 				else
@@ -497,7 +497,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					if (!sendRequest("ACK;"))
 					{
 						throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-							Poco::format("%s 机械手通讯错误", robot->getName()), this);
+							Poco::format("%s 机械手通讯错误.", robot->getName()), this);
 					}
 				}
 				else

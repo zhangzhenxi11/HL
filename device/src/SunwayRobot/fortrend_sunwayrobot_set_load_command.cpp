@@ -88,7 +88,7 @@ namespace FC{
 		
 		int timeout = command_config->getInt("timeout", 5000);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取手指状态超时参数设置错误", robot->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取手指状态超时参数设置错误.", robot->getName()), this);
 		}
 		/*
 		SET:LOAD/[P1]/[P1];\r

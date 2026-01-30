@@ -84,12 +84,12 @@ namespace FC{
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 去工艺位命令超时参数设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 去工艺位命令超时参数设置错误.", sub->getName()), this);
 		}
 
 		if ((start_address == "") || (finish_address == "") || (failed_address == "") || (abs_position_address == "") ||(axis_target3_position_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 去工艺位命令地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 去工艺位命令地址未定义.", getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "去工艺位命令开始执行.");
@@ -108,7 +108,7 @@ namespace FC{
 
 		if (!writeBit(start_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到去工艺位命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到去工艺位命令地址错误.", sub->getName()), this);
 		}
 		Sleep(100);
 		int loopCount = timeout / 20;
@@ -131,7 +131,7 @@ namespace FC{
 		}
 		if (!writeBit(start_address, false))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到去放料位命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到去放料位命令地址错误.", sub->getName()), this);
 		}
 
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;

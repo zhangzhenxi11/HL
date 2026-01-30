@@ -220,18 +220,18 @@ namespace FC{
 		}
 		
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开分子泵超时参数错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开分子泵超时参数错误.", sub->getName()), this);
 		}
 
 		if (address == "" || finish_address == "" || failed_address=="")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开分子泵地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开分子泵地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "打开分子泵命令执行开始 %s", moduleName);
 
 		if (!writeBit(address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开分子泵地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到打开分子泵地址错误.", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;
@@ -267,12 +267,12 @@ namespace FC{
 		}
 		else if (readRes2)
 		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(0, 2, Poco::format("打开%s分子泵命令执行失败", moduleName)));
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 2, Poco::format("打开%s分子泵命令执行失败.", moduleName)));
 			setAlarm(alarm);
 		}
 		else
 		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, Poco::format("打开%s分子泵命令通讯超时", moduleName)));
+			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, Poco::format("打开%s分子泵命令通讯超时.", moduleName)));
 			setAlarm(alarm);
 		}
 

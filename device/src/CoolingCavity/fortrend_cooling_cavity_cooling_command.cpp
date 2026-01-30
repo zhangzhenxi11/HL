@@ -59,17 +59,17 @@ namespace FC{
 		std::string error_code_address = command_config->getString("error_code_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 冷却命令超时时间设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 冷却命令超时时间设置错误.", sub->getName()), this);
 		}
 
 		if ((start_address == "") || (finish_address == "") || (failed_address == "") || (error_code_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 冷却命令地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 冷却命令地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "冷却命令执行开始.");
 		if (!writeBit(start_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到冷却命令地址失败", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到冷却命令地址失败.", sub->getName()), this);
 		}
 		Sleep(100);
 		int loopCount = timeout / 20;
@@ -87,7 +87,7 @@ namespace FC{
 		}
 		if (!writeBit(start_address, false))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到冷却命令地址失败", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到冷却命令地址失败.", sub->getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (readRes[0])

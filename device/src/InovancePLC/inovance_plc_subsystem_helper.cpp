@@ -366,7 +366,7 @@ bool InovancePlcSubSystemHelperPrivate::readBit(const std::string address, bool 
 		while (!res&&isConnected && (retry_count < 5))
 		{
 			Sleep(200);
-			logInform1("inovance_plc", Poco::format("%s地址读取失败,重新读取bool第%d次", address, retry_count).c_str());
+			logInform1("inovance_plc", Poco::format("%s地址读取失败,重新读取bool第%d次.", address, retry_count).c_str());
 			operation = H5u_Read_Device_Block(addr.type, addr.address, 1, resRead, plc_net_id);
 			res = (operation == plc_operation_sucess);
 			retry_count++;
@@ -437,7 +437,7 @@ bool InovancePlcSubSystemHelperPrivate::readShort(const std::string address, int
 		while (!operation_res && (retry_count < 5))
 		{
 			Sleep(200);
-			logInform1("inovance_plc", Poco::format("%s地址读取失败,重新读取Short第%d次", address, retry_count).c_str());
+			logInform1("inovance_plc", Poco::format("%s地址读取失败,重新读取Short第%d次.", address, retry_count).c_str());
 			operation = H5u_Read_Soft_Elem_Int16(addr.type, addr.address, 1, &value, plc_net_id);
 			operation_res = (operation == plc_operation_sucess);
 			retry_count++;
@@ -772,7 +772,7 @@ bool InovancePlcSubSystemHelperPrivate::readFloat(const std::string address, flo
 		while (!operation_res && (retry_count < 8))
 		{
 			Sleep(200);
-			logInform1("inovance_plc", Poco::format("%s地址读取失败,重新读取float第%d次", address, retry_count).c_str());
+			logInform1("inovance_plc", Poco::format("%s地址读取失败,重新读取float第%d次.", address, retry_count).c_str());
 			operation = H5u_Read_Soft_Elem(addr.type, addr.address, 2, u.bytes, plc_net_id);
 			operation_res = (operation == plc_operation_sucess);
 			retry_count++;
@@ -984,7 +984,7 @@ bool InovancePlcSubSystemHelperPrivate::writeBit(const std::string address, cons
 			while (!res&&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写bool第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写bool第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem(addr.type, addr.address, 1, write_value, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;
@@ -1051,7 +1051,7 @@ bool InovancePlcSubSystemHelperPrivate::writeShort(const std::string address, co
 			while (!res&&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写Short第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写Short第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem_Int16(addr.type, addr.address, 1, &write_value, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;
@@ -1119,7 +1119,7 @@ bool InovancePlcSubSystemHelperPrivate::writeUnsignedShort(const std::string add
 			while (!res&&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写UnsignedShort第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写UnsignedShort第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem_UInt16(addr.type, addr.address, 1, &write_value, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;
@@ -1212,7 +1212,7 @@ bool InovancePlcSubSystemHelperPrivate::writeInt(const std::string address, cons
 			while (!res &&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写UnsignedInt第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写UnsignedInt第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem(addr.type, addr.address, 2, u.bytes, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;
@@ -1314,7 +1314,7 @@ bool InovancePlcSubSystemHelperPrivate::writeUnsignedInt(const std::string addre
 			while (!res&&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写UnsignedInt第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写UnsignedInt第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem(addr.type, addr.address, 2, u.bytes, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;
@@ -1415,7 +1415,7 @@ bool InovancePlcSubSystemHelperPrivate::writeFloat(const std::string address, co
 			while (!res&&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写Float第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写Float第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem(addr.type, addr.address, 2, u.bytes, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;
@@ -1502,7 +1502,7 @@ bool InovancePlcSubSystemHelperPrivate::writeDouble(const std::string address, c
 			while (!res&&isConnected && (retry_count < 10))
 			{
 				Sleep(500);
-				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写Double第%d次", address, retry_count).c_str());
+				logInform1("inovance_plc", Poco::format("%s地址写入失败,重写Double第%d次.", address, retry_count).c_str());
 				operation = H5u_Write_Soft_Elem(addr.type, addr.address, 4, u.bytes, plc_net_id);
 				res = (operation == plc_operation_sucess);
 				retry_count++;

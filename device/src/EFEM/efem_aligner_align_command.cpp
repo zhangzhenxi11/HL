@@ -1,4 +1,4 @@
-// Library: Fortrend
+ï»¿// Library: Fortrend
 // Package: CommandImp/Rnd/Aligner
 //
 // align command for rnd aligner subsystem
@@ -62,10 +62,10 @@ IKernelCommand::RunResult EFEMAlignerAlignCommand::onRun() throw(KernelException
 	int timeout = command_config->getInt("timeout", -1);//20000ms
 	if (timeout < 10) {
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
-			Poco::format("³¬Ê±: Ñ°±ß³¬Ê±²ÎÊıÉèÖÃÊ§°Ü", sub->getName()), this);
+			Poco::format("è¶…æ—¶: å¯»è¾¹è¶…æ—¶å‚æ•°è®¾ç½®å¤±è´¥.", sub->getName()), this);
 	}
 
-	logInform(sub->getName().c_str(), "Ñ°±ßÃüÁî¿ªÊ¼Ö´ĞĞ.");
+	logInform(sub->getName().c_str(), "å¯»è¾¹å‘½ä»¤å¼€å§‹æ‰§è¡Œ.");
 	// MOV:ALIGN;
 	std::string command = "MOV:";
 	//EALIGNER
@@ -100,7 +100,7 @@ IKernelCommand::RunResult EFEMAlignerAlignCommand::onRun() throw(KernelException
 		
 	}
 	sub->getKernel()->getKernelBlockManager()->releaseBlock(sub);
-	logInform(sub->getName().c_str(), "Ñ°±ßÃüÁîÖ´ĞĞ½áÊø.");
+	logInform(sub->getName().c_str(), "å¯»è¾¹å‘½ä»¤æ‰§è¡Œç»“æŸ.");
 	return ret;
 
 }

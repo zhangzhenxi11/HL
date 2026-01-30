@@ -89,7 +89,7 @@ namespace FC{
 		std::string address2 = command_config->getString("address2", "");//隔膜阀快充
 		if (address1 == "" || address2 == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开隔膜阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开隔膜阀地址未定义.", getName()), this);
 		}
 		//if (SIMULATION_TEST == 1)
 		//{

@@ -65,12 +65,12 @@ PMCavityRotatingAxisHomeCommand::RunResult PMCavityRotatingAxisHomeCommand::onRu
     std::string running_address = command_config->getString("running_address", "");
     int timeout = command_config->getInt("timeout", -1);
     if (timeout < 10) {
-        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时:旋转轴回原命令超时参数设置错误", sub->getName()), this);
+        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时:旋转轴回原命令超时参数设置错误.", sub->getName()), this);
     }
 
     if ((start_address == "") || (finish_address == "")||(running_address == ""))
     {
-        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:旋转轴回原命令地址未定义", getName()), this);
+        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:旋转轴回原命令地址未定义.", getName()), this);
     }
     logInform(sub->getName().c_str(), "旋转轴回原命令开始执行.");
     if (!writeBit(start_address, true))

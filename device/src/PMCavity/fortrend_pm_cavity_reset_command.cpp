@@ -75,13 +75,13 @@ namespace FC{
 		std::string rotating_axis_alarm_address = command_config->getString("rotating_axis_alarm_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位命令超时参数设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位命令超时参数设置错误.", sub->getName()), this);
 		}
 
 		if ((lifting_axis_start_address == "") || (lifting_axis_finish_address == "") || (rotating_axis_start_address == "") || (rotating_axis_finish_address == "")
 			||(lifting_axis_alarm_address =="") ||(rotating_axis_alarm_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 复位命令地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 复位命令地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "复位命令开始.");
 		sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
@@ -95,19 +95,19 @@ namespace FC{
 
 		if (!readInt(lifting_axis_alarm_address, lifting_axis_alarm_code))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读升降轴报警地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读升降轴报警地址错误.", sub->getName()), this);
 
 		}
 		if (!readInt(rotating_axis_alarm_address, rotating_axis_alarm_code))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读旋转轴报警地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s读旋转轴报警地址错误.", sub->getName()), this);
 		}
 
 		if (lifting_axis_alarm_code != 0)
 		{
 			if (!writeBit(lifting_axis_start_address, true))
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到清除升降轴错误命令地址错误", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到清除升降轴错误命令地址错误.", sub->getName()), this);
 			}
 			Sleep(100);
 
@@ -146,7 +146,7 @@ namespace FC{
 
 			if (!writeBit(rotating_axis_start_address, true))
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到清除旋转轴错误命令地址错误", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到清除旋转轴错误命令地址错误.", sub->getName()), this);
 			}
 
 			while (count <= loopCount)

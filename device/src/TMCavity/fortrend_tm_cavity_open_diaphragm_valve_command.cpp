@@ -82,7 +82,7 @@ namespace FC{
 			if (sub->getAngleValveOpend())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, 
-					Poco::format("子系统: %s 角阀阀未关闭（逻辑错误", sub->getName()), this);
+					Poco::format("子系统: %s 角阀阀未关闭（逻辑错误.", sub->getName()), this);
 			}
 		}
 
@@ -101,7 +101,7 @@ namespace FC{
 		if (address1 == "" || address2 == "")
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, 
-				Poco::format("地址: 打开隔膜阀命令地址未定义", getName()), this);
+				Poco::format("地址: 打开隔膜阀命令地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "打开隔膜阀命令开始.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;

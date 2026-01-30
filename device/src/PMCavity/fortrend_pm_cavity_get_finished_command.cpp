@@ -74,18 +74,18 @@ namespace FC{
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 取片完成超时参数设置失败", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 取片完成超时参数设置失败.", sub->getName()), this);
 		}
 
 		if ((write_address == "") || (finish_reset_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 取片完成地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 取片完成地址未定义.", getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "取片完成命令开始执行.");
 		if (!writeBit(write_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到取片完成(%s)地址失败", sub->getName(), write_address), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到取片完成(%s)地址失败.", sub->getName(), write_address), this);
 		}
 		
 		bool write_state = false;

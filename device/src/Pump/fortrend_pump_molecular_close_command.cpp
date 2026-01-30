@@ -91,18 +91,18 @@ namespace FC{
 		}
 
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 关闭分子泵超时参数错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 关闭分子泵超时参数错误.", sub->getName()), this);
 		}
 
 		if (address == "" || finish_address == "" || failed_address == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭分子泵地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭分子泵地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "关闭分子泵命令执行开始 %s", moduleName);
 
 		if (!writeBit(address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到关闭分子泵地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写1到关闭分子泵地址错误.", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;

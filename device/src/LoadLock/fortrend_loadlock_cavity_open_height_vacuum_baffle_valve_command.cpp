@@ -90,11 +90,11 @@ namespace FC{
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开高真空挡板阀超时设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开高真空挡板阀超时设置错误.", sub->getName()), this);
 		}
 		if (open_address == "" || close_address == "" || finish_address == "" || finish_address_slowdraw == "" || open_address_slowdraw=="")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开高真空挡板阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开高真空挡板阀地址未定义.", getName()), this);
 		}
 		/*if (sub->getLoadLockRoughVacuumReachesTheSetValue())
 		{
@@ -103,12 +103,12 @@ namespace FC{
 		logInform(sub->getName().c_str(), "打开高真空慢抽挡板阀命令开始.");
 		if (!writeBit(close_address, false))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写0到关闭高真空挡板阀地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写0到关闭高真空挡板阀地址错误.", sub->getName()), this);
 		}
 		Sleep(20);
 		if (!writeBit(open_address_slowdraw, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空慢抽挡板阀地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空慢抽挡板阀地址错误.", sub->getName()), this);
 		}
 
 		Sleep(500);
@@ -170,7 +170,7 @@ namespace FC{
 			Sleep(20);
 			if (!writeBit(open_address, true))
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空快抽挡板阀地址错误", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空快抽挡板阀地址错误.", sub->getName()), this);
 			}
 
 			Sleep(500);

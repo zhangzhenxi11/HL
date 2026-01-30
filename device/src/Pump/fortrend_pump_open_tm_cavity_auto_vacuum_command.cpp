@@ -131,7 +131,7 @@ namespace FC{
 		}
 		if (d->tm->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->tm->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态.", d->tm->getName()), this);
 		}
 		if (!d->lk1)
 		{
@@ -139,7 +139,7 @@ namespace FC{
 		}
 		if (d->lk1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->lk1->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态.", d->lk1->getName()), this);
 		}
 		if (!d->lk2)
 		{
@@ -148,7 +148,7 @@ namespace FC{
 
 		if (d->lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->lk2->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态.", d->lk2->getName()), this);
 		}
 		if (!d->wtr)
 		{
@@ -156,7 +156,7 @@ namespace FC{
 		}
 		if (d->wtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->wtr->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态.", d->wtr->getName()), this);
 		}
 
 		std::shared_ptr<KernelConfiguration> command_config = d->pump->getConfigure()->createView(getName());
@@ -164,10 +164,10 @@ namespace FC{
 		int timeout = command_config->getInt("timeout", 2 * 60 * 60);
 		timeout = timeout * 1000;
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开%s 真空命令超时参数错误", d->pump->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 打开%s 真空命令超时参数错误.", d->pump->getName()), this);
 		}
 		
-		logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令开始", d->tm->getName()).c_str());
+		logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令开始.", d->tm->getName()).c_str());
 
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
 		SystemState currentState = SystemState::CLOSE_PM_CAVITY_DOOR;
@@ -176,7 +176,7 @@ namespace FC{
 			if (d->pump->getProcessAbort()) {
 				d->pump->setProcessAbort(false);
 
-				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止", d->pump->getName()).c_str());
+				logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行终止.", d->pump->getName()).c_str());
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
 				return IKernelCommand::RunResult::RUN_OK;
 			};
@@ -185,7 +185,7 @@ namespace FC{
 			if (it == stateHandlers.end())
 			{
 				logError(d->pump->getName().c_str(), Poco::format("未知的状态码：%d", int(currentState)).c_str());
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("抽%s真空命令执行失败", d->pump->getName())));
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("抽%s真空命令执行失败.", d->pump->getName())));
 				setAlarm(alarm);
 				d->ret = IKernelCommand::RunResult::RUN_FAILD;
 				break;
@@ -197,7 +197,7 @@ namespace FC{
 			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
 			if (pass >= timeout && d->loop)
 			{
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("打开%s真空命令执行超时", d->tm->getName())));
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("打开%s真空命令执行超时.", d->tm->getName())));
 				setAlarm(alarm);
 				currentState = SystemState::CREATE_END;
 				d->loop = false;
@@ -207,18 +207,18 @@ namespace FC{
 
 		if (d->ret == IKernelCommand::RunResult::RUN_OK)
 		{
-			logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成", d->tm->getName()).c_str());
+			logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令执行完成.", d->tm->getName()).c_str());
 		}
 		return d->ret;
 	}
 
 	void PumpOpenTMCavityAutoVacuumCommand::addCommandExecutionAlarmMessage(const int code_id, const std::string subsytem_name, const std::string message){
-		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败", subsytem_name, message)));
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败.", subsytem_name, message)));
 		setAlarm(alarm);
 	}
 	void PumpOpenTMCavityAutoVacuumCommand::addSubsystemNotNormalAlarmMessage(const int code_id, const std::string subsytem_name)
 	{
-		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s 状态异常", subsytem_name)));
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s 状态异常.", subsytem_name)));
 		setAlarm(alarm);
 	}
 
@@ -398,7 +398,7 @@ namespace FC{
 				}
 			}
 			else {
-				logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成", d->lk1->getName()).c_str());
+				logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成.", d->lk1->getName()).c_str());
 				step = 40; 
 			
 			}
@@ -451,7 +451,7 @@ namespace FC{
 			}
 			else
 			{
-				logInform(d->lk2->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成", d->lk2->getName()).c_str());
+				logInform(d->lk2->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成.", d->lk2->getName()).c_str());
 				step = 50;
 			}
 		}

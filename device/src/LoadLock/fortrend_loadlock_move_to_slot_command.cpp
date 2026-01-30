@@ -65,19 +65,19 @@ namespace FC{
 		}*/
 		/*if (!sub->hasBoxPresent())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s 没有晶圆盒", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s 没有晶圆盒.", sub->getName()), this);
 		}*/
 		/*if (sub->getCassetteDoorOpend())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s放晶圆盒的门已打开", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s放晶圆盒的门已打开.", sub->getName()), this);
 		}*/
 		/*if (sub->getTMCavityDoorOpend())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s传输腔门阀已打开", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s传输腔门阀已打开.", sub->getName()), this);
 		}*/
 		/*if (!sub->getProtrudingSensorState())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片.", sub->getName()), this);
 		}*/
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
@@ -89,27 +89,27 @@ namespace FC{
 		std::string slot_address = command_config->getString("slot_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时： %s 移动到指定槽号超时时间设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时： %s 移动到指定槽号超时时间设置错误.", sub->getName()), this);
 		}
 
 		if ((start_address == "") || (finish_address == "") || (failed_address == "") || (error_code_address == "") || (slot_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址：移动到指定槽号地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址：移动到指定槽号地址未定义.", getName()), this);
 		}
 		/*if (d->slot < 1 || (d->slot >25 && d->slot != 28))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_PARAMER_ERROR, Poco::format(" 参数： 移动到指定槽号(%d)参数超出范围(1~25 and 28 )", d->slot), this);
 		}*/
 		sub->setBoxPlacement(false);
-		logInform(sub->getName().c_str(), Poco::format("移动到第%d槽号命令开始", d->slot).c_str());
+		logInform(sub->getName().c_str(), Poco::format("移动到第%d槽号命令开始.", d->slot).c_str());
 		short s_slot = d->slot;
 		if (!writeShort(slot_address, s_slot))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %d 到槽号地址错误", sub->getName(), s_slot), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 %d 到槽号地址错误.", sub->getName(), s_slot), this);
 		}
 		if (!writeBit(start_address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到移动到指定槽号命令地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写 1 到移动到指定槽号命令地址错误.", sub->getName()), this);
 		}
 		sub->setLastMoveSlot(0);
 		Sleep(500);
@@ -128,7 +128,7 @@ namespace FC{
 		}
 		if (!writeBit(start_address, false))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到移动到指定槽号命令地址错误", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到移动到指定槽号命令地址错误.", getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 		if (readRes[0])
@@ -136,7 +136,7 @@ namespace FC{
 			sub->setBoxPlacement(true);
 			sub->setLastMoveSlot(d->slot);
 			ret = IKernelCommand::RunResult::RUN_OK;
-			logInform(sub->getName().c_str(), Poco::format("移动到第%d槽号命令执行结束", d->slot).c_str());
+			logInform(sub->getName().c_str(), Poco::format("移动到第%d槽号命令执行结束.", d->slot).c_str());
 
 		}
 		else if (readRes[1])
@@ -147,7 +147,7 @@ namespace FC{
 			auto code_message = getErrorCode(LoadLockErrorCommand::MoveToSlot, code);
 			AlarmMessage::Ptr alarm(new AlarmMessage(code_message->type, code_message->code, code_message->message));
 			setAlarm(alarm);
-			logError(sub->getName().c_str(), Poco::format("移动到第%d槽号命令执行失败", d->slot).c_str());
+			logError(sub->getName().c_str(), Poco::format("移动到第%d槽号命令执行失败.", d->slot).c_str());
 		}
 		else
 		{

@@ -59,19 +59,19 @@ namespace FC{
 		}
 		//if (!sub->hasBoxPresent())
 		//{
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s当前没有晶圆盒", sub->getName()), this);
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s当前没有晶圆盒.", sub->getName()), this);
 		//}
 		//if (sub->getCassetteDoorOpend())
 		//{
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s放晶圆盒的门已打开", sub->getName()), this);
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s放晶圆盒的门已打开.", sub->getName()), this);
 		//}
 		//if (sub->getTMCavityDoorOpend())
 		//{
-		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s传输腔门阀已打开", sub->getName()), this);
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位： %s传输腔门阀已打开.", sub->getName()), this);
 		//}
 		/*if (!sub->getProtrudingSensorState())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_CONFLICT_EXCEPTION, Poco::format("工位： %s 检测到凸片.", sub->getName()), this);
 		}*/
 
 		//check modules
@@ -87,12 +87,12 @@ namespace FC{
 
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 1){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 扫描指令设置超时时间错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 扫描指令设置超时时间错误.", sub->getName()), this);
 		}
 
 		if ((first_layer_wafer_presence == "") || (second_layer_wafer_presence == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 扫描地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 扫描地址未定义.", getName()), this);
 		}
 
 		Cassette::Mapping mappingData1 = Cassette::Mapping::Unknown;
@@ -113,11 +113,11 @@ namespace FC{
 
 		if (!readBit(first_layer_wafer_presence, nfirst_res))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LoadLock1第一层检测感应器地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LoadLock1第一层检测感应器地址错误.", sub->getName()), this);
 		}
 		if (!readBit(second_layer_wafer_presence, nSecond_res))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LoadLock1第二层检测感应器地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 读LoadLock1第二层检测感应器地址错误.", sub->getName()), this);
 		}
 		
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
@@ -125,7 +125,7 @@ namespace FC{
 		
 		if (slot_count != 2)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 获取casstte的槽数不是两层", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 获取casstte的槽数不是两层.", sub->getName()), this);
 		}
 		std::unique_ptr<short[]> mapping_res(new short[slot_count]);
 		

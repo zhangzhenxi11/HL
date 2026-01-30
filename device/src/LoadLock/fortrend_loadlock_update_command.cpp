@@ -63,7 +63,7 @@ namespace FC{
 			open_angle_valve_address == "" || close_angle_valve_address == ""
 			)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 获取状态地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 获取状态地址未定义.", getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_OK;
 		bool open_cassette_door_value = false;

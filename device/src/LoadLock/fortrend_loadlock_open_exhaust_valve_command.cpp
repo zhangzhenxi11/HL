@@ -73,7 +73,7 @@ namespace FC{
 		std::string address = command_config->getString("address", "");
 		if (address == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开排气阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开排气阀地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "打开排气阀命令开始.");
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;

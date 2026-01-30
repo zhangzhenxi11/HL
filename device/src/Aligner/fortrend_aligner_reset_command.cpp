@@ -60,7 +60,7 @@ namespace FC{
 		
 		int timeout = command_config->getInt("timeout", 30000);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 复位指令超时时间设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 复位指令超时时间设置错误.", sub->getName()), this);
 		}
 		logInform(sub->getName().c_str(), "复位指令开始.");
 		
@@ -82,7 +82,7 @@ namespace FC{
 		
 		else
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("子系统: 发送复位命令错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("子系统: 发送复位命令错误.", sub->getName()), this);
 
 		}
 		return ret;

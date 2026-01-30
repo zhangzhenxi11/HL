@@ -1,4 +1,4 @@
-// Library: Fortrend
+ï»¿// Library: Fortrend
 // Package: CommandImp/Rnd/Aligner
 //
 // status command for rnd subsystem
@@ -59,7 +59,7 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 	int timeout = command_config->getInt("timeout", -1);//20000ms
 	if (timeout < 10) {
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
-			Poco::format("³¬Ê±: »ñÈ¡×´Ì¬³¬Ê±²ÎÊýÉèÖÃÊ§°Ü", aligner->getName()), this);
+			Poco::format("è¶…æ—¶: èŽ·å–çŠ¶æ€è¶…æ—¶å‚æ•°è®¾ç½®å¤±è´¥.", aligner->getName()), this);
 	}
 
 	//GET:MAPDT/ALIGNER;
@@ -76,7 +76,7 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s update command failed to send, please check the communication!", aligner->getName())));
 		setAlarm(alarm);
 		ret = RunResult::RUN_FAILD;
-		logError(aligner->getName().c_str(), "%s»ñÈ¡×´Ì¬ÃüÁî·¢ËÍÊ§°Ü£¬Çë¼ì²éÍ¨Ñ¶£¡", aligner->getName());
+		logError(aligner->getName().c_str(), "%sèŽ·å–çŠ¶æ€å‘½ä»¤å‘é€å¤±è´¥ï¼Œè¯·æ£€æŸ¥é€šè®¯ï¼", aligner->getName());
 		return ret;
 	}
 	aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
@@ -101,7 +101,7 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s mapdt command failed to send, please check the communication!", aligner->getName())));
 		setAlarm(alarm);
 		ret = RunResult::RUN_FAILD;
-		logError(aligner->getName().c_str(), "%s»ñÈ¡MAPÃüÁî·¢ËÍÊ§°Ü£¬Çë¼ì²éÍ¨Ñ¶£¡", aligner->getName());
+		logError(aligner->getName().c_str(), "%sèŽ·å–MAPå‘½ä»¤å‘é€å¤±è´¥ï¼Œè¯·æ£€æŸ¥é€šè®¯ï¼", aligner->getName());
 		return ret;
 	}
 	aligner->setCommandState(EFEMAsciiApi::State::TRANS_WAIT_REPLY);
@@ -120,7 +120,7 @@ IKernelCommand::RunResult EFEMAlignerStatusCommand::onRun() throw(KernelExceptio
 #endif
 
 	aligner->getKernel()->getKernelBlockManager()->releaseBlock(aligner);
-	logInform(aligner->getName().c_str(), Poco::format("»ñÈ¡Ñ°±ßÆ÷¾§Ô²×´Ì¬ %s ÃüÁîÖ´ÐÐ½áÊø", aligner->getName()).c_str());
+	logInform(aligner->getName().c_str(), Poco::format("èŽ·å–å¯»è¾¹å™¨æ™¶åœ†çŠ¶æ€ %s å‘½ä»¤æ‰§è¡Œç»“æŸ.", aligner->getName()).c_str());
 
 	return RunResult::RUN_OK;
 }

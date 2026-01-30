@@ -68,7 +68,7 @@ namespace FC{
 		{
 			if (sub->TMCavityCoverSafetyLock() == false)
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("子系统: %s 传输腔未检测到传输腔盖门锁信号", sub->getName()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("子系统: %s 传输腔未检测到传输腔盖门锁信号.", sub->getName()), this);
 			}
 		}
 		if (sub->getSlowDiaphragmValveOpend())
@@ -101,18 +101,18 @@ namespace FC{
 		std::string finish_address = command_config->getString("finish_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开高真空挡板阀超时设置错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 打开高真空挡板阀超时设置错误.", sub->getName()), this);
 		}
 		if (address == "" || finish_address=="")
 		{
-		   throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开高真空挡板阀地址未定义", getName()), this);
+		   throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开高真空挡板阀地址未定义.", getName()), this);
 		}
 		
 		
 		logInform(sub->getName().c_str(), "打开高真空挡板阀命令开始.");
 		if (!writeBit(address, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空挡板阀地址错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s写1到打开高真空挡板阀地址错误.", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;
@@ -156,7 +156,7 @@ namespace FC{
 
 		if (address == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开高真空挡板阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 打开高真空挡板阀地址未定义.", getName()), this);
 		}
 		if (sub->getTMCavityRoughVacuumReachesTheSetValue())
 		{

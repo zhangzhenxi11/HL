@@ -132,7 +132,7 @@ namespace FC{
 		}
 		if (d->sub->getState() != IKernelSubSystem::State::SUB_NORMAL)
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态", d->sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("子系统: %s 不在正常状态.", d->sub->getName()), this);
 		}
 
 		if (d->sub->getCassetteDoorOpend())
@@ -149,11 +149,11 @@ namespace FC{
 		//fill params
 		int timeout = command_config->getInt("timeout", 50 * 60 * 1000);
 		if (timeout < 10) {
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 破%s 真空命令超时参数错误", d->sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 破%s 真空命令超时参数错误.", d->sub->getName()), this);
 		}
 
 		//IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
-		logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令开始", d->sub->getName()).c_str());
+		logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令开始.", d->sub->getName()).c_str());
 
 		SystemState currentState = SystemState::EXHAUST_VACUUM_VALUE_REACHES_SETVALUE;
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
@@ -162,7 +162,7 @@ namespace FC{
 			if (pump->getProcessAbort()) 
 			{
 				pump->setProcessAbort(false);
-				logInform(pump->getName().c_str(), Poco::format("破%s真空命令终止", pump->getName()).c_str());
+				logInform(pump->getName().c_str(), Poco::format("破%s真空命令终止.", pump->getName()).c_str());
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "命令终止", this);
 				return IKernelCommand::RunResult::RUN_OK;
 			};
@@ -171,7 +171,7 @@ namespace FC{
 			if (it == stateHandlers.end()) {
 				d->ret = IKernelCommand::RunResult::RUN_FAILD;
 				logError(d->sub->getName().c_str(), Poco::format("未知的状态码：%d", int(currentState)).c_str());
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行失败", d->sub->getName())));
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行失败.", d->sub->getName())));
 				setAlarm(alarm);
 				break;
 			}
@@ -182,7 +182,7 @@ namespace FC{
 				pipeLineWidget::getInstance().stop();
 				d->ret == IKernelCommand::RunResult::RUN_OK;
 				//结束
-				logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成", d->sub->getName()).c_str());
+				logInform(d->sub->getName().c_str(), Poco::format("破%s真空命令执行完成.", d->sub->getName()).c_str());
 				return IKernelCommand::RunResult::RUN_OK;
 				//break;
 			}
@@ -193,14 +193,14 @@ namespace FC{
 			int pass = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time_clock).count();
 			if (pass >= timeout && d->loop)
 			{
-				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName().c_str())));
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时.", d->sub->getName().c_str())));
 				setAlarm(alarm);
 				currentState = SystemState::CREATE_END;
 				d->loop = false;
 				break;
 			}
 		}
-		AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时", d->sub->getName().c_str())));
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, 10000, Poco::format("破%s真空命令执行超时.", d->sub->getName().c_str())));
 		setAlarm(alarm);
 	
 		//NOTE:返回d->ret ,且一定要报警，否则virtual void onAttributeChange(const IKernelCommand* cmd)虚函数，找不到报警信息报错！！
@@ -208,12 +208,12 @@ namespace FC{
 	}
 	
 	void LoadLockAutoBreakVacuumCommand::addCommandExecutionAlarmMessage(const std::string subsytem_name, const std::string message, const int code_id){
-		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败", subsytem_name, message)));
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s %s执行失败.", subsytem_name, message)));
 		setAlarm(alarm);
 	}
 	void LoadLockAutoBreakVacuumCommand::addSubsystemNotNormalAlarmMessage(const int code_id, const std::string subsytem_name)
 	{
-		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s 状态异常", subsytem_name)));
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, code_id, Poco::format("子系统：%s 状态异常.", subsytem_name)));
 		setAlarm(alarm);
 	}
 

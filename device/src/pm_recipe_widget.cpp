@@ -1260,7 +1260,7 @@ namespace FC {
 
 		QSpinBox* Rotation_count_spx = new QSpinBox();
 		Rotation_count_spx->setMinimum(0);
-		Rotation_count_spx->setMaximum(6);
+		Rotation_count_spx->setMaximum(100);
 		Rotation_count_spx->setSingleStep(1);
 		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 4, Rotation_count_spx);//旋转次数
 

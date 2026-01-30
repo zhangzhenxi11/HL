@@ -61,7 +61,7 @@ namespace FC{
 		if (open_tm_cavity_door_address == "" || close_tm_cavity_door_address == "" ||(lifting_axis_upper_enable_address =="")||(rotating_axis_upper_enable_address =="")
 			||(lifting_axis_enable_address =="")||(rotating_axis_enable_address ==""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 获取状态地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 获取状态地址未定义.", getName()), this);
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_OK;
 		

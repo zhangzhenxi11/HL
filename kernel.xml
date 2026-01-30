@@ -1813,7 +1813,7 @@
 				<failed_address>MR35309</failed_address>
 				<!-- 前级泵警告信号 -->
 				<error_code_address>MR35312</error_code_address>
-				<timeout>4500</timeout>
+				<timeout>6000</timeout>
 			</OpenMechanical>
 			<CloseMechanical>
 				<start_address>MR35306</start_address>
@@ -1821,7 +1821,7 @@
 				<failed_address>MR35310</failed_address>
 				<!-- 前级泵警告信号 -->
 				<error_code_address>MR35312</error_code_address>
-				<timeout>4500</timeout>
+				<timeout>6000</timeout>
 			</CloseMechanical>
 			<!-- 打开分子泵-->
 			<OpenMolecular>

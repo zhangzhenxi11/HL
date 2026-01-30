@@ -69,7 +69,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
 	int timeout = command_config->getInt("timeout", 100000);
 	if (timeout < 10){
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取状态超时参数设置错误", sub->getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取状态超时参数设置错误.", sub->getName()), this);
 	}
 
 	std::string command = "SET:SERVOS/1;";
@@ -170,7 +170,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			if (!sendRequest("ACK;"))
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-					Poco::format("%s 机械手通讯错误", sub->getName()), this);
+					Poco::format("%s 机械手通讯错误.", sub->getName()), this);
 			}
 			logInform(sub->getName().c_str(), "机械手上使能命令执行结束.");
 		}

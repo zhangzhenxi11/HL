@@ -61,12 +61,12 @@ namespace FC{
 		std::string finish_address = command_config->getString("finish_address", "");
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 关闭角阀设置超时参数错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 关闭角阀设置超时参数错误.", sub->getName()), this);
 		}
 
 		if ((address_1 == "") || (address_2 == "") || (finish_address == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭角阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭角阀地址未定义.", getName()), this);
 		}
 
 		//if (SIMULATION_TEST == 1)
@@ -80,11 +80,11 @@ namespace FC{
 
 		if (!writeBit(address_1, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到打开角阀地址1错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到打开角阀地址1错误.", sub->getName()), this);
 		}
 		if (!writeBit(address_2, true))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到关闭角阀地址2错误", sub->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到关闭角阀地址2错误.", sub->getName()), this);
 		}
 		Sleep(500);
 		int loopCount = timeout / 20;

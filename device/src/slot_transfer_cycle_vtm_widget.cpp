@@ -3039,7 +3039,7 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(lk1->getName(), Poco::format("%s 第%d槽不是正常片", lk1->getName(), loadlock1_move_slot_index));
+								logFailed(lk1->getName(), Poco::format("%s 第%d槽不是正常片.", lk1->getName(), loadlock1_move_slot_index));
 							}
 						}
 					}
@@ -3303,7 +3303,7 @@ namespace FC{
 						}
 						else
 						{
-							logFailed(lk1->getName(), Poco::format("%s 第%d槽不是空片", lk1->getName(), loadlock1_move_slot_index));
+							logFailed(lk1->getName(), Poco::format("%s 第%d槽不是空片.", lk1->getName(), loadlock1_move_slot_index));
 						}
 
 					}
@@ -4080,7 +4080,7 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(lk2->getName(), Poco::format("%s 第%d槽不是正常片", lk2->getName(), loadlock2_move_slot_index));
+								logFailed(lk2->getName(), Poco::format("%s 第%d槽不是正常片.", lk2->getName(), loadlock2_move_slot_index));
 							}
 						}
 
@@ -4343,7 +4343,7 @@ namespace FC{
 						}
 						else
 						{
-							logFailed(lk2->getName(), Poco::format("%s 第%d槽不是空片", lk2->getName(), loadlock2_move_slot_index));
+							logFailed(lk2->getName(), Poco::format("%s 第%d槽不是空片.", lk2->getName(), loadlock2_move_slot_index));
 						}
 
 					}
@@ -6753,7 +6753,7 @@ namespace FC{
 				{
 					finished_time_lla++;
 
-					logInform("Cycle", Poco::format("LP1 Cycle第%d次数", finished_time_lla).c_str());
+					logInform("Cycle", Poco::format("LP1 Cycle第%d次数.", finished_time_lla).c_str());
 					if (is_lp1_cycle)
 					{
 						is_lp1_cycle = false;
@@ -6762,7 +6762,7 @@ namespace FC{
 					if (finished_time_lla >= cycle_times_lla)
 					{
 						//cycle 完成
-						logInform("Cycle", Poco::format("LP1 Cycle次数%d已完成", cycle_times_lla).c_str());
+						logInform("Cycle", Poco::format("LP1 Cycle次数%d已完成.", cycle_times_lla).c_str());
 						//finished_time_lla = 0;
 						cycleFinished_lla = true;
 						onUpdateCycleInfo();
@@ -6789,7 +6789,7 @@ namespace FC{
 				case 1040:
 				{
 					finished_time_llb++;
-					logInform("Cycle", Poco::format("LP2 Cycle第%d次数", finished_time_llb).c_str());
+					logInform("Cycle", Poco::format("LP2 Cycle第%d次数.", finished_time_llb).c_str());
 
 					if (is_lp2_cycle)
 					{
@@ -6798,7 +6798,7 @@ namespace FC{
 					}
 					if (finished_time_llb >= cycle_times_llb)
 					{
-						logInform("Cycle", Poco::format("LP2 Cycle次数%d已完成", cycle_times_llb).c_str());
+						logInform("Cycle", Poco::format("LP2 Cycle次数%d已完成.", cycle_times_llb).c_str());
 
 						//finished_time_llb = 0;
 						cycleFinished_llb = true;
@@ -7263,7 +7263,7 @@ namespace FC{
 				}
 				else{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s处于未知状态", wtr->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s处于未知状态.", wtr->getName()).c_str());
 				}
 
 			}
@@ -7390,47 +7390,47 @@ namespace FC{
 					rest_step = 15000;
 					if (wtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", wtr->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", wtr->getName()).c_str());
 					}
 					if (lk1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk1->getName()).c_str());
 					}
 					if (lk2->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk2->getName()).c_str());
 					}
 					if (pm1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm1->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm1->getName()).c_str());
 					}
 					if (pm2->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm2->getName()).c_str());
 					}
 					if (pm3->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm3->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm3->getName()).c_str());
 					}
 					if (pm4->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm4->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm4->getName()).c_str());
 					}
 					if (pump->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pump->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pump->getName()).c_str());
 					}
 					if (tm->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", tm->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", tm->getName()).c_str());
 					}
 					if (elp1->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", elp1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", elp1->getName()).c_str());
 					}
 					if (elp2->getState() == IKernelSubSystem::State::SUB_UNKNOWN)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", elp2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", elp2->getName()).c_str());
 					}
 				}
 			}
@@ -7458,48 +7458,48 @@ namespace FC{
 				{
 					if (lk1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk1->getName()).c_str());
 					}
 
 					if (lk2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", lk2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", lk2->getName()).c_str());
 					}
 					if (pm1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm1->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm1->getName()).c_str());
 					}
 					if (pm2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm2->getName()).c_str());
 					}
 					if (pm3->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm3->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm3->getName()).c_str());
 					}
 					if (pm4->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pm4->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pm4->getName()).c_str());
 					}
 					if (pump->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", pump->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", pump->getName()).c_str());
 					}
 					if (tm->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", tm->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", tm->getName()).c_str());
 					}
 					if (ewtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", ewtr->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", ewtr->getName()).c_str());
 					}
 					if (elp1->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", elp1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", elp1->getName()).c_str());
 					}
 					if (elp2->getState() != IKernelSubSystem::State::SUB_NORMAL)
 					{
-						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态", elp2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s不在正常状态.", elp2->getName()).c_str());
 					}
 					
 					rest_step = 15000;

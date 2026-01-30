@@ -84,7 +84,7 @@ namespace FC{
 				if (!readUnsignedInt(address, _value))
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-						Poco::format(" %s写%s错误", sub->getName(), mapping.description), this);
+						Poco::format(" %s写%s错误.", sub->getName(), mapping.description), this);
 				}
 			}
 
@@ -93,7 +93,7 @@ namespace FC{
 			if (!writeFloat(address, value)) 
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-					Poco::format(" %s写%s错误", sub->getName(), mapping.description), this);
+					Poco::format(" %s写%s错误.", sub->getName(), mapping.description), this);
 			}	
 		}
 

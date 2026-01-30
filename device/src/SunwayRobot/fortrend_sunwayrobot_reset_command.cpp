@@ -61,7 +61,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	//fill params
 	int timeout = command_config->getInt("timeout", 100000);
 	if (timeout < 10){
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位超时参数错误", robot->getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位超时参数错误.", robot->getName()), this);
 	}
 
 	//测试
@@ -84,7 +84,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, 
 			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-			Poco::format("%s 机械手通讯错误", robot->getName())));
+			Poco::format("%s 机械手通讯错误.", robot->getName())));
 		setAlarm(alarm);
 		return RunResult::RUN_FAILD;
 	};
@@ -189,7 +189,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			if (!sendRequest("ACK;"))
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-					Poco::format("%s 机械手通讯错误", robot->getName()), this);
+					Poco::format("%s 机械手通讯错误.", robot->getName()), this);
 			}
 			
 		}

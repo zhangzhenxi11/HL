@@ -103,7 +103,7 @@ EFEMLoadPortOpenBoxCommand::RunResult EFEMLoadPortOpenBoxCommand::onRun() throw(
 		else{
 			AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
 				KernelSysException::KR_MODULE_STATE_EXCEPTION,
-				Poco::format("%s %s 命令失败", lp->getName(), getName())));
+				Poco::format("%s %s 命令失败.", lp->getName(), getName())));
 			setAlarm(alarm);
 		}
 

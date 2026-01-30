@@ -1,4 +1,4 @@
-// Library: Fortrend
+ï»¿// Library: Fortrend
 // Package: CommandImp/OCR/Aligner
 //
 // OCR command for rnd aligner subsystem
@@ -57,11 +57,11 @@ IKernelCommand::RunResult EFEMAlignerOcrCommand::onRun() throw(KernelException)
 	int timeout = command_config->getInt("timeout", -1);//20000ms
 	if (timeout < 10) {
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
-			Poco::format("³¬Ê±: ¶ÁÂë³¬Ê±²ÎÊıÉèÖÃÊ§°Ü", sub->getName()), this);
+			Poco::format("è¶…æ—¶: è¯»ç è¶…æ—¶å‚æ•°è®¾ç½®å¤±è´¥.", sub->getName()), this);
 	}
-	logInform(sub->getName().c_str(), "¶ÁÂëÃüÁî¿ªÊ¼Ö´ĞĞ.");
+	logInform(sub->getName().c_str(), "è¯»ç å‘½ä»¤å¼€å§‹æ‰§è¡Œ.");
 
-	// MOV:TRIGGER/OCR1;  MOV:TRIGGER/OCR2;   ÉÏ£ºOCR1  ÏÂ£ºOCR2
+	// MOV:TRIGGER/OCR1;  MOV:TRIGGER/OCR2;   ä¸Šï¼šOCR1  ä¸‹ï¼šOCR2
 
 	std::string command = "MOV:TRIGGER/OCR";
 	std::string ocr_str = std::to_string(d->_direction);
@@ -98,7 +98,7 @@ IKernelCommand::RunResult EFEMAlignerOcrCommand::onRun() throw(KernelException)
 
 	}
 	sub->getKernel()->getKernelBlockManager()->releaseBlock(sub);
-	logInform(sub->getName().c_str(), "¶ÁÂëÃüÁîÖ´ĞĞ½áÊø.");
+	logInform(sub->getName().c_str(), "è¯»ç å‘½ä»¤æ‰§è¡Œç»“æŸ.");
     return RunResult::RUN_OK;
 }
 

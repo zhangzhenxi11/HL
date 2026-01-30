@@ -128,25 +128,25 @@ namespace FC{
 		int timeout = command_config->getInt("timeout", -1);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
-				Poco::format("超时: 打开角阀命令超时参数设置错误", sub->getName()), this);
+				Poco::format("超时: 打开角阀命令超时参数设置错误.", sub->getName()), this);
 		}
 
 		if ((address_1 == "") || (address_2 == "") || (finish_address == "")|| (failed_address == ""))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
-				Poco::format("地址: 打开角阀命令定义未定义", getName()), this);
+				Poco::format("地址: 打开角阀命令定义未定义.", getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "打开角阀命令执行开始.");
 		if (!writeBit(address_1, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-				Poco::format(" %s 写1到打开角阀命令地址1错误", sub->getName()), this);
+				Poco::format(" %s 写1到打开角阀命令地址1错误.", sub->getName()), this);
 		}
 		if (!writeBit(address_2, true))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, 
-				Poco::format(" %s 写1到打开角阀命令地址2错误", sub->getName()), this);
+				Poco::format(" %s 写1到打开角阀命令地址2错误.", sub->getName()), this);
 		}
 
 		Sleep(500);

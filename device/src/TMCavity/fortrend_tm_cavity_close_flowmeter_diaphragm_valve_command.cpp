@@ -58,7 +58,7 @@ namespace FC{
 		
 		if ((address1 == "") || (address2 == "") || (address3 == ""))
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭流量计隔膜阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址:关闭流量计隔膜阀地址未定义.", getName()), this);
 		}
 
 		logInform(sub->getName().c_str(), "关闭流量计隔膜阀命令开始.");

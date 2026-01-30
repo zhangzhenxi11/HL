@@ -52,7 +52,7 @@ namespace FC{
 		}
 		if (!robot->getHasResetFlag())
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s请先将机械手复位", robot->getName()).c_str(), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR, Poco::format("%s请先将机械手复位.", robot->getName()).c_str(), this);
 		}
 		if (robot->getBusyState())
 		{
@@ -63,7 +63,7 @@ namespace FC{
 		//fill params
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 清除错误超时参数设置错误", robot->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 清除错误超时参数设置错误.", robot->getName()), this);
 		}
 
 		logInform(getName().c_str(), "清除错误命令开始执行.");

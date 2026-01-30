@@ -67,7 +67,7 @@ namespace FC{
 		std::string address2 = command_config->getString("address2", "");
 		if (address1 == "" || address2 == "")
 		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭隔膜阀地址未定义", getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 关闭隔膜阀地址未定义.", getName()), this);
 		}
 		logInform(sub->getName().c_str(), "关闭隔膜阀命令开始.");
 		

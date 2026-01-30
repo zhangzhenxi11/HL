@@ -56,7 +56,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 	int timeout = command_config->getInt("timeout", 100000);
 	if (timeout < 10) {
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
-			Poco::format("超时:%s回到home位超时参数错误", sub->getName()), this);
+			Poco::format("超时:%s回到home位超时参数错误.", sub->getName()), this);
 	}
 	//HOME
 	std::string command = "MOV:ALLAXISHOMESAFE;";
@@ -73,7 +73,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
 			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-			Poco::format("%s 机械手通讯错误", sub->getName())));
+			Poco::format("%s 机械手通讯错误.", sub->getName())));
 		setAlarm(alarm);
 		return RunResult::RUN_FAILD;
 	};
@@ -164,7 +164,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 			if (!sendRequest("ACK;"))
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-					Poco::format("%s 机械手通讯错误", sub->getName()), this);
+					Poco::format("%s 机械手通讯错误.", sub->getName()), this);
 			}
 		}
 		else
