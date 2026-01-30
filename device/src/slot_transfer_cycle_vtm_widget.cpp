@@ -4909,7 +4909,7 @@ namespace FC{
 							}
 						#else
 							//TODO:测试阶段，机械手不去PM放晶圆
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 							pm1_auto_step.store(2000);
 
 						#endif  //DEBUG_TEST_PM
@@ -4943,7 +4943,7 @@ namespace FC{
 								}
 							#else
 								//TODO:测试阶段，机械手不去PM放晶圆
-								logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+								logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 								pm1_auto_step.store(2000);
 							#endif
 						}
@@ -5405,7 +5405,7 @@ namespace FC{
 						}
 #else
 						//TODO:测试阶段，机械手不去PM放晶圆	
-						logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+						logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 						pm2_auto_step.store(2000);
 #endif
 						}
@@ -5437,7 +5437,7 @@ namespace FC{
 							}
 #else
 							//TODO:测试阶段，机械手不去PM放晶圆	
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 							pm2_auto_step.store(2000);
 #endif
 						}
@@ -5889,7 +5889,7 @@ namespace FC{
 							
 #else
 							//TODO:测试阶段，机械手不去PM放晶圆
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 							pm3_auto_step.store(2000);
 
 #endif  //DEBUG_TEST_PM
@@ -5923,7 +5923,7 @@ namespace FC{
 								pm3_auto_step.store(2000);
 							}
 #else
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 							pm3_allow_get_put_wafer = false;
 							pm3_auto_step.store(2000);
 #endif
@@ -6368,7 +6368,7 @@ namespace FC{
 								}
 #else
 							//TODO:测试阶段，机械手不去PM放晶圆
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 							pm4_auto_step.store(2000);
 
 #endif  //DEBUG_TEST_PM
@@ -6403,7 +6403,7 @@ namespace FC{
 								pm4_auto_step.store(2000);
 							}
 #else
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆");
+							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
 							pm4_auto_step.store(2000);
 #endif
 						}
@@ -8212,7 +8212,7 @@ namespace FC{
 	/*	initPMCavityParamEdieTableWidget();*/
 
 		//d->ui->gbx_pm_parameter->hide();
-
+		d->ui->wph_test_gbx->hide();
 		d->ui->loadlock1_put_cassette_finished_pbt->hide();
 		d->ui->loadlock2_put_cassette_finished_pbt->hide();
 

@@ -95,7 +95,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::performRobotOp
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 			}
 			logError(robot->getName().c_str(), "更新晶圆状态失败.");
-			std::string error_message = "机械手更新晶圆状态失败";
+			std::string error_message = "机械手更新晶圆状态失败.";
 			int error_code = 0x101;
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
 			setAlarm(alarm);
@@ -196,12 +196,12 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 	if (prefix == "MOV")
 	{
 		VerificationMessage = "RPS:PUTOBJECT;";
-		error_message = "放晶圆命令执行失败";
+		error_message = "放晶圆命令执行失败.";
 	}
 	else if(prefix == "QRY")
 	{
-		VerificationMessage = "RPS:AWC_PARAM";
-		error_message = "查询AWC命令执行失败";
+		VerificationMessage = "RPS:AWCRUNDATA";
+		error_message = "查询AWC命令执行失败.";
 	}
 
 
@@ -279,7 +279,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			}
 			if (elapsed >= timeout3)
 			{
-				error_message = "返回指令超时";
+				error_message = "返回指令超时.";
 				error_code = 0x100;
 				AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
 				setAlarm(alarm);
@@ -293,7 +293,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 		auto found = search(res.begin(), res.end(), VerificationMessage.begin(), VerificationMessage.end());
 		if (found != res.end())
 		{
-			if (VerificationMessage == "RPS:AWC_PARAM")
+			if (VerificationMessage == "RPS:AWCRUNDATA")
 			{
 				std::string prefix, command;
 				std::vector<std::string> params;
@@ -302,8 +302,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 					FortrendSunwayRobotSubsystem::AWCRecordData awc_value;
 					if (params.size() == 2)
 					{
-						awc_value.R = stod(params.at(0));
-						awc_value.T = stod(params.at(1));
+						awc_value.R = stod(params.at(0)); //长度
+						awc_value.T = stod(params.at(1)); //宽度
 						// 设置AWC记录数
 						robot->setAWCRecordData(awc_value);
 					}
@@ -363,14 +363,14 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 
 	FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
 	if (!robot){
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误.", this);
 	}
 
 	std::lock_guard<std::mutex> lock(robot->robot_mutex); //加锁
 
 	//check subsystem state
 	if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, "机械手未处于正常状态", this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, "机械手未处于正常状态.", this);
 	}
 	//check station state
 	if (auto sub = std::dynamic_pointer_cast<KernelAbstractSubSystem>(getStation())){
@@ -522,23 +522,24 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	}
 	Sleep(200);
 
-	if (d->result_ == RunResult::RUN_OK)
-		return RunResult::RUN_OK;
-	else
-		return RunResult::RUN_FAILD;
+	//if (d->result_ == RunResult::RUN_OK)
+	//	return RunResult::RUN_OK;
+	//else
+	//	return RunResult::RUN_FAILD;
 
 	if(d->result_ == RunResult::RUN_OK)
 	{
 		//2026-1-22 不加AWC
-#if 0
 		return performRobotOperation(
 			[this, robot]()->std::string {
 			int stationId = getStation()->getStationId(robot->getName());
 
-			std::string command = "QRY:AWC_PARAM/";
-			command.append(std::to_string(stationId));
-			command.append(";");
-
+			//std::string command = "QRY:AWC_PARAM/";
+			//command.append(std::to_string(stationId));
+			//command.append(";");
+			
+			//2026-1-30 修改AWC查询指令，不带工位参数
+			std::string command = "QRY:AWCRUNDATA;";
 			return command;
 			},
 
@@ -548,7 +549,6 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			return updateAwcData();
 			}
 		);
-#endif
 		return RunResult::RUN_OK;
 	}
 }

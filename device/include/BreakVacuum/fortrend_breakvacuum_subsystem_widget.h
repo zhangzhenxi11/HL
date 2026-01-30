@@ -26,9 +26,9 @@ private slots:
 
 	void onOpenLoadLock1AutoBreakVacuumCommand();//ÆÆÕæ¿Õ
 
-	void onOpenLoadLock2AutoBreakVacuumCommand();
+	void onOpenLoadLock2AutoBreakVacuumCommand();//ÆÆÕæ¿Õ
 
-	void onOpenTMCavityAutoBreakVacuumCommand();
+	void onOpenTMCavityAutoBreakVacuumCommand(); //TMÆÆÕæ¿Õ
 	
 private:
 	void onAttributeUpdate()throw(KernelException);

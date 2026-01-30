@@ -1,6 +1,6 @@
 ﻿/**
-* @file            fortrend_pump_open_loadlock2_auto_vacuum_command.h
-* @brief           open loadlock2 auto command for Pump
+* @file            fortrend_loadlock_auto_break_vacuum_command.h
+* @brief           open loadlock2 auto break vacuum command for pump
 * @author		   xielonghua
 */
 

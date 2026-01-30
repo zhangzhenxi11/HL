@@ -845,6 +845,13 @@ std::shared_ptr<PumpOpenTMCavityAutoVacuumCommand>  FortrendPumpSubsystem::creat
 	return ret;
 }
 
+std::shared_ptr<PumpOpenTMCavityAutoBreakVacuumCommand> FortrendPumpSubsystem::createOpenTMCavityAutoBreakVacuumCommand() const
+{
+	FortrendPumpSubsystem* self = const_cast<FortrendPumpSubsystem*>(this);
+	PumpOpenTMCavityAutoBreakVacuumCommand::Ptr ret(new PumpOpenTMCavityAutoBreakVacuumCommand(self));
+	return ret;
+}
+
 std::shared_ptr<PumpClearErrorCommand>  FortrendPumpSubsystem::createClearErrorCommand()const{
 	FortrendPumpSubsystem* self = const_cast<FortrendPumpSubsystem*>(this);
 	PumpClearErrorCommand::Ptr ret(new PumpClearErrorCommand(self));

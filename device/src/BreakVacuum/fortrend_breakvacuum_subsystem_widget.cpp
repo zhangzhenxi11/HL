@@ -120,7 +120,7 @@ namespace FC{
 		connect(status_widget_llb, &QKernelSubsystemStatusWidget::onStatusUpdate, this, [=](){
 			onAttributeUpdate();
 		});
-		d->ui->open_tm_cavity_break_vacuum_btn->hide();
+		/*d->ui->open_tm_cavity_break_vacuum_btn->hide();*/
 
 		//QObject::connect(d->ui->gmfk_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFKClicked);
 		QObject::connect(d->ui->gmfm_tm, &SlideValveWidget::signalClicked, this, &QBreakVacuumSubsystemWidget::onTMGMFMClicked);
@@ -514,10 +514,10 @@ namespace FC{
 			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位.", d->tm->getName().c_str());
 			return;
 		}
-		//KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoVacuumCommand();
-		//cmd->setOrigin("GUI");
-		//cmd->addListener(d);
-		//d->pump->startCommand(cmd);
+		KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoBreakVacuumCommand();
+		cmd->setOrigin("GUI");
+		cmd->addListener(d);
+		d->pump->startCommand(cmd);
 	}
 	void QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);

@@ -25,6 +25,7 @@
 #include "Pump/fortrend_pump_open_loadlock1_auto_vacuum_command.h"
 #include "Pump/fortrend_pump_open_loadlock2_auto_vacuum_command.h"
 #include "Pump/fortrend_pump_open_tm_cavity_auto_vacuum_command.h"
+#include "Pump/fortrend_pump_open_tm_cavity_auto_break_vacuum_command.h"
 #include "Pump/fortrend_pump_clear_error_command.h"
 
 namespace FC{
@@ -62,7 +63,8 @@ public:
 
 	std::shared_ptr<PumpOpenLoadLock1AutoVacuumCommand> createOpenLoadLock1AutoVacuumCommand() const;//LL1打开真空（抽真空）
 	std::shared_ptr<PumpOpenLoadLock2AutoVacuumCommand> createOpenLoadLock2AutoVacuumCommand() const;//LL2打开真空（抽真空）
-	std::shared_ptr<PumpOpenTMCavityAutoVacuumCommand> createOpenTMCavityAutoVacuumCommand() const;//TM打开真空（抽真空）
+	std::shared_ptr<PumpOpenTMCavityAutoVacuumCommand> createOpenTMCavityAutoVacuumCommand() const;//TM打开真空（抽真空)
+	std::shared_ptr<PumpOpenTMCavityAutoBreakVacuumCommand> createOpenTMCavityAutoBreakVacuumCommand() const;//TM打开真空（破真空)
 
 	std::shared_ptr<PumpClearErrorCommand> createClearErrorCommand()const;
 
