@@ -38,6 +38,10 @@ namespace FC{
 		:KeyencePlcCommandExecuter(hexHelper){
 		//setMessageName("OpenTMCavityDoor");
 		//setDescription("open tm cavity door the laodlock");
+	}
+	std::vector<IKernelResources*> LoadLockOpenTMCavityDoorCommand::resources() const
+	{
+		return std::vector<IKernelResources*>();
 	};
 
 	/**

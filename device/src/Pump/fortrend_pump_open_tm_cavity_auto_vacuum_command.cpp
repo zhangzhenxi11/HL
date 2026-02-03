@@ -360,14 +360,17 @@ namespace FC{
 	{
 		int step = 40;
 		std::string errorMessage = "关闭LLA_TM传输腔门阀";
+		logInform(d->lk1->getName().c_str(), Poco::format("关闭LLA_TM传输腔门阀", d->lk1->getName()).c_str());
+
 		if (d->lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			
-			//检测机械手是否在原点的互锁条件，并等待条件完成
-			if (d->lk1->getWtrOriginSafeSignal()) //true 在原点 
+			// 1.硬件与软件异步,只使用getWtrOriginSafeSignal偶发失效！！
+			// 2.Sleep 时间不可控
+			// 3.State 不等于 Idle: getState() == SUB_NORMAL 只能说明子系统没报错，不能代表它没有正在运行的指令
+			// 解决：得到安全信号后，最低延迟2s，再使用 isBusy() 检查 ，检查该子系统当前的 workCommands 列表是否为空，这与资源锁的持有状态是同步的
+			// 否则报Resources : LLA  has be lock by WTR.
+			if (d->lk1->getWtrOriginSafeSignal() && !d->wtr->isBusy()) //true 在原点 
 			{
-				//得到安全信号后，最低延迟2s，等待机械手模组状态是正常状态， 
-				// 才能关门阀，否则报Resources : LLA  has be lock by WTR.
 				Sleep(3000);
 
 				if (d->wtr->getState() == IKernelSubSystem::State::SUB_NORMAL ||
@@ -375,18 +378,32 @@ namespace FC{
 				{
 					if (d->lk1->getTMCavityDoorOpend())
 					{
-						//关闭传输腔门
-						auto cmd = d->lk1->createCloseTMCavityDoorCommand();
-						d->lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						int retryCount = 5;
+						while (retryCount > 0)
 						{
-							addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
-							step = 10000;
-						}
-						else
-						{
-							step = 50;
+							//关闭传输腔门
+							auto cmd = d->lk1->createCloseTMCavityDoorCommand();
+							d->lk1->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								if (cmd->getState() == IKernelCommand::CMD_REJECT)
+								{
+									logWarn(getName().c_str(), "LLA关门指令被拒绝，可能存在资源竞争，尝试重试. 剩余次数: %d", retryCount - 1);
+									dumpAllBlocks();
+									retryCount--;
+									Sleep(1000);
+									continue;
+								}
+								addCommandExecutionAlarmMessage(step, d->lk1->getName(), errorMessage);
+								step = 10000;
+								break;
+							}
+							else
+							{
+								step = 50;
+								break;
+							}
 						}
 					}
 					else {
@@ -398,9 +415,12 @@ namespace FC{
 				}
 			}
 			else {
-				logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成.", d->lk1->getName()).c_str());
+				static int wait_count = 0;
+				if ((wait_count++ % 20) == 0) {  // 每20次循环打印一次
+					logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成.", d->lk1->getName()).c_str());
+				}
+				Sleep(500);
 				step = 40; 
-			
 			}
 		}
 		else
@@ -417,7 +437,8 @@ namespace FC{
 		std::string errorMessage = "关闭LLB_TM传输腔门阀";
 		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk2->getWtrOriginSafeSignal()) 
+			//2026-2-3 :isBusy() 会检查该子系统当前的 workCommands 列表是否为空，这与资源锁的持有状态是同步的。
+			if (d->lk2->getWtrOriginSafeSignal() && !d->wtr->isBusy()) 
 			{
 				//得到安全信号后，最低延迟2s，才能关门阀，否则报Resources : LLB  has be lock by WTR.
 				Sleep(3000);
@@ -426,18 +447,32 @@ namespace FC{
 				{
 					if (d->lk2->getTMCavityDoorOpend())
 					{
-						//关闭传输腔门
-						auto cmd = d->lk2->createCloseTMCavityDoorCommand();
-						d->lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						int retryCount = 5;
+						while (retryCount > 0)
 						{
-							addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
-							step = 10000;
-						}
-						else
-						{
-							step = 10;
+							//关闭传输腔门
+							auto cmd = d->lk2->createCloseTMCavityDoorCommand();
+							d->lk2->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								if (cmd->getState() == IKernelCommand::CMD_REJECT)
+								{
+									logWarn(getName().c_str(), "LLB关门指令被拒绝，可能存在资源竞争，尝试重试. 剩余次数: %d", retryCount - 1);
+									dumpAllBlocks();
+									retryCount--;
+									Sleep(1000);
+									continue;
+								}
+								addCommandExecutionAlarmMessage(step, d->lk2->getName(), errorMessage);
+								step = 10000;
+								break;
+							}
+							else
+							{
+								step = 10;
+								break;
+							}
 						}
 					}
 					else {
@@ -451,7 +486,11 @@ namespace FC{
 			}
 			else
 			{
-				logInform(d->lk2->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成.", d->lk2->getName()).c_str());
+				static int wait_count = 0;
+				if ((wait_count++ % 20) == 0) {  // 每20次循环打印一次
+					logInform(d->lk1->getName().c_str(), Poco::format("等待%s中的机械手动作执行完成.", d->lk1->getName()).c_str());
+				}
+				Sleep(500);
 				step = 50;
 			}
 		}
@@ -651,6 +690,28 @@ namespace FC{
 
 		int step = 10;
 		return SystemState(step);
+	}
+
+	void PumpOpenTMCavityAutoVacuumCommand::dumpAllBlocks()
+	{
+		auto blockManager = getSubsystem()->getKernel()->getKernelBlockManager();
+		if (!blockManager) return;
+
+		auto blocks = blockManager->allBlocks();
+		logWarn(getName().c_str(), "--- 当前内核资源锁定情况监控 (Total: %d) ---", (int)blocks.size());
+		for (auto& block : blocks)
+		{
+			std::string res_names;
+			for (auto res : block->getResources())
+			{
+				if (res) res_names += res->getName() + " ";
+			}
+			logWarn(getName().c_str(), "Block: [%s], Owner: [%s], Resources: [%s]", 
+				block->getName().c_str(), 
+				block->getOwner() ? block->getOwner()->getName().c_str() : "Unknown",
+				res_names.c_str());
+		}
+		logWarn(getName().c_str(), "------------------------------------------");
 	}
 
 	

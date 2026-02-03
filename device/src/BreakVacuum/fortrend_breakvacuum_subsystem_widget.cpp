@@ -514,10 +514,27 @@ namespace FC{
 			logError(d->tm->getName().c_str(), "模组：%s状态异常，请先复位.", d->tm->getName().c_str());
 			return;
 		}
+		
+		// 添加空指针检查
+		if (!d->pump) {
+			logError(d->tm->getName().c_str(), "Pump 模块未初始化");
+			return;
+		}
+		
 		KernelSubsystemCommand::Ptr cmd = d->pump->createOpenTMCavityAutoBreakVacuumCommand();
+		if (!cmd) {
+			logError(d->tm->getName().c_str(), "无法创建打开 TM 腔破真空命令");
+			return;
+		}
+		
 		cmd->setOrigin("GUI");
 		cmd->addListener(d);
-		d->pump->startCommand(cmd);
+		
+		try {
+			d->pump->startCommand(cmd);
+		} catch (const std::exception& e) {
+			logError(d->tm->getName().c_str(), "执行命令异常: %s", e.what());
+		}
 	}
 	void QBreakVacuumSubsystemWidget::onOpenLoadLock1AutoBreakVacuumCommand(){
 		Q_D(QBreakVacuumSubsystemWidget);

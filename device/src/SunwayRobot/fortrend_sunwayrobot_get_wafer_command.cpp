@@ -194,7 +194,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
 		std::string str_arm = (getArm() == 0) ? "A" : "B";
-		//写机械手的傻逼，把0代表B,1代表A ,去他妈个逼,六百六十六！！！！真是小母牛坐飞机——牛逼上天了  ^*^ 
 		int timeout = command_config->getInt("timeout", 300000);
 		std::string command = "";
 		std::string station_name = getStation()->getName();
@@ -221,7 +220,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			command.append("/0/0");
 			command.append(";");
 
-			logInform(robot->getName().c_str(), "取晶圆命令:%s,开始.", command);
+			logInform(robot->getName().c_str(), "取晶圆命令:%s,开始.", command.c_str());
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 		

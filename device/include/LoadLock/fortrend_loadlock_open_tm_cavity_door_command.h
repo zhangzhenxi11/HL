@@ -26,6 +26,7 @@ namespace FC{
 		DECLARE_PTR(LoadLockOpenTMCavityDoorCommand)
 		LoadLockOpenTMCavityDoorCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "OpenTMCavityDoor"; }
+		std::vector<IKernelResources* > resources() const override; //2026-2-2 ÷ÿ–¥∑¿÷πWTRª•À¯
 
 	protected:
 		virtual RunResult onRun() throw(KernelException);		

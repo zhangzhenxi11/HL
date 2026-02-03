@@ -114,6 +114,7 @@ namespace FC{
 			onAttributeUpdate();
 		});
 
+#if 0
 		d->present_sensor_left_ckb = new QCheckBox(QString::fromStdString("左晶圆在位检测感应器"));
 		d->present_sensor_left_ckb->setObjectName("io_object");
 		d->present_sensor_left_ckb->setEnabled(false);
@@ -131,7 +132,7 @@ namespace FC{
 		d->protruding_sensor_ckb->setEnabled(false);
 		d->ui->inputs_layout->addWidget(d->protruding_sensor_ckb, 0, 2, 1, 1);
 		d->input_checkboxs.push_back(d->protruding_sensor_ckb);
-
+#endif
 		//d->ultrahigh_vacuum_baffle_valve_ckb = new QCheckBox("高真空挡板阀");
 		//d->inserting_plate_value_ckb = new QCheckBox("插板阀");
 
@@ -312,10 +313,10 @@ namespace FC{
 			}*/
 		
 		//update door state
-		d->present_sensor_left_ckb->setChecked(getSubsystem()->getPresentSensorState(0));
-		d->present_sensor_right_ckb->setChecked(getSubsystem()->getPresentSensorState(1));
+		//d->present_sensor_left_ckb->setChecked(getSubsystem()->getPresentSensorState(0));
+		//d->present_sensor_right_ckb->setChecked(getSubsystem()->getPresentSensorState(1));
+		//d->protruding_sensor_ckb->setChecked(getSubsystem()->getProtrudingSensorState());
 
-		d->protruding_sensor_ckb->setChecked(getSubsystem()->getProtrudingSensorState());
 		d->cassette_door_ckb->setChecked(getSubsystem()->getCassetteDoorOpend());
 		d->tm_cavity_door_ckb->setChecked(getSubsystem()->getTMCavityDoorOpend());
 		d->ui->current_vacuum_value_let->setText(QString::number(getSubsystem()->getVacuumValue(), 'e', 3).append("Pa"));

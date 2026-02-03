@@ -215,7 +215,7 @@ namespace FC{
 		std::string errorMessage = "关闭传输腔门阀";
 		if (d->lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 		{
-			if (d->lk2->getWtrOriginSafeSignal())
+			if (d->lk2->getWtrOriginSafeSignal() && !d->wtr->isBusy())
 			{
 				//得到安全信号后，最低延迟2s，才能关门阀，否则报Resources : LLB  has be lock by WTR.
 				Sleep(3000);

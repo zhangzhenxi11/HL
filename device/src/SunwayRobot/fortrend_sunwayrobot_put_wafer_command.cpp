@@ -143,7 +143,9 @@ bool SunwayRobotPutWaferCommand::updateWaferMapping()
 	station_cass->setPodSize(robot_cass->getPodSize());//PM腔的工艺次数，需要本地存储，暂时使用PodSize字段
 
 	//Loadlock的cassete状态会自动更新
-	//robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+	
+	//2026-2-2 放晶圆后，再次释放机械手block
+	robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
 
 	logInform(robot->getName().c_str(), "放晶圆命令执行结束 %s %d %s", d->station_name, slot, station_cass->getBoxId());
 	return true;
@@ -521,6 +523,9 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 		);
 	}
 	Sleep(200);
+
+	//释放机械手block
+	robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
 
 	//if (d->result_ == RunResult::RUN_OK)
 	//	return RunResult::RUN_OK;

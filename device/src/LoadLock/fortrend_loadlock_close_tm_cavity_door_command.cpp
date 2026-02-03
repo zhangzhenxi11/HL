@@ -36,6 +36,21 @@ namespace FC{
 		:KeyencePlcCommandExecuter(hexHelper){
 		//setMessageName("CloseTMCavityDoor");
 		//setDescription("close tm cavity door the laodlock");
+	}
+	std::vector<IKernelResources*> LoadLockCloseTMCavityDoorCommand::resources() const
+	{
+		std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
+		FortrendCassetteManager::Ptr cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+		auto wtr = cassManager->getStation("WTR");
+		if (wtr) {
+			ret.push_back(wtr);
+		}
+		else
+		{
+			return std::vector<IKernelResources*>();
+		}
+		return ret;
+		
 	};
 
 	

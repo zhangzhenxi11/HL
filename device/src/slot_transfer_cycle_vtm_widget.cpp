@@ -1086,7 +1086,7 @@ namespace FC{
 
 						if (elp && elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							// 2026-1-09  下料完成步骤去执行关lp！！
+							// 2026-1-09  下料完成步骤去执行关lp..
 #if 0
 
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
@@ -1766,7 +1766,7 @@ namespace FC{
 				case 158:
 				{
 					logWarn("EFEM", " efem_auto_step:%d", efem_auto_step);
-					// 使用缓存的第二个任务信息：放第二片料（关键修复！）
+					// 使用缓存的第二个任务信息：放第二片料（关键修复.）
 					std::shared_ptr<FortrendLoadLockSubsystem>get_lk = cached_task_second.target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -2163,7 +2163,7 @@ namespace FC{
 								efem_auto_step = 201;
 							}
 
-							//要加！！！！
+							//要加....
 							efem_auto_step = 201;
 						}
 						
@@ -2442,7 +2442,7 @@ namespace FC{
 
 					//多片情况下，系统判断开启LP循环的条件是： 整个LP的所有晶圆都下料完成
 					//怎么区分是否是lp1传输任务，条件：efemReturnPendingTasks.at(0).source == UnifiedWaferTask::Location::LP1
-					// 原先条件： efemUnkownStatusTasks.size() == 0 && efemPendingTasks.size() ==0 && efemReturnPendingTasks.size() == 2 不对！！！
+					// 原先条件： efemUnkownStatusTasks.size() == 0 && efemPendingTasks.size() ==0 && efemReturnPendingTasks.size() == 2 不对...
 
 
 					UpdateEfemSubTransferDatas();//2025-8-21  获取最新数据
@@ -3051,8 +3051,10 @@ namespace FC{
 				break;
 				case 1040:
 				{
-					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL && lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						logInform("cycle", "step:1040,CheckLLAVacuum...");
 						LLA_start_time = std::chrono::steady_clock::now();
 						// 选择不加真空机械手线程，直接操作，真空检测和门阀，阀动作，csr取放动作
 						if (CheckLLVacuumMeetsStandard("LLA", 2010))
@@ -3063,6 +3065,7 @@ namespace FC{
 						{
 							logFailedNotNormal(lk1->getName(), loadlock1_process_name, loadlock1_auto_step);
 						}
+
 					}
 					else
 					{
@@ -3315,8 +3318,11 @@ namespace FC{
 				break;
 				case 2030:
 				{
-					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
+					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL && lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						logInform("cycle", "step:2030,CheckLLAVacuum...");
+
 						LLA_start_time = std::chrono::steady_clock::now();
 						// 真空检测和门阀，阀动作，csr取放动作
 						if (CheckLLVacuumMeetsStandard("LLA", 2010))
@@ -3327,6 +3333,7 @@ namespace FC{
 						{
 							logFailedNotNormal(lk1->getName(), loadlock1_process_name, loadlock1_auto_step);
 						}
+		
 					}
 					else
 					{
@@ -3351,7 +3358,7 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(lk1->getName(), "关闭隔膜阀失败！", loadlock1_process_name, loadlock1_auto_step);
+								logFailedExcuteCommandHasError(lk1->getName(), "关闭隔膜阀失败.", loadlock1_process_name, loadlock1_auto_step);
 							}
 							else
 							{
@@ -4093,8 +4100,10 @@ namespace FC{
 				break;
 				case 1040:
 				{
-					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						logInform("cycle", "step:1040,CheckLLBVacuum...");
 						LLB_start_time = std::chrono::steady_clock::now();
 						// 选择不加真空机械手线程，直接操作，真空检测和门阀，阀动作，csr取放动作
 						if (CheckLLVacuumMeetsStandard("LLB", 2010))
@@ -4333,7 +4342,7 @@ namespace FC{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								logInform(elp->getName().c_str(), "step:2010,LLB模拟放晶圆流程程序....");
-								efem_auto_step = 2070;
+								loadlock2_auto_step = 2070;
 							}
 							else
 							{
@@ -4355,17 +4364,26 @@ namespace FC{
 				break;
 				case 2030:
 				{
-					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
+					if (wtr == nullptr)
 					{
-						LLB_start_time = std::chrono::steady_clock::now();
-						// 真空检测和门阀，阀动作，csr取放动作
-						if (CheckLLVacuumMeetsStandard("LLB", 2010))
+						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+					}
+					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						//if (lk1->getWtrOriginSafeSignal() && lk2->getWtrOriginSafeSignal() && !wtr->isBusy())
 						{
-							loadlock2_auto_step = 2040;
-						}
-						else
-						{
-							logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+							logInform("cycle", "step:2030,CheckLLBVacuum...");
+							LLB_start_time = std::chrono::steady_clock::now();
+							// 真空检测和门阀，阀动作，csr取放动作
+							if (CheckLLVacuumMeetsStandard("LLB", 2010))
+							{
+								loadlock2_auto_step = 2040;
+							}
+							else
+							{
+								logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+							}
 						}
 					}
 					else
@@ -4391,7 +4409,7 @@ namespace FC{
 							cmd->wait();
 							if (cmd->hasError())
 							{
-								logFailedExcuteCommandHasError(lk2->getName(), "关闭隔膜阀失败！", loadlock2_process_name, loadlock2_auto_step);
+								logFailedExcuteCommandHasError(lk2->getName(), "关闭隔膜阀失败.", loadlock2_process_name, loadlock2_auto_step);
 							}
 							else
 							{
@@ -4734,7 +4752,7 @@ namespace FC{
 						if (pm1_allow_get_put_wafer)
 						{//允许取放
 
-							//要区分那个LL腔！！！
+							//要区分那个LL腔...
 							
 							loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");
 							if (loadLockACompletedTasks.size() > 0)
@@ -6708,7 +6726,7 @@ namespace FC{
 					update_auto_step = 10;
 
 
-					running = false; //阻塞，此时EFEM线程下料完成，wait case 201处！！
+					running = false; //阻塞，此时EFEM线程下料完成，wait case 201处..
 					//pauseAllThreads();
 
 					logInform("Cycle", "整机流程结束.");
@@ -7242,7 +7260,7 @@ namespace FC{
 						if (cmd_ewtr->hasError())
 						{
 							rest_step = 15000;
-							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", cmd_ewtr->getName()).c_str());
+							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", cmd_ewtr->getName()).c_str());
 						}
 					}
 					
@@ -7254,7 +7272,7 @@ namespace FC{
 					if (cmd->hasError() || home_cmd->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", wtr->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", wtr->getName()).c_str());
 					}
 					else
 					{
@@ -7321,12 +7339,12 @@ namespace FC{
 						if (cmd_elp1->hasError())
 						{
 							rest_step = 15000;
-							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", cmd_elp1->getName()).c_str());
+							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", cmd_elp1->getName()).c_str());
 						}
 						else if (cmd_elp2->hasError())
 						{
 							rest_step = 15000;
-							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", cmd_elp2->getName()).c_str());
+							logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", cmd_elp2->getName()).c_str());
 						}
 						elp1->setDoorOpend(false);
 						elp2->setDoorOpend(false);
@@ -7343,42 +7361,42 @@ namespace FC{
 					if (cmd_lk1->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", lk1->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", lk1->getName()).c_str());
 					}
 					else if (cmd_lk2->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", lk2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", lk2->getName()).c_str());
 					}
 					else if (cmd_pm1->hasError())
 					{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm1->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", pm1->getName()).c_str());
 					}
 					else if (cmd_pm2->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm2->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", pm2->getName()).c_str());
 					}
 					else if (cmd_pm3->hasError())
 					{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm3->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", pm3->getName()).c_str());
 					}
 					else if (cmd_pm4->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pm4->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", pm4->getName()).c_str());
 					}
 					else if (cmd_tm->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", tm->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", tm->getName()).c_str());
 					}
 					else if (cmd_pump->hasError())
 					{
 						rest_step = 15000;
-						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败！", pump->getName()).c_str());
+						logError(reset_process_name.c_str(), Poco::format("%s复位指令执行失败.", pump->getName()).c_str());
 					}
 					else{
 						rest_step = 120;
@@ -7533,32 +7551,32 @@ namespace FC{
 				if (cmd_lk1->hasError())
 				{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", lk1->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", lk1->getName()).c_str());
 				}
 				else if (cmd_lk2->hasError())
 				{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", lk2->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失.", lk2->getName()).c_str());
 				}
 				else if (cmd_pm1->hasError())
 				{
 				rest_step = 15000;
-				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm1->getName()).c_str());
+				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm1->getName()).c_str());
 				}
 				else if (cmd_pm2->hasError())
 				{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm2->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm2->getName()).c_str());
 				}
 				else if (cmd_pm3->hasError())
 				{
 				rest_step = 15000;
-				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm3->getName()).c_str());
+				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm3->getName()).c_str());
 				}
 				else if (cmd_pm4->hasError())
 				{
 					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败！", pm4->getName()).c_str());
+					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm4->getName()).c_str());
 				}
 				else{
 					rest_step = 10000;
@@ -7655,44 +7673,50 @@ namespace FC{
 				{
 					case 10:
 					{
-						if (tm_get_vacuum)
+						// 如果有抽真空需求，先检测机器人是否安全且空闲
+						if (tm_get_vacuum || loadlock1_get_vacuum || loadlock2_get_vacuum)
 						{
-							vacuum_auto_step = 5000;
-						}
-						else if (loadlock1_get_vacuum && !loadlock2_get_vacuum)//新增LLA、LLB的抽真空顺序判断
-						{
-							vacuum_auto_step = 10000;
-						}
-						else if (loadlock2_get_vacuum && !loadlock1_get_vacuum)
-						{
-							vacuum_auto_step = 20000;
-						}
-						else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() < lk2->getVacuumValue()){
-							vacuum_auto_step = 10000;
-						}
-						else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() > lk2->getVacuumValue()){
-							vacuum_auto_step = 20000;
+							// 核心检测：LLA、LLB 的机器人原点信号必须为真（代表手臂已缩回），且机器人软件状态不忙
+							if (lk1->getWtrOriginSafeSignal() && lk2->getWtrOriginSafeSignal() && !wtr->isBusy())
+							{
+								if (tm_get_vacuum)
+								{
+									vacuum_auto_step = 5000;
+								}
+								else if (loadlock1_get_vacuum && !loadlock2_get_vacuum)//新增LLA、LLB的抽真空顺序判断
+								{
+									vacuum_auto_step = 10000;
+								}
+								else if (loadlock2_get_vacuum && !loadlock1_get_vacuum)
+								{
+									vacuum_auto_step = 20000;
+								}
+								else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() < lk2->getVacuumValue()){
+									vacuum_auto_step = 10000;
+								}
+								else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() > lk2->getVacuumValue()){
+									vacuum_auto_step = 20000;
+								}
+								else
+								{
+									Sleep(10);
+								}	
+							}
+							else
+							{
+								// 如果不满足条件，则留在 case 10 继续等待
+								// 可以适当打印日志以便观察（增加 static 计数器避免日志刷屏）
+								static int wait_log_count = 0;
+								if (wait_log_count++ % 50 == 0) {
+									logInform("VacuumCycle", "等待 WTR 安全信号或 WTR 空闲以启动真空流程...");
+								}
+								Sleep(200);
+							}
 						}
 						else
 						{
 							Sleep(10);
-						}	
-						/*if (tm_get_vacuum)
-						{
-							vacuum_auto_step = 5000;
 						}
-						else if (loadlock2_get_vacuum)
-						{
-							vacuum_auto_step = 20000;
-						}
-						else if (loadlock1_get_vacuum)
-						{
-							vacuum_auto_step = 10000;
-						}
-						else
-						{
-							Sleep(10);
-						}*/
 					}
 					break;
 					case 5000:
@@ -8471,7 +8495,7 @@ namespace FC{
 		QString fileName = QFileDialog::getOpenFileName(this, "加载顺序", cycle_dir, "配置文件 (*.ini)");
 		if (fileName.isEmpty())
 		{
-			QMessageBox::warning(this, tr("警告信息"), tr("加载路径不能为空！"));
+			QMessageBox::warning(this, tr("警告信息"), tr("加载路径不能为空."));
 			return;
 		}
 			
@@ -8540,7 +8564,7 @@ namespace FC{
 		{
 		if (d->ui->sequence_edit_tbw->rowCount()<1)
 		{
-			QMessageBox::warning(this, tr("警告信息"), tr("请先添加顺序！"));
+			QMessageBox::warning(this, tr("警告信息"), tr("请先添加顺序."));
 			return;
 		}
 		QString cycle_dir = QCoreApplication::applicationDirPath() + "/CycleIni";
@@ -8553,7 +8577,7 @@ namespace FC{
 		QString fileName = QFileDialog::getSaveFileName(this, "保存顺序", cycle_dir, "配置文件(*.ini)");
 		if (fileName.isEmpty())
 		{
-			QMessageBox::warning(this, tr("警告信息"), tr("保存路径不能为空！"));
+			QMessageBox::warning(this, tr("警告信息"), tr("保存路径不能为空."));
 			return;
 		}
 		QSettings settings(fileName, QSettings::IniFormat);

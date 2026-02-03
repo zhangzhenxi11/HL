@@ -14,6 +14,8 @@
 
 #include "KeyencePLC/keyence_plc_command_executer.h"
 #include "KeyencePLC/keyence_plc_subsystem_helper.h"
+#include "Kernel/kernel_block_manager.h"
+#include "Kernel/kernel_block.h"
 #include <unordered_map>
 
 namespace FC{
@@ -82,6 +84,8 @@ namespace FC{
 		//退出循环
 		SystemState handleStepEND();
 
+		// 监控并打印当前系统所有资源锁定情况
+		void dumpAllBlocks();
 
 	protected:
 		virtual RunResult onRun() throw(KernelException);
