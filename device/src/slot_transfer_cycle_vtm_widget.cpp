@@ -7139,14 +7139,26 @@ namespace FC{
 			break;
 			case 2050:
 			{
+				static int vacuum_check_fail_count = 0; // 防抖计数器
 				if (tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
 				{
+					vacuum_check_fail_count = 0; // 重置计数器
 					robot_auto_step = 2100;
 				}
 				else
 				{
-					tm_get_vacuum = true;
-					robot_auto_step = 2060;
+					vacuum_check_fail_count++;
+					if (vacuum_check_fail_count >= 3) // 连续3次检测不达标才触发抽真空
+					{
+						logWarn("Cycle", "TM真空值连续3次未达标，触发抽真空. 当前值: %.2f", tm->getTMCavityVacuumValue());
+						tm_get_vacuum = true;
+						vacuum_check_fail_count = 0; // 重置计数器
+						robot_auto_step = 2060;
+					}
+					else
+					{
+						Sleep(500); // 等待一段时间后再次检测
+					}
 				}
 			}
 			break;

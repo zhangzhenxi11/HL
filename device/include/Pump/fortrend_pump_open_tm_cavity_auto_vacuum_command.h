@@ -33,6 +33,7 @@ namespace FC{
 
 
 		enum class SystemState {
+			CHECK_TM_VACUUM_STATUS = 0,
 			OPEN_MECHANICAL_PUMP = 10,
 			OPEN_TM_ANGLE_VALVE = 20,
 			CLOSE_TM_DIAPHRAGM_VALVE = 30,
@@ -51,6 +52,9 @@ namespace FC{
 
 		void initializeStateHandlers();
 
+		//0 检查TM腔真空状态
+		SystemState handleStepCheckTMCavityVacuumStatus();
+		
 		//10 打开干泵
 		SystemState handleStepOpenMechanicalPump();
 

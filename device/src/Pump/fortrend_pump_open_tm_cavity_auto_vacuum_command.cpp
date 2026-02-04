@@ -170,7 +170,9 @@ namespace FC{
 		logInform(d->pump->getName().c_str(), Poco::format("打开%s真空命令开始.", d->tm->getName()).c_str());
 
 		std::chrono::system_clock::time_point time_clock = std::chrono::system_clock::now();   //抽真空计时
-		SystemState currentState = SystemState::CLOSE_PM_CAVITY_DOOR;
+
+		SystemState currentState = SystemState::CHECK_TM_VACUUM_STATUS;
+
 		while (d->loop)
 		{
 			if (d->pump->getProcessAbort()) {
@@ -235,6 +237,7 @@ namespace FC{
 		//8.最后结束，关闭当前腔体角阀，打印结束日志
 
 		stateHandlers = std::unordered_map<SystemState, StateHandler>{
+			{SystemState::CHECK_TM_VACUUM_STATUS,[this]() {return handleStepCheckTMCavityVacuumStatus(); }},
 			{SystemState::CLOSE_PM_CAVITY_DOOR,[this]() {return handleStepClosePmDoor(); }},
 			{SystemState::CLOSE_TM_DIAPHRAGM_VALVE,[this]() {return handleStepCLoseDiaphragmValve(); }},
 			{SystemState::CLOSE_LLA_TM_CAVITY_DOOR,[this]() {return handleStepCloseLlaTmDoor(); }},
@@ -248,6 +251,29 @@ namespace FC{
 			{SystemState::CREATE_END,[this]() {return handleStepEND(); }}
 		};
 
+	}
+	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepCheckTMCavityVacuumStatus()
+	{
+		int step = 0;
+		//检查TM腔真空状态
+		//std::string errorMessage = "检查TM腔的真空值是否达到极限值";
+		if (d->tm->getState() == IKernelSubSystem::State::SUB_NORMAL)
+		{
+			if (d->tm->getTMCavityVacuumValueUpperLimitReachesTheSetValue())
+			{
+				step = 10000; //end
+			}
+			else
+			{
+				step = 80; //CLOSE_PM_CAVITY_DOOR
+			}
+		}
+		else
+		{
+			addSubsystemNotNormalAlarmMessage(step, d->tm->getName());
+			step = 10000;
+		}
+		return SystemState(step);
 	}
 	PumpOpenTMCavityAutoVacuumCommand::SystemState PumpOpenTMCavityAutoVacuumCommand::handleStepOpenMechanicalPump()
 	{
