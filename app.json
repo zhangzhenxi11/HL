@@ -19,6 +19,11 @@
                 "icon": ":/Imageblack/main_formula.png",
                 "access": 5
             },
+            {
+                "name": "曲线图",
+                "icon": ":/Imageblack/main_historicalcurve.png",
+                "access": 5
+            },
 			{
 				"name": "报警信息",
 				"icon": ":/Imageblack/main_alert.png",

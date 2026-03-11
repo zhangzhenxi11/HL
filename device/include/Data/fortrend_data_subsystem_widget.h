@@ -13,10 +13,9 @@
 #include <QWidget>
 #include <memory>
 #include <string>
+#include <QVector>
 
-#include <QWebEngineView>
-#include <QtWebEngine/QtWebEngine>
-#include <QWebEngineSettings>
+class QCustomPlot;
 
 namespace FC {
 
@@ -31,10 +30,8 @@ public:
     ~DataWidget();
 public:
     void resizeEvent(QResizeEvent *event);
-    // Modified to support multiple charts/views
-    void httpUpdate(QWebEngineView* view, const QList<QString> &name, 
-                    const QList<double> &dataZ, const QList<double> &dataR,
-                    const QString& zName, const QString& rName);
+    void updateChart(QCustomPlot* plot, const QVector<double> &timeKeys, 
+                     const QVector<double> &dataZ, const QVector<double> &dataR);
 
 public slots:
     void onclick();

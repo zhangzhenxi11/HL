@@ -10,15 +10,17 @@
 #include "device/ui_fortrend_data_subsystem_widget.h"
 #include "Data/fortrend_data_subsystem_helper.h"
 
+#include "qcustomplot.h"
+
 #include <QVBoxLayout>
 #include <QTabWidget>
 #include <QDateTime>
 #include <QTimer>
 #include <QDebug>
 #include <QCoreApplication>
-#include <QLabel>
+#include <QMenu>
+#include <QFileDialog>
 
-#define USE_WEBENGINE
 namespace FC{
 
 	class DataWidgetPrivate{
@@ -35,20 +37,18 @@ namespace FC{
         std::shared_ptr<FortrendPMCavitySubsystem> currentSubsystem = nullptr;
         
         QTabWidget* tabWidget;
-        QWebEngineView* viewAcc;
-        QWebEngineView* viewVel;
-        QWebEngineView* viewPos;
+        QCustomPlot* plotAcc;
+        QCustomPlot* plotVel;
+        QCustomPlot* plotPos;
         
         QTimer* timer;
         qint64 startTime;
-        int pagesLoaded = 0;  // 跟踪所有页面加载状态
-        bool isPageLoaded = false;
         
         // Data buffers
-        QList<QString> timeList;
-        QList<double> accZList, accRList;
-        QList<double> velZList, velRList;
-        QList<double> posZList, posRList;
+        QVector<double> timeKeys;
+        QVector<double> accZVec, accRVec;
+        QVector<double> velZVec, velRVec;
+        QVector<double> posZVec, posRVec;
         
         // Database helper
         std::shared_ptr<DataSubSystemHelper> dataHelper;
@@ -58,12 +58,11 @@ namespace FC{
 		q_ptr(p),
         kernel(k),
         tabWidget(nullptr),
-        viewAcc(nullptr),
-        viewVel(nullptr),
-        viewPos(nullptr),
+        plotAcc(nullptr),
+        plotVel(nullptr),
+        plotPos(nullptr),
         currentSubsystem(nullptr),
-        startTime(0),
-        pagesLoaded(0)
+        startTime(0)
     {
         timer = new QTimer(p);
         // Initialize database helper
@@ -92,88 +91,76 @@ namespace FC{
         d->tabWidget = new QTabWidget(this);
         mainLayout->addWidget(d->tabWidget);
         
-        // Helper to create tab
-        auto createTab = [&](const QString& title) -> QWebEngineView* {
-#ifdef USE_WEBENGINE
+        // Helper to create tab with QCustomPlot
+        auto createTab = [&](const QString& title, const QString& zName, const QString& rName) -> QCustomPlot* {
             QWidget* page = new QWidget();
             QVBoxLayout* layout = new QVBoxLayout(page);
             layout->setContentsMargins(0,0,0,0);
-            QWebEngineView* view = new QWebEngineView(page);
-            
-            // 设置焦点策略，确保能接收鼠标事件
-            view->setFocusPolicy(Qt::StrongFocus);
-            view->setAttribute(Qt::WA_AcceptTouchEvents, true);
-            view->setAttribute(Qt::WA_NativeWindow, true);  // 确保OpenGL正确渲染
-            
-            layout->addWidget(view);
+            QCustomPlot* plot = new QCustomPlot(page);
+            layout->addWidget(plot);
             d->tabWidget->addTab(page, title);
             
-            // Load HTML
-            QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/line-stack.html";
-            //qDebug() << "[DataWidget]" << title << "loading HTML from:" << appDirPath;
-            //qDebug() << "  - File exists:" << QFile::exists(appDirPath);
-            view->load(QUrl::fromLocalFile(appDirPath));
+            // Create 2 graphs: Z-axis and R-axis
+            plot->addGraph();
+            plot->graph(0)->setName(zName);
+            plot->graph(0)->setPen(QPen(Qt::blue, 2));
             
-            //qDebug() << "[DataWidget]" << title << "QWebEngineView created";
-            //qDebug() << "  - isEnabled:" << view->isEnabled();
-            //qDebug() << "  - focusPolicy:" << view->focusPolicy();
+            plot->addGraph();
+            plot->graph(1)->setName(rName);
+            plot->graph(1)->setPen(QPen(Qt::red, 2));
             
-            return view;
-#else
-            // 临时禁用WebEngine，显示占位符
-            QWidget* page = new QWidget();
-            QVBoxLayout* layout = new QVBoxLayout(page);
-            QLabel* label = new QLabel("Chart disabled (WebEngine not available)", page);
-            label->setAlignment(Qt::AlignCenter);
-            layout->addWidget(label);
-            d->tabWidget->addTab(page, title);
-            return nullptr;
-#endif
-        };
-        
-        d->viewAcc = createTab("Acceleration");
-        d->viewVel = createTab("Velocity");
-        d->viewPos = createTab("Position");
-
-#ifdef USE_WEBENGINE
-        //C++ 等待 JS 环境就绪
-        // Wait for page load - 检测所有页面都加载完成
-        auto onPageLoaded = [d](bool ok){ 
-            if(ok) {
-                d->pagesLoaded++;
-                //qDebug() << "[DataWidget] Page loaded successfully. Total:" << d->pagesLoaded << "/3";
-                // 当所有三个页面都加载完成时才设置为true
-                if(d->pagesLoaded >= 3) {
-                    d->isPageLoaded = true;
-                    //qDebug() << "[DataWidget] *** All WebEngine pages loaded successfully ***";
-                }
-            } else {
-                //qDebug() << "[DataWidget] ERROR: Page load failed!";
-            }
-        };
-        if(d->viewAcc) connect(d->viewAcc, &QWebEngineView::loadFinished, onPageLoaded);
-        if(d->viewVel) connect(d->viewVel, &QWebEngineView::loadFinished, onPageLoaded);
-        if(d->viewPos) connect(d->viewPos, &QWebEngineView::loadFinished, onPageLoaded);
-        
-        // 监听加载进度
-        if(d->viewVel) {
-            connect(d->viewVel, &QWebEngineView::loadProgress, [](int progress){
-                if(progress % 20 == 0 || progress == 100) {
-                    //qDebug() << "[DataWidget] Velocity view load progress:" << progress << "%";
-                }
+            // X-axis: time format
+            QSharedPointer<QCPAxisTickerDateTime> timeTicker(new QCPAxisTickerDateTime);
+            timeTicker->setDateTimeFormat("HH:mm:ss");
+            plot->xAxis->setTicker(timeTicker);
+            plot->xAxis->setTickLabelRotation(30);
+            
+            // Y-axis: auto range
+            plot->yAxis->setLabel(title);
+            
+            // Interactions: zoom + drag
+            plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+            
+            // Legend
+            plot->legend->setVisible(true);
+            plot->legend->setFont(QFont("sans", 8));
+            plot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop | Qt::AlignRight);
+            
+            // Antialiasing optimization
+            plot->setNoAntialiasingOnDrag(true);
+            
+            // Right-click context menu for export
+            plot->setContextMenuPolicy(Qt::CustomContextMenu);
+            QObject::connect(plot, &QWidget::customContextMenuRequested, [plot](QPoint pos){
+                QMenu menu;
+                menu.addAction("Save as PNG", [plot]{
+                    QString path = QFileDialog::getSaveFileName(plot, "Save Chart", "", "PNG (*.png)");
+                    if(!path.isEmpty()) plot->savePng(path, 0, 0, 1.0, -1, 300);
+                });
+                menu.addAction("Save as JPG", [plot]{
+                    QString path = QFileDialog::getSaveFileName(plot, "Save Chart", "", "JPG (*.jpg)");
+                    if(!path.isEmpty()) plot->saveJpg(path, 0, 0, 1.0, -1, 300);
+                });
+                menu.exec(plot->mapToGlobal(pos));
             });
-        }
-#else
-        // WebEngine禁用时直接标记为已加载
-        d->isPageLoaded = true;
-#endif
+            
+            return plot;
+        };
+        
+        d->plotAcc = createTab("Acceleration", "Z-Acc", "R-Acc");
+        d->plotVel = createTab("Velocity", "Z-Vel", "R-Vel");
+        d->plotPos = createTab("Position", "Z-Pos", "R-Pos");
+
+        // Only replot when switching tabs
+        connect(d->tabWidget, &QTabWidget::currentChanged, [d](int index){
+            QCustomPlot* plots[] = {d->plotAcc, d->plotVel, d->plotPos};
+            if (index >= 0 && index < 3 && plots[index]) {
+                plots[index]->replot();
+            }
+        });
         
         // Timer connection
         connect(d->timer, &QTimer::timeout, this, &DataWidget::onclick);
-        //connect(d->timer, &QTimer::timeout, this, &DataWidget::onSimulateTest);
-        //d->startTime = QDateTime::currentMSecsSinceEpoch();
-        //Sleep(2000);
-        //d->timer->start(2000);
 	}
 
     DataWidget::~DataWidget()
@@ -184,25 +171,21 @@ namespace FC{
     void DataWidget::onCycleStart(const std::string& pmName)
     {
         Q_D(DataWidget);
-        //qDebug() << "[DataWidget] onCycleStart called for PM:" << QString::fromStdString(pmName);
-        //qDebug() << "  - isPageLoaded:" << d->isPageLoaded;
-        // Get Subsystem
         
         d->currentSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(pmName);
 
         if (!d->currentSubsystem) {
-            //qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString(pmName);
             return;
         }
         
         // Reset Data
-        d->timeList.clear();
-        d->accZList.clear();
-        d->accRList.clear();
-        d->velZList.clear();
-        d->velRList.clear();
-        d->posZList.clear();
-        d->posRList.clear();
+        d->timeKeys.clear();
+        d->accZVec.clear();
+        d->accRVec.clear();
+        d->velZVec.clear();
+        d->velRVec.clear();
+        d->posZVec.clear();
+        d->posRVec.clear();
         
         d->startTime = QDateTime::currentMSecsSinceEpoch();
         d->timer->start(200); // 200ms interval
@@ -217,70 +200,60 @@ namespace FC{
 	void DataWidget::onSimulateTest()
 	{
 		Q_D(DataWidget);
-        if (!d->isPageLoaded) return;
         
         d->currentSubsystem = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 
         if (!d->currentSubsystem) {
-            //qDebug() << "DataWidget: PM Subsystem not found:" << QString::fromStdString("PM1");
             return;
         }
 
-        //qint64 now = QDateTime::currentMSecsSinceEpoch();
-        //double t = (double)(now - d->startTime); // ms
-        //QString tStr = QString::number(t, 'f', 0); // Display as string
         qint64 now = QDateTime::currentMSecsSinceEpoch();
-        QString tStr = QDateTime::fromMSecsSinceEpoch(now).toString("HH:mm:ss:zzz");
+        double key = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTime());
 
         // Generate Random Data
-        double accZ = (qrand() % 200) - 100; // -100 to 100
+        double accZ = (qrand() % 200) - 100;
         double accR = (qrand() % 200) - 100;
-        
-        double velZ = qrand() % 500; // 0 to 500
+        double velZ = qrand() % 500;
         double velR = qrand() % 500;
-        
-        double posZ = qrand() % 100; // 0 to 100
+        double posZ = qrand() % 100;
         double posR = qrand() % 100;
         
-        // 使用实际时间戳保存数据（格式：yyyy-MM-dd HH:mm:ss）
+        // Save to database
         QString timestampStr = QDateTime::fromMSecsSinceEpoch(now).toString("yyyy-MM-dd HH:mm:ss");
-        std::string pmName = d->currentSubsystem->getName();
         d->dataHelper->insertRealtimeDataWithTimestamp("PM1", accZ, accR, velZ, velR, posZ, posR, timestampStr.toStdString());
 
         // Append
-        d->timeList.append(tStr);
-        d->accZList.append(accZ);
-        d->accRList.append(accR);
-        d->velZList.append(velZ);
-        d->velRList.append(velR);
-        d->posZList.append(posZ);
-        d->posRList.append(posR);
+        d->timeKeys.append(key);
+        d->accZVec.append(accZ);
+        d->accRVec.append(accR);
+        d->velZVec.append(velZ);
+        d->velRVec.append(velR);
+        d->posZVec.append(posZ);
+        d->posRVec.append(posR);
         
         // Prune (Keep last 500 points)
-        if (d->timeList.size() > 500) {
-            d->timeList.removeFirst();
-            d->accZList.removeFirst();
-            d->accRList.removeFirst();
-            d->velZList.removeFirst();
-            d->velRList.removeFirst();
-            d->posZList.removeFirst();
-            d->posRList.removeFirst();
+        if (d->timeKeys.size() > 500) {
+            d->timeKeys.remove(0, 1);
+            d->accZVec.remove(0, 1);
+            d->accRVec.remove(0, 1);
+            d->velZVec.remove(0, 1);
+            d->velRVec.remove(0, 1);
+            d->posZVec.remove(0, 1);
+            d->posRVec.remove(0, 1);
         }
         
         // Update Charts
-        //httpUpdate(d->viewAcc, d->timeList, d->accZList, d->accRList, "Z-Acc", "R-Acc");
-        httpUpdate(d->viewVel, d->timeList, d->velZList, d->velRList, "Z-Vel", "R-Vel");
-        httpUpdate(d->viewPos, d->timeList, d->posZList, d->posRList, "Z-Pos", "R-Pos");
+        updateChart(d->plotVel, d->timeKeys, d->velZVec, d->velRVec);
+        updateChart(d->plotPos, d->timeKeys, d->posZVec, d->posRVec);
 	}
 
 	void DataWidget::onclick()
 	{
 		Q_D(DataWidget);
-        if (!d->isPageLoaded) return;
         if (!d->currentSubsystem) return;
         
         qint64 now = QDateTime::currentMSecsSinceEpoch();
-        QString tStr = QDateTime::fromMSecsSinceEpoch(now).toString("HH:mm:ss:zzz");
+        double key = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTime());
         
         // Fetch Data
         double accZ = d->currentSubsystem->getPMCavityZAxleAcc();
@@ -292,109 +265,63 @@ namespace FC{
         double posZ = d->currentSubsystem->getPMCavityZAxleLocation();
         double posR = d->currentSubsystem->getPMCavityRAxleLocation();
         
-        // 使用实际时间戳保存数据（格式：yyyy-MM-dd HH:mm:ss）
+        // Save to database
         QString timestampStr = QDateTime::fromMSecsSinceEpoch(now).toString("yyyy-MM-dd HH:mm:ss");
         std::string pmName = d->currentSubsystem->getName();
         d->dataHelper->insertRealtimeDataWithTimestamp(pmName, accZ, accR, velZ, velR, posZ, posR, timestampStr.toStdString());
         
         // Append
-        d->timeList.append(tStr);
-        d->accZList.append(accZ);
-        d->accRList.append(accR);
-        d->velZList.append(velZ);
-        d->velRList.append(velR);
-        d->posZList.append(posZ);
-        d->posRList.append(posR);
+        d->timeKeys.append(key);
+        d->accZVec.append(accZ);
+        d->accRVec.append(accR);
+        d->velZVec.append(velZ);
+        d->velRVec.append(velR);
+        d->posZVec.append(posZ);
+        d->posRVec.append(posR);
         
         // Prune (Keep last 1000 points)
-        if (d->timeList.size() > 1000) {
-            d->timeList.removeFirst();
-            d->accZList.removeFirst();
-            d->accRList.removeFirst();
-            d->velZList.removeFirst();
-            d->velRList.removeFirst();
-            d->posZList.removeFirst();
-            d->posRList.removeFirst();
+        if (d->timeKeys.size() > 1000) {
+            d->timeKeys.remove(0, 1);
+            d->accZVec.remove(0, 1);
+            d->accRVec.remove(0, 1);
+            d->velZVec.remove(0, 1);
+            d->velRVec.remove(0, 1);
+            d->posZVec.remove(0, 1);
+            d->posRVec.remove(0, 1);
         }
         
         // Update Charts
-        httpUpdate(d->viewAcc, d->timeList, d->accZList, d->accRList, "Z-Acc", "R-Acc");
-        httpUpdate(d->viewVel, d->timeList, d->velZList, d->velRList, "Z-Vel", "R-Vel");
-        httpUpdate(d->viewPos, d->timeList, d->posZList, d->posRList, "Z-Pos", "R-Pos");
-
+        updateChart(d->plotAcc, d->timeKeys, d->accZVec, d->accRVec);
+        updateChart(d->plotVel, d->timeKeys, d->velZVec, d->velRVec);
+        updateChart(d->plotPos, d->timeKeys, d->posZVec, d->posRVec);
 	}
 
-	//数据解析函数
-	void DataWidget::httpUpdate(QWebEngineView* view, const QList<QString> &name, 
-                                const QList<double> &dataZ, const QList<double> &dataR,
-                                const QString& zName, const QString& rName)
+	void DataWidget::updateChart(QCustomPlot* plot, const QVector<double> &timeKeys, 
+                                 const QVector<double> &dataZ, const QVector<double> &dataR)
 	{
-#ifdef USE_WEBENGINE
-        if (!view) {
-            //qDebug() << "[DataWidget] ERROR: httpUpdate called with null view!";
-            return;
+        if (!plot || timeKeys.isEmpty()) return;
+        
+        plot->graph(0)->setData(timeKeys, dataZ);
+        plot->graph(1)->setData(timeKeys, dataR);
+        
+        // X-axis: show recent 60-second window
+        plot->xAxis->setRange(timeKeys.last(), 60, Qt::AlignRight);
+        
+        // Y-axis: auto-fit
+        plot->graph(0)->rescaleValueAxis(false);
+        plot->graph(1)->rescaleValueAxis(true);
+        
+        // Only replot if this plot's tab is currently visible
+        Q_D(DataWidget);
+        int currentTab = d->tabWidget->currentIndex();
+        QCustomPlot* plots[] = {d->plotAcc, d->plotVel, d->plotPos};
+        if (currentTab >= 0 && currentTab < 3 && plots[currentTab] == plot) {
+            plot->replot(QCustomPlot::rpQueuedReplot);
         }
-        
-        if (!view->page()) {
-            //qDebug() << "[DataWidget] ERROR: QWebEngineView page is null!";
-            return;
-        }
-        
-        //qDebug() << "[DataWidget] httpUpdate for" << zName << "/" << rName;
-        //qDebug() << "  - view isEnabled:" << view->isEnabled();
-        //qDebug() << "  - view isVisible:" << view->isVisible();
-        //qDebug() << "  - data points:" << name.size();
-        
-		//在QT中我们需要组成一个字符串将数据传过去
-		QString jscode = "onDataReceived([";
-		for (int i = 0; i < name.size(); i++)
-		{
-			jscode += QString("\"%1\"").arg(name[i]);
-			if (i < name.size() - 1)
-				jscode += ",";
-		}
-		jscode += "],";
-
-        // Add legend update to match series names
-        jscode += QString("['%1', '%2'],").arg(zName).arg(rName);
-
-		//线条数据 拼接
-        auto buildDataArray = [](const QList<double>& data) -> QString {
-            QString str = "[";
-            for (int i = 0; i < data.size(); i++) {
-                str += QString::number(data[i]);
-                if (i < data.size() - 1) str += ",";
-            }
-            str += "]";
-            return str;
-        };
-
-		QString lineDataZ = buildDataArray(dataZ);
-        QString lineDataR = buildDataArray(dataR);
-
-		jscode += "[{name:'" + zName + "',data: " + lineDataZ + ",type: 'line',smooth: true}";//第一个线条
-		jscode += ",{name:'" + rName + "',data: " + lineDataR + ",type: 'line',smooth: true}";//第二个线条
-		jscode += "])";
-        //jscode += "[{name:'" + zName + "',data: " + lineDataZ + ",type: 'line',stack: 'Total',smooth: true}";//第一个线条
-        //jscode += ",{name:'" + rName + "',data: " + lineDataR + ",type: 'line',stack: 'Total',smooth: true}";//第二个线条
-        //jscode += "])";
-
-		view->page()->runJavaScript(jscode);
-#else
-        // WebEngine禁用时不执行
-        Q_UNUSED(view);
-        Q_UNUSED(name);
-        Q_UNUSED(dataZ);
-        Q_UNUSED(dataR);
-        Q_UNUSED(zName);
-        Q_UNUSED(rName);
-#endif
 	}
 
-	//自适应窗体
 	void DataWidget::resizeEvent(QResizeEvent *event){
         Q_D(DataWidget);
-		/*QWidget::resizeEvent(event);*/
-        // Views resize automatically with layout
+        QWidget::resizeEvent(event);
 	}
 }

@@ -46,20 +46,22 @@ private:
 	void addAlarmCompoments();
 	void addHeadCompoments();
 
-	QFortrendStationStatusVTMWidget* status_widget;//主界面
-	QVacuumizeSubsystemWidget* tm_widget;//抽真空
-	QBreakVacuumSubsystemWidget* tm_widget2;//破真空
-	QSlotTransferCycleVTMWidget* slot_transfer_cycle_vtm_widget;// 循环 配方
+	QFortrendStationStatusVTMWidget* status_widget;
+	QVacuumizeSubsystemWidget* tm_widget;
+	QBreakVacuumSubsystemWidget* tm_widget2;
+	QSlotTransferCycleVTMWidget* slot_transfer_cycle_vtm_widget;
 
-	QTabWidget* efemmodule_tabWidget;//EFEM
-	QWidget* control_widget;//设置
-	QTabWidget* module_tabWidget;//手动
+	QTabWidget* efemmodule_tabWidget;
+	QWidget* control_widget;
+	QTabWidget* module_tabWidget;
 	
-	QWidget* system_button_widget;//控制启动、暂停、停止、复位、手动、自动
-	QKernelAlarmWidget* alarm;//报警
+	QWidget* system_button_widget;
+	QKernelAlarmWidget* alarm;
 
-	QWidget* pmRecipe_widget;//pm配方界面
+	QWidget* pmRecipe_widget;
 
+	QWidget* data_widget;
+	QWidget* datahistory_widget;
 
 private:
 	std::shared_ptr<FortrendDeviceKernel> kernel;

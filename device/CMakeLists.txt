@@ -74,7 +74,6 @@ Qt5::AxContainer
 Qt5::Core 
 Qt5::Widgets 
 Qt5::PrintSupport
-Qt5::WebEngineWidgets
 myunit
 )
 target_link_libraries("${LIBNAME}" ${STANDARD_MODBUS_API_LIBRARY})#链接StandardModbusApi库
@@ -156,18 +155,6 @@ add_custom_command(TARGET ${LIBNAME}
 		copy_directory   
         "${CMAKE_CURRENT_SOURCE_DIR}/../images"   
         "${PROJECT_BINARY_DIR}/output/$(Configuration)/images"	
-		
-) 
-
-# 拷贝Echarts
-add_custom_command(TARGET ${LIBNAME} 
-   POST_BUILD 
-   VERBATIM 
-   COMMAND_EXPAND_LISTS 
-   COMMAND ${CMAKE_COMMAND} -E 
-		copy_directory   
-        "${CMAKE_CURRENT_SOURCE_DIR}/../Echarts"   
-        "${PROJECT_BINARY_DIR}/output/$(Configuration)/Echarts"	
 		
 ) 
 

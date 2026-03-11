@@ -5,6 +5,8 @@
 #include "kernel/kernel_log.h"
 #include "Kernel/kernel_exception.h"
 
+#include "qcustomplot.h"
+
 #include "Poco/Format.h"
 #include <vector>
 #include <memory>
@@ -19,14 +21,11 @@
 #include <QLabel>
 #include <QComboBox>
 #include <QVBoxLayout>
-#include <QWebEngineView>
-#include <QUrl>
 #include <QDateTime>
 #include <QCoreApplication>
 #include <qmessagebox.h>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QJsonDocument>
+#include <QMenu>
+#include <QFileDialog>
 
 namespace FC{
 
@@ -55,8 +54,6 @@ namespace FC{
 		q_ptr(p),
 		datahelper(new DataSubSystemHelper()){
 
-		
-
 	}
 	DataHistoryWidgetPrivate::~DataHistoryWidgetPrivate(){
 		
@@ -68,124 +65,100 @@ namespace FC{
 		d_ptr(new DataHistoryWidgetPrivate(this))
 	{
 		Q_D(DataHistoryWidget);
-		//qDebug() << "[DataHistoryWidget] Constructor called";
-		//qDebug() << "  - parent:" << parent;
 		
 		d->ui = new Ui::DataHistoryWidget();
 		d->ui->setupUi(this);
 		
-		// 监听窗口显示、隐藏事件
-		installEventFilter(this);
-		
-		// 初始化pmComboBox指针
+		// Initialize pmComboBox pointer
 		d->pmComboBox = d->ui->dateType;
-		if (!d->pmComboBox) {
-			qDebug() << "[DataHistoryWidget] ERROR: pmComboBox assignment failed!";
-		}
 
 		// Layout Management
-		// Use existing layout from verticalLayoutWidget if available
 		QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(d->ui->verticalLayoutWidget->layout());
 		if (!layout) {
 			layout = new QVBoxLayout(d->ui->verticalLayoutWidget);
 			layout->setContentsMargins(0,0,0,0);
 		}
 
-		// 确保verticalLayoutWidget不覆盖顶部控件
-		// UI文件中设置了verticalLayoutWidget的geometry为(50, 80, 1091, 551)
-		// 这意味着它不应该覆盖y=30处的顶部控件
 		d->ui->verticalLayoutWidget->setGeometry(50, 80, 1091, 551);
-		
-		// 确保qweb在verticalLayoutWidget内部，不会溢出
-		d->ui->qweb->setMaximumHeight(551);
-		
-		// 确保顶部控件在最上层，不会被qweb覆盖
-		d->ui->startDatetime->raise();
-		d->ui->endDatetime->raise();
-		d->ui->label->raise();
-		d->ui->label_2->raise();
-		d->pmComboBox->raise();  // dateType
-		d->ui->select_btn->raise();
 
-
-		// Ensure qweb is in the layout
-		if (layout->indexOf(d->ui->qweb) == -1) {
-			layout->addWidget(d->ui->qweb);
+		// Ensure historyPlot is in the layout
+		if (layout->indexOf(d->ui->historyPlot) == -1) {
+			layout->addWidget(d->ui->historyPlot);
 		}
-		
-		// 不要设置主窗口的layout，因为UI文件使用的是绝对定位
-		// 如果设置了主窗口的layout，会导致verticalLayoutWidget被拉伸覆盖整个窗口
-		// Re-setup main layout to ensure full screen
-		// if (this->layout() == nullptr) {
-		//     QVBoxLayout* mainLayout = new QVBoxLayout(this);
-		//     mainLayout->addWidget(d->ui->verticalLayoutWidget);
-		// }
 
-		//数据加载 - 使用fromLocalFile确保本地文件正确加载
-		QString appDirPath = QCoreApplication::applicationDirPath() + "/Echarts/history-line-stack.html";
-		qDebug() << "[DataHistoryWidget] Loading HTML from:" << appDirPath;
-		qDebug() << "[DataHistoryWidget] File exists:" << QFile::exists(appDirPath);
+		// Initialize QCustomPlot
+		QCustomPlot* plot = d->ui->historyPlot;
+
+		// Create 4 graphs with different colors and line styles
+		// Velocity on left Y-axis
+		plot->addGraph(plot->xAxis, plot->yAxis);
+		plot->graph(0)->setName("Z-Axis Velocity");
+		plot->graph(0)->setPen(QPen(Qt::blue, 2));
+
+		plot->addGraph(plot->xAxis, plot->yAxis);
+		plot->graph(1)->setName("R-Axis Velocity");
+		plot->graph(1)->setPen(QPen(Qt::red, 2));
+
+		// Position on right Y-axis
+		plot->yAxis2->setVisible(true);
 		
-		d->ui->qweb->load(QUrl::fromLocalFile(appDirPath));
-		
-		// 设置焦点策略，确保能接收鼠标事件但不拦截父窗口事件
-		d->ui->qweb->setFocusPolicy(Qt::NoFocus);
-		// 设置透明背景，允许鼠标穿透非图表区域
-		d->ui->qweb->page()->setBackgroundColor(Qt::transparent);
-		// 注意：QWebEngineView会拦截鼠标事件用于图表交互
-		// 如果需要父窗口可点击，需要调整布局，不要让qweb覆盖整个父窗口
-		
-		qDebug() << "[DataHistoryWidget] QWebEngineView properties:";
-		qDebug() << "  - isEnabled:" << d->ui->qweb->isEnabled();
-		qDebug() << "  - isVisible:" << d->ui->qweb->isVisible();
-		qDebug() << "  - focusPolicy:" << d->ui->qweb->focusPolicy();
-		qDebug() << "  - geometry:" << d->ui->qweb->geometry();
-		
-		// 监听页面加载完成
-		connect(d->ui->qweb, &QWebEngineView::loadFinished, [](bool ok){
-			qDebug() << "[DataHistoryWidget] Page load finished:" << ok;
+		plot->addGraph(plot->xAxis, plot->yAxis2);
+		plot->graph(2)->setName("Z-Axis Position");
+		plot->graph(2)->setPen(QPen(Qt::darkGreen, 2, Qt::DashLine));
+
+		plot->addGraph(plot->xAxis, plot->yAxis2);
+		plot->graph(3)->setName("R-Axis Position");
+		plot->graph(3)->setPen(QPen(QColor(255, 165, 0), 2, Qt::DashLine));
+
+		// Y-axis labels
+		plot->yAxis->setLabel("Velocity");
+		plot->yAxis2->setLabel("Position");
+
+		// X-axis: time format for historical data
+		QSharedPointer<QCPAxisTickerDateTime> timeTicker(new QCPAxisTickerDateTime);
+		timeTicker->setDateTimeFormat("MM-dd HH:mm");
+		plot->xAxis->setTicker(timeTicker);
+		plot->xAxis->setTickLabelRotation(30);
+
+		// Interactions: zoom + drag
+		plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+
+		// Legend
+		plot->legend->setVisible(true);
+		plot->legend->setFont(QFont("sans", 8));
+		plot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop | Qt::AlignRight);
+
+		// Antialiasing optimization
+		plot->setNoAntialiasingOnDrag(true);
+
+		// Right-click context menu for export
+		plot->setContextMenuPolicy(Qt::CustomContextMenu);
+		QObject::connect(plot, &QWidget::customContextMenuRequested, [plot](QPoint pos){
+			QMenu menu;
+			menu.addAction("Save as PNG", [plot]{
+				QString path = QFileDialog::getSaveFileName(plot, "Save Chart", "", "PNG (*.png)");
+				if(!path.isEmpty()) plot->savePng(path, 0, 0, 1.0, -1, 300);
+			});
+			menu.addAction("Save as JPG", [plot]{
+				QString path = QFileDialog::getSaveFileName(plot, "Save Chart", "", "JPG (*.jpg)");
+				if(!path.isEmpty()) plot->saveJpg(path, 0, 0, 1.0, -1, 300);
+			});
+			menu.exec(plot->mapToGlobal(pos));
 		});
-		
-		// 监听页面加载进度
-		connect(d->ui->qweb, &QWebEngineView::loadProgress, [](int progress){
-			if(progress % 20 == 0 || progress == 100) {
-				qDebug() << "[DataHistoryWidget] Page load progress:" << progress << "%";
-			}
-		});
-		
-		// Initialize line names for different data types
-		lineName.clear();
-		lineName.append("Z-Axis Velocity");
-		lineName.append("R-Axis Velocity");
-		lineName.append("Z-Axis Position");
-		lineName.append("R-Axis Position");
-		
+
 		// Initialize database
-		std::string db_file = "./realtime_data.db"; // Use same DB as real-time data
+		std::string db_file = "./realtime_data.db";
 		d->datahelper->opendb(db_file);
 		
 		// Populate PM chamber combo box
 		populatePMChambers();
 
-		// 连接按钮点击事件 - 添加连接检查
-		bool connected = connect(d->ui->select_btn, &QPushButton::clicked, this, &DataHistoryWidget::onQueryClicked);
-		if (!connected) {
-			qDebug() << "[DataHistoryWidget] ERROR: Failed to connect select_btn clicked signal!";
-		} else {
-			qDebug() << "[DataHistoryWidget] Successfully connected select_btn clicked signal";
-		}
+		// Connect query button
+		connect(d->ui->select_btn, &QPushButton::clicked, this, &DataHistoryWidget::onQueryClicked);
 	}
-	void DataHistoryWidget::onSelect(){
-		
-	}
-	
+
 	void DataHistoryWidget::onQueryClicked() {
 	    Q_D(DataHistoryWidget);
-	    
-	    qDebug() << "[DataHistoryWidget] onQueryClicked() called";
-	    qDebug() << "  - qweb isEnabled:" << d->ui->qweb->isEnabled();
-	    qDebug() << "  - qweb isVisible:" << d->ui->qweb->isVisible();
-	    qDebug() << "  - qweb hasFocus:" << d->ui->qweb->hasFocus();
 	    
 	    // Get selected time range and PM chamber
 	    QString startTimeStr = d->ui->startDatetime->dateTime().toString("yyyy-MM-dd HH:mm");
@@ -193,7 +166,6 @@ namespace FC{
 	    QString selectedPM = d->pmComboBox->currentText();
 	    
 	    if (selectedPM.isEmpty()) {
-	        qDebug() << "Please select a PM chamber";
 	        return;
 	    }
 	    
@@ -206,80 +178,47 @@ namespace FC{
 	    
 	    if (results.empty()) {
 			QMessageBox::warning(this, "No Data", "No historical data found for the selected period.");
-	        qDebug() << "No historical data found for the selected period";
 	        return;
 	    }
 	    
-	    // Clear existing data
-	    httpname.clear();
-	    httpdata.clear();
-	    
 	    // Prepare data for chart display
-	    QList<QString> timestamps;
-	    QList<double> accZData, accRData;
-	    QList<double> velZData, velRData;
-	    QList<double> posZData, posRData;
+	    QVector<double> timeKeys;
+	    QVector<double> velZData, velRData;
+	    QVector<double> posZData, posRData;
 	    
 	    for (const auto& row : results) {
-	        if (row.size() >= 7) // timestamp, acc_z, acc_r, vel_z, vel_r, pos_z, pos_r
-	            timestamps.append(QString::fromStdString(row[0])) // timestamp
-	                            , accZData.append(std::stod(row[1])) // acc_z
-	                            , accRData.append(std::stod(row[2])) // acc_r
-	                            , velZData.append(std::stod(row[3])) // vel_z
-	                            , velRData.append(std::stod(row[4])) // vel_r
-	                            , posZData.append(std::stod(row[5])) // pos_z
-	                            , posRData.append(std::stod(row[6])); // pos_r
+	        if (row.size() >= 7) {
+	            // Parse timestamp to double key
+	            QDateTime dt = QDateTime::fromString(QString::fromStdString(row[0]), "yyyy-MM-dd HH:mm:ss");
+	            if (dt.isValid()) {
+	                double key = QCPAxisTickerDateTime::dateTimeToKey(dt);
+	                timeKeys.append(key);
+	                velZData.append(std::stod(row[3]));  // vel_z
+	                velRData.append(std::stod(row[4]));  // vel_r
+	                posZData.append(std::stod(row[5]));  // pos_z
+	                posRData.append(std::stod(row[6]));  // pos_r
+	            }
+	        }
 	    }
 	    
-	    // Convert velocity data to int for display
-	    QList<int> displayvelZData;
-		QList<int> displayvelRData;
-	    for (double val : velZData) {
-			displayvelZData.append(static_cast<int>(val));
+	    if (timeKeys.isEmpty()) {
+	        QMessageBox::warning(this, "No Data", "No valid data found for the selected period.");
+	        return;
 	    }
-		for (double val : velRData) {
-			displayvelRData.append(static_cast<int>(val));
-		}
 	    
-	    // Convert position data to int for display
-	    QList<int> displayposZData;
-		QList<int> displayposRData;
-	    for (double val : posZData) {
-			displayposZData.append(static_cast<int>(val));
-	    }
-		for (double val : posRData) {
-			displayposRData.append(static_cast<int>(val));
-		}
-	    
-	    // 在同一个图表中显示所有4条曲线：Z速度、R速度、Z位置、R位置
-	    qDebug() << "[DataHistoryWidget] Updating chart with 4 series and" << timestamps.size() << "data points";
-	    httpUpdateMultipleSeries(timestamps, 
-	        displayvelZData, displayvelRData, 
-	        displayposZData, displayposRData);
+	    // Update chart with 4 series
+	    updateHistoryChart(timeKeys, velZData, velRData, posZData, posRData);
 	}
 	
 	void DataHistoryWidget::populatePMChambers(int index) {
 	    Q_D(DataHistoryWidget);
-	    
-	    //// Query all available PM chambers from database
-	    //std::vector<std::vector<std::string>> results = d->datahelper->queryAllPMNames();
-	    //
-	    //d->pmComboBox->clear();
-	    //for (const auto& row : results) {
-	    //    if (!row.empty()) {
-	    //        d->pmComboBox->addItem(QString::fromStdString(row[0]));
-	    //    }
-	    //}
-	    
-	    //if (d->pmComboBox->count() > 0) {
-	    //    d->pmComboBox->setCurrentIndex(0);
-	    //}
 
 		if (index <= d->pmComboBox->count())
 		{
 			d->pmComboBox->setCurrentIndex(index);
 		}
 	}
+
 	void DataHistoryWidget::populatePMChambers()
 	{
 		Q_D(DataHistoryWidget);
@@ -287,7 +226,6 @@ namespace FC{
 		// Query all available PM chambers from database
 		std::vector<std::vector<std::string>> results = d->datahelper->queryAllPMNames();
 		d->ui->dateType->clear();
-		//d->pmComboBox->clear();
 
 		if (!results.empty())
 		{
@@ -303,32 +241,6 @@ namespace FC{
 		    d->pmComboBox->setCurrentIndex(0);
 		}
 	}
-	void DataHistoryWidget::onclick()
-	{
-		Q_D(DataHistoryWidget);
-		QString dateTime = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");//获取系统当前的时间
-		httpname.append(dateTime);
-
-		int randcount = 10;
-		qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime()));
-		randcount += qrand() % 10 + 10;
-
-		d->datahelper->exce(Poco::format(
-			"INSERT OR REPLACE INTO test "
-			"(value) "
-			"VALUES(%d);"
-			, randcount));
-
-		httpdata.append(randcount);//随机数
-
-		httpUpdate(httpname, httpdata);//更新html
-		if (httpdata.count() > 500){
-			httpdata.erase(httpdata.begin(), httpdata.begin() + 400);
-		}
-		if (httpname.count() > 500){
-			httpname.erase(httpname.begin(), httpname.begin() + 400);
-		}
-	}
 
 	DataHistoryWidget::~DataHistoryWidget()
 	{
@@ -336,225 +248,31 @@ namespace FC{
 		delete d->ui;
 	}
 
-	//数据解析函数
-	void DataHistoryWidget::httpUpdate(const QList<QString> &name, const QList<int> &data)
+	void DataHistoryWidget::updateHistoryChart(const QVector<double> &timeKeys,
+	                                           const QVector<double> &velZ, const QVector<double> &velR,
+	                                           const QVector<double> &posZ, const QVector<double> &posR)
 	{
 		Q_D(DataHistoryWidget);
+		QCustomPlot* plot = d->ui->historyPlot;
 		
-		qDebug() << "[DataHistoryWidget] httpUpdate called with" << name.size() << "timestamps," << data.size() << "data points";
-		qDebug() << "  - qweb page isNull:" << (d->ui->qweb->page() == nullptr);
-		//在QT中我们需要组成一个字符串将数据传过去
-		QString jscode = "onDataReceived([";
-		for (int i = 0; i < name.size(); i++)
-		{
-			jscode += QString("\"%1\"").arg(name[i]);
-			if (i < name.size() - 1)
-				jscode += ",";
-		}
-		jscode += "],";
-
-        // Add Legend Data
-        jscode += "[";
-        for (int i = 0; i < lineName.size(); i++) {
-            jscode += QString("'%1'").arg(lineName[i]);
-            if (i < lineName.size() - 1) jscode += ",";
-        }
-        jscode += "],";
-
-		//线条数据 拼接
-		QString lineData = "[";
-		for (int i = 0; i < data.size(); i++)
-		{
-			lineData += QString::number(data[i]);
-			if (i < data.size() - 1)
-				lineData += ",";
-		}
-		lineData += "]";
-
-		jscode += "[{name:'" + lineName[0] + "',data: " + lineData + ",type: 'line',stack: 'Total',smooth: true}";//第一个线条
-		jscode += ",{name:'" + lineName[1] + "',data: " + lineData + ",type: 'line',stack: 'Total',smooth: true}";//第二个线条
-		jscode += "])";
-		d->ui->qweb->page()->runJavaScript(jscode);
+		plot->graph(0)->setData(timeKeys, velZ);
+		plot->graph(1)->setData(timeKeys, velR);
+		plot->graph(2)->setData(timeKeys, posZ);
+		plot->graph(3)->setData(timeKeys, posR);
+		
+		plot->rescaleAxes();
+		plot->replot();
 	}
 
-
-
-
-	//自适应窗体
 	void DataHistoryWidget::resizeEvent(QResizeEvent *event){
-		Q_D(DataHistoryWidget);
-		qDebug() << "[DataHistoryWidget] resizeEvent:" << event->size();
-		// 调用父类的resizeEvent
 		QWidget::resizeEvent(event);
 	}
 	
 	void DataHistoryWidget::showEvent(QShowEvent *event) {
-		Q_D(DataHistoryWidget);
-		qDebug() << "[DataHistoryWidget] *** showEvent - Widget is now visible ***";
-		qDebug() << "  - this geometry:" << this->geometry();
-		qDebug() << "  - this size:" << this->size();
-		qDebug() << "  - qweb isEnabled:" << d->ui->qweb->isEnabled();
-		qDebug() << "  - qweb isVisible:" << d->ui->qweb->isVisible();
-		qDebug() << "  - qweb geometry:" << d->ui->qweb->geometry();
-		qDebug() << "  - qweb size:" << d->ui->qweb->size();
-		qDebug() << "  - verticalLayoutWidget geometry:" << d->ui->verticalLayoutWidget->geometry();
-		
-		// 强制更新布局
-		this->updateGeometry();
-		d->ui->qweb->updateGeometry();
-		
 		QWidget::showEvent(event);
-		
-		// 显示后再次检查
-		QTimer::singleShot(100, this, [this, d](){
-			qDebug() << "[DataHistoryWidget] 100ms after showEvent:";
-			qDebug() << "  - qweb geometry:" << d->ui->qweb->geometry();
-			qDebug() << "  - qweb isVisible:" << d->ui->qweb->isVisible();
-		});
 	}
 	
 	void DataHistoryWidget::hideEvent(QHideEvent *event) {
-		qDebug() << "[DataHistoryWidget] hideEvent - Widget is now hidden";
 		QWidget::hideEvent(event);
-	}
-	
-	bool DataHistoryWidget::eventFilter(QObject *obj, QEvent *event) {
-		if (event->type() == QEvent::FocusIn) {
-			qDebug() << "[DataHistoryWidget] FocusIn event on" << obj->objectName();
-		} else if (event->type() == QEvent::FocusOut) {
-			qDebug() << "[DataHistoryWidget] FocusOut event on" << obj->objectName();
-		} else if (event->type() == QEvent::MouseButtonPress) {
-			qDebug() << "[DataHistoryWidget] MouseButtonPress event on" << obj->objectName();
-		}
-		return QWidget::eventFilter(obj, event);
-	}
-
-	//新增：多数据序列的数据解析函数
-	void DataHistoryWidget::httpUpdateMultiple(const QList<QString> &timestamps,
-	                                           const QList<int> &dataZ,
-	                                           const QList<int> &dataR,
-	                                           const QString &nameZ,
-	                                           const QString &nameR)
-	{
-		Q_D(DataHistoryWidget);
-		
-		qDebug() << "[DataHistoryWidget] httpUpdateMultiple called with" << timestamps.size() << "timestamps";
-		qDebug() << "  - dataZ points:" << dataZ.size() << "dataR points:" << dataR.size();
-		qDebug() << "  - qweb page isNull:" << (d->ui->qweb->page() == nullptr);
-		
-		if (d->ui->qweb->page() == nullptr) {
-			qDebug() << "[DataHistoryWidget] ERROR: qweb page is null!";
-			return;
-		}
-		
-		// 使用 QJsonDocument 构建 JSON 参数，避免手工拼接
-		QJsonArray jsTimestamps;
-		for (const QString &t : timestamps) jsTimestamps.append(t);
-
-		QJsonArray jsLegends;
-		jsLegends.append(nameZ);
-		jsLegends.append(nameR);
-
-		// series 对象数组
-		QJsonArray jsSeries;
-		QJsonObject seriesZ;
-		seriesZ.insert("name", nameZ);
-		QJsonArray arrZ;
-		for (int v : dataZ) arrZ.append(v);
-		seriesZ.insert("data", arrZ);
-		jsSeries.append(seriesZ);
-
-		QJsonObject seriesR;
-		seriesR.insert("name", nameR);
-		QJsonArray arrR;
-		for (int v : dataR) arrR.append(v);
-		seriesR.insert("data", arrR);
-		jsSeries.append(seriesR);
-
-		QString jsonT = QString::fromUtf8(QJsonDocument(jsTimestamps).toJson(QJsonDocument::Compact));
-		QString jsonL = QString::fromUtf8(QJsonDocument(jsLegends).toJson(QJsonDocument::Compact));
-		QString jsonS = QString::fromUtf8(QJsonDocument(jsSeries).toJson(QJsonDocument::Compact));
-
-		// 使用 window.postMessage 将数据传入页面渲染上下文，避免直接在主进程调用 setOption
-		QString jscode = QString("(function(){ try{ var payload = { type: 'data_update', timestamps: %1, legends: %2, series: %3 }; window.postMessage(payload, '*'); }catch(e){ console.error('postMessage wrapper error', e); } })();")
-				.arg(jsonT).arg(jsonL).arg(jsonS);
-
-		qDebug() << "[DataHistoryWidget] Executing JavaScript (postMessage) for" << nameZ << "and" << nameR;
-		d->ui->qweb->page()->runJavaScript(jscode);
-	}
-
-	//新增：支持4条曲线的数据解析函数
-	void DataHistoryWidget::httpUpdateMultipleSeries(const QList<QString> &timestamps,
-	                                                const QList<int> &velZ,
-	                                                const QList<int> &velR,
-	                                                const QList<int> &posZ,
-	                                                const QList<int> &posR)
-	{
-		Q_D(DataHistoryWidget);
-		
-		qDebug() << "[DataHistoryWidget] httpUpdateMultipleSeries called with" << timestamps.size() << "timestamps";
-		qDebug() << "  - velZ:" << velZ.size() << "velR:" << velR.size() 
-		         << "posZ:" << posZ.size() << "posR:" << posR.size();
-		
-		if (d->ui->qweb->page() == nullptr) {
-			qDebug() << "[DataHistoryWidget] ERROR: qweb page is null!";
-			return;
-		}
-		
-		// 使用 QJsonDocument 构建 JSON 参数
-		QJsonArray jsTimestamps;
-		for (const QString &t : timestamps) jsTimestamps.append(t);
-
-		QJsonArray jsLegends;
-		jsLegends.append("Z-Axis Velocity");
-		jsLegends.append("R-Axis Velocity");
-		jsLegends.append("Z-Axis Position");
-		jsLegends.append("R-Axis Position");
-
-		// 创建4个series对象
-		QJsonArray jsSeries;
-		
-		// Series 1: Z速度
-		QJsonObject s1;
-		s1.insert("name", "Z-Axis Velocity");
-		QJsonArray arr1;
-		for (int v : velZ) arr1.append(v);
-		s1.insert("data", arr1);
-		jsSeries.append(s1);
-		
-		// Series 2: R速度
-		QJsonObject s2;
-		s2.insert("name", "R-Axis Velocity");
-		QJsonArray arr2;
-		for (int v : velR) arr2.append(v);
-		s2.insert("data", arr2);
-		jsSeries.append(s2);
-		
-		// Series 3: Z位置
-		QJsonObject s3;
-		s3.insert("name", "Z-Axis Position");
-		QJsonArray arr3;
-		for (int v : posZ) arr3.append(v);
-		s3.insert("data", arr3);
-		jsSeries.append(s3);
-		
-		// Series 4: R位置
-		QJsonObject s4;
-		s4.insert("name", "R-Axis Position");
-		QJsonArray arr4;
-		for (int v : posR) arr4.append(v);
-		s4.insert("data", arr4);
-		jsSeries.append(s4);
-
-		QString jsonT = QString::fromUtf8(QJsonDocument(jsTimestamps).toJson(QJsonDocument::Compact));
-		QString jsonL = QString::fromUtf8(QJsonDocument(jsLegends).toJson(QJsonDocument::Compact));
-		QString jsonS = QString::fromUtf8(QJsonDocument(jsSeries).toJson(QJsonDocument::Compact));
-
-		// 使用 window.postMessage 将数据传入页面渲染上下文
-		QString jscode = QString("(function(){ try{ var payload = { type: 'data_update', timestamps: %1, legends: %2, series: %3 }; window.postMessage(payload, '*'); }catch(e){ console.error('postMessage wrapper error', e); } })();")
-				.arg(jsonT).arg(jsonL).arg(jsonS);
-
-		qDebug() << "[DataHistoryWidget] Executing JavaScript (postMessage) for 4 series";
-		d->ui->qweb->page()->runJavaScript(jscode);
 	}
 }

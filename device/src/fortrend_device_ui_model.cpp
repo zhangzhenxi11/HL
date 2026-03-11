@@ -217,6 +217,8 @@ private:
 
 FortrendDeviceModel::FortrendDeviceModel(){
 	kernel.reset(new FortrendDeviceKernel);
+	data_widget = nullptr;
+	datahistory_widget = nullptr;
 }
 
 
@@ -263,26 +265,27 @@ void FortrendDeviceModel::addMainCompoments(){
 	addAutoReleasedObject(new SubSystemWorkPanel(slot_transfer_cycle_vtm_widget, "循环", "配方", 0, UserLevel::USER_ADMIN, ":/Imageblack/main_while.png"));
 
 	//add 在配方界面中加一个pm配方界面
-	pmRecipe_widget =  QPmRecipeWidget::instance(kernel);
+	pmRecipe_widget = QPmRecipeWidget::instance(kernel);
 	//pmRecipe_widget = new QPmRecipeWidget(kernel);
 	addAutoReleasedObject(new SubSystemWorkPanel(pmRecipe_widget, "PM配方", "配方", 0, UserLevel::USER_ADMIN, ":/Imageblack/main_formula.png"));
-	
+
+	DataWidget* data_widget_local = new DataWidget(kernel);
+	data_widget = data_widget_local;
+	QObject::connect(pmRecipe_widget, SIGNAL(cycleStarted(std::string)), data_widget_local, SLOT(onCycleStart(std::string)));
+	QObject::connect(pmRecipe_widget, SIGNAL(cycleStopped()), data_widget_local, SLOT(onCycleStop()));
+	addAutoReleasedObject(new SubSystemWorkPanel(data_widget_local, "实时数据", "曲线图", 0, UserLevel::USER_ADMIN, ":/Imageblack/main_historicalcurve.png"));
+
+
+	DataHistoryWidget* datahistoey_widget = new DataHistoryWidget();
+	datahistory_widget = datahistoey_widget;
+
+	addAutoReleasedObject(new SubSystemWorkPanel(datahistoey_widget, "历史数据", "曲线图", 0, UserLevel::USER_ADMIN, ":/Imageblack/main_historicalcurve.png"));
 
 	//2025-12-3 注释
 	//QWidget* system_button_widget = new QVTMSystemControlHLayoutWidget(kernel, slot_transfer_cycle_vtm_widget,this);
 	//system_button_widget->setMaximumWidth(450);
 	//addAutoReleasedObject(new HeadPanel(system_button_widget, 2, IHeadPanel::HEAD_CENTER));
-	
-	
-	DataWidget* data_widget = new DataWidget(kernel);
-	QObject::connect(pmRecipe_widget, SIGNAL(cycleStarted(std::string)), data_widget, SLOT(onCycleStart(std::string)));
-	QObject::connect(pmRecipe_widget, SIGNAL(cycleStopped()), data_widget, SLOT(onCycleStop()));
-	addAutoReleasedObject(new SubSystemWorkPanel(data_widget, "实时数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
 
-
-	DataHistoryWidget* datahistoey_widget = new DataHistoryWidget();
-
-	addAutoReleasedObject(new SubSystemWorkPanel(datahistoey_widget, "历史数据", "曲线图", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_historicalcurve.png"));
 }
 
 void FortrendDeviceModel::addManualCompoments(){
@@ -383,6 +386,7 @@ void FortrendDeviceModel::addManualCompoments(){
 	
 	addAutoReleasedObject(new SubSystemWorkPanel(module_tabWidget, "手动", "主界面", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_manual.png"));
 
+
 }
 
 void FortrendDeviceModel::addAutoCompoments(){
@@ -466,6 +470,8 @@ void FC::FortrendDeviceModel::StatusOpen()
 	efemmodule_tabWidget->setEnabled(true);//EFEM
 	control_widget->setEnabled(true);//设置
 	module_tabWidget->setEnabled(true);//手动
+	if (data_widget) data_widget->setEnabled(true);//实时数据
+	if (datahistory_widget) datahistory_widget->setEnabled(true);//历史数据
 }
 
 /// <summary>
@@ -480,6 +486,8 @@ void FC::FortrendDeviceModel::StatusClose()
 	efemmodule_tabWidget->setEnabled(false);//EFEM
 	control_widget->setEnabled(false);//设置
 	module_tabWidget->setEnabled(false);//手动
+	if (data_widget) data_widget->setEnabled(false);//实时数据
+	if (datahistory_widget) datahistory_widget->setEnabled(false);//历史数据
 }
 
 
