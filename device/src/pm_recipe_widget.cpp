@@ -185,7 +185,8 @@ namespace FC {
 		table->setAlternatingRowColors(true);
 		table->verticalHeader()->setVisible(true);
 		table->verticalHeader()->setDefaultSectionSize(30);
-		// table->setSelectionBehavior(QAbstractItemView::SelectColumns); // 选择列进行添加/删除？
+		table->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+		table->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 		
 		QFont font;
 		font.setFamily("SimHei");
@@ -247,6 +248,8 @@ namespace FC {
 			QVBoxLayout* innerLayout = new QVBoxLayout(innerWidget);
 			d->innerTables[i] = new QTableWidget(innerWidget);
 			d->initInnerTable(d->innerTables[i]);
+			d->innerTables[i]->setMinimumHeight(280);
+			d->innerTables[i]->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 			// 内表按钮
 			QHBoxLayout* btnLayout = new QHBoxLayout();
@@ -404,8 +407,12 @@ namespace FC {
 		// 设置内表列
 		innerTable->setColumnCount(details.process_count);
 		QStringList headers;
-		for(int i=0; i<details.process_count; ++i) headers << QString("Step %1").arg(i+1);
+		QString recipeQName = QString::fromStdString(recipeName);
+		headers << QString("[%1] Step 1").arg(recipeQName);
+		for(int i=1; i<details.process_count; ++i) headers << QString("Step %1").arg(i+1);
 		innerTable->setHorizontalHeaderLabels(headers);
+		//设置头宽度显示全
+		innerTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 		
 		// 填充数据
 		for(int c=0; c<details.process_count; ++c) {
@@ -418,6 +425,34 @@ namespace FC {
 			addTableWidgetItemDoubleSpinBox(5, c, 0, 1000, 1, m.rotating_dec, 3, innerTable);
 			addTableWidgetItemDoubleSpinBox(6, c, 0, 1000, 1, m.rotating_jerk, 3, innerTable);
 			addTableWidgetItemDoubleSpinBox(7, c, 0, 360, 1, m.rotating_vel, 3, innerTable);
+		}
+
+		// 检查外表中是否有Rotate配方，决定R轴参数是否可编辑
+		bool hasRotate = false;
+		for (int r = 0; r < seqTable->rowCount(); ++r) {
+			auto fromItem = seqTable->cellWidget(r, 0);
+			auto toItem = seqTable->cellWidget(r, 1);
+			QString fromText, toText;
+			if (auto cb = qobject_cast<QComboBox*>(fromItem)) {
+				fromText = cb->currentText();
+			}
+			if (auto cb = qobject_cast<QComboBox*>(toItem)) {
+				toText = cb->currentText();
+			}
+			if (fromText == "Rotate" || toText == "Rotate") {
+				hasRotate = true;
+				break;
+			}
+		}
+		
+		// 设置R轴参数可编辑状态
+		for (int c = 0; c < innerTable->columnCount(); ++c) {
+			for (int r = 4; r <= 7; ++r) {
+				auto widget = innerTable->cellWidget(r, c);
+				if (auto dsb = qobject_cast<QDoubleSpinBox*>(widget)) {
+					dsb->setEnabled(hasRotate);
+				}
+			}
 		}
 	}
 
@@ -462,7 +497,12 @@ namespace FC {
 		
 		int col = table->columnCount();
 		table->insertColumn(col);
-		QString header = QString("Step %1").arg(col + 1);
+		
+		std::string recipeName = d->currentRecipeNames[pmIndex];
+		QString recipeQName = QString::fromStdString(recipeName);
+		QString header = (col == 0 && !recipeName.empty()) 
+			? QString("[%1] Step 1").arg(recipeQName) 
+			: QString("Step %1").arg(col + 1);
 		table->setHorizontalHeaderItem(col, new QTableWidgetItem(header));
 		
 		for(int r=0; r<8; ++r) {
@@ -483,6 +523,14 @@ namespace FC {
 		int col = table->currentColumn();
 		if (col >= 0) {
 			table->removeColumn(col);
+			
+			std::string recipeName = d->currentRecipeNames[pmIndex];
+			QString recipeQName = QString::fromStdString(recipeName);
+			QStringList headers;
+			headers << QString("[%1] Step 1").arg(recipeQName);
+			for(int i=1; i<table->columnCount(); ++i) headers << QString("Step %1").arg(i+1);
+			table->setHorizontalHeaderLabels(headers);
+			
 			saveInnerTableToRecipe(pmIndex);
 		}
 	}
@@ -541,7 +589,12 @@ namespace FC {
 		// 在最后添加新列
 		int newCol = table->columnCount();
 		table->insertColumn(newCol);
-		QString header = QString("Step %1").arg(newCol + 1);
+		
+		std::string recipeName = d->currentRecipeNames[pmIndex];
+		QString recipeQName = QString::fromStdString(recipeName);
+		QString header = (newCol == 0 && !recipeName.empty()) 
+			? QString("[%1] Step 1").arg(recipeQName) 
+			: QString("Step %1").arg(newCol + 1);
 		table->setHorizontalHeaderItem(newCol, new QTableWidgetItem(header));
 		
 		// 填充剪贴板的数据
@@ -931,6 +984,10 @@ namespace FC {
 			return;
 		}
 
+		// 获取循环次数
+		int cycleCount = d->ui->pm1_spx->value();
+		if (cycleCount <= 0) cycleCount = 1;
+
 		// 获取该PM的独立执行上下文
 		auto& ctx = pmContexts[pmIndex];
 		
@@ -981,11 +1038,19 @@ namespace FC {
 			}
 
 			try {
-				// 初始移动到序列开始？
-				// 或者直接开始执行步骤。
-
-				for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
+				// 循环执行配方
+				for (int cycleIdx = 0; cycleIdx < cycleCount; ++cycleIdx) {
 					if (ctx.stopRequested) break;
+
+					logInform(pmSubsystem->getName().c_str(), "===== Cycle %d/%d =====", cycleIdx + 1, cycleCount);
+					QMetaObject::invokeMethod(this, "updateCycleCountDisplay", Qt::QueuedConnection, 
+						Q_ARG(int, cycleIdx + 1), Q_ARG(int, cycleCount));
+
+					// 初始移动到序列开始？
+					// 或者直接开始执行步骤。
+
+					for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
+						if (ctx.stopRequested) break;
 
 					QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex),
 						Q_ARG(int, sIdx), Q_ARG(QColor, Qt::green));
@@ -1034,7 +1099,7 @@ namespace FC {
 							QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i - 1), Q_ARG(QColor, Qt::white));
 						}
 						// 更新UI进度（可选）
-						QMetaObject::invokeMethod(d->ui->pm1_spx, "setValue", Q_ARG(int, i + 1));
+						QMetaObject::invokeMethod(d->ui->pm_process_spx, "setValue", Q_ARG(int, i + 1));
 
 						const auto& m = recipe.motors[i];
 
@@ -1133,7 +1198,11 @@ namespace FC {
 
 				}
 
-				logInform(pmSubsystem->getName().c_str(), "Sequence Completed");
+				logInform(pmSubsystem->getName().c_str(), "Cycle %d Completed", cycleIdx + 1);
+
+				} // end of cycle loop
+
+				logInform(pmSubsystem->getName().c_str(), "All Sequences Completed");
 
 			}
 			catch (const std::exception& e) {
@@ -1220,24 +1289,33 @@ namespace FC {
 		logFailed(station_name, Poco::format("%s %s命令执行失败， %s", station_name, command_name, process_name));
 	}
 
+	void QPmRecipeWidget::updateCycleCountDisplay(int current, int total)
+	{
+		Q_D(QPmRecipeWidget);
+		d->ui->pm_current_cycle_spx->setValue(current);
+	}
+
 	void QPmRecipeWidget::onSelectPMChanged(int index)
 	{
 		Q_D(QPmRecipeWidget);
 		d->ui->tabWidget->setCurrentIndex(index);
-		d->ui->pm1_spx->setValue(0);
+		d->ui->pm1_spx->setValue(1);
+		d->ui->pm_current_cycle_spx->setValue(0);
+		d->ui->pm_process_spx->setValue(0);
 	}
 
 	void QPmRecipeWidget::initPMCavityParamEdieTableWidget()
 	{
 		Q_D(QPmRecipeWidget);
+		d->ui->pm_cavity_param_edit_tbw->setColumnCount(11);
+		
 		addAnPMItem("PM1");
 		addAnPMItem("PM2");
 		addAnPMItem("PM3");
 		addAnPMItem("PM4");
-		for (size_t i = 0; i < d->ui->pm_cavity_param_edit_tbw->columnCount(); i++)
-		{
-			d->ui->pm_cavity_param_edit_tbw->horizontalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
-		}
+		
+		d->ui->pm_cavity_param_edit_tbw->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+		d->ui->pm_cavity_param_edit_tbw->horizontalHeader()->setMinimumSectionSize(80);
 
 		d->ui->pm_cavity_param_edit_tbw->setSelectionBehavior(QAbstractItemView::SelectRows);
 	}
@@ -1270,6 +1348,14 @@ namespace FC {
 		
 		addEditTableWidgetItemDoubleSpinBox(row_count, 8, 0.0, 10000.0, 1, 0.0);	//最后一次时间
 		addEditTableWidgetItemDoubleSpinBox(row_count, 9, 0.0, 10000.0, 1, 0.0);	//前n-1次时间
+		
+		// 循环次数
+		QSpinBox* Cycle_count_spx = new QSpinBox();
+		Cycle_count_spx->setMinimum(1);
+		Cycle_count_spx->setMaximum(10000);
+		Cycle_count_spx->setSingleStep(1);
+		Cycle_count_spx->setValue(1);
+		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 10, Cycle_count_spx);
 		
 		// Disable Avg Time Editing
 		if(auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(row_count, 9))) {

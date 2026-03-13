@@ -75,7 +75,7 @@ namespace FC{
 			if (address.empty())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
-					Poco::format("address: %s not defined", sub->getName()), this);
+					Poco::format("address: %s not defined", address.c_str()), this);
 			}
 			if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
 			{
@@ -84,7 +84,7 @@ namespace FC{
 				if (!readUnsignedInt(address, _value))
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-						Poco::format(" %s写%s错误.", sub->getName(), mapping.description), this);
+						Poco::format(" %s写%s错误.", sub->getName(), mapping.description.c_str()), this);
 				}
 			}
 
@@ -93,7 +93,7 @@ namespace FC{
 			if (!writeFloat(address, value)) 
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-					Poco::format(" %s写%s错误.", sub->getName(), mapping.description), this);
+					Poco::format(" %s写%s错误.", sub->getName(), mapping.description.c_str()), this);
 			}	
 		}
 

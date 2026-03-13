@@ -146,6 +146,7 @@ namespace FC{
 			}
 			else
 			{
+				logError(sub->getName().c_str(), "alarmCode:%d", alarmCode);
 				errorMessage = "升降轴去取料位命令执行失败";
 			}
 			AlarmMessage::Ptr alarm(new AlarmMessage(1, alarmCode, errorMessage));

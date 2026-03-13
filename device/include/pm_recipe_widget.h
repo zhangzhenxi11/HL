@@ -106,6 +106,7 @@ namespace FC {
 		void onLoadParameters();
 		void onSetParameters();
 		void onSelectPMChanged(int index);
+		void updateCycleCountDisplay(int current, int total);
 
 		//初始化PM腔界面
 		void initPMCavityParamEdieTableWidget();

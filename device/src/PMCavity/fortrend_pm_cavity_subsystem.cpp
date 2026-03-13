@@ -1352,6 +1352,7 @@ namespace FC{
 			//TM腔门
 			io_changed |= safe_read_bit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend);
 
+			/*******************************************************升降轴******************************************************/
 			//升降轴当前速度
 			io_changed |= safe_read_float(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed);
 			//升降轴当前坐标
@@ -1360,16 +1361,16 @@ namespace FC{
 			//清除轴错误完成
 			io_changed |= safe_read_bit(d->lifting_axis_clear_error_completion_address, d->lifting_axis_clear_done);
 
-			//回原完成
+			//升降轴回原完成
 			io_changed |= safe_read_bit(d->lifting_axis_return_original_completion_address, d->axis_origin_done);
 
-			//回原中
+			//升降轴回原中
 			io_changed |= safe_read_bit(d->lifting_axis_return_original_running_address, d->lifting_axis_return_original_running);
 
-			//JOG运行中
+			//升降轴JOG运行中
 			io_changed |= safe_read_bit(d->lifting_axis_jog_running_address, d->lifting_axis_jog_running);
 
-			//使能ON
+			//升降轴使能ON
 			io_changed |= safe_read_bit(d->lifting_axis_enable_address, d->lifting_axis_enable_done);
 
 			//升降轴移动中
@@ -1392,6 +1393,8 @@ namespace FC{
 			io_changed |= safe_read_bit(d->maximum_plane_level_detection_address, d->pm_cavity_motor_maximum_plane_signal);
 			//顶升销面位检测
 			io_changed |= safe_read_bit(d->liftpin_plane_level_detection_address, d->pm_cavity_motor_liftpin_plane_signal);
+
+			/*******************************************************旋转轴******************************************************/
 			//清除轴错误完成
 			io_changed |= safe_read_bit(d->rotating_axis_clear_error_completion_address, d->rotating_axis_clear_error_done);
 			//轴停止完成
@@ -1404,6 +1407,9 @@ namespace FC{
 			io_changed |= safe_read_bit(d->rotating_axis_moving_address, d->rotating_axis_moving);
 			//移动结束
 			io_changed |= safe_read_bit(d->rotating_axis_move_end_address, d->rotating_axis_move_end);
+			
+			//回原完成
+			io_changed |= safe_read_bit(d->rotating_axis_return_original_completion_address, d->rotating_axis_return_original_done);
 
 			//旋转轴运行速度
 			io_changed |= safe_read_float(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);

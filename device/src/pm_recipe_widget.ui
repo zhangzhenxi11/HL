@@ -18,8 +18,8 @@
     <rect>
      <x>1210</x>
      <y>20</y>
-     <width>133</width>
-     <height>211</height>
+     <width>155</width>
+     <height>291</height>
     </rect>
    </property>
    <property name="title">
@@ -31,12 +31,58 @@
       <item>
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>PM当前次数</string>
+         <string>循环次数</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QSpinBox" name="pm1_spx">
+        <property name="maximum">
+         <number>999</number>
+        </property>
+        <property name="value">
+         <number>1</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>当前第</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="pm_current_cycle_spx">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>次</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>工艺次数</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="pm_process_spx">
         <property name="enabled">
          <bool>false</bool>
         </property>
@@ -151,6 +197,12 @@
          </property>
          <property name="alternatingRowColors">
           <bool>true</bool>
+         </property>
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOn</enum>
+         </property>
+         <property name="horizontalScrollBarPolicy">
+          <enum>Qt::ScrollBarAlwaysOn</enum>
          </property>
          <attribute name="horizontalHeaderVisible">
           <bool>true</bool>

@@ -70,12 +70,12 @@ namespace FC{
 		for (const auto& mapping : mapping_table)
 		{
 			std::string address = command_config->getString(mapping.config_key, "");
-			//logInform(sub->getName().c_str(), "config_key:%s, description:%s.", mapping.config_key.c_str(),mapping.description.c_str());
+			logInform(sub->getName().c_str(), "address:%s", address.c_str());
 
 			if (address.empty())
 			{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
-					Poco::format("address: %s not defined", mapping.config_key.c_str()), this);
+					Poco::format("address: %s not defined", address.c_str()), this);
 			}
 			//readUnsignedInt 
 			if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
@@ -85,7 +85,7 @@ namespace FC{
 				if (!readUnsignedInt(address, _value))
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-						Poco::format(" %s读取%s错误.", sub->getName(), mapping.description), this);
+						Poco::format(" %s读取%s错误.", sub->getName(), mapping.description.c_str()), this);
 				}
 				value = float(_value);
 			}
@@ -96,7 +96,7 @@ namespace FC{
 				if (!readFloat(address, value))
 				{
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-						Poco::format(" %s读取%s错误.", sub->getName(), mapping.description), this);
+						Poco::format(" %s读取%s错误.", sub->getName(), mapping.description.c_str()), this);
 				}
 			}
 		}
