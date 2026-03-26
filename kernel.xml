@@ -32,7 +32,22 @@
 			<!--错误代码关联-->
 			<ErrorTxt>./Error Code Definition/Error_SMIF.txt</ErrorTxt>
 		</SMIF>
-		
+		<!-- tcpServer -->
+		<HOST>
+			<port>13000</port>
+			<max_clients>1</max_clients>
+			<auto_enable>true</auto_enable>
+			<auto_model>0</auto_model>
+		</HOST>
+
+		<!-- PM Spindle Signal Server -->
+		<PMHOST>
+			<port>13002</port>
+			<max_clients>5</max_clients>
+			<auto_enable>true</auto_enable>
+			<auto_model>0</auto_model>
+		</PMHOST>
+
 		<EFEMClient>
 			<port>13001</port>
 			<!-- 192.168.127.123 -->

@@ -8,6 +8,7 @@
 #include "device/ui_pm_recipe_widget.h"
 #include "PMCavity/fortrend_pm_cavity_defined.h"
 #include "PMCavity/fortrend_pm_cavity_subsystem.h"
+#include "pm_spindle_signal_server_api.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -34,6 +35,8 @@
 #include <QFileDialog>
 #include <QTimer>
 
+#define TESET_PM_SERVER
+
 namespace FC {
 	class QPmRecipeWidgetPrivate
 	{
@@ -57,7 +60,8 @@ namespace FC {
 		Ui::QPmRecipeWidgetClass* ui;
 		std::shared_ptr<IKernel> kernel;
 		QPmRecipeWidget* q_ptr;
-	
+		PMSpindleSignalServerApi::Ptr pmSignalServer;
+
 		// 4个PM的表格
 		QTableWidget* sequenceTables[4];
 		QTableWidget* innerTables[4];
@@ -86,6 +90,7 @@ namespace FC {
 			sequenceTables[i] = nullptr;
 			innerTables[i] = nullptr;
 		}
+		pmSignalServer = kernel->getKernelModule<PMSpindleSignalServerApi>();
 	}
 	
 	QPmRecipeWidgetPrivate::~QPmRecipeWidgetPrivate()
@@ -1014,6 +1019,17 @@ namespace FC {
 				QMetaObject::invokeMethod(this, "cycleStopped");
 				return;
 			}
+			//
+
+#ifdef TESET_PM_SERVER
+			while (true)
+			{
+				d->pmSignalServer->notifyAxisDepartedProcess(1, "rotate");
+				d->pmSignalServer->notifyAxisArrivedProcess(1, "process");
+				Sleep(1000);
+			}
+#endif // TESET_PM_SERVER
+
 
 			// 定义位置
 			std::map<std::string, double> posMap;
@@ -1120,12 +1136,20 @@ namespace FC {
 							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
 							pmSubsystem->startCommand(cmd);
 							cmd->wait();
+
+							if (from == "Process" && d->pmSignalServer) {
+								d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, from);
+							}
+
 							if (cmd->hasError() || ctx.stopRequested) {
 								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
 
 								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
 								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 								throw std::runtime_error("Move Z Failed");
+							}
+							if (to == "Process" && d->pmSignalServer) {
+								d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, to);
 							}
 						}
 
@@ -1159,10 +1183,12 @@ namespace FC {
 										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 										throw std::runtime_error("Move Z Failed");
 									}
+									if (d->pmSignalServer) {
+										d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, "Process");
+									}
 								}
 							}
 						}
-
 
 						// 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
 						if (from == "Process" && to == "Rotate")
@@ -1349,13 +1375,13 @@ namespace FC {
 		addEditTableWidgetItemDoubleSpinBox(row_count, 8, 0.0, 10000.0, 1, 0.0);	//最后一次时间
 		addEditTableWidgetItemDoubleSpinBox(row_count, 9, 0.0, 10000.0, 1, 0.0);	//前n-1次时间
 		
-		// 循环次数
-		QSpinBox* Cycle_count_spx = new QSpinBox();
-		Cycle_count_spx->setMinimum(1);
-		Cycle_count_spx->setMaximum(10000);
-		Cycle_count_spx->setSingleStep(1);
-		Cycle_count_spx->setValue(1);
-		d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 10, Cycle_count_spx);
+		//// 循环次数
+		//QSpinBox* Cycle_count_spx = new QSpinBox();
+		//Cycle_count_spx->setMinimum(1);
+		//Cycle_count_spx->setMaximum(10000);
+		//Cycle_count_spx->setSingleStep(1);
+		//Cycle_count_spx->setValue(1);
+		//d->ui->pm_cavity_param_edit_tbw->setCellWidget(row_count, 10, Cycle_count_spx);
 		
 		// Disable Avg Time Editing
 		if(auto dsb = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(row_count, 9))) {

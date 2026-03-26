@@ -6909,6 +6909,7 @@ namespace FC{
 	{
 		std::shared_ptr<FortrendPumpSubsystem> pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
 		{
+			logWarn("Cyclelog", "start pause All Threads .....");
 			std::lock_guard<std::mutex> lock(mtx);
 			running = false; 
 			ispause = true;//add
@@ -6918,10 +6919,10 @@ namespace FC{
 			for (int i = 0; i < 4; i++)
 			{
 				PmInstance->stopPmMotor(i);
-			}
-			
+			}		
 		}
 		cv.notify_all();  // 2025-10-28 :唤醒所有等待的线程，让它们重新检查running状态，实现暂停
+		logWarn("Cyclelog", "pause All Threads  end!");
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::stopAllThreads()
@@ -7670,7 +7671,7 @@ namespace FC{
 
 		while (!stopRequested)
 		{
-			
+
 			{
 				std::unique_lock<std::mutex> lock(mtx);
 				cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
@@ -8243,11 +8244,10 @@ namespace FC{
 
 		d->ui->enableAtmosphere->setEnabled(true);
 		d->ui->execute_pbt->setEnabled(true);
-		d->ui->continue_pbt->setEnabled(true);
+		//注释掉继续按钮
+		d->ui->continue_pbt->setEnabled(false);
+		d->ui->continue_pbt->hide();
 
-	/*	initPMCavityParamEdieTableWidget();*/
-
-		//d->ui->gbx_pm_parameter->hide();
 		d->ui->wph_test_gbx->hide();
 		d->ui->loadlock1_put_cassette_finished_pbt->hide();
 		d->ui->loadlock2_put_cassette_finished_pbt->hide();
@@ -8256,12 +8256,7 @@ namespace FC{
 		d->ui->spb_max->hide();
 		d->ui->label_3->hide();
 		d->ui->label_4->hide();
-		//d->ui->smif_feed_btn->hide();
-		//d->ui->smif_blanking_btn->hide();
 		d->ui->abort_pbt->hide();
-		//d->ui->enablesmif1->hide();
-		//d->ui->enablesmif2->hide();
-
 		d->onUpdateLightButtonStatus("light_reset_pbt", 1); 
 		d->onUpdateLightButtonStatus("light_running_pbt", 1);
 
@@ -8686,6 +8681,8 @@ namespace FC{
 	}
 
 	void QSlotTransferCycleVTMWidget::onPause(){
+
+		logWarn("Cyclelog", "start onPause.....");
 		Q_D(QSlotTransferCycleVTMWidget);
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
@@ -8698,18 +8695,20 @@ namespace FC{
 		pm4->setIsRunning(false);
 
 
-
 		d->pauseAllThreads();
 		//d->running = false;
 		//d->ispause = true;
 
 		d->ui->execute_pbt->setEnabled(true);
 		d->ui->reset_pbt->setEnabled(true);
-		d->ui->pause_pbt->setEnabled(false);
+
+		//2026-3-24 注释掉暂停按钮使能
+		//d->ui->pause_pbt->setEnabled(false);
 
 		//2025-8-06
 		d->onUpdateProcessControlEnabled(true);
 		d->onUpdateLightButtonStatus("light_running_pbt", 4);
+		logWarn("Cyclelog", "onPause end.....");
 	}
 
 	void QSlotTransferCycleVTMWidget::onAbort(){
@@ -8733,6 +8732,10 @@ namespace FC{
 	{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->startAllThreads();
+
+		d->ui->pause_pbt->setEnabled(true); 
+		d->ui->execute_pbt->setEnabled(false);
+		d->ui->reset_pbt->setEnabled(false);
 		d->onUpdateLightButtonStatus("light_running_pbt", 2);
 	}
 
@@ -8761,42 +8764,18 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidget::onStart() {
 		Q_D(QSlotTransferCycleVTMWidget);
-
+		logWarn("Cyclelog", "start all workflow.....");
 		//start action & store param
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
 
-		//if (!d->reset_finish)
-		//{
-		//	QMessageBox::warning(this, "警告", "未执行整机复位.");
-		//	return;
-		//}
-		//调试注释
-#ifdef CYCLE_SIM_MODE
-		if (!pm2->getPMCavityMotorHomeSignal()) {
-			QMessageBox::warning(this, "警告", "PM腔步进电机未后退到原位.");
-			return;
-		}
-#endif
 		d->cycle_times_lla = d->ui->cycle_setting_times_sbx->value(); //LP1循环次数
 		d->cycle_times_llb = d->ui->cycle_setting_times_sbx_2->value();//LP2循环次数
 
 		if (taskManager.getAllTasksSize() == 0 && !d->ispause)// 无任务配置，无暂停，才执行解析流程配方
 		{
-			//快照回复测试
-#ifdef DEBUG_LOAD_SNAPSHOT
-
-			auto snapshots = CycleStateSnapshot::listSnapshots();
-			if (!snapshots.empty())
-			{
-				if (d->loadStateSnapshot(snapshots.back()))
-				{
-					logWarn("Cycle", "🔄 已从快照恢复，直接跳到错误位置.");
-				}
-			}
-#else
 			//正常流程
 			if (d->setHLTransferSequence())
 			{
@@ -8810,7 +8789,6 @@ namespace FC{
 				QMessageBox::warning(this, "警告", "传送流程配置错误.");
 				return;
 			}
-
 			//2025-8-14 默认已经手动处理机台片子，重新把wafer数据刷新到初始状态
 			//暂停过，检测机台状态
 			if (d->ispause && taskManager.detectionHasNoInitialTypeTasks()) {
@@ -8818,14 +8796,6 @@ namespace FC{
 				QMessageBox::warning(this, "警告", "请检查机台有无片子，再执行整体复位");
 				return;
 			}
-
-#endif
-#ifdef CYCLE_SIM_MODE
-			if (!isEnabledplcAuto()) {
-				QMessageBox::warning(this, "警告", "PLC不在自动模式.");
-				return;
-			}
-#endif
 			d->startAllThreads();
 			//d->running = true;
 			d->ispause = false;
@@ -8845,8 +8815,9 @@ namespace FC{
 		}
 		else
 		{
-			logError("Cycle","无任务配置，无暂停，才执行解析流程配方.");
+			logError("Cycle","重新加载配方,并整机复位,再执行.");
 		}
+
 	}
 
 	void QSlotTransferCycleVTMWidget::clickStart(){

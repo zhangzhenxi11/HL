@@ -107,9 +107,9 @@
 #endif
 
 //手动版本号管理
-#define VERSION_NUMBER  "1.0.5.0805_alpha"
+#define VERSION_NUMBER  "1.0.6.0326_alpha"
 #define GIT_COMMIT  " ce3d201f6d22a652b70fe01084d0c22f6955a65a"
-#define GIT_BRANCH  "master"
+#define GIT_BRANCH  "dev"
 
 using namespace FC;
 
