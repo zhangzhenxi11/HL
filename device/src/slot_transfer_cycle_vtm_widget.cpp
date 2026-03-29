@@ -3149,16 +3149,16 @@ namespace FC{
 						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
 					}
 				}
-				
+				break;
 				case 1052:
 				{
-					std::string pmName;
+					//std::string pmName;
 					if (loadLockAPendingTasks.size() > 0)
 					{
 
 						//真空机械手取料完成
-						pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
-						logInform(lk1->getName().c_str(), "step:1052,pmName:%s", pmName.c_str());
+						//pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
+						//logInform(lk1->getName().c_str(), "step:1052,pmName:%s", pmName.c_str());
 
 						taskManager.updateTaskStatus(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						taskManager.updateTaskStatus(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -3171,11 +3171,22 @@ namespace FC{
 
 					UpdateLLASubTransferDatas();
 
+					loadlock1_auto_step = 1053;
+				}
+				break;
 
+				case 1053:
+				{
+					if (wtr == nullptr)
+					{
+						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+					}
+					
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						logInform("cycle", "step:1052,大气模式，不关闭TM腔门!");
-						
+						std::string pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
+						logInform("cycle", "step:1053,大气模式，不关闭TM腔门!");
+
 						tool_allow_lla = true;
 						if (!pmName.empty())
 						{
@@ -3209,52 +3220,66 @@ namespace FC{
 					}
 					else
 					{
-						auto cmd = lk1->createCloseTMCavityDoorCommand();
-						lk1->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
+						//2026-3-29 避免 Resources : WTR   has be lock by WTR.
+						if (lk1->getWtrOriginSafeSignal() && !wtr->isBusy())
 						{
-							logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
-						}
-						else {
-
-							if (!pmName.empty())
+							auto cmd = lk1->createCloseTMCavityDoorCommand();
+							lk1->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
 							{
-								tool_allow_lla = true;
+								logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+							}
+							else {
+								
+								std::string pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
 
-								if (pmName == "PM1")
+								if (!pmName.empty())
 								{
-									pm1_allow_get_put_wafer = true;
-								}
-								else if (pmName == "PM2")
-								{
-									pm2_allow_get_put_wafer = true;
-								}
-								else if (pmName == "PM3")
-								{
-									pm3_allow_get_put_wafer = true;
-								}
-								else if(pmName == "PM4")
-								{
-									pm4_allow_get_put_wafer = true;
+									tool_allow_lla = true;
+
+									if (pmName == "PM1")
+									{
+										pm1_allow_get_put_wafer = true;
+									}
+									else if (pmName == "PM2")
+									{
+										pm2_allow_get_put_wafer = true;
+									}
+									else if (pmName == "PM3")
+									{
+										pm3_allow_get_put_wafer = true;
+									}
+									else if (pmName == "PM4")
+									{
+										pm4_allow_get_put_wafer = true;
+									}
+									else
+									{
+										logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
+									}
+									logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
 								}
 								else
 								{
 									logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
 								}
-								logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+								loadlock1_auto_step = 950;
 							}
-							else
-							{
-								logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
-							}
-							loadlock1_auto_step = 950;
 						}
-
+						else
+						{
+							static int wait_log_count1 = 0;
+							if (wait_log_count1++ % 50 == 0) {
+								logInform(lk1->getName().c_str(), "等待 WTR 安全信号或 WTR空闲...");
+							}
+							Sleep(200);
+						}
 					}
-					
+				
 				}
 				break;
+
 #pragma endregion
 
 #pragma region 允许放晶圆流程
@@ -3296,13 +3321,12 @@ namespace FC{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								logInform(elp->getName().c_str(), "step:2010,模拟放晶圆流程程序....");
-								efem_auto_step = 2070;
+								loadlock1_auto_step = 2070;
 							}
 							else
 							{
-								loadlock1_auto_step = 2020;
+								loadlock1_auto_step = 2030;
 							}
-							loadlock1_auto_step = 2030;
 						}
 						else
 						{
@@ -3407,10 +3431,20 @@ namespace FC{
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->hasDoorOpend())
 					{
+						//// 新增：再次检查 loadLockAReturnPendingTasks 是否为空
+						if (loadLockAReturnPendingTasks.empty())
+						{
+							logFailed(lk1->getName(), Poco::format("%s 放片任务队列为空 %s：%d", lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
+							loadlock2_auto_step = 900;
+							break;
+						}
+						loadlock1_move_slot_index = loadLockAReturnPendingTasks.front().targetBlankingSlot;
+						const auto put_arm = loadLockAReturnPendingTasks.front().arm;
+
 						if(lk1->getTMCavityDoorOpend())
 						{
 							//robot 把手臂A的放到LoadLock1
-							auto cmd = wtr->createPutCommand(lk1, loadLockAReturnPendingTasks.at(0).arm, loadlock1_move_slot_index);
+							auto cmd = wtr->createPutCommand(lk1, put_arm, loadlock1_move_slot_index);
 							wtr->startCommand(cmd);
 							cmd->wait();
 							if (cmd->hasError())
@@ -3436,12 +3470,22 @@ namespace FC{
 					}
 				}
 				break;
+
+				
 				case 2070:
 				{
-					//下料到LL的晶圆 8->3
+					if (loadLockAReturnPendingTasks.empty())
+					{
+						logFailed(lk1->getName(), Poco::format("%s 放片完成但任务队列为空， %s：%d", lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
+						loadlock1_auto_step = 900;
+						break;
+					}					
 					taskManager.updateTaskStatus(loadLockAReturnPendingTasks.at(0).taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
-					//taskManager.updateTaskStatus(loadLockAReturnPendingTasks.at(0).taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
-
+					loadlock1_auto_step = 2071;
+				}
+				break;
+				case 2071:
+				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
@@ -3451,16 +3495,39 @@ namespace FC{
 						}
 						else
 						{
-							auto cmd = lk1->createCloseTMCavityDoorCommand();
-							lk1->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+
+							//2026-3-27 检测mapping，再去关门
+							auto cassManager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
+							auto station_cass = cassManager->getCassette(lk1.get());
+							if (station_cass->getMapping(loadlock1_move_slot_index) == Cassette::Mapping::Present)
 							{
-								logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+								if (lk1->getWtrOriginSafeSignal() && !wtr->isBusy())
+								{
+									auto cmd = lk1->createCloseTMCavityDoorCommand();
+									lk1->startCommand(cmd);
+									cmd->wait();
+									if (cmd->hasError())
+									{
+										logFailedExcuteCommandHasError(lk1->getName(), "关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+									}
+									else
+									{
+										loadlock1_auto_step = 2080;
+									}
+								}
+								else
+								{
+									static int wait_log_count2 = 0;
+									if (wait_log_count2++ % 50 == 0) {
+										logInform(lk1->getName().c_str(), "等待 WTR 安全信号或 WTR空闲...");
+									}
+									Sleep(200);
+								}
 							}
 							else
 							{
-								loadlock1_auto_step = 2080;
+								logFailedExcuteCommandHasError(lk1->getName(), "检测mapping无片，不执行关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
+
 							}
 						}
 					}
@@ -3468,6 +3535,7 @@ namespace FC{
 					{
 						Sleep(500);
 					}
+				
 				}
 				break;
 				case 2080:
@@ -3640,10 +3708,12 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
+			saveCurrentStateSnapshot(e.what(), Poco::format("LLATransfer step:%d", loadlock1_auto_step));
 			logError("Cyclelog", "LLATransfer thread crashed:", e.what());
 			qCritical() << "LLATransfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			saveCurrentStateSnapshot("unknown exception", Poco::format("LLATransfer step:%d", loadlock1_auto_step));
 			logError("Cyclelog", "LLATransfer thread crashed: unknown exception");
 			qCritical() << "LLATransfer thread crashed: unknown exception";
 		}
@@ -3662,8 +3732,8 @@ namespace FC{
 			lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 			wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		}
-			while (!stopRequested)
-			{
+		while (!stopRequested)
+		{
 				{
 					std::unique_lock<std::mutex> lock(mtx);
 					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
@@ -3681,7 +3751,10 @@ namespace FC{
 
 				Sleep(500);
 
+				//2026-3-27 实时刷新最新数组
+				UpdateLLBSubTransferDatas();
 				loadlock2_step_once_finished = false;
+
 				switch (loadlock2_auto_step)
 				{
 				case 10:
@@ -4077,7 +4150,7 @@ namespace FC{
 						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							logInform(elp->getName().c_str(), "step:1010,LLB模拟取晶圆流程程序....");
-							efem_auto_step = 1052;
+							loadlock2_auto_step = 1052;
 						}
 						else
 						{
@@ -4196,113 +4269,128 @@ namespace FC{
 						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
 					}
 				}
+				break;
 				case 1052:
 				{
-					std::string pmName;
+					UpdateLLBSubTransferDatas();
 					if(loadLockBPendingTasks.size() >0 )
 					{
-						pmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
-						logInform(lk2->getName().c_str(), "step:1052,pmName:%s", pmName.c_str());
 						//真空机械手取料完成
 						taskManager.updateTaskStatus(loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						taskManager.updateTaskStatus(loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 					}
 					else
 					{
-						logFailedExcuteCommandHasError(lk1->getName(), "数据更新错误", loadlock1_process_name, loadlock1_auto_step);
+						logFailedExcuteCommandHasError(lk2->getName(), "数据更新错误", loadlock2_process_name, loadlock2_auto_step);
 						loadlock2_auto_step = 950;
 					}
+					loadlock2_auto_step = 1053;
 
-					UpdateLLBSubTransferDatas();
-
-					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
-					{
-							logInform("cycle", "step:1052,大气模式，不关闭TM腔门!");
-							tool_allow_llb = true;
-							if (!pmName.empty())
-							{
-								if (pmName == "PM1")
-								{
-									pm1_allow_get_put_wafer = true;
-									
-								}
-								else if (pmName == "PM2")
-								{
-									pm2_allow_get_put_wafer = true;
-									
-								}
-								else if (pmName == "PM3")
-								{
-									pm3_allow_get_put_wafer = true;
-									
-								}
-								else
-								{
-									pm4_allow_get_put_wafer = true;
-									
-								}
-								logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
-							}
-							else
-							{
-								logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
-							}
-						loadlock2_auto_step = 950;
-					}
-					else
-					{
-						auto cmd = lk2->createCloseTMCavityDoorCommand();
-						lk2->startCommand(cmd);
-						cmd->wait();
-						if (cmd->hasError())
-						{
-							logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
-						}
-						else {
-							if (!pmName.empty())
-							{
-								tool_allow_llb = true;
-
-								if (pmName == "PM1")
-								{
-									pm1_allow_get_put_wafer = true;
-									
-								}
-								else if (pmName == "PM2")
-								{
-									pm2_allow_get_put_wafer = true;
-									
-								}
-								else if (pmName == "PM3")
-								{
-									pm3_allow_get_put_wafer = true;
-									
-								}
-								else
-								{
-									pm4_allow_get_put_wafer = true;
-									
-								}
-								logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
-							}
-							else
-							{
-								logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
-							}
-							loadlock2_auto_step = 950;
-						}
-					}
 				}
 				break;
 				case 1053:
 				{
-					//for (int i = 0; i < 4; i++)
-					//{
-					//	if (pm_allow_get_put_wafer_list[i] == 1)
-					//	{
-					//		break;
-					//	}
-					//}
+					if (wtr == nullptr)
+					{
+						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+					}
+
+					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
+					{
+						logInform("cycle", "step:1052,大气模式，不关闭TM腔门!");
+						tool_allow_llb = true;
+						std::string pmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
+						logInform(lk2->getName().c_str(), "step:1053,pmName:%s", pmName.c_str());
+
+						if (!pmName.empty())
+						{
+							if (pmName == "PM1")
+							{
+								pm1_allow_get_put_wafer = true;
+
+							}
+							else if (pmName == "PM2")
+							{
+								pm2_allow_get_put_wafer = true;
+
+							}
+							else if (pmName == "PM3")
+							{
+								pm3_allow_get_put_wafer = true;
+
+							}
+							else
+							{
+								pm4_allow_get_put_wafer = true;
+
+							}
+							logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+						}
+						else
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "配方解析错误", loadlock2_process_name, loadlock2_auto_step);
+						}
+						loadlock2_auto_step = 950;
+					}
+					else
+					{
+						//2026-3-29 避免 Resources : WTR   has be lock by WTR.
+						if (lk2->getWtrOriginSafeSignal() && !wtr->isBusy())
+						{
+							auto cmd = lk2->createCloseTMCavityDoorCommand();
+							lk2->startCommand(cmd);
+							cmd->wait();
+							if (cmd->hasError())
+							{
+								logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+							}
+							else
+							{
+								std::string pmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
+								logInform(lk2->getName().c_str(), "step:1053,pmName:%s", pmName.c_str());
+
+								if (!pmName.empty())
+								{
+									tool_allow_llb = true;
+
+									if (pmName == "PM1")
+									{
+										pm1_allow_get_put_wafer = true;
+
+									}
+									else if (pmName == "PM2")
+									{
+										pm2_allow_get_put_wafer = true;
+
+									}
+									else if (pmName == "PM3")
+									{
+										pm3_allow_get_put_wafer = true;
+
+									}
+									else
+									{
+										pm4_allow_get_put_wafer = true;
+
+									}
+									logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+								}
+								else
+								{
+									logFailedExcuteCommandHasError(lk2->getName(), "配方解析错误", loadlock2_process_name, loadlock2_auto_step);
+								}
+								loadlock2_auto_step = 950;
+
+							}
+						}
+						else{
+					
+							static int wait_log_count3 = 0;
+							if (wait_log_count3++ % 50 == 0) {
+								logInform(lk2->getName().c_str(), "等待 WTR 安全信号或 WTR空闲...");
+							}
+							Sleep(200);
+						}
 				}
 				break;
 
@@ -4460,12 +4548,21 @@ namespace FC{
 					{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 					}
+					if (loadLockBReturnPendingTasks.empty())
+					{
+						logFailed(lk2->getName(), Poco::format("%s 放片任务队列为空 %s：%d", lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
+						loadlock2_auto_step = 900;
+						break;
+					}
+					loadlock2_move_slot_index = loadLockBReturnPendingTasks.front().targetBlankingSlot;
+					const auto put_arm = loadLockBReturnPendingTasks.front().arm;
+
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk2->hasDoorOpend())
 					{
 						//robot 把手臂A的放到Loadlock2
 						if(lk2->getTMCavityDoorOpend())
 						{
-							auto cmd = wtr->createPutCommand(lk2, loadLockBReturnPendingTasks.at(0).arm, loadlock2_move_slot_index);
+							auto cmd = wtr->createPutCommand(lk2, put_arm, loadlock2_move_slot_index);
 							wtr->startCommand(cmd);
 							cmd->wait();
 							if (cmd->hasError())
@@ -4494,7 +4591,19 @@ namespace FC{
 				case 2070:
 				{
 					//下料到LL的晶圆 8->3
-					taskManager.updateTaskStatus(loadLockBReturnPendingTasks.at(0).taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					if (loadLockBReturnPendingTasks.empty())
+					{
+						logFailed(lk2->getName(), Poco::format("%s 放片完成但任务队列为空， %s：%d", lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
+						loadlock2_auto_step = 900;
+						break;
+					}
+					taskManager.updateTaskStatus(loadLockBReturnPendingTasks.front().taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+
+					loadlock2_auto_step = 2071;
+				}
+				break;
+				case 2071:
+				{
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
@@ -4504,19 +4613,40 @@ namespace FC{
 						}
 						else
 						{
-							auto cmd = lk2->createCloseTMCavityDoorCommand();
-							lk2->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							//2026-3-27 检测mapping，再去关门
+							auto cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
+							auto station_cass = cassManager->getCassette(lk2.get());
+							if (station_cass->getMapping(loadlock2_move_slot_index) == Cassette::Mapping::Present)
 							{
-								logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+								if (lk2->getWtrOriginSafeSignal() && !wtr->isBusy())
+								{
+									auto cmd = lk2->createCloseTMCavityDoorCommand();
+									lk2->startCommand(cmd);
+									cmd->wait();
+									if (cmd->hasError())
+									{
+										logFailedExcuteCommandHasError(lk2->getName(), "关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
+									}
+									else
+									{
+										loadlock2_auto_step = 2080;
+									}
+								}
+								else
+								{
+									static int wait_log_count4 = 0;
+									if (wait_log_count4++ % 50 == 0) {
+										logInform(lk2->getName().c_str(), "等待 WTR 安全信号或 WTR空闲...");
+									}
+									Sleep(200);
+								}
 							}
 							else
 							{
-								loadlock2_auto_step = 2080;
+								logFailedExcuteCommandHasError(lk2->getName(), "检测mapping无片，不执行关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
 							}
 						}
-						
+
 					}
 					else
 					{
@@ -4693,13 +4823,16 @@ namespace FC{
 		
 				loadlock2_step_once_finished = true;
 			}
-	
+
+		}
 		}
 		catch (const std::exception& e) {
-			logError("Cyclelog", "LLBTransfer thread crashed:", e.what());
+			saveCurrentStateSnapshot(e.what(), Poco::format("LLBTransfer step:%d", loadlock2_auto_step));
+			logError("Cyclelog", "LLBTransfer thread crashed:%s", e.what());
 			qCritical() << "LLBTransfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			saveCurrentStateSnapshot("unknown exception", Poco::format("LLBTransfer step:%d", loadlock2_auto_step));
 			logError("Cyclelog", "LLBTransfer thread crashed: unknown exception");
 			qCritical() << "LLBTransfer thread crashed: unknown exception";
 		}
@@ -4819,12 +4952,12 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							auto cmd1 = wtr->createCheckLoadCommand(0, 2); //1手
+							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
 
 
-							auto cmd2 = wtr->createCheckLoadCommand(1, 2); //1手
+							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
 
@@ -5319,12 +5452,12 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							auto cmd1 = wtr->createCheckLoadCommand(0, 2); //1手
+							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
 
 
-							auto cmd2 = wtr->createCheckLoadCommand(1, 2); //1手
+							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
 
@@ -5809,11 +5942,11 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							auto cmd1 = wtr->createCheckLoadCommand(0, 2); //1手
+							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
 
-							auto cmd2 = wtr->createCheckLoadCommand(1, 2); //1手
+							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
 
@@ -6287,12 +6420,12 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							auto cmd1 = wtr->createCheckLoadCommand(0, 2); //1手
+							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
 
 
-							auto cmd2 = wtr->createCheckLoadCommand(1, 2); //1手
+							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
 

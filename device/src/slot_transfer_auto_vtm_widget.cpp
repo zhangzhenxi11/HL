@@ -2203,7 +2203,7 @@ namespace FC{
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = wtr->createCheckLoadCommand(robot_selected_arm, 20);
+						auto cmd = wtr->createRQLoadCommand(robot_selected_arm);
 						wtr->startCommand(cmd);
 						cmd->wait();
 						if (cmd->hasError())
@@ -2537,7 +2537,7 @@ namespace FC{
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = wtr->createCheckLoadCommand(robot_selected_arm, 20);
+						auto cmd = wtr->createRQLoadCommand(robot_selected_arm);
 						wtr->startCommand(cmd);
 						cmd->wait();
 						if (cmd->hasError())
@@ -2857,7 +2857,7 @@ namespace FC{
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = wtr->createCheckLoadCommand(robot_selected_arm, 20);
+						auto cmd = wtr->createRQLoadCommand(robot_selected_arm);
 						wtr->startCommand(cmd);
 						cmd->wait();
 						if (cmd->hasError())
@@ -3159,7 +3159,7 @@ namespace FC{
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						auto cmd = wtr->createCheckLoadCommand(robot_selected_arm, 21);
+						auto cmd = wtr->createRQLoadCommand(robot_selected_arm);
 						wtr->startCommand(cmd);
 						cmd->wait();
 						if (cmd->hasError())

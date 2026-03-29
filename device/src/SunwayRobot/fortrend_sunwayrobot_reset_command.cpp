@@ -64,12 +64,12 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位超时参数错误.", robot->getName()), this);
 	}
 
-	//测试
-	//if(SIMULATION_TEST == 1)
-	//{
-	//	logInform(getName().c_str(), "模拟复位命令执行.");
-	//	return RunResult::RUN_OK;
-	//}
+//测试
+#ifdef SIMULATION_TEST
+
+		//logInform(getName().c_str(), "模拟复位命令执行.");
+		//return RunResult::RUN_OK;
+#endif //SIMULATION_TEST
 
 
 	std::string error_message = "";
