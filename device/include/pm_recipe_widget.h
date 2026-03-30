@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file            pm_recipe_widget.h
  * @brief           pm_recipe_widget
  * @author			xielonghua
@@ -96,6 +96,7 @@ namespace FC {
 	public:
 		void startPmMotorRun(int pmIndex);
 		void stopPmMotor(int pmIndex); // 修改：支持指定PM索引停止
+		bool isPmMotorRunning(int pmIndex) const; // 新增：检查PM配方是否在运行
 
 	private slots:
 		void onStartCycle();

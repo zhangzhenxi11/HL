@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1985</width>
-    <height>881</height>
+    <width>1963</width>
+    <height>967</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -45,19 +45,34 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="processAreaContainer" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>16777215</height>
-      </size>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
      </property>
+     <widget class="QWidget" name="processAreaContainer" native="true">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>1900</width>
+        <height>980</height>
+       </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>1900</width>
+        <height>980</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
      <widget class="QWidget" name="gridLayoutWidget">
       <property name="geometry">
        <rect>
@@ -342,6 +357,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayoutD"/>
      </widget>
+    </widget>
     </widget>
    </item>
   </layout>

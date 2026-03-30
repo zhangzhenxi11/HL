@@ -204,6 +204,28 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			return RunResult::RUN_FAILD;
 		}
 		robot->setHasResetFlag(true);
+
+		//2026-3-30 增加checkload
+		/*	
+		auto cmd1 = robot->createCheckLoadCommand(0);
+		robot->startCommand(cmd1);
+		cmd1->wait();
+		if (cmd1->hasError())
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "复位后检测B手指命令执行失败！"));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		auto cmd2 = robot->createCheckLoadCommand(1);
+		robot->startCommand(cmd2);
+		cmd2->wait();
+		if (cmd2->hasError())
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 1, "复位后检测A手指命令执行失败！"));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}*/
+
 		logInform(getName().c_str(), "复位命令执行结束.");
 
 		return RunResult::RUN_OK;

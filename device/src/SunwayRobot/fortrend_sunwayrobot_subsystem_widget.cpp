@@ -392,6 +392,7 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
 		arm = (arm == 0) ? 1 : 0;
+#if  0	
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 
 		/*if (!station){
@@ -433,7 +434,8 @@ namespace FC{
 			QMessageBox::information(this, "错误", "查询手指有无晶圆输入工位错误");
 			return;
 		}
-		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createCheckLoadCommand(arm, station_id);
+#endif
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createRQLoadCommand(arm);
 		executeCommand(getSubsystem(), cmd);
 
 	}

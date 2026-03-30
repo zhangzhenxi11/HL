@@ -1019,18 +1019,6 @@ namespace FC {
 				QMetaObject::invokeMethod(this, "cycleStopped");
 				return;
 			}
-			//
-
-#ifdef TESET_PM_SERVER
-			while (true)
-			{
-				d->pmSignalServer->notifyAxisDepartedProcess(1, "rotate");
-				d->pmSignalServer->notifyAxisArrivedProcess(1, "process");
-				Sleep(1000);
-			}
-#endif // TESET_PM_SERVER
-
-
 			// 定义位置
 			std::map<std::string, double> posMap;
 			posMap["Transfer"] = cfg.params.take_position_mm;
@@ -1258,6 +1246,12 @@ namespace FC {
 			ctx.stopRequested = true;
 			ctx.cycleCv.notify_all();
 		}
+	}
+
+	bool QPmRecipeWidget::isPmMotorRunning(int pmIndex) const
+	{
+		if (pmIndex < 0 || pmIndex >= 4) return false;
+		return pmContexts[pmIndex].isRunning.load();
 	}
 
 	void QPmRecipeWidget::onStopCycle()

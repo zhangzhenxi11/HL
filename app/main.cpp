@@ -31,8 +31,10 @@ int main(int argc, char *argv[])
 		
 	// 初始化QtWebEngine - 必须在QApplication创建之后调用
 	QtWebEngine::initialize();
-	 CCreateDump::Instance()->DeclarDumpFile("app_dump");
-	 qDebug() << "The application Dump file has been set";
+	// 提前注册全局异常过滤器
+	SetUnhandledExceptionFilter(CCreateDump::UnhandleExceptionFilter);
+	CCreateDump::Instance()->DeclarDumpFile("app_dump");
+	qDebug() << "The application Dump file has been set";
 	if (app.isRunning()){
 		QMessageBox::warning(0, "Warn", "The gui is already running!!!");
 		return 0;

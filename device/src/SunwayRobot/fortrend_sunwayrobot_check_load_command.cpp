@@ -100,7 +100,7 @@ namespace FC{
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
-		std::string str_arm = (d->arm == 0) ? "B" : "A";
+		std::string str_arm = (d->arm == 0) ? "A" : "B";
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
@@ -111,15 +111,12 @@ namespace FC{
 		int error_code = 0;
 		std::string error_message;
 
-		//MOV:CHECKWAFER/[P1]/[P2];\r
-		//p1:工位，范围：1~30  int
-		//p2:手指（0：B,1:A）   int
+		//MOV:CHECKWAFER/[P1];\r
+		//p1:手指（0：B,1:A）   int
 		//RPS:CHECKWAFER/[R1]; \r
 		//[R1]:0代表无晶圆，1代表手指有晶圆
 
 		command = "MOV:CHECKWAFER/";
-		command.append(std::to_string(d->station_id));
-		command.append("/");
 		command.append(std::to_string(d->arm));
 		command.append(";");
 

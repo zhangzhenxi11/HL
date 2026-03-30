@@ -74,7 +74,7 @@ namespace FC{
 		virtual std::shared_ptr<RobotAbstractPutWaferCommand> createPutCommand(const std::shared_ptr<FortrendStation>&  station, int arm, int slot) const override;
 		virtual std::shared_ptr<RobotAbstractSetSpeedCommand> createSetSpeedCommand(uint8_t percentage) const override;
 		
-		std::shared_ptr<SunwayRobotCheckLoadCommand> createCheckLoadCommand(int arm, int station_id)const; //回原后检测手臂有无晶圆
+		std::shared_ptr<SunwayRobotCheckLoadCommand> createCheckLoadCommand(int arm, int station_id = 7)const; //回原后检测手臂有无晶圆,不要填station_id
 		std::shared_ptr<SunwayRobotRQLoadCommand> createRQLoadCommand(int arm)const;//获取晶圆记忆
 		std::shared_ptr<SunwayRobotSetLoadCommand> createSetLoadCommand(int arm, int state)const;
 		std::shared_ptr<SunwayRobotClearErrorCommand> createClearErrorCommand()const;

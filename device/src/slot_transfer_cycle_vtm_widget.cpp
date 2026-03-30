@@ -252,6 +252,10 @@ namespace FC{
 
 		bool llB_condition = false;//true 满足互锁 ，  false不满足没锁
 
+		std::string LLAPmName; //lla当前处理的pm
+
+		std::string LLBPmName; //llb当前处理的pm
+
 
 		//情景：当一个LL的料下到位，另一个没下料时，为了不让另一个LL继续发送上料请求的互锁条件
 		bool isLoadingInterlock(const std::string& LLName);
@@ -3160,6 +3164,8 @@ namespace FC{
 						//pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
 						//logInform(lk1->getName().c_str(), "step:1052,pmName:%s", pmName.c_str());
 
+						LLAPmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
+
 						taskManager.updateTaskStatus(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						taskManager.updateTaskStatus(loadLockAPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
 					}
@@ -3184,25 +3190,25 @@ namespace FC{
 					
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
-						std::string pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
+						//std::string pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
 						logInform("cycle", "step:1053,大气模式，不关闭TM腔门!");
 
 						tool_allow_lla = true;
-						if (!pmName.empty())
+						if (!LLAPmName.empty())
 						{
-							if (pmName == "PM1")
+							if (LLAPmName == "PM1")
 							{
 								pm1_allow_get_put_wafer = true;
 							}
-							else if (pmName == "PM2")
+							else if (LLAPmName == "PM2")
 							{
 								pm2_allow_get_put_wafer = true;
 							}
-							else if (pmName == "PM3")
+							else if (LLAPmName == "PM3")
 							{
 								pm3_allow_get_put_wafer = true;
 							}
-							else if (pmName == "PM4")
+							else if (LLAPmName == "PM4")
 							{
 								pm4_allow_get_put_wafer = true;
 							}
@@ -3210,7 +3216,7 @@ namespace FC{
 							{
 								logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
 							}
-							logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+							logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", LLAPmName.c_str());
 						}
 						else
 						{
@@ -3232,25 +3238,23 @@ namespace FC{
 							}
 							else {
 								
-								std::string pmName = getSelectPmProcessName(loadLockAPendingTasks.at(0));
-
-								if (!pmName.empty())
+								if (!LLAPmName.empty())
 								{
 									tool_allow_lla = true;
 
-									if (pmName == "PM1")
+									if (LLAPmName == "PM1")
 									{
 										pm1_allow_get_put_wafer = true;
 									}
-									else if (pmName == "PM2")
+									else if (LLAPmName == "PM2")
 									{
 										pm2_allow_get_put_wafer = true;
 									}
-									else if (pmName == "PM3")
+									else if (LLAPmName == "PM3")
 									{
 										pm3_allow_get_put_wafer = true;
 									}
-									else if (pmName == "PM4")
+									else if (LLAPmName == "PM4")
 									{
 										pm4_allow_get_put_wafer = true;
 									}
@@ -3258,7 +3262,7 @@ namespace FC{
 									{
 										logFailedExcuteCommandHasError(lk1->getName(), "配方解析错误", loadlock1_process_name, loadlock1_auto_step);
 									}
-									logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+									logInform(lk1->getName().c_str(), "呼叫:%s 取放片.", LLAPmName.c_str());
 								}
 								else
 								{
@@ -4275,6 +4279,8 @@ namespace FC{
 					UpdateLLBSubTransferDatas();
 					if(loadLockBPendingTasks.size() >0 )
 					{
+						LLBPmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
+
 						//真空机械手取料完成
 						taskManager.updateTaskStatus(loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						taskManager.updateTaskStatus(loadLockBPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
@@ -4299,22 +4305,22 @@ namespace FC{
 					{
 						logInform("cycle", "step:1052,大气模式，不关闭TM腔门!");
 						tool_allow_llb = true;
-						std::string pmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
-						logInform(lk2->getName().c_str(), "step:1053,pmName:%s", pmName.c_str());
+						
+						logInform(lk2->getName().c_str(), "step:1053,LLBPmName:%s", LLBPmName.c_str());
 
-						if (!pmName.empty())
+						if (!LLBPmName.empty())
 						{
-							if (pmName == "PM1")
+							if (LLBPmName == "PM1")
 							{
 								pm1_allow_get_put_wafer = true;
 
 							}
-							else if (pmName == "PM2")
+							else if (LLBPmName == "PM2")
 							{
 								pm2_allow_get_put_wafer = true;
 
 							}
-							else if (pmName == "PM3")
+							else if (LLBPmName == "PM3")
 							{
 								pm3_allow_get_put_wafer = true;
 
@@ -4324,7 +4330,7 @@ namespace FC{
 								pm4_allow_get_put_wafer = true;
 
 							}
-							logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+							logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", LLBPmName.c_str());
 						}
 						else
 						{
@@ -4346,24 +4352,24 @@ namespace FC{
 							}
 							else
 							{
-								std::string pmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
-								logInform(lk2->getName().c_str(), "step:1053,pmName:%s", pmName.c_str());
+								//std::string pmName = getSelectPmProcessName(loadLockBPendingTasks.at(0));
+								logInform(lk2->getName().c_str(), "step:1053,LLBPmName:%s", LLBPmName.c_str());
 
-								if (!pmName.empty())
+								if (!LLBPmName.empty())
 								{
 									tool_allow_llb = true;
 
-									if (pmName == "PM1")
+									if (LLBPmName == "PM1")
 									{
 										pm1_allow_get_put_wafer = true;
 
 									}
-									else if (pmName == "PM2")
+									else if (LLBPmName == "PM2")
 									{
 										pm2_allow_get_put_wafer = true;
 
 									}
-									else if (pmName == "PM3")
+									else if (LLBPmName == "PM3")
 									{
 										pm3_allow_get_put_wafer = true;
 
@@ -4373,7 +4379,7 @@ namespace FC{
 										pm4_allow_get_put_wafer = true;
 
 									}
-									logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", pmName.c_str());
+									logInform(lk2->getName().c_str(), "呼叫:%s 取放片.", LLBPmName.c_str());
 								}
 								else
 								{
@@ -4850,10 +4856,6 @@ namespace FC{
 		try {
 		std::shared_ptr<FortrendSunwayRobotSubsystem> wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
-		// std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-		// std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
-		// std::shared_ptr<FortrendPMCavitySubsystem> pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
-
 		auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 
 			while (!stopRequested)
@@ -5294,14 +5296,41 @@ namespace FC{
 					//工艺步骤
 					case 2000:
 					{
-						UpdatePmSubTransferDatas("PM1");			
-#ifdef DEBUG_TEST_PM
-						auto PmInstance = QPmRecipeWidget::instance(kernel);
-						PmInstance->startPmMotorRun(1);
-#else
-						Sleep(200);
-						logInform("PM1", "2s延迟，来模拟做工艺流程.....");
-#endif
+						UpdatePmSubTransferDatas("PM1");
+
+						if (pm1 != nullptr)
+						{
+							if (pm1->getWithWaferModeEnable())
+							{
+								auto PmInstance = QPmRecipeWidget::instance(kernel);
+								if(PmInstance!=nullptr)
+								{
+									PmInstance->startPmMotorRun(0);
+									while (PmInstance->isPmMotorRunning(0) && !stopRequested)
+									{
+										Sleep(100);
+									}
+								}
+								else
+								{
+									logFailed(pm1->getName(), Poco::format("无法获取到工艺界面实例，无法执行工艺流程， %s：%d", pm1_process_name, pm1_auto_step.load()));
+									pm1_auto_step.store(10);
+									break;
+								}
+							}
+							else
+							{
+								logFailed(pm1->getName(), Poco::format("%s 没有片，无法执行工艺流程， %s：%d", pm1->getName(), pm1_process_name, pm1_auto_step.load()));
+							}
+						}
+						else
+						{
+							logFailed(wtr->getName(), Poco::format("PM1模块指针为空， %s：%d", pm1_process_name, pm1_auto_step.load()));
+						}
+
+						//Sleep(200);
+						//logInform("PM1", "2s延迟，来模拟做工艺流程.....");
+
 						if(pmPendingTasks.size() > 0 )
 						{
 							taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
@@ -5792,7 +5821,14 @@ namespace FC{
 
 #ifdef DEBUG_TEST_PM
 						auto PmInstance = QPmRecipeWidget::instance(kernel);
-						PmInstance->startPmMotorRun(2);
+						if(PmInstance!=nullptr)
+						{
+							PmInstance->startPmMotorRun(1);
+							while (PmInstance->isPmMotorRunning(1) && !stopRequested)
+							{
+								Sleep(100);
+							}
+						}
 #else
 						//Sleep(2000);
 						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
@@ -6276,7 +6312,14 @@ namespace FC{
 
 #ifdef DEBUG_TEST_PM
 						auto PmInstance = QPmRecipeWidget::instance(kernel);
-						PmInstance->startPmMotorRun(3);
+						if(PmInstance!=nullptr)
+						{
+							PmInstance->startPmMotorRun(2);
+							while (PmInstance->isPmMotorRunning(2) && !stopRequested)
+							{
+								Sleep(100);
+							}
+						}
 
 #else
 						logInform("PM3", "模拟做工艺流程.....");
@@ -6758,7 +6801,14 @@ namespace FC{
 
 #ifdef DEBUG_TEST_PM
 						auto PmInstance = QPmRecipeWidget::instance(kernel);
-						PmInstance->startPmMotorRun(4);
+						if(PmInstance!=nullptr)
+						{
+							PmInstance->startPmMotorRun(3);
+							while (PmInstance->isPmMotorRunning(3) && !stopRequested)
+							{
+								Sleep(100);
+							}
+						}
 
 #else
 						logInform("PM4", "模拟做工艺流程.....");
