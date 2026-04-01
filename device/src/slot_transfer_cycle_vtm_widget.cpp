@@ -357,6 +357,8 @@ namespace FC{
 
 		CheckableMutex efem_robot_mutex; //efem 上下料锁
 
+		CheckableMutex wtr_robot_mutex; //真空机械手锁
+
 		std::mutex feeding_mutex; //上料锁
 
 		std::mutex blanking_mutex;//下料锁
@@ -2583,11 +2585,19 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
-
+			pauseAllThreads();
+			saveCurrentStateSnapshot(e.what(), Poco::format("EFEMTransfer step:%d", efem_auto_step));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
 			logError("Cyclelog", "EFEM thread crashed:", e.what());
 			qCritical() << "EFEM thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot("unknown exception", Poco::format("EFEMTransfer step:%d", efem_auto_step));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "EFEM thread crashed: unknown exception");
 			qCritical() << "EFEM thread crashed: unknown exception";
 		}
@@ -3130,9 +3140,12 @@ namespace FC{
 						//互锁条件，TM抽真空会触发关门动作
 						if(lk1->getTMCavityDoorOpend())
 						{
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(lk1, loadLockAPendingTasks.at(0).arm, loadlock1_move_slot_index);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
+							
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
@@ -3447,10 +3460,13 @@ namespace FC{
 
 						if(lk1->getTMCavityDoorOpend())
 						{
+							wtr_robot_mutex.lock();
 							//robot 把手臂A的放到LoadLock1
 							auto cmd = wtr->createPutCommand(lk1, put_arm, loadlock1_move_slot_index);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
+							
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
@@ -3712,12 +3728,18 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
 			saveCurrentStateSnapshot(e.what(), Poco::format("LLATransfer step:%d", loadlock1_auto_step));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
 			logError("Cyclelog", "LLATransfer thread crashed:", e.what());
 			qCritical() << "LLATransfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
 			saveCurrentStateSnapshot("unknown exception", Poco::format("LLATransfer step:%d", loadlock1_auto_step));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
 			logError("Cyclelog", "LLATransfer thread crashed: unknown exception");
 			qCritical() << "LLATransfer thread crashed: unknown exception";
 		}
@@ -4250,9 +4272,12 @@ namespace FC{
 
 						if (lk2->getTMCavityDoorOpend())
 						{
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(lk2, loadLockBPendingTasks.at(0).arm, loadlock2_move_slot_index);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
+							
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock2_process_name, loadlock2_auto_step);
@@ -4568,9 +4593,12 @@ namespace FC{
 						//robot 把手臂A的放到Loadlock2
 						if(lk2->getTMCavityDoorOpend())
 						{
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(lk2, put_arm, loadlock2_move_slot_index);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
+							
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
@@ -4833,11 +4861,13 @@ namespace FC{
 		}
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
 			saveCurrentStateSnapshot(e.what(), Poco::format("LLBTransfer step:%d", loadlock2_auto_step));
 			logError("Cyclelog", "LLBTransfer thread crashed:%s", e.what());
 			qCritical() << "LLBTransfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
 			saveCurrentStateSnapshot("unknown exception", Poco::format("LLBTransfer step:%d", loadlock2_auto_step));
 			logError("Cyclelog", "LLBTransfer thread crashed: unknown exception");
 			qCritical() << "LLBTransfer thread crashed: unknown exception";
@@ -4954,6 +4984,7 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
+							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -4962,6 +4993,7 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
+							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -5045,9 +5077,11 @@ namespace FC{
 						#ifdef DEBUG_TEST_PM
 							{
 								robot_selected_arm = 0; //A手
+								wtr_robot_mutex.lock();
 								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 								wtr->startCommand(cmd);
 								cmd->wait();
+								wtr_robot_mutex.unlock();
 								if (cmd->hasError())
 								{
 									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
@@ -5080,9 +5114,11 @@ namespace FC{
 						{
 							#ifdef DEBUG_TEST_PM
 								robot_selected_arm = 1;
+								wtr_robot_mutex.lock();
 								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 								wtr->startCommand(cmd);
 								cmd->wait();
+								wtr_robot_mutex.unlock();
 								if (cmd->hasError())
 								{
 									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step);
@@ -5112,9 +5148,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm1_process_name, pm1_auto_step.load());
@@ -5141,9 +5179,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm1_auto_step.load());
@@ -5169,9 +5209,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm1_auto_step.load());
@@ -5193,9 +5235,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
@@ -5218,9 +5262,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm1_auto_step.load());
@@ -5245,9 +5291,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
@@ -5369,10 +5417,20 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot(e.what(), Poco::format("PM1Transfer step:%d", pm1_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "PM1Transfer thread crashed:", e.what());
 			qCritical() << "PM1Transfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot("unknown exception", Poco::format("PM1Transfer step:%d", pm1_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "PM1Transfer thread crashed: unknown exception");
 			qCritical() << "PM1Transfer thread crashed: unknown exception";
 		}
@@ -5481,6 +5539,7 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
+							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -5489,6 +5548,7 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
+							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -5569,9 +5629,11 @@ namespace FC{
 						{
 #ifdef DEBUG_TEST_PM
 						robot_selected_arm = 0;
+						wtr_robot_mutex.lock();
 						auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
 						wtr->startCommand(cmd);
 						cmd->wait();
+						wtr_robot_mutex.unlock();
 						if (cmd->hasError())
 						{
 							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5601,9 +5663,11 @@ namespace FC{
 						{
 #ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5633,9 +5697,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5661,9 +5727,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5689,9 +5757,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5713,9 +5783,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());	
@@ -5738,9 +5810,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5765,9 +5839,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5792,9 +5868,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
@@ -5873,10 +5951,20 @@ namespace FC{
 
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot(e.what(), Poco::format("PM2Transfer step:%d", pm2_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "PM2Transfer thread crashed:", e.what());
 			qCritical() << "PM2ransfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot("unknown exception", Poco::format("PM2Transfer step:%d", pm2_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "PM2Transfer thread crashed: unknown exception");
 			qCritical() << "PM2Transfer thread crashed: unknown exception";
 		}
@@ -5978,6 +6066,7 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
+							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -5985,6 +6074,7 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
+							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -6059,9 +6149,11 @@ namespace FC{
 #ifdef DEBUG_TEST_PM
 							
 							robot_selected_arm = 0; //A手
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6094,9 +6186,11 @@ namespace FC{
 						{
 #ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6127,9 +6221,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6155,9 +6251,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6183,9 +6281,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6207,9 +6307,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6232,9 +6334,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6258,9 +6362,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6284,9 +6390,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
@@ -6362,10 +6470,18 @@ namespace FC{
 
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot(e.what(), Poco::format("PM3Transfer step:%d", pm3_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
 			logError("Cyclelog", "PM3Transfer thread crashed:", e.what());
 			qCritical() << "PM3Transfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot("unknown exception", Poco::format("PM3Transfer step:%d", pm3_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
 			logError("Cyclelog", "PM3Transfer thread crashed: unknown exception");
 			qCritical() << "PM3Transfer thread crashed: unknown exception";
 		}
@@ -6463,6 +6579,7 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
+							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -6471,6 +6588,7 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
+							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -6546,9 +6664,11 @@ namespace FC{
 						{
 #ifdef DEBUG_TEST_PM
 								robot_selected_arm = 0; //A手
+								wtr_robot_mutex.lock();
 								auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
 								wtr->startCommand(cmd);
 								cmd->wait();
+								wtr_robot_mutex.unlock();
 								if (cmd->hasError())
 								{
 									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
@@ -6581,9 +6701,11 @@ namespace FC{
 
 #ifdef DEBUG_TEST_PM
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step);
@@ -6613,9 +6735,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step);
@@ -6641,9 +6765,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, robot_auto_step);
@@ -6669,9 +6795,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
@@ -6693,9 +6821,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
@@ -6718,9 +6848,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
@@ -6745,9 +6877,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
@@ -6771,9 +6905,11 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 0;
+							wtr_robot_mutex.lock();
 							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
 							wtr->startCommand(cmd);
 							cmd->wait();
+							wtr_robot_mutex.unlock();
 							if (cmd->hasError())
 							{
 								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
@@ -6853,10 +6989,19 @@ namespace FC{
 				}
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot(e.what(), Poco::format("PM4Transfer step:%d", pm4_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "PM4Transfer thread crashed:", e.what());
 			qCritical() << "PM4Transfer thread crashed:" << e.what();
 		}
 		catch (...) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot("unknown exception", Poco::format("PM4Transfer step:%d", pm4_auto_step.load()));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
 			logError("Cyclelog", "PM4Transfer thread crashed: unknown exception");
 			qCritical() << "PM4Transfer thread crashed: unknown exception";
 		}
@@ -7036,11 +7181,21 @@ namespace FC{
 			}
 		}
 		catch (const std::exception& e) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot(e.what(), Poco::format("executeUpdateTransferStatus step:%d", update_auto_step));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "UpdateTransfer thread crashed:%s", e.what());
 			qCritical() << "UpdateTransfer thread crashed:" << e.what();
 			
 		}
 		catch (...) {
+			pauseAllThreads();
+			saveCurrentStateSnapshot("unknown exception", Poco::format("executeUpdateTransferStatus step:%d", update_auto_step));
+			onUpdateControlEnabled("execute_pbt", true);
+			onUpdateLightButtonStatus("light_running_pbt", 3);
+
 			logError("Cyclelog", "UpdateTransfer thread crashed: unknown exception");
 			qCritical() << "UpdateTransfer thread crashed: unknown exception";
 		}

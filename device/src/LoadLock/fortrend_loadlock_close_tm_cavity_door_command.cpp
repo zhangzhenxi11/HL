@@ -37,21 +37,25 @@ namespace FC{
 		//setMessageName("CloseTMCavityDoor");
 		//setDescription("close tm cavity door the laodlock");
 	}
-	std::vector<IKernelResources*> LoadLockCloseTMCavityDoorCommand::resources() const
-	{
-		std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
-		FortrendCassetteManager::Ptr cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
-		auto wtr = cassManager->getStation("WTR");
-		if (wtr) {
-			ret.push_back(wtr);
-		}
-		else
-		{
-			return std::vector<IKernelResources*>();
-		}
-		return ret;
-		
-	};
+
+	//底层WTR已经锁住了目标工位，所以这里不需要重写resources，2026-2-2
+	// 若重写就是互锁，wtr那边会解锁，可是LL这里是加锁，但没去解锁，releaseResource().导致持有WTR资源.
+ 
+	//std::vector<IKernelResources*> LoadLockCloseTMCavityDoorCommand::resources() const
+	//{
+		//std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
+		//FortrendCassetteManager::Ptr cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+		//auto wtr = cassManager->getStation("WTR");
+		//if (wtr) {
+		//	ret.push_back(wtr);
+		//}
+		//else
+		//{
+		//	return std::vector<IKernelResources*>();
+		//}
+		//return ret;
+	//	return std::vector<IKernelResources*>();
+	//};
 
 	
 	/**
