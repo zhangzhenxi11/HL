@@ -211,7 +211,7 @@ namespace FC{
 				else if (robot_staus == "OFF")
 				{
 					robot->setObject(1, false);
-					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s无晶圆.", str_arm).c_str());
 					robot_cass->setMapping(2, Cassette::Mapping::Empty);
 				}
 				else

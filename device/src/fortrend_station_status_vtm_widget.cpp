@@ -2008,23 +2008,23 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 			if (mapping.size()>=1 && mapping[0] == Cassette::Present){
 			logInform(d->wtr->getName().c_str(),"updateCassetteAnimation wtr 1 Present");
 			d_ptr->ui->robot_widget->setIsWaferArm1(true);
-			d->wtr->setObject(1,true);
+			d->wtr->setObject(0,true);
 			}
 			else if (mapping.size()>=1 && mapping[0] == Cassette::Empty){
 			logInform(d->wtr->getName().c_str(), "updateCassetteAnimation wtr 1 Empty");
 			d_ptr->ui->robot_widget->setIsWaferArm1(false);
-			d->wtr->setObject(1, false);
+			d->wtr->setObject(0, false);
 			}
 
 			if (mapping.size()>=2 && mapping[1] == Cassette::Present){
 			logInform(d->wtr->getName().c_str(), "updateCassetteAnimation wtr 2 Present");
 			d_ptr->ui->robot_widget->setIsWaferArm2(true);
-			d->wtr->setObject(2, true);
+			d->wtr->setObject(1, true);
 			}
 			else if (mapping.size()>=2 && mapping[1] == Cassette::Empty){
 			logInform(d->wtr->getName().c_str(), "updateCassetteAnimation wtr 2 Empty");
 			d_ptr->ui->robot_widget->setIsWaferArm2(false);
-			d->wtr->setObject(2, false);
+			d->wtr->setObject(1, false);
 			}
 			
 		}

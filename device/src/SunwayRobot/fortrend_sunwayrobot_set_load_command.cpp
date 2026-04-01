@@ -142,12 +142,12 @@ namespace FC{
 				if(str_state=="1")
 				{
 					robot->setObject(0, true);
-					robot_cass->setMapping(2, Cassette::Mapping::Present);
+					robot_cass->setMapping(1, Cassette::Mapping::Present);
 				}
 				else
 				{
 					robot->setObject(0, false);
-					robot_cass->setMapping(2, Cassette::Mapping::Empty);
+					robot_cass->setMapping(1, Cassette::Mapping::Empty);
 				}
 			}
 			else
@@ -196,12 +196,12 @@ namespace FC{
 				if (str_state == "1")
 				{
 					robot->setObject(1, true);
-					robot_cass->setMapping(1, Cassette::Mapping::Present);
+					robot_cass->setMapping(2, Cassette::Mapping::Present);
 				}
 				else
 				{
 					robot->setObject(1, false);
-					robot_cass->setMapping(1, Cassette::Mapping::Empty);
+					robot_cass->setMapping(2, Cassette::Mapping::Empty);
 				}
 			}
 			else
