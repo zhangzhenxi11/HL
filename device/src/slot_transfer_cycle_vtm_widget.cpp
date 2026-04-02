@@ -5390,6 +5390,7 @@ namespace FC{
 							pm1_auto_step.store(10);
 						}
 					}
+					break;
 					case 2001:
 					{
 
@@ -5894,23 +5895,36 @@ namespace FC{
 
 					case 2000:
 					{
-						
 						UpdatePmSubTransferDatas("PM2");
-
-#ifdef DEBUG_TEST_PM
-						auto PmInstance = QPmRecipeWidget::instance(kernel);
-						if(PmInstance!=nullptr)
+						if (pm2 != nullptr)
 						{
-							PmInstance->startPmMotorRun(1);
-							while (PmInstance->isPmMotorRunning(1) && !stopRequested)
+							if (pm2->getWithWaferModeEnable())
 							{
-								Sleep(100);
+								auto PmInstance = QPmRecipeWidget::instance(kernel);
+								if (PmInstance != nullptr)
+								{
+									PmInstance->startPmMotorRun(1);
+									while (PmInstance->isPmMotorRunning(1) && !stopRequested)
+									{
+										Sleep(100);
+									}
+								}
+								else
+								{
+									logFailed(pm2->getName(), Poco::format("无法获取到工艺界面实例，无法执行工艺流程， %s：%d", pm2_process_name, pm2_auto_step.load()));
+									pm2_auto_step.store(10);
+									break;
+								}
+							}
+							else
+							{
+								logFailed(pm2->getName(), Poco::format("%s 没有片，无法执行工艺流程， %s：%d", pm2->getName(), pm2_process_name, pm2_auto_step.load()));
 							}
 						}
-#else
-						//Sleep(2000);
-						logInform("PM2", "2s延迟，来模拟做工艺流程.....");
-#endif
+						else
+						{
+							logFailed(wtr->getName(), Poco::format("PM2模块指针为空， %s：%d", pm2_process_name, pm2_auto_step.load()));
+						}
 
 						if(pm2PendingTasks.size() > 0)
 						{
@@ -5923,6 +5937,7 @@ namespace FC{
 							pm2_auto_step.store(10);
 						}
 					}
+					break;
 					case 2001:
 					{
 						UpdatePmSubTransferDatas("PM2");
