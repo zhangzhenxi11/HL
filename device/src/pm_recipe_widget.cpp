@@ -198,11 +198,11 @@ namespace FC {
 		table->horizontalHeader()->setFont(font);
 		table->verticalHeader()->setFont(font);
 		
-		// 固定行：Z_ACC, Z_DEC, Z_JERK, Z_VEL, R_ACC, R_DEC, R_JERK, R_VEL
-		table->setRowCount(8);
+		table->setRowCount(10);
 		QStringList headers = {
 			"Z-Acc", "Z-Dec", "Z-Jerk", "Z-Vel",
-			"R-Acc", "R-Dec", "R-Jerk", "R-Vel"
+			"R-Acc", "R-Dec", "R-Jerk", "R-Vel",
+			"前处理Wait/s", "后处理Wait/s"
 		};
 		table->setVerticalHeaderLabels(headers);
 	}
@@ -430,6 +430,8 @@ namespace FC {
 			addTableWidgetItemDoubleSpinBox(5, c, 0, 1000, 1, m.rotating_dec, 3, innerTable);
 			addTableWidgetItemDoubleSpinBox(6, c, 0, 1000, 1, m.rotating_jerk, 3, innerTable);
 			addTableWidgetItemDoubleSpinBox(7, c, 0, 360, 1, m.rotating_vel, 3, innerTable);
+			addTableWidgetItemDoubleSpinBox(8, c, 0, 1000, 1, m.pre_process_wait_s, 3, innerTable);
+			addTableWidgetItemDoubleSpinBox(9, c, 0, 1000, 1, m.post_process_wait_s, 3, innerTable);
 		}
 
 		// 检查外表中是否有Rotate配方，决定R轴参数是否可编辑
@@ -488,6 +490,8 @@ namespace FC {
 			row.rotating_dec = getVal(5);
 			row.rotating_jerk = getVal(6);
 			row.rotating_vel = getVal(7);
+			row.pre_process_wait_s = getVal(8);
+			row.post_process_wait_s = getVal(9);
 			details.motors.push_back(row);
 		}
 		
@@ -510,8 +514,9 @@ namespace FC {
 			: QString("Step %1").arg(col + 1);
 		table->setHorizontalHeaderItem(col, new QTableWidgetItem(header));
 		
-		for(int r=0; r<8; ++r) {
-			addTableWidgetItemDoubleSpinBox(r, col, 0, 1000, 1, 10, 3, table);
+		for(int r=0; r<10; ++r) {
+			double defaultValue = (r < 8) ? 10.0 : 0.0;
+			addTableWidgetItemDoubleSpinBox(r, col, 0, 1000, 1, defaultValue, 3, table);
 		}
 		
 		// 立即更新映射？还是等待保存？
@@ -1181,26 +1186,49 @@ namespace FC {
 						// 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
 						if (from == "Process" && to == "Rotate")
 						{
-							//if (pmSubsystem->getMaximumPlaneLevelSignal())//检测是否达到了工艺面
-							{
-								double waitTime = 0.0;
-								if (i < processCount - 1)
-								{
-									waitTime = avgTime;
-								}
-								else
-								{
-									waitTime = lastTime;
-								}
-
-								logInform(pmSubsystem->getName().c_str(), "Process Wait: %.3f s (Step %d/%d)", waitTime, i + 1, loopCount);
-
-								d->runTimer(waitTime, pmIndex);
+							// 3.1 前处理Wait时间 (soak)
+							if (m.pre_process_wait_s > 0) {
+								logInform(pmSubsystem->getName().c_str(), "Pre Process Wait (soak): %.3f s (Step %d/%d)", m.pre_process_wait_s, i + 1, loopCount);
+								d->runTimer(m.pre_process_wait_s, pmIndex);
 								{
 									std::unique_lock<std::mutex> lk(ctx.cycleMutex);
 									ctx.cycleCv.wait(lk, [&]() {
 										return ctx.timerFinished.load() || ctx.stopRequested.load();
-										});
+									});
+								}
+								if (ctx.stopRequested) return;
+							}
+
+							// 3.2 工艺时间 (Dep)
+							double waitTime = 0.0;
+							if (i < processCount - 1)
+							{
+								waitTime = avgTime;
+							}
+							else
+							{
+								waitTime = lastTime;
+							}
+
+							logInform(pmSubsystem->getName().c_str(), "Process Wait (Dep): %.3f s (Step %d/%d)", waitTime, i + 1, loopCount);
+
+							d->runTimer(waitTime, pmIndex);
+							{
+								std::unique_lock<std::mutex> lk(ctx.cycleMutex);
+								ctx.cycleCv.wait(lk, [&]() {
+									return ctx.timerFinished.load() || ctx.stopRequested.load();
+								});
+							}
+
+							// 3.3 后处理Wait时间 (time7)
+							if (m.post_process_wait_s > 0) {
+								logInform(pmSubsystem->getName().c_str(), "Post Process Wait (time7): %.3f s (Step %d/%d)", m.post_process_wait_s, i + 1, loopCount);
+								d->runTimer(m.post_process_wait_s, pmIndex);
+								{
+									std::unique_lock<std::mutex> lk(ctx.cycleMutex);
+									ctx.cycleCv.wait(lk, [&]() {
+										return ctx.timerFinished.load() || ctx.stopRequested.load();
+									});
 								}
 							}
 						}

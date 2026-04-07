@@ -56,6 +56,8 @@ namespace FC {
 			double rotating_dec = 0.0;
 			double rotating_jerk = 0.0;
 			double rotating_vel = 0.0;
+			double pre_process_wait_s = 0.0;
+			double post_process_wait_s = 0.0;
 		};
 
 		struct PMRecipeDetails {
