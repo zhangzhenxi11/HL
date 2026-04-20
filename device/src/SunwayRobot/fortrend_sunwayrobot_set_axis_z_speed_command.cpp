@@ -75,7 +75,7 @@ public:
 		int error_code = 0;
 		int error_type = 1;
 
-		if (res == "ACK;"){
+		if (res.find("ACK") != std::string::npos){
 
 			auto startTime = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(10);

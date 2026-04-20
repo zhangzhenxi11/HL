@@ -239,7 +239,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 	logInform(robot->getName().c_str(), "ACK res:%s", res.c_str());
 
 	//if (res != "ACK;" && res.find(VerificationMessage) == std::string::npos)
-	if (res != "ACK;")//没找到
+
+	if (res.find("ACK") == std::string::npos)//没找到
 	{
 		logError(robot->getName().c_str(), error_message.c_str());
 
@@ -275,7 +276,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			auto currentTime = std::chrono::high_resolution_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-			if (res != std::string("ACK;") && (!res.empty()))
+			if (res.find("ACK") == std::string::npos && (!res.empty()))
 			{
 				break;
 			}
@@ -461,7 +462,6 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	}
 	//fill params
 	d->station_name = getStation()->getName();
-	//写机械手的傻逼，把0代表B,1代表A ,六百六十六！！！！真是小母牛坐飞机——牛逼上天了 ^*^ 
 	std::string str_arm = (getArm() == 0) ? "A" : "B";
 	// LL 工位处理
 

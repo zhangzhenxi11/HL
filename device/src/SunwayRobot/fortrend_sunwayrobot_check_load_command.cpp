@@ -126,7 +126,8 @@ namespace FC{
 		sendRequest(command);
 
 		std::string res = recvResponseRobotMessage(timeout);
-		if (res != std::string("ACK;") && res.find("RPS:CHECKWAFER") == std::string::npos)
+		//2026-4-20
+		if (res.find("ACK") == std::string::npos && res.find("RPS:CHECKWAFER") == std::string::npos)
 		{
 			logError(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 			
@@ -162,7 +163,7 @@ namespace FC{
 				auto currentTime = std::chrono::high_resolution_clock::now();
 				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-				if (res != std::string("ACK;"))
+				if (res.find("ACK") == std::string::npos)
 				{
 					break;
 				}

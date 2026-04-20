@@ -108,7 +108,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		Sleep(200);
 	}
 
-	if (res != "ACK;" && res != "RPS:SERVOS;")
+	if (res.find("ACK") == std::string::npos && res != "RPS:SERVOS;")
 	{
 		logError(sub->getName().c_str(), "上使能命令发生错误.");
 
@@ -143,8 +143,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		{
 			auto currentTime = std::chrono::high_resolution_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
-
-			if (res != std::string("ACK;") && (!res.empty()))
+			if (res.find("ACK") == std::string::npos && (!res.empty()))
 			{
 				break;
 			}
@@ -217,7 +216,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-		if (res != std::string("ACK;") && !res.empty())
+		if (res.find("ACK") == std::string::npos && !res.empty())
 		{
 			break;
 		}
@@ -288,7 +287,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime3);
 
-		if (res != std::string("ACK;") && !res.empty())
+		if (res.find("ACK") == std::string::npos && !res.empty())
 		{
 			break;
 		}

@@ -119,7 +119,7 @@
 
 #define DEBUG_LOAD_SNAPSHOT1
 
-#define DEBUG_TEST_PM1
+#define DEBUG_TEST_PM
 
 // 全局任务管理器
 TaskManager& taskManager = TaskManager::getInstance();
@@ -4942,12 +4942,7 @@ namespace FC{
 							logInform("Cycle", Poco::format("%s = %d", pm1_process_name, pm1_auto_step.load()).c_str());
 							pm1_auto_step.store(100);
 						}
-						else
-						{
-							Sleep(200);
-						}
-
-						if (pm1_allow_goto_craft)
+						else if (pm1_allow_goto_craft)
 						{//转工艺
 							pm1_auto_step.store(2000);
 							//pm1_auto_step = 2000;
@@ -5499,12 +5494,7 @@ namespace FC{
 							logInform("Cycle", Poco::format("%s = %d", pm2_process_name, pm2_auto_step.load()).c_str());
 							//pm2_auto_step = 100;
 						}
-						else
-						{
-							Sleep(200);
-						}
-
-						if (pm2_allow_goto_craft)
+						else if (pm2_allow_goto_craft)
 						{//转工艺
 							pm2_auto_step.store(2000);
 						}
@@ -6048,12 +6038,7 @@ namespace FC{
 							pm3_auto_step.store(100);
 							//pm3_auto_step = 100;
 						}
-						else
-						{
-							Sleep(200);
-						}
-
-						if (pm3_allow_goto_craft)
+						else if (pm3_allow_goto_craft)
 						{//转工艺
 							pm3_auto_step.store(2000);
 						}
@@ -6561,12 +6546,7 @@ namespace FC{
 							UpdatePmSubTransferDatas("PM4");
 							pm4_auto_step.store(100); //改成100,不然下不去
 						}
-						else
-						{
-							Sleep(200);
-						}
-
-						if (pm4_allow_goto_craft)
+						else if (pm4_allow_goto_craft)
 						{//转工艺
 							pm4_auto_step.store(2000);
 						}

@@ -344,12 +344,14 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 	if (command->type == EFEMAsciiApi::Type::INF){
 		#pragma region STATE
 			if (command->message->base == EFEMAsciiApi::Base::STATE){
-				if (command->message->paramers.size() == 5)
+				//2026-4-20 增加一个参数：LOCKED/UNLOCKED
+				if (command->message->paramers.size() == 6)
 				{
 					std::string  status = command->message->paramers.at(1);//UNKNOWN,IDLE,NORMAL,ERROR
 					std::string  busystatus = command->message->paramers.at(2);//BUSY or IDLE
 					std::string  boxstatus = command->message->paramers.at(3);//EMPTY or PRESENT
 					std::string  foupOpenStatus = command->message->paramers.at(4);//CLOSED or OPENED
+					std::string  lockedStatus = command->message->paramers.at(5);//LOCKED or UNLOCKED
 
 					//logError(getName().c_str(), "status=%s busystatus=%s boxstatus=%s foupOpenStatus=%s", status, busystatus, boxstatus, foupOpenStatus);
 					FortrendCassetteManager::Ptr cassManager =IKernelSubSystem::getKernel()->getKernelModule<FortrendCassetteManager>();
@@ -363,6 +365,15 @@ void EFEMLPSubsystem::handle(const std::shared_ptr<EFEMAsciiApi::Command>& comma
 					}
 					else{
 						setDoorOpend(true);
+					}
+
+					if (lockedStatus == "LOCKED")
+					{
+						setBoxLocked(true);
+					}
+					else
+					{
+						setBoxLocked(false);
 					}
 				
 					if (boxstatus == "EMPTY"){

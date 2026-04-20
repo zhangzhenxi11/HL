@@ -115,7 +115,9 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		res = recvResponseRobotMessage(timeout);
 		Sleep(200);
 	}
-	if (res != "ACK;" && res != "RPS:CLEAR;")
+	//2026-4-20:ack后面加上指令名称
+
+	if (res.find("ACK") == std::string::npos && res != "RPS:CLEAR;")
 	{
 		logError(robot->getName().c_str(), "机械手复位命令发生错误.");
 
@@ -165,7 +167,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			auto currentTime = std::chrono::high_resolution_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-			if (res != std::string("ACK;"))
+			if (res.find("ACK") == std::string::npos)
 			{
 				break;
 			}

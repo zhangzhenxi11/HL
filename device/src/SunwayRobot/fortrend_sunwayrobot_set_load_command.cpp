@@ -137,7 +137,7 @@ namespace FC{
 				Sleep(200);
 			}
 
-			if (res == "ACK;" || res == "RPS:LOAD;")
+			if (res.find("ACK") != std::string::npos || res == "RPS:LOAD;")
 			{
 				if(str_state=="1")
 				{
@@ -191,7 +191,7 @@ namespace FC{
 				Sleep(200);
 			}
 
-			if (res == "ACK;" || res == "RPS:LOAD;")
+			if (res.find("ACK") != std::string::npos || res == "RPS:LOAD;")
 			{
 				if (str_state == "1")
 				{

@@ -253,7 +253,7 @@ namespace FC {
 			QVBoxLayout* innerLayout = new QVBoxLayout(innerWidget);
 			d->innerTables[i] = new QTableWidget(innerWidget);
 			d->initInnerTable(d->innerTables[i]);
-			d->innerTables[i]->setMinimumHeight(280);
+			d->innerTables[i]->setMinimumHeight(380);
 			d->innerTables[i]->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 			// 内表按钮
@@ -724,6 +724,8 @@ namespace FC {
 								row.rotating_dec = mObj["rotating_dec"].toDouble();
 								row.rotating_jerk = mObj["rotating_jerk"].toDouble();
 								row.rotating_vel = mObj["rotating_vel"].toDouble();
+								row.pre_process_wait_s = mObj["pre_process_wait_s"].toDouble();
+								row.post_process_wait_s = mObj["post_process_wait_s"].toDouble();
 								details.motors.push_back(row);
 							}
 						}
@@ -873,6 +875,8 @@ namespace FC {
 					mObj["rotating_dec"] = m.rotating_dec;
 					mObj["rotating_jerk"] = m.rotating_jerk;
 					mObj["rotating_vel"] = m.rotating_vel;
+					mObj["pre_process_wait_s"] = m.pre_process_wait_s;
+					mObj["post_process_wait_s"] = m.post_process_wait_s;
 					mArr.append(mObj);
 				}
 				rObj["motors"] = mArr;
