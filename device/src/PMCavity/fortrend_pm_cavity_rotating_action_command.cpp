@@ -65,16 +65,23 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     std::string finish_address = command_config->getString("finish_address", "");
     std::string failed_address = command_config->getString("failed_address", "");
     std::string relative_position_address = command_config->getString("relative_position_address", "");
-
+    std::string warning_address = command_config->getString("warning_address","");
+    
     int timeout = command_config->getInt("timeout", -1);
     if (timeout < 10) {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 旋转轴动作命令超时参数设置错误.", sub->getName()), this);
     }
 
-    if ((start_address == "") || (finish_address == "") || (failed_address == "") ||  (relative_position_address == ""))
+    if ((start_address == "") || (finish_address == "") || (failed_address == "") ||  (relative_position_address == "") ||(warning_address ==""))
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 旋转轴命令地址未定义.", getName()), this);
     }
+    //2026-4-21 R轴只能Z轴在旋转面才可以动作
+    if (!sub->getRotatingimumPlaneLevelSignal())
+    {
+        throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_ABORT, Poco::format("Z轴不在旋转位停止旋转.", getName()), this);
+    }
+
     logInform(sub->getName().c_str(), "旋转轴动作命令开始执行.");
     sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
@@ -91,12 +98,15 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     int count = 0;
     bool readRes;
     bool failedRes;
+    bool warnRes;
     while (count <= loopCount)
     {
         Sleep(20);
         readBit(finish_address, readRes);
         readBit(failed_address, failedRes);
-        if (readRes || failedRes)
+        readBit(warning_address, warnRes);
+
+        if (readRes || failedRes || warnRes)
         {
             break;
         }
@@ -119,6 +129,11 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     else if (!readRes || failedRes)
     {
         AlarmMessage::Ptr alarm(new AlarmMessage(1, 1, "旋转轴定位开始命令执行失败"));
+        setAlarm(alarm);
+    }
+    else if (warnRes)
+    {
+        AlarmMessage::Ptr alarm(new AlarmMessage(1, 2, "Z轴不在旋转位,R轴停止"));
         setAlarm(alarm);
     }
     else

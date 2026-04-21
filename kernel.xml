@@ -736,7 +736,7 @@
 			<!--端口号  13000-->
 			<port>13000</port>	
 			<!--ip地址 192.168.10.111-->
-			<ip>127.0.0.1</ip>
+			<ip>192.168.10.111</ip>
 			<!--可单独运动的手臂数量-->
 			<ArmCount>2</ArmCount>
 			<!--可以工作的Station列表-->	
@@ -1430,6 +1430,8 @@
 				<start_address>MR8505</start_address>
 				<finish_address>MR8509</finish_address>
 				<failed_address>DM6828</failed_address>
+				<!--Z轴不在旋转位r轴停止-->
+				<warning_address>MR100101</warning_address>
 				<!--目标度数-->
 				<relative_position_address>DM6812</relative_position_address>
 				<timeout>60000</timeout>

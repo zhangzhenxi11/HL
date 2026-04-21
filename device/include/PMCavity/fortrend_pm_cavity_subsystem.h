@@ -78,7 +78,6 @@ namespace FC{
 
 		//升降轴动作
 		std::shared_ptr<PMCavityLiftingActionCommand> createLiftingActionCommand(double targetPos)const;//自动命令到目标位
-
 		std::shared_ptr<PMCavityToGetStationCommand> createToGetStationCommand()const;					//去取料位命令  位置1
 		std::shared_ptr<PMCavityToRotatingStationCommand> createToRotatingStationCommand()const;	    //去旋转位命令  位置2
 		std::shared_ptr<PMCavityToPutStationCommand> createToPutStationCommand()const;					//去工艺位命令  位置3
