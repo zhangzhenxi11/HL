@@ -77,16 +77,18 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
 					Poco::format("address: %s not defined", address.c_str()), this);
 			}
-			if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
-			{
-				auto& value = d->_axis_parames.*(mapping.member_ptr);
-				uint32_t _value = uint32_t(value);
-				if (!readUnsignedInt(address, _value))
-				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-						Poco::format(" %s写%s错误.", sub->getName(), mapping.description.c_str()), this);
-				}
-			}
+
+			//if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
+			//{
+			//	auto& value = d->_axis_parames.*(mapping.member_ptr);
+			//	uint16_t _value = uint16_t(value);
+			//	//2026-04-23 写uint16_t
+			//	if (!writeUnsignedShort(address, _value))
+			//	{
+			//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+			//			Poco::format(" %s写%s错误.", sub->getName(), mapping.description.c_str()), this);
+			//	}
+			//}
 
 			float& value = d->_axis_parames.*(mapping.member_ptr);
 

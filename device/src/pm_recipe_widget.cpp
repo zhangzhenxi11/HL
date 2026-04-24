@@ -34,6 +34,7 @@
 #include <QLineEdit>
 #include <QFileDialog>
 #include <QTimer>
+#include <cmath>
 
 #define TESET_PM_SERVER
 
@@ -1036,6 +1037,10 @@ namespace FC {
 			posMap["Process"] = cfg.params.process_position_mm;
 
 			int rotation_angle_deg = cfg.params.rotation_angle_deg;
+			const double angleToleranceDeg = 3.0;//误差值 3度
+			auto isAngleInTolerance = [&](double current, double target) {
+				return std::fabs(current - target) <= angleToleranceDeg;
+			};
 
 			// 计算时间分配
 			double totalTime = cfg.params.process_time_min; // 现在单位为秒
@@ -1059,16 +1064,13 @@ namespace FC {
 					QMetaObject::invokeMethod(this, "updateCycleCountDisplay", Qt::QueuedConnection, 
 						Q_ARG(int, cycleIdx + 1), Q_ARG(int, cycleCount));
 
-					// 初始移动到序列开始？
-					// 或者直接开始执行步骤。
-
 					for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
 						if (ctx.stopRequested) break;
 
 					QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex),
 						Q_ARG(int, sIdx), Q_ARG(QColor, Qt::green));
 
-					const auto& step = cfg.steps[sIdx];
+					const auto& step = cfg.steps[sIdx]; 
 					std::string from = step.from_pos;
 					std::string to = step.to_pos;
 					std::string rName = step.recipe_name;
@@ -1127,8 +1129,8 @@ namespace FC {
 						pmSubsystem->setPMCavityRAxleJerk((uint32_t)m.rotating_jerk);
 						pmSubsystem->setPMCavityRAxleSpeed(m.rotating_vel);
 
-						// 1. Z轴移动（标准 From!=To）
-						if (from != to)
+						// 1. Z轴移动（标准 From!=To） 往高位走的情况
+						if (from != to && !(to == "Transfer"))
 						{
 							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
 							pmSubsystem->startCommand(cmd);
@@ -1149,18 +1151,102 @@ namespace FC {
 								d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, to);
 							}
 						}
+						// 2. 返回到Transfer面时需要先旋转再移动（From!=To且To==Transfer）往低位走的情况
+						if (to == "Transfer")
+						{
+							double rotatePos = posMap["Rotate"];
+							{
+								auto cmd = pmSubsystem->createLiftingActionCommand(rotatePos);
+								pmSubsystem->startCommand(cmd);
+								cmd->wait();
+
+								if (d->pmSignalServer) {
+									d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, from);
+								}
+
+								if (cmd->hasError() || ctx.stopRequested) {
+									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", "Rotate");
+									QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+									QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+									throw std::runtime_error("Move Z Failed");
+								}
+							}
+
+							if (!pmSubsystem->getRotatingimumPlaneLevelSignal()) {
+								logFailed(pmSubsystem->getName(), "Rotate Plane Level Signal False");
+								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+								throw std::runtime_error("Rotate Plane Level Signal False");
+							}
+
+							double targetAngle = pmSubsystem->getPmLiftPinSafeAnglePos();
+							double currentAngle = pmSubsystem->getPMCavityRAxleLocation();
+							if (!isAngleInTolerance(currentAngle, targetAngle))
+							{
+								for (int attempt = 1; attempt <= 3; ++attempt)
+								{
+									if (ctx.stopRequested) break;
+
+									auto cmd = pmSubsystem->createRotatingActionCommand(targetAngle, 2); //绝对移动，增加容错尝试
+									pmSubsystem->startCommand(cmd);
+									cmd->wait();
+
+									if (cmd->hasError() || ctx.stopRequested) {
+										logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
+										QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+										throw std::runtime_error("Rotate Failed");
+									}
+
+									currentAngle = pmSubsystem->getPMCavityRAxleLocation();
+									if (isAngleInTolerance(currentAngle, targetAngle)) break;
+
+									if (attempt >= 3) {
+										logFailed(pmSubsystem->getName(), Poco::format("Rotate Angle Not Reached, target=%.3f, current=%.3f", targetAngle, currentAngle));
+										QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+										throw std::runtime_error("Rotate Angle Not Reached");
+									}
+								}
+							}
+
+							if (ctx.stopRequested) break;
+
+							double transferPos = posMap["Transfer"];
+							{
+								auto cmd = pmSubsystem->createLiftingActionCommand(transferPos);
+								pmSubsystem->startCommand(cmd);
+								cmd->wait();
+
+								if (cmd->hasError() || ctx.stopRequested) {
+									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
+									QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+									QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+									throw std::runtime_error("Move Z Failed");
+								}
+							}
+
+							double finalAngle = pmSubsystem->getPMCavityRAxleLocation();
+							if (!isAngleInTolerance(finalAngle, targetAngle)) {
+								logFailed(pmSubsystem->getName(), Poco::format("Final Angle Check Failed, target=%.3f, current=%.3f", targetAngle, finalAngle));
+								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+								throw std::runtime_error("Final Angle Check Failed");
+							}
+						}
 
 						// 2. Rotate Action
 						//到达旋转面时且是from：Process to:Rotate
 
 						if (from == "Process" && to == "Rotate")
 						{
-							//if (pmSubsystem->getRotatingimumPlaneLevelSignal()) //检测是否达到了旋转面
+							//先旋转一定角度,必须在旋转面时才能旋转
+							if (pmSubsystem->getRotatingimumPlaneLevelSignal())
 							{
-								//先旋转一定角度
 								auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 								pmSubsystem->startCommand(cmd);
 								cmd->wait();
+
 								if (cmd->hasError() || ctx.stopRequested) {
 									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Rotate Failed", "");
 									QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
@@ -1184,8 +1270,16 @@ namespace FC {
 										d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, "Process");
 									}
 								}
+
 							}
+							else
+							{
+								//未达到报警，并停止
+								throw std::runtime_error("Move Z Failed");
+							}
+							
 						}
+
 
 						// 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
 						if (from == "Process" && to == "Rotate")

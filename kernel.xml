@@ -1259,6 +1259,8 @@
 				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
 				<!--R轴报警-->
 				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
+				<!--lifter pin角度位置-->
+				<rotating_axis_safe_Angle_address>DM6842</rotating_axis_safe_Angle_address>
 			</Update>
 			<Reset>
 				<!--清除升降轴错误-->
@@ -1428,6 +1430,7 @@
 			<!--旋转轴动作-->
 			<RotatingAxisAction>
 				<start_address>MR8505</start_address>
+				<start_address_2>MR8510</start_address_2>
 				<finish_address>MR8509</finish_address>
 				<failed_address>DM6828</failed_address>
 				<!--Z轴不在旋转位r轴停止-->
@@ -1523,7 +1526,7 @@
 				<!--旋转轴jog速度-->
 				<rotating_axis_jog_speed_address>DM6816</rotating_axis_jog_speed_address>
 				<!--旋转轴寸动移动量-->
-				<rotating_axis_inch_movement_address>DM6820</rotating_axis_inch_movement_address>			
+				<rotating_axis_inch_movement_address>DM6820</rotating_axis_inch_movement_address>
 			</AxisWriteParameters>	
 			<GetFinished>
 				<write_address>M210</write_address>
@@ -1599,7 +1602,9 @@
 				<!--Z轴报警-->
 				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
 				<!--R轴报警-->
-				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>				
+				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
+				<!--lifter pin角度位置-->
+				<rotating_axis_safe_Angle_address>DM6842</rotating_axis_safe_Angle_address>				
 			</Update>
 			<Reset>
 				<!--清除升降轴错误-->

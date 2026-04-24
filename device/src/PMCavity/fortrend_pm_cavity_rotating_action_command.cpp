@@ -31,16 +31,18 @@ namespace FC{
 class PMCavityRotatingActionCommandPrivate{
 public:
     double _degree; //角度
+	int _model;   //模式
     //int  _count;    //次数
 };
 
 /**
 * PMCavityRotatingActionCommand
 */
-PMCavityRotatingActionCommand::PMCavityRotatingActionCommand(KeyencePlcSubSystemHelper* helper, double degree)
+PMCavityRotatingActionCommand::PMCavityRotatingActionCommand(KeyencePlcSubSystemHelper* helper, double degree, int model)
     :KeyencePlcCommandExecuter(helper)
     , d(new PMCavityRotatingActionCommandPrivate){
     d->_degree = degree;
+	d->_model = model;
     //d->_count = count;
 
 };
@@ -59,14 +61,21 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, Poco::format("工位: %s 晶圆盒为空.", sub->getName()), this);
     }
     std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
-
-    //fill params
-    std::string start_address = command_config->getString("start_address", "");
+    std::string start_address;
+    if (d->_model == 1)
+    {
+        //相对移动模式
+        std::string start_address = command_config->getString("start_address", "");
+    }
+    else 
+    {
+		//绝对移动模式
+        std::string start_address = command_config->getString("start_address_2", "");
+    }
     std::string finish_address = command_config->getString("finish_address", "");
     std::string failed_address = command_config->getString("failed_address", "");
     std::string relative_position_address = command_config->getString("relative_position_address", "");
-    std::string warning_address = command_config->getString("warning_address","");
-    
+    std::string warning_address = command_config->getString("warning_address", "");
     int timeout = command_config->getInt("timeout", -1);
     if (timeout < 10) {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 旋转轴动作命令超时参数设置错误.", sub->getName()), this);
@@ -81,8 +90,11 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_ABORT, Poco::format("Z轴不在旋转位停止旋转.", getName()), this);
     }
+    if(d->_model ==1)
+        logInform(sub->getName().c_str(), "旋转轴相对位置动作命令开始执行.");
+    else
+		logInform(sub->getName().c_str(), "旋转轴绝对位置命令开始执行.");
 
-    logInform(sub->getName().c_str(), "旋转轴动作命令开始执行.");
     sub->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
     if (!writeFloat(relative_position_address, d->_degree))

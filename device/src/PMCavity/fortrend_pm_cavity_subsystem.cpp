@@ -221,11 +221,16 @@ namespace FC{
 
 		// z轴jerk
 		std::string lifting_axis_jerk_address;
-		uint32_t lifting_axis_jerk_value;
+		float lifting_axis_jerk_value;
 
 		// r轴jerk
 		std::string rotating_axis_jerk_address;
-		uint32_t rotating_axis_jerk_value;
+		float rotating_axis_jerk_value;
+
+		//lift pin位置角度 
+		std::string rotating_axis_safe_angle_address;
+		float rotating_axis_safe_angle_value;
+
 	};
 
 	/**
@@ -798,6 +803,11 @@ namespace FC{
 	float FortrendPMCavitySubsystem::getPmRotatingTargetPos() const
 	{
 		return d->axis_setting_parameters.rotating_axis_target_position;
+	}
+
+	float FortrendPMCavitySubsystem::getPmLiftPinSafeAnglePos() const
+	{
+		return d->rotating_axis_safe_angle_value;
 	}
 	/**
 
@@ -1446,9 +1456,11 @@ namespace FC{
 			io_changed |= safe_read_float(d->rotating_axis_dece_address, d->rotating_axis_dece_value);
 
 			//jerk
-			io_changed |= safe_read_unsignedInt(d->lifting_axis_jerk_address, d->lifting_axis_jerk_value);
+			io_changed |= safe_read_float(d->lifting_axis_jerk_address, d->lifting_axis_jerk_value);
 			//jerk
-			io_changed |= safe_read_unsignedInt(d->rotating_axis_jerk_address, d->rotating_axis_jerk_value);
+			io_changed |= safe_read_float(d->rotating_axis_jerk_address, d->rotating_axis_jerk_value);
+			//lift pin angle
+			io_changed |= safe_read_float(d->rotating_axis_safe_angle_address,d->rotating_axis_safe_angle_value);
 
 
 			if (io_changed)
@@ -1625,6 +1637,8 @@ namespace FC{
 
 			d->rotating_axis_motor_alarm_address = config->getString("Update.rotating_axis_alarm_address","");
 
+			d->rotating_axis_safe_angle_address = config->getString("Update.rotating_axis_safe_Angle_address","");
+
 		}
 		if (config->has("AxisReadParameters"))
 		{
@@ -1713,10 +1727,10 @@ namespace FC{
 		return ret;
 	}
 
-	std::shared_ptr<PMCavityRotatingActionCommand> FortrendPMCavitySubsystem::createRotatingActionCommand(double degree) const
+	std::shared_ptr<PMCavityRotatingActionCommand> FortrendPMCavitySubsystem::createRotatingActionCommand(double degree, int model) const
 	{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
-		PMCavityRotatingActionCommand::Ptr ret(new PMCavityRotatingActionCommand(self, degree));
+		PMCavityRotatingActionCommand::Ptr ret(new PMCavityRotatingActionCommand(self, degree, model));
 		return ret;
 	}
 

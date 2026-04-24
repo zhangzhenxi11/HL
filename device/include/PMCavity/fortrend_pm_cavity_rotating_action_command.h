@@ -22,7 +22,7 @@ class  PMCavityRotatingActionCommand : public std::enable_shared_from_this<PMCav
 {
 public:
     DECLARE_PTR(PMCavityRotatingActionCommand)
-    PMCavityRotatingActionCommand(KeyencePlcSubSystemHelper* helper,double degree);
+    PMCavityRotatingActionCommand(KeyencePlcSubSystemHelper* helper,double degree,int model);
     virtual std::string getName()const override {return "RotatingAxisAction";}
 protected:
     virtual RunResult onRun() throw(KernelException);

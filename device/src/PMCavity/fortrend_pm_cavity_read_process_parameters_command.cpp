@@ -77,19 +77,19 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT,
 					Poco::format("address: %s not defined", address.c_str()), this);
 			}
-			//readUnsignedInt 
-			if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
-			{
-				float& value = axis_parames.*(mapping.member_ptr);
-				uint32_t _value = uint32_t(value);
-				if (!readUnsignedInt(address, _value))
-				{
-					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
-						Poco::format(" %s读取%s错误.", sub->getName(), mapping.description.c_str()), this);
-				}
-				value = float(_value);
-			}
-			else
+			//2026-4-24 都是float 
+			//if (mapping.config_key == "lifting_axis_jerk_address" || mapping.config_key == "rotating_axis_jerk_address")
+			//{
+			//	float& value = axis_parames.*(mapping.member_ptr);
+			//	uint16_t _value = uint16_t(value);
+			//	if (!readUnsignedShort(address, _value))
+			//	{
+			//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR,
+			//			Poco::format(" %s读取%s错误.", sub->getName(), mapping.description.c_str()), this);
+			//	}
+			//	value = float(_value);
+			//}
+			//else
 			{
 				float& value = axis_parames.*(mapping.member_ptr);
 
