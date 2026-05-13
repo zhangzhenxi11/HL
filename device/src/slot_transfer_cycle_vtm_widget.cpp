@@ -5621,7 +5621,7 @@ namespace FC{
 #ifdef DEBUG_TEST_PM
 						robot_selected_arm = 0;
 						wtr_robot_mutex.lock();
-						auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
+						auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
 						wtr->startCommand(cmd);
 						cmd->wait();
 						wtr_robot_mutex.unlock();
@@ -6834,7 +6834,7 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
+							logFailedNotNormal(wtr->getName(), pm_process_name, pm4_auto_step.load());
 						}
 					}
 					break;

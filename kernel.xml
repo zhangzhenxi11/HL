@@ -1091,6 +1091,7 @@
 			<!--旋转轴动作-->
 			<RotatingAxisAction>
 				<start_address>MR8505</start_address>
+				<start_address_2>MR8510</start_address_2>
 				<finish_address>MR8509</finish_address>
 				<failed_address>DM6828</failed_address>
 				<!--目标度数-->

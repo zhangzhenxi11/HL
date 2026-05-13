@@ -35,7 +35,7 @@
 #include <QFileDialog>
 #include <QTimer>
 #include <cmath>
-
+#include <algorithm> // 在文件顶部添加
 #define TESET_PM_SERVER
 
 namespace FC {
@@ -1038,8 +1038,23 @@ namespace FC {
 
 			int rotation_angle_deg = cfg.params.rotation_angle_deg;
 			const double angleToleranceDeg = 3.0;//误差值 3度
+			auto angleDistanceDeg = [](double a, double b) {
+				double diff = std::fmod(std::fabs(a - b), 360.0);
+				return (std::min)(diff, 360.0 - diff);
+			};
 			auto isAngleInTolerance = [&](double current, double target) {
-				return std::fabs(current - target) <= angleToleranceDeg;
+				return angleDistanceDeg(current, target) <= angleToleranceDeg;
+			};
+			auto waitAngleInTolerance = [&](double target, int timeoutMs) {
+				const int stepMs = 50;
+				int waitedMs = 0;
+				double current = pmSubsystem->getPMCavityRAxleLocation();
+				while (!ctx.stopRequested && waitedMs < timeoutMs && !isAngleInTolerance(current, target)) {
+					Sleep(stepMs);
+					waitedMs += stepMs;
+					current = pmSubsystem->getPMCavityRAxleLocation();
+				}
+				return current;
 			};
 
 			// 计算时间分配
@@ -1198,7 +1213,7 @@ namespace FC {
 										throw std::runtime_error("Rotate Failed");
 									}
 
-									currentAngle = pmSubsystem->getPMCavityRAxleLocation();
+									currentAngle = waitAngleInTolerance(targetAngle, 10000);
 									if (isAngleInTolerance(currentAngle, targetAngle)) break;
 
 									if (attempt >= 3) {

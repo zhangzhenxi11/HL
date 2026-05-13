@@ -941,9 +941,16 @@ namespace FC{
 	void FortrendPMCavitySubsystem::setRotationHome(bool enable)
 	{
 		logInform(getName().c_str(), "写R轴回原开始.");
-		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
+		if(getRotatingimumPlaneLevelSignal())
 		{
-			logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
+			if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
+			{
+				logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
+			}
+		}
+		else
+		{
+			logError(getName().c_str(), "Z轴不在旋转位置，禁止回原!");
 		}
 	}
 

@@ -62,16 +62,19 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     }
     std::shared_ptr<KernelConfiguration> command_config = sub->getConfigure()->createView(getName());
     std::string start_address;
+	logInform(sub->getName().c_str(), "旋转轴动作命令模式:%d.", d->_model);
+
     if (d->_model == 1)
     {
         //相对移动模式
-        std::string start_address = command_config->getString("start_address", "");
+        start_address = command_config->getString("start_address", "");
     }
     else 
     {
 		//绝对移动模式
-        std::string start_address = command_config->getString("start_address_2", "");
+        start_address = command_config->getString("start_address_2", "");
     }
+
     std::string finish_address = command_config->getString("finish_address", "");
     std::string failed_address = command_config->getString("failed_address", "");
     std::string relative_position_address = command_config->getString("relative_position_address", "");
@@ -80,7 +83,11 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     if (timeout < 10) {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: 旋转轴动作命令超时参数设置错误.", sub->getName()), this);
     }
-
+    //logInform(sub->getName().c_str(), "start_address:%s", start_address.c_str());
+    //logInform(sub->getName().c_str(), "finish_address:%s", finish_address.c_str());
+    //logInform(sub->getName().c_str(), "failed_address:%s", failed_address.c_str());
+    //logInform(sub->getName().c_str(), "relative_position_address:%s", relative_position_address.c_str());
+    //logInform(sub->getName().c_str(), "warning_address:%s", warning_address.c_str());
     if ((start_address == "") || (finish_address == "") || (failed_address == "") ||  (relative_position_address == "") ||(warning_address ==""))
     {
         throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_COMMAND_NO_SUPPORT, Poco::format("地址: 旋转轴命令地址未定义.", getName()), this);
