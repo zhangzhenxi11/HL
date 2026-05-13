@@ -545,6 +545,7 @@ namespace FC{
 
 		bool pm2_allow_get_put_wafer = false;//PM2允许取放  
 		bool pm2_allow_goto_craft = false;   //PM2允许转到工艺
+		bool pm2_need_return_wafer = false;  //PM2工艺完成后需取回晶圆（非交换场景）
 
 		bool pm3_allow_get_put_wafer = false;//PM3允许取放  
 		bool pm3_allow_goto_craft = false;   //PM3允许转到工艺
@@ -896,7 +897,7 @@ namespace FC{
 				#pragma region 给TOOL上料
 				case 100:
 				{
-					logWarn("EFEM", "efem_auto_step:100,给%s上料 Lock thread...", current_loadlock.c_str());
+					//logWarn("EFEM", "efem_auto_step:100,给%s上料 Lock thread...", current_loadlock.c_str());
 
 					if (efemUnkownStatusTasks.size() > 0)
 					{
@@ -5454,6 +5455,7 @@ namespace FC{
 					// 检查是否需要重置
 					if (needReset_PM2.load()) {
 						pm2_auto_step = 10;
+						pm2_need_return_wafer = false;
 						needReset_PM2 = false;
 						continue; // 跳过本次循环剩余部分
 					}
@@ -5497,6 +5499,10 @@ namespace FC{
 						else if (pm2_allow_goto_craft)
 						{//转工艺
 							pm2_auto_step.store(2000);
+						}
+						else if (pm2_need_return_wafer)
+						{//PM2工艺完成，需取回晶圆（非交换场景）
+							pm2_auto_step.store(300);
 						}
 						else {
 							Sleep(200);
@@ -5883,6 +5889,54 @@ namespace FC{
 					}
 					break;
 
+					case 300:
+					{//PM2工艺完成，WTR从PM2取回晶圆（非交换场景）
+						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						{
+							auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+							bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;
+
+							if (haswaferpm)
+							{
+								//从任务中读取arm，确保与LL放片时使用的arm一致
+								int return_arm = 0;
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								if (!pm2CompletedTasks.empty())
+								{
+									return_arm = pm2CompletedTasks.at(0).arm;
+								}
+
+								wtr_robot_mutex.lock();
+								auto cmd = wtr->createGetCommand(pm2, return_arm, 1);
+								wtr->startCommand(cmd);
+								cmd->wait();
+								wtr_robot_mutex.unlock();
+
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)", pm2_process_name, pm2_auto_step.load());
+								}
+								else
+								{
+									logInform("PM2", Poco::format("回程取片完成，WTR arm%d持有晶圆，等待LL放片.", return_arm).c_str());
+									pm2_need_return_wafer = false;
+									pm2_auto_step.store(10);
+								}
+							}
+							else
+							{
+								logInform("PM2", "PM2中无物理晶圆，无需回程取片.");
+								pm2_need_return_wafer = false;
+								pm2_auto_step.store(10);
+							}
+						}
+						else
+						{
+							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+						}
+					}
+					break;
+
 					case 2000:
 					{
 						UpdatePmSubTransferDatas("PM2");
@@ -5920,6 +5974,7 @@ namespace FC{
 						{
 							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
+							pm2_need_return_wafer = true;
 							pm2_auto_step.store(10);
 						}
 						else
