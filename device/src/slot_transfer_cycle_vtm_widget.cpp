@@ -482,6 +482,7 @@ namespace FC{
 		int loadlock2_auto_step = 0;
 		int vacuum_auto_step = 0;
 		int pm_auto_step;
+		int robot_step = 10;
 		std::atomic<int> pm1_auto_step;
 		std::atomic<int> pm2_auto_step;
 		std::atomic<int> pm3_auto_step;
@@ -1030,6 +1031,7 @@ namespace FC{
 					}
 					else
 					{
+						efem_auto_step = 11; //2026-5-14 继续监控上料请求，避免死循环在100
 						Sleep(500);
 					}
 				}
@@ -3068,7 +3070,7 @@ namespace FC{
 				break;
 				case 950:
 				{
-					logInform("Cycle", "llA step 950");
+					//logInform("Cycle", "llA step 950");
 					UpdateLLASubTransferDatas();
 					if (loadLockAPendingTasks.size() > 0 && !abortCycle)
 					{
@@ -3234,7 +3236,16 @@ namespace FC{
 							loadlock1_auto_step = 1052;
 						} else {
 							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
+							Sleep(2000);
+							loadlock1_auto_step = 1051; // 回退重试
 						}
+					} else if (!robot_get_from_lla.requested.load()) {
+						logFailed(lk1->getName(), Poco::format("LLA 1055步：请求标志异常(done=false,requested=false)，回退重发 %s：%d", loadlock1_process_name, loadlock1_auto_step));
+						Sleep(1000);
+						loadlock1_auto_step = 1051;
+					} else {
+						logInform(lk1->getName().c_str(), "LLA 1055步：等待Robot从LLA取片完成, done=%d, requested=%d, robot_step=%d",
+							robot_get_from_lla.done.load(), robot_get_from_lla.requested.load(), robot_step);
 					}
 				}
 				break;
@@ -3565,6 +3576,14 @@ namespace FC{
 				break;
 				case 2056: // 等待Robot线程从PM取片完成（LLA回程）
 				{
+					if (loadLockAReturnPendingTasks.empty())
+					{
+						logFailed(lk1->getName(), Poco::format("%s 2056步回程任务队列为空 %s：%d",
+							lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
+						loadlock1_auto_step = 900;
+						break;
+					}
+
 					const auto& task = loadLockAReturnPendingTasks.front();
 					std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
 					RobotTransferRequest* req = nullptr;
@@ -3573,14 +3592,31 @@ namespace FC{
 					else if (pm_name == "PM3") req = &robot_get_from_pm3;
 					else if (pm_name == "PM4") req = &robot_get_from_pm4;
 
-					if (req != nullptr && req->done.load()) {
+					logInform("Cycle", Poco::format("LLA回程：pm_name:%s.", pm_name).c_str());
+
+					if (req == nullptr) {
+						logFailed(lk1->getName(), Poco::format("LLA回程2056步：无法匹配PM请求标志, pm_name=%s", pm_name));
+						loadlock1_auto_step = 900;
+						break;
+					}
+
+					if (req->done.load()) {
 						if (req->success.load()) {
 							logInform("Cycle", Poco::format("LLA回程：已从%s取回晶圆，准备放入LLA.", pm_name).c_str());
 							loadlock1_auto_step = 2060;
 						} else {
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
-								loadlock1_process_name, loadlock1_auto_step);
+							logInform(wtr->getName().c_str(), "LLA回程从%s取片失败，2秒后重试 step=%d", pm_name.c_str(), loadlock1_auto_step);
+							Sleep(2000);
+							loadlock1_auto_step = 2055; // 回退重试
 						}
+					} else if (!req->requested.load()) {
+						// done未完成且requested已被清除（可能是reset导致），重新发起请求
+						logInform(lk1->getName().c_str(), "LLA回程2056步：%s请求标志异常(done=false,requested=false)，回退重发 step=%d", pm_name.c_str(), loadlock1_auto_step);
+						Sleep(1000);
+						loadlock1_auto_step = 2055;
+					} else {
+						logInform(lk1->getName().c_str(), "LLA回程2056步：等待Robot从%s取片完成, done=%d, requested=%d, robot_step=%d",
+							pm_name.c_str(), req->done.load(), req->requested.load(), robot_step);
 					}
 				}
 				break;
@@ -3629,8 +3665,14 @@ namespace FC{
 						if (robot_put_to_lla.success.load()) {
 							loadlock1_auto_step = 2070;
 						} else {
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
+							logInform(wtr->getName().c_str(), "LLA放片失败，2秒后重试 step=%d", loadlock1_auto_step);
+							Sleep(2000);
+							loadlock1_auto_step = 2060; // 回退重试
 						}
+					} else if (!robot_put_to_lla.requested.load()) {
+						logInform(lk1->getName().c_str(), "LLA 2065步：请求标志异常(done=false,requested=false)，回退重发 step=%d", loadlock1_auto_step);
+						Sleep(1000);
+						loadlock1_auto_step = 2060;
 					}
 				}
 				break;
@@ -4279,7 +4321,7 @@ namespace FC{
 				break;
 				case 950:
 				{
-					logInform("Cycle", "LLB step 950");
+					//logInform("Cycle", "LLB step 950");
 					UpdateLLBSubTransferDatas();
 
 					if (loadLockBPendingTasks.size() > 0 && !abortCycle)
@@ -4442,8 +4484,17 @@ namespace FC{
 						if (robot_get_from_llb.success.load()) {
 							loadlock2_auto_step = 1052;
 						} else {
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock2_process_name, loadlock2_auto_step);
+							logInform(wtr->getName().c_str(), "LLB取片失败，2秒后重试 step=%d", loadlock2_auto_step);
+							Sleep(2000);
+							loadlock2_auto_step = 1051; // 回退重试
 						}
+					} else if (!robot_get_from_llb.requested.load()) {
+						logInform(lk2->getName().c_str(), "LLB 1055步：请求标志异常(done=false,requested=false)，回退重发 step=%d", loadlock2_auto_step);
+						Sleep(1000);
+						loadlock2_auto_step = 1051;
+					} else {
+						logInform(lk2->getName().c_str(), "LLB 1055步：等待Robot从LLB取片完成, done=%d, requested=%d, robot_step=%d",
+							robot_get_from_llb.done.load(), robot_get_from_llb.requested.load(), robot_step);
 					}
 				}
 				break;
@@ -4771,6 +4822,14 @@ namespace FC{
 				break;
 				case 2056: // 等待Robot线程从PM取片完成（LLB回程）
 				{
+					if (loadLockBReturnPendingTasks.empty())
+					{
+						logFailed(lk2->getName(), Poco::format("%s 2056步回程任务队列为空 %s：%d",
+							lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
+						loadlock2_auto_step = 900;
+						break;
+					}
+
 					const auto& task = loadLockBReturnPendingTasks.front();
 					std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
 					RobotTransferRequest* req = nullptr;
@@ -4779,16 +4838,26 @@ namespace FC{
 					else if (pm_name == "PM3") req = &robot_get_from_pm3;
 					else if (pm_name == "PM4") req = &robot_get_from_pm4;
 
-					if (req != nullptr && req->done.load()) {
+					if (req == nullptr) {
+						logFailed(lk2->getName(), Poco::format("LLB回程2056步：无法匹配PM请求标志, pm_name=%s", pm_name));
+						loadlock2_auto_step = 900;
+						break;
+					}
+
+					if (req->done.load()) {
 						if (req->success.load()) {
 							logInform("Cycle", Poco::format("LLB回程：已从%s取回晶圆，准备放入LLB.", pm_name).c_str());
 							loadlock2_auto_step = 2060;
 						} else {
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
-								loadlock2_process_name, loadlock2_auto_step);
+							logInform(wtr->getName().c_str(), "LLB回程从%s取片失败，2秒后重试 step=%d", pm_name.c_str(), loadlock2_auto_step);
 							Sleep(2000);
 							loadlock2_auto_step = 2055; // 回退重试
 						}
+					} else if (!req->requested.load()) {
+						// done未完成且requested已被清除（可能是reset导致），重新发起请求
+						logInform(lk2->getName().c_str(), "LLB回程2056步：%s请求标志异常(done=false,requested=false)，回退重发 step=%d", pm_name.c_str(), loadlock2_auto_step);
+						Sleep(1000);
+						loadlock2_auto_step = 2055;
 					}
 				}
 				break;
@@ -4841,10 +4910,14 @@ namespace FC{
 						if (robot_put_to_llb.success.load()) {
 							loadlock2_auto_step = 2070;
 						} else {
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
+							logInform(wtr->getName().c_str(), "LLB放片失败，2秒后重试 step=%d", loadlock2_auto_step);
 							Sleep(2000);
 							loadlock2_auto_step = 2060; // 回退重试
 						}
+					} else if (!robot_put_to_llb.requested.load()) {
+						logInform(lk2->getName().c_str(), "LLB 2065步：请求标志异常(done=false,requested=false)，回退重发 step=%d", loadlock2_auto_step);
+						Sleep(1000);
+						loadlock2_auto_step = 2060;
 					}
 				}
 				break;
@@ -5324,8 +5397,20 @@ namespace FC{
 								pm1_allow_get_put_wafer = false;
 								pm1_auto_step.store(2000);
 							} else {
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
+								logInform(wtr->getName().c_str(), "PM1放片失败，2秒后重试 step=%d", pm1_auto_step.load());
+								Sleep(2000);
+								if (robot_put_to_pm1.arm.load() == 0)
+									pm1_auto_step.store(1010);
+								else
+									pm1_auto_step.store(1030);
 							}
+						} else if (!robot_put_to_pm1.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM1 1015步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm1_auto_step.load());
+							Sleep(1000);
+							if (robot_put_to_pm1.arm.load() == 0)
+								pm1_auto_step.store(1010);
+							else
+								pm1_auto_step.store(1030);
 						}
 					}
 					break;
@@ -5414,8 +5499,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM1交换料失败(A取B放)， %s：%d", pm_process_name, pm1_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM1交换料失败(A取B放)，2秒后重试 step=%d", pm1_auto_step.load());
+								Sleep(2000);
+								pm1_auto_step.store(1060);
 							}
+						} else if (!robot_exchange_pm1.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM1 1065步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm1_auto_step.load());
+							Sleep(1000);
+							pm1_auto_step.store(1060);
 						}
 					}
 					break;
@@ -5445,8 +5536,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM1交换料失败(B取A放)， %s：%d", pm_process_name, pm1_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM1交换料失败(B取A放)，2秒后重试 step=%d", pm1_auto_step.load());
+								Sleep(2000);
+								pm1_auto_step.store(1070);
 							}
+						} else if (!robot_exchange_pm1.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM1 1075步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm1_auto_step.load());
+							Sleep(1000);
+							pm1_auto_step.store(1070);
 						}
 					}
 					break;
@@ -5475,8 +5572,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM1最终取片失败， %s：%d", pm1_process_name, pm1_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM1最终取片失败，2秒后重试 step=%d", pm1_auto_step.load());
+								Sleep(2000);
+								pm1_auto_step.store(1090);
 							}
+						} else if (!robot_get_from_pm1.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM1 1095步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm1_auto_step.load());
+							Sleep(1000);
+							pm1_auto_step.store(1090);
 						}
 					}
 					break;
@@ -5784,8 +5887,20 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM2放片失败(A臂)， %s：%d", pm2_process_name, pm2_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM2放片失败，2秒后重试 step=%d", pm2_auto_step.load());
+								Sleep(2000);
+								if (robot_put_to_pm2.arm.load() == 0)
+									pm2_auto_step.store(1010);
+								else
+									pm2_auto_step.store(1030);
 							}
+						} else if (!robot_put_to_pm2.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM2 1015步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm2_auto_step.load());
+							Sleep(1000);
+							if (robot_put_to_pm2.arm.load() == 0)
+								pm2_auto_step.store(1010);
+							else
+								pm2_auto_step.store(1030);
 						}
 					}
 					break;
@@ -5865,8 +5980,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM2交换料失败(A取B放)， %s：%d", pm2_process_name, pm2_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM2交换料失败(A取B放)，2秒后重试 step=%d", pm2_auto_step.load());
+								Sleep(2000);
+								pm2_auto_step.store(1060);
 							}
+						} else if (!robot_exchange_pm2.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM2 1065步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm2_auto_step.load());
+							Sleep(1000);
+							pm2_auto_step.store(1060);
 						}
 					}
 					break;
@@ -5927,8 +6048,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM2最终取片失败， %s：%d", pm2_process_name, pm2_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM2最终取片失败，2秒后重试 step=%d", pm2_auto_step.load());
+								Sleep(2000);
+								pm2_auto_step.store(1090);
 							}
+						} else if (!robot_get_from_pm2.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM2 1095步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm2_auto_step.load());
+							Sleep(1000);
+							pm2_auto_step.store(1090);
 						}
 					}
 					break;
@@ -5941,6 +6068,13 @@ namespace FC{
 						{
 							logInform("PM2", "LL已取回晶圆，PM2回程流程结束.");
 							pm2_need_return_wafer = false;
+							// 检查是否还有待处理的晶圆（如另一片LL在WTR上等待）
+							UpdatePmSubTransferDatas("PM2");
+							if (pm2PendingTasks.size() > 0 || pm2CompletedTasks.size() > 0)
+							{
+								pm2_allow_get_put_wafer = true;
+								logInform("PM2", "PM2回程结束后检测到待处理任务，重新允许取放片");
+							}
 							pm2_auto_step.store(10);
 						}
 						else
@@ -6372,10 +6506,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM3最终取片失败， %s：%d", pm3_process_name, pm3_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM3最终取片失败，2秒后重试 step=%d", pm3_auto_step.load());
 								Sleep(2000);
-								pm3_auto_step.store(1090); // 回退重试
+								pm3_auto_step.store(1090);
 							}
+						} else if (!robot_get_from_pm3.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM3 1095步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm3_auto_step.load());
+							Sleep(1000);
+							pm3_auto_step.store(1090);
 						}
 					}
 					break;
@@ -6639,7 +6777,7 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM4放片失败(A臂)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM4放片失败，2秒后重试 step=%d", pm4_auto_step.load());
 								Sleep(2000);
 								// 根据arm判断回退到哪个请求步骤
 								if (robot_put_to_pm4.arm.load() == 0)
@@ -6647,6 +6785,13 @@ namespace FC{
 								else
 									pm4_auto_step.store(1030);
 							}
+						} else if (!robot_put_to_pm4.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM4 1015步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm4_auto_step.load());
+							Sleep(1000);
+							if (robot_put_to_pm4.arm.load() == 0)
+								pm4_auto_step.store(1010);
+							else
+								pm4_auto_step.store(1030);
 						}
 					}
 					break;
@@ -6684,14 +6829,20 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM4取片失败(A臂)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM4取片失败，2秒后重试 step=%d", pm4_auto_step.load());
 								Sleep(2000);
-								// 根据arm判断回退到哪个请求步骤
 								if (robot_get_from_pm4.arm.load() == 0)
 									pm4_auto_step.store(1040);
 								else
 									pm4_auto_step.store(1050);
 							}
+						} else if (!robot_get_from_pm4.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM4 1045步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm4_auto_step.load());
+							Sleep(1000);
+							if (robot_get_from_pm4.arm.load() == 0)
+								pm4_auto_step.store(1040);
+								else
+									pm4_auto_step.store(1050);
 						}
 					}
 					break;
@@ -6732,10 +6883,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM4交换料失败(A取B放)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM4交换料失败(A取B放)，2秒后重试 step=%d", pm4_auto_step.load());
 								Sleep(2000);
-								pm4_auto_step.store(1060); // 回退重试
+								pm4_auto_step.store(1060);
 							}
+						} else if (!robot_exchange_pm4.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM4 1065步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm4_auto_step.load());
+							Sleep(1000);
+							pm4_auto_step.store(1060);
 						}
 					}
 					break;
@@ -6765,10 +6920,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM4交换料失败(B取A放)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM4交换料失败(B取A放)，2秒后重试 step=%d", pm4_auto_step.load());
 								Sleep(2000);
-								pm4_auto_step.store(1070); // 回退重试
+								pm4_auto_step.store(1070);
 							}
+						} else if (!robot_exchange_pm4.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM4 1075步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm4_auto_step.load());
+							Sleep(1000);
+							pm4_auto_step.store(1070);
 						}
 					}
 					break;
@@ -6797,10 +6956,14 @@ namespace FC{
 							}
 							else
 							{
-								logFailed(wtr->getName(), Poco::format("PM4最终取片失败， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								logInform(wtr->getName().c_str(), "PM4最终取片失败，2秒后重试 step=%d", pm4_auto_step.load());
 								Sleep(2000);
-								pm4_auto_step.store(1090); // 回退重试
+								pm4_auto_step.store(1090);
 							}
+						} else if (!robot_get_from_pm4.requested.load()) {
+							logInform(wtr->getName().c_str(), "PM4 1095步：请求标志异常(done=false,requested=false)，回退重发 step=%d", pm4_auto_step.load());
+							Sleep(1000);
+							pm4_auto_step.store(1090);
 						}
 					}
 					break;
@@ -6890,7 +7053,11 @@ namespace FC{
 	{
 		try {
 			auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
-			int robot_step = 10;
+			std::shared_ptr<FortrendPMCavitySubsystem> pm1 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
+			std::shared_ptr<FortrendPMCavitySubsystem> pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+			std::shared_ptr<FortrendPMCavitySubsystem> pm3 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM3");
+			std::shared_ptr<FortrendPMCavitySubsystem> pm4 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM4");
+			
 
 			while (!stopRequested)
 			{
@@ -7158,7 +7325,9 @@ namespace FC{
 					logInform(wtr->getName().c_str(), "Robot线程：从PM1取片, arm=%d", arm);
 					auto cmd = wtr->createGetCommand(pm1, arm, 1);
 					wtr->startCommand(cmd);
+					logInform(wtr->getName().c_str(), "Robot线程：从PM1取片 cmd->wait() 开始");
 					cmd->wait();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM1取片 cmd->wait() 返回, hasError=%d", cmd->hasError());
 					if (cmd->hasError()) {
 						auto alarm_msg = cmd->alarmMessage();
 						if (alarm_msg->code() == 745) {
@@ -7194,7 +7363,9 @@ namespace FC{
 					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片, arm=%d", arm);
 					auto cmd = wtr->createGetCommand(pm2, arm, 1);
 					wtr->startCommand(cmd);
+					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片 cmd->wait() 开始");
 					cmd->wait();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片 cmd->wait() 返回, hasError=%d", cmd->hasError());
 					if (cmd->hasError()) {
 						auto alarm_msg = cmd->alarmMessage();
 						if (alarm_msg->code() == 745) {
@@ -7220,6 +7391,7 @@ namespace FC{
 					robot_get_from_pm2.requested.store(false);
 					robot_get_from_pm2.done.store(true);
 					robot_step = 10;
+					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片,robot_get_from_pm2:requested:false,done:true");
 				}
 				break;
 
@@ -7230,7 +7402,9 @@ namespace FC{
 					logInform(wtr->getName().c_str(), "Robot线程：从PM3取片, arm=%d", arm);
 					auto cmd = wtr->createGetCommand(pm3, arm, 1);
 					wtr->startCommand(cmd);
+					logInform(wtr->getName().c_str(), "Robot线程：从PM3取片 cmd->wait() 开始");
 					cmd->wait();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM3取片 cmd->wait() 返回, hasError=%d", cmd->hasError());
 					if (cmd->hasError()) {
 						auto alarm_msg = cmd->alarmMessage();
 						if (alarm_msg->code() == 745) {
@@ -7266,7 +7440,9 @@ namespace FC{
 					logInform(wtr->getName().c_str(), "Robot线程：从PM4取片, arm=%d", arm);
 					auto cmd = wtr->createGetCommand(pm4, arm, 1);
 					wtr->startCommand(cmd);
+					logInform(wtr->getName().c_str(), "Robot线程：从PM4取片 cmd->wait() 开始");
 					cmd->wait();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM4取片 cmd->wait() 返回, hasError=%d", cmd->hasError());
 					if (cmd->hasError()) {
 						auto alarm_msg = cmd->alarmMessage();
 						if (alarm_msg->code() == 745) {
@@ -7541,12 +7717,14 @@ namespace FC{
 					cycleFinished_llb = true;
 					onUpdateCycleInfo();
 					lp2_cycle_one_time_finished = false;
-
+					
 					//update step
 					loadlock1_auto_step = 10;
 					loadlock2_auto_step = 10;
 					vacuum_auto_step = 10;
 					efem_auto_step = 10;
+					robot_step = 10;//2026-5-14: robot step也更新到10
+
 					pm1_auto_step.store(10);
 					pm2_auto_step.store(10);
 					pm3_auto_step.store(10);
@@ -7711,6 +7889,7 @@ namespace FC{
 		loadlock2_auto_step = 10;
 		vacuum_auto_step = 10;
 		efem_auto_step = 10;
+		robot_step = 10;//2026-5-14: robot step也更新到10
 		pm1_auto_step.store(10);
 		pm2_auto_step.store(10);
 		pm3_auto_step.store(10);
@@ -8444,6 +8623,7 @@ namespace FC{
 				loadlock2_auto_step = 10;
 				vacuum_auto_step = 10;
 				efem_auto_step = 10;
+				robot_step = 10; //2026-5-14  重置机器手步骤
 				pm1_auto_step.store(10);
 				pm2_auto_step.store(10);
 				pm3_auto_step.store(10);
@@ -8453,6 +8633,7 @@ namespace FC{
 				reset_finish = true;
 				current_lp_cycle = false;  //2025-11-17  重置
 				rest_step = -1;
+				resetAllRobotFlags(); //2026-5-14 复位所有机器人相关标志位
 				
 			}
 			break;
@@ -8665,7 +8846,7 @@ namespace FC{
 		Sleep(500);
 		logInform("Cycle", Poco::format("%s = %d", loadlock1_process_name, loadlock1_auto_step).c_str());
 		logInform("Cycle", Poco::format("%s = %d", loadlock2_process_name, loadlock2_auto_step).c_str());
-		logInform("Cycle", Poco::format("%s = %d", robot_process_name, robot_auto_step).c_str());
+		logInform("Cycle", Poco::format("%s = %d", robot_process_name, robot_step).c_str());
 		logInform("Cycle", Poco::format("%s = %d", vacuum_process_name,vacuum_auto_step).c_str());
 		logInform("Cycle", Poco::format("%s = %d", efem_process_name, efem_auto_step).c_str());
 		logInform("Cycle", Poco::format("%s = %d", pm1_process_name, pm1_auto_step.load()).c_str());

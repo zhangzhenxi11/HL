@@ -501,7 +501,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				}
 				else
 				{
-#if 0
+
 					std::string error_str = "ERR";
 					try {
 						if (!handleErrorCode(res, error_str, error_type, error_code)) {
@@ -529,7 +529,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					logError(robot->getName().c_str(), "机械手取晶圆失败,机械手返回：【%s】", res);
 					return RunResult::RUN_FAILD;
-#endif
+
 				}
 
 				int slot = 1;
@@ -540,9 +540,11 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				robot_cass->setMapping(getArm()+1, Cassette::Mapping::Present);
 
 				robot_cass->setPodSize(station_cass->getPodSize());
-
 				logInform(robot->getName().c_str(), "获取晶圆命令执行结束 %s %s", station_name, station_cass->getBoxId());
 			}
+			//2026-5-14 指令一定要返回，否则会卡在wait处
+			robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+			return RunResult::RUN_OK;
 		}
 	}
 	catch (KernelBlockException&e){
