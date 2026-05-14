@@ -3391,7 +3391,7 @@ namespace FC{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "大气模式，不关闭隔膜阀!");
-							loadlock1_auto_step = 2060; //直接放片
+							loadlock1_auto_step = 2055; //先取片再放片
 						}
 						else 
 						{
@@ -3430,7 +3430,7 @@ namespace FC{
 							}
 							else
 							{
-								loadlock1_auto_step = 2060;
+								loadlock1_auto_step = 2055;
 							}
 						}
 						else
@@ -3445,6 +3445,53 @@ namespace FC{
 					}
 				}
 				break;
+				case 2055:
+				{//LLA回程：从目标PM取回晶圆
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (loadLockAReturnPendingTasks.empty())
+						{
+							logFailed(lk1->getName(), Poco::format("%s 回程取片任务队列为空 %s：%d",
+								lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
+							loadlock1_auto_step = 900;
+							break;
+						}
+
+						const auto& task = loadLockAReturnPendingTasks.front();
+						int get_arm = task.arm;
+						std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
+						auto target_pm_sub = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
+
+						if (target_pm_sub == nullptr)
+						{
+							logFailed(lk1->getName(), Poco::format("回程取片目标PM无效: %s", pm_name));
+							loadlock1_auto_step = 900;
+							break;
+						}
+
+						wtr_robot_mutex.lock();
+						auto cmd = wtr->createGetCommand(target_pm_sub, get_arm, 1);
+						wtr->startCommand(cmd);
+						cmd->wait();
+						wtr_robot_mutex.unlock();
+
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
+								loadlock1_process_name, loadlock1_auto_step);
+						}
+						else
+						{
+							logInform("Cycle", Poco::format("LLA回程：已从%s取回晶圆，准备放入LLA.", pm_name).c_str());
+							loadlock1_auto_step = 2060;
+						}
+					}
+					else
+					{
+						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
+					}
+				}
+				break;
 				case 2060:
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->hasDoorOpend())
@@ -3453,7 +3500,7 @@ namespace FC{
 						if (loadLockAReturnPendingTasks.empty())
 						{
 							logFailed(lk1->getName(), Poco::format("%s 放片任务队列为空 %s：%d", lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
-							loadlock2_auto_step = 900;
+							loadlock1_auto_step = 900;
 							break;
 						}
 						loadlock1_move_slot_index = loadLockAReturnPendingTasks.front().targetBlankingSlot;
@@ -4520,7 +4567,7 @@ namespace FC{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "大气模式，不关闭隔膜阀!");
-							loadlock2_auto_step = 2060; //直接放片
+							loadlock2_auto_step = 2055; //先取片再放片
 						}
 						else
 						{
@@ -4560,7 +4607,7 @@ namespace FC{
 							}
 							else
 							{
-								loadlock2_auto_step = 2060;
+								loadlock2_auto_step = 2055;
 							}
 						}
 						else
@@ -4571,6 +4618,53 @@ namespace FC{
 					else
 					{
 						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2055:
+				{//LLB回程：从目标PM取回晶圆
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{
+						if (loadLockBReturnPendingTasks.empty())
+						{
+							logFailed(lk2->getName(), Poco::format("%s 回程取片任务队列为空 %s：%d",
+								lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
+							loadlock2_auto_step = 900;
+							break;
+						}
+
+						const auto& task = loadLockBReturnPendingTasks.front();
+						int get_arm = task.arm;
+						std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
+						auto target_pm_sub = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
+
+						if (target_pm_sub == nullptr)
+						{
+							logFailed(lk2->getName(), Poco::format("回程取片目标PM无效: %s", pm_name));
+							loadlock2_auto_step = 900;
+							break;
+						}
+
+						wtr_robot_mutex.lock();
+						auto cmd = wtr->createGetCommand(target_pm_sub, get_arm, 1);
+						wtr->startCommand(cmd);
+						cmd->wait();
+						wtr_robot_mutex.unlock();
+
+						if (cmd->hasError())
+						{
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
+								loadlock2_process_name, loadlock2_auto_step);
+						}
+						else
+						{
+							logInform("Cycle", Poco::format("LLB回程：已从%s取回晶圆，准备放入LLB.", pm_name).c_str());
+							loadlock2_auto_step = 2060;
+						}
+					}
+					else
+					{
+						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
 					}
 				}
 				break;
@@ -5890,49 +5984,18 @@ namespace FC{
 					break;
 
 					case 300:
-					{//PM2工艺完成，WTR从PM2取回晶圆（非交换场景）
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{//PM2工艺完成，等待LL取回晶圆（非交换场景）
+						auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+						bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;
+						if (!haswaferpm)
 						{
-							auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
-							bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;
-
-							if (haswaferpm)
-							{
-								//从任务中读取arm，确保与LL放片时使用的arm一致
-								int return_arm = 0;
-								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
-								if (!pm2CompletedTasks.empty())
-								{
-									return_arm = pm2CompletedTasks.at(0).arm;
-								}
-
-								wtr_robot_mutex.lock();
-								auto cmd = wtr->createGetCommand(pm2, return_arm, 1);
-								wtr->startCommand(cmd);
-								cmd->wait();
-								wtr_robot_mutex.unlock();
-
-								if (cmd->hasError())
-								{
-									logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)", pm2_process_name, pm2_auto_step.load());
-								}
-								else
-								{
-									logInform("PM2", Poco::format("回程取片完成，WTR arm%d持有晶圆，等待LL放片.", return_arm).c_str());
-									pm2_need_return_wafer = false;
-									pm2_auto_step.store(10);
-								}
-							}
-							else
-							{
-								logInform("PM2", "PM2中无物理晶圆，无需回程取片.");
-								pm2_need_return_wafer = false;
-								pm2_auto_step.store(10);
-							}
+							logInform("PM2", "LL已取回晶圆，PM2回程流程结束.");
+							pm2_need_return_wafer = false;
+							pm2_auto_step.store(10);
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+							Sleep(200);
 						}
 					}
 					break;
