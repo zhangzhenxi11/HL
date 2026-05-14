@@ -93,64 +93,141 @@ namespace FC{
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 获取手指状态超时参数设置错误.", robot->getName()), this);
 		}
-		
-		logInform(robot->getName().c_str(), Poco::format("获取手指%s有无晶圆命令开始执行.", str_arm).c_str());
-		if (str_arm == "A")
+		std::string command = "";
+		int error_type = 1;
+		int error_code = 0;
+		std::string error_message;
+		command = "QRY:LOAD/";
+		command.append(str_arm);
+		command.append(";");
+
+		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行.", str_arm).c_str());
+
+		clearRobotMessage();
+		sendRequest(command);
+
+		std::string res = recvResponseRobotMessage(timeout);
+
+		if (res.find("ACK") == std::string::npos && res.find("QRY:LOAD") == std::string::npos)
 		{
-			//ARM A
-			std::string command = "QRY:LOAD/A;";
-			sendRequest(command);
+			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 
-			std::string res = recvResponseRobotMessage(timeout);
-
-			if (res == "RPS:LOAD/ON;")//有片
-			{
-				robot->setObject(0, true);
-				robot_cass->setMapping(1, Cassette::Mapping::Present);
-			}
-			else if (res == "RPS:LOAD/OFF;")//无片
-			{
-				robot->setObject(0, false);
-				robot_cass->setMapping(1, Cassette::Mapping::Empty);
-			}
-			else if (res == "LOAD A ?")
-			{
-				robot->setObject(0, false);
-				robot_cass->setMapping(1, Cassette::Mapping::Unknown);
+			std::string error_str = "ERR";
+			if (!handleErrorCode(res, error_str, error_type, error_code)) {
+				error_type = 5;
+				error_code = 1;
+				error_message = ("执行查询手指命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "执行查询手指命令执行失败，机械手返回的指令未定义：%s", res);
 			}
 			else
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("工位: %s 获取手臂A状态通讯错误,返回到数据：%s", robot->getName(), res), this);
+				auto error_strucct = getErrorCode(error_type, error_code);
+				error_type = error_strucct->type;
+				error_code = error_strucct->code;
+				error_message = error_strucct->message;
 			}
-			
+			//set alarm data
+			AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+
 		}
-		else{
-			
-			//ARM B
-			std::string command = "QRY:LOAD/B;";
-			sendRequest(command);
+		else
+		{
+			// RPS:LOAD/ON;  或者 RPS:LOAD/OFF;
+			//等待机械手返回指令
+			auto startTime2 = std::chrono::high_resolution_clock::now();
+			auto timeout3 = std::chrono::seconds(30);
 
-			std::string res = recvResponse(timeout);
+			while (true)
+			{
+				auto currentTime = std::chrono::high_resolution_clock::now();
+				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
+				if (res.find("ACK") == std::string::npos)
+				{
+					break;
+				}
+				if (elapsed >= timeout3)
+				{
+					error_message = "机械手返回指令超时";
+					error_code = 0x100;
+					AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+					setAlarm(alarm);
+					return RunResult::RUN_FAILD;
+				}
+				res = recvResponseRobotMessage(timeout);
+				Sleep(200);
+			}
+
+			std::string robot_staus = "";
 			if (res == "RPS:LOAD/ON;")
 			{
-				robot->setObject(1, true);
-				robot_cass->setMapping(2, Cassette::Mapping::Present);
+				robot_staus = "ON";
 			}
 			else if (res == "RPS:LOAD/OFF;")
 			{
-				robot->setObject(1, false);
-				robot_cass->setMapping(2, Cassette::Mapping::Empty);
-			}
-			else if (res == "LOAD B ?")
-			{
-				robot->setObject(1, false);
-				robot_cass->setMapping(2, Cassette::Mapping::Unknown);
+				robot_staus = "OFF";
 			}
 			else
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("工位: %s 获取手臂B状态通讯错误，返回到数据：%s", robot->getName(), res), this);
+				error_code = 101;
+				error_message = ("执行查询手指命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "执行查询手指命令执行失败，机械手返回的指令未定义：%s", res);
+				AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+				setAlarm(alarm);
+				return RunResult::RUN_FAILD;
 			}
+
+			if (str_arm == "A")
+			{
+				if (robot_staus == "ON")
+				{
+					robot->setObject(0, true);
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
+					robot_cass->setMapping(1, Cassette::Mapping::Present);
+				}
+				else if (robot_staus == "OFF")
+				{
+					robot->setObject(0, false);
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s无晶圆.", str_arm).c_str());
+					robot_cass->setMapping(1, Cassette::Mapping::Empty);
+				}
+				else
+				{
+					robot->setObject(0, false);
+					robot_cass->setMapping(1, Cassette::Mapping::Unknown);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+						Poco::format("工位: %s 获取手臂A状态通讯错误,返回到数据：%s", robot->getName(), res), this);
+				}
+			}
+			else if (str_arm == "B")
+			{
+				if (robot_staus == "ON")
+				{
+					robot->setObject(1, true);
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
+					robot_cass->setMapping(2, Cassette::Mapping::Present);
+				}
+				else if (robot_staus == "OFF")
+				{
+					robot->setObject(1, false);
+					logInform(robot->getName().c_str(), Poco::format("查询手指%s无晶圆.", str_arm).c_str());
+					robot_cass->setMapping(2, Cassette::Mapping::Empty);
+				}
+				else
+				{
+					robot->setObject(1, false);
+					robot_cass->setMapping(2, Cassette::Mapping::Unknown);
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+						Poco::format("工位: %s 获取手臂B状态通讯错误，返回到数据：%s",
+							robot->getName(), res), this);
+				}
+			}
+
+			Sleep(200);
+
+			logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令执行结束.", str_arm).c_str());
 		}
 		return RunResult::RUN_OK;
 

@@ -139,6 +139,7 @@ PMCavityToRotatingStationCommand::RunResult PMCavityToRotatingStationCommand::on
 		}
 		else
 		{
+			logError(sub->getName().c_str(), "alarmCode:%d", alarmCode);
 			errorMessage = "升降轴去旋转位命令执行失败";
 		}
 

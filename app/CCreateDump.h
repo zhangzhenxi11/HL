@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -10,7 +10,7 @@ public:
 	CCreateDump();
 	~CCreateDump(void);
 	static CCreateDump* Instance();
-	static long __stdcall UnhandleExceptionFilter(_EXCEPTION_POINTERS* ExceptionInfo);
+	static long WINAPI UnhandleExceptionFilter(_EXCEPTION_POINTERS* ExceptionInfo);
 
 	void DeclarDumpFile(std::string dmpFileName = "");
 private:

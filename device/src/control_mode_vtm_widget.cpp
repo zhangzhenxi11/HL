@@ -879,6 +879,35 @@ namespace FC{
 		d->ui->pm2_enable_label->setText(enable_stat_map[d->pm2_enable]);
 		d->ui->pm3_enable_label->setText(enable_stat_map[d->pm3_enable]);
 		d->ui->pm4_enable_label->setText(enable_stat_map[d->pm4_enable]);
+
+		// 更新 SwitchButton 状态，阻断信号以免造成循环调用
+		d->ui->enable_buzzer_btn->blockSignals(true);
+		d->ui->enable_buzzer_btn->setChecked(d->buzzer_enable);
+		d->ui->enable_buzzer_btn->blockSignals(false);
+
+		d->ui->enable_vacuum_btn->blockSignals(true);
+		d->ui->enable_vacuum_btn->setChecked(d->vacuum_enable);
+		d->ui->enable_vacuum_btn->blockSignals(false);
+
+		d->ui->enable_with_wafer_btn->blockSignals(true);
+		d->ui->enable_with_wafer_btn->setChecked(d->with_wafer_enable);
+		d->ui->enable_with_wafer_btn->blockSignals(false);
+
+		d->ui->enable_pm1_btn->blockSignals(true);
+		d->ui->enable_pm1_btn->setChecked(d->pm1_enable);
+		d->ui->enable_pm1_btn->blockSignals(false);
+
+		d->ui->enable_pm2_btn->blockSignals(true);
+		d->ui->enable_pm2_btn->setChecked(d->pm2_enable);
+		d->ui->enable_pm2_btn->blockSignals(false);
+
+		d->ui->enable_pm3_btn->blockSignals(true);
+		d->ui->enable_pm3_btn->setChecked(d->pm3_enable);
+		d->ui->enable_pm3_btn->blockSignals(false);
+
+		d->ui->enable_pm4_btn->blockSignals(true);
+		d->ui->enable_pm4_btn->setChecked(d->pm4_enable);
+		d->ui->enable_pm4_btn->blockSignals(false);
 		
 		d->loadlock1_vacuum_upper_limit_dsb->setValue(d->loadlock1_vacuum_upper_limit);
 		d->loadlock1_vacuum_extraction_dsb->setValue(d->loadlock1_vacuum_extraction);

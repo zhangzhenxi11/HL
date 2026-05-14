@@ -78,14 +78,13 @@ namespace FC{
 
 		//升降轴动作
 		std::shared_ptr<PMCavityLiftingActionCommand> createLiftingActionCommand(double targetPos)const;//自动命令到目标位
-
 		std::shared_ptr<PMCavityToGetStationCommand> createToGetStationCommand()const;					//去取料位命令  位置1
 		std::shared_ptr<PMCavityToRotatingStationCommand> createToRotatingStationCommand()const;	    //去旋转位命令  位置2
 		std::shared_ptr<PMCavityToPutStationCommand> createToPutStationCommand()const;					//去工艺位命令  位置3
 		
 
-		//旋转轴动作
-		std::shared_ptr<PMCavityRotatingActionCommand> createRotatingActionCommand(double degree)const;
+		//旋转轴动作  model 1:相对位置移动  model 2:绝对位置移动
+		std::shared_ptr<PMCavityRotatingActionCommand> createRotatingActionCommand(double degree,int model = 1)const;
 
 		std::shared_ptr<PMCavityReadProcessParametersCommand> createReadProcessParametersCommand()const;
 		std::shared_ptr<PMCavityWriteProcessParametersCommand> createWriteProcessParametersCommand(const PMCavityAxisSettingParameters axis_parames)const;
@@ -101,7 +100,10 @@ namespace FC{
 		double getTemperatureValue()const;
 		void setVacuumEnable(const bool value);
 		bool getVacuumEnable()const;
+
+		bool getWithWaferModeEnable()const;
 		void setWithWaferModeEnable(const bool value);
+
 		bool getVacuumValueReachesTheSetValue() const;
 		bool getExhaustVacuumValueReachesTheSetValue() const;
 		bool getTemperatureValueReachesTheSetValue() const;
@@ -166,6 +168,9 @@ namespace FC{
 		float getPmLiftingTargetPos()const;
 		//r轴定位坐标
 		float getPmRotatingTargetPos()const;
+
+		//2026-4-23
+		float getPmLiftPinSafeAnglePos()const;
 
 		/**
 		* 获取镀膜时间

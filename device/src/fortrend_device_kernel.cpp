@@ -16,6 +16,7 @@
 #include "fortrend_device_user_module.h"
 #include "efem_hex_api.h"
 #include "tcp_client_api.h"
+#include "pm_spindle_signal_server_api.h" //2026-3-26
 
 #include "Kernel/kernel_log.h"
 #include "Kernel/kernel_action_subsystem.h"
@@ -63,6 +64,7 @@ namespace FC{
 		auto api = std::make_shared<FortrendAsciiEFEMApi>(this);
 		//this->addKernelModule(api);
 
+		auto pmApi = std::make_shared<PMSpindleSignalServerApi>(this);
 
 		//VTM TOWER
 		std::shared_ptr<FortrendVTMSignalTower> tower(new FortrendVTMSignalTower(this, api));
@@ -112,6 +114,8 @@ namespace FC{
 		//this->addKernelModule(user_script);
 
 		this->addKernelModule(api);
+
+		this->addKernelModule(pmApi); //2026-3-26
 
 
 

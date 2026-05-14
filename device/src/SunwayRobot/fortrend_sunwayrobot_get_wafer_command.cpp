@@ -193,7 +193,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
-		std::string str_arm = (getArm() == 0) ? "A" : "B";
+		std::string str_arm = (getArm() == 0) ? "A" : "B"; //这里不对调，因为自己执行规则只要UI和指令对上就行。
 		int timeout = command_config->getInt("timeout", 300000);
 		std::string command = "";
 		std::string station_name = getStation()->getName();
@@ -265,7 +265,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			logInform(robot->getName().c_str(), "res：%s", res.c_str());
 
 			//if (res != "ACK;" && res != "RPS:GET;")
-			if (res != "ACK;")
+			if(res.find("ACK") == std::string::npos)
 			{
 				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误.");
 				int error_type = 1;
@@ -304,7 +304,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					auto currentTime = std::chrono::high_resolution_clock::now();
 					auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-					if (res != std::string("ACK;") && !res.empty())
+					if (res.find("ACK") == std::string::npos && !res.empty())
 					{
 						break;
 					}
@@ -428,7 +428,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 
 			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
 
-			if (res != std::string("ACK;"))
+			if (res.find("ACK") == std::string::npos)
 			{
 				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误.");
 
@@ -470,7 +470,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					auto currentTime = std::chrono::high_resolution_clock::now();
 					auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-					if (res != std::string("ACK;") && !res.empty())
+					if (res.find("ACK") == std::string::npos && !res.empty())
 					{
 						break;
 					}

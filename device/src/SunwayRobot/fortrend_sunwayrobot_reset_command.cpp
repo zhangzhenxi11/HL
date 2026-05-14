@@ -64,12 +64,12 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, Poco::format("超时: %s 复位超时参数错误.", robot->getName()), this);
 	}
 
-	//测试
-	//if(SIMULATION_TEST == 1)
-	//{
-	//	logInform(getName().c_str(), "模拟复位命令执行.");
-	//	return RunResult::RUN_OK;
-	//}
+//测试
+#ifdef SIMULATION_TEST
+
+		//logInform(getName().c_str(), "模拟复位命令执行.");
+		//return RunResult::RUN_OK;
+#endif //SIMULATION_TEST
 
 
 	std::string error_message = "";
@@ -115,7 +115,9 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 		res = recvResponseRobotMessage(timeout);
 		Sleep(200);
 	}
-	if (res != "ACK;" && res != "RPS:CLEAR;")
+	//2026-4-20:ack后面加上指令名称
+
+	if (res.find("ACK") == std::string::npos && res != "RPS:CLEAR;")
 	{
 		logError(robot->getName().c_str(), "机械手复位命令发生错误.");
 
@@ -165,7 +167,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			auto currentTime = std::chrono::high_resolution_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-			if (res != std::string("ACK;"))
+			if (res.find("ACK") == std::string::npos)
 			{
 				break;
 			}
@@ -204,6 +206,28 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			return RunResult::RUN_FAILD;
 		}
 		robot->setHasResetFlag(true);
+
+		//2026-3-30 增加checkload
+		/*	
+		auto cmd1 = robot->createCheckLoadCommand(0);
+		robot->startCommand(cmd1);
+		cmd1->wait();
+		if (cmd1->hasError())
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "复位后检测B手指命令执行失败！"));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		auto cmd2 = robot->createCheckLoadCommand(1);
+		robot->startCommand(cmd2);
+		cmd2->wait();
+		if (cmd2->hasError())
+		{
+			AlarmMessage::Ptr alarm(new AlarmMessage(0, 1, "复位后检测A手指命令执行失败！"));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}*/
+
 		logInform(getName().c_str(), "复位命令执行结束.");
 
 		return RunResult::RUN_OK;

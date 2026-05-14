@@ -550,7 +550,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockCompletedTasks(std
         });
         if (it != tasks_.end())
         {
-            logInform("TaskManager", "LOADLOCK_TRANSFER/COMPLETED taskId:%d", (*it).taskId);
+            //logInform("TaskManager", "LOADLOCK_TRANSFER/COMPLETED taskId:%d", (*it).taskId);
             result.push_back(*it);
         }
     }
@@ -574,7 +574,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnPendingTasks
         });
         if (it != tasks_.end()) 
         {
-            logInform("TaskManager", "找到LOADLOCK_RETURN/QUEUED taskId:%d", (*it).taskId);
+            //logInform("TaskManager", "找到LOADLOCK_RETURN/QUEUED taskId:%d", (*it).taskId);
             result.push_back(*it);
         }
     }
@@ -597,7 +597,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnCompletedTas
         });
         if (it != tasks_.end()) 
         {
-            logInform("TaskManager", "LOADLOCK_RETURN/COMPLETED taskId:%d", (*it).taskId);
+            //logInform("TaskManager", "LOADLOCK_RETURN/COMPLETED taskId:%d", (*it).taskId);
             result.push_back(*it);
         }
     }
@@ -622,7 +622,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMPendingTasks(std::string
         });
         if (it != tasks_.end())
         {
-            logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
+            //logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
             result.push_back(*it);
         }
     }
@@ -664,7 +664,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMCompletedTasks(std::stri
         });
         if (it != tasks_.end())
         {
-            logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
+            //logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
             result.push_back(*it);
         }
     }

@@ -101,7 +101,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 		Sleep(200);
 	}
 
-	if (res != std::string("ACK;") && res!= std::string("RPS:ALLAXISHOMESAFE;"))
+	if (res.find("ACK") == std::string::npos && res!= std::string("RPS:ALLAXISHOMESAFE;"))
 	{
 		logError(sub->getName().c_str(), "机械手HOME时存在一个错误.");
 		int error_type = 1;
@@ -141,7 +141,7 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 			auto currentTime = std::chrono::high_resolution_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-			if (res != std::string("ACK;") && !res.empty())
+			if (res.find("ACK") == std::string::npos && !res.empty())
 			{
 				break;
 			}

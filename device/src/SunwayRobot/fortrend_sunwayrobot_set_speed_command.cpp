@@ -103,7 +103,7 @@ public:
 		}
 
 
-		if (res == "ACK;" || res == "RPS:RUN_SPEED;")
+		if (res.find("ACK") != std::string::npos || res == "RPS:RUN_SPEED;")
 		{
 
 			auto startTime2 = std::chrono::high_resolution_clock::now();
@@ -116,7 +116,7 @@ public:
 				auto currentTime = std::chrono::high_resolution_clock::now();
 				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-				if (res != std::string("ACK;"))
+				if(res.find("ACK") == std::string::npos)
 				{
 					break;
 				}

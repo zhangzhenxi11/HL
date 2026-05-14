@@ -1,4 +1,4 @@
-#include <Windows.h>
+ï»¿#include <Windows.h>
 #include "CCreateDump.h"
 #include <DbgHelp.h>
 #include <codecvt>
@@ -17,11 +17,11 @@ CCreateDump::~CCreateDump(void)
 
 }
 
-long  CCreateDump::UnhandleExceptionFilter(_EXCEPTION_POINTERS* ExceptionInfo)
+long WINAPI CCreateDump::UnhandleExceptionFilter(_EXCEPTION_POINTERS* ExceptionInfo)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converterX;
 	std::wstring dumpFile = converterX.from_bytes(strDumpFile.c_str());
-	HANDLE hFile = CreateFileW(dumpFile.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);//Í³Ò»Ê¹ÓÃ Unicode °æ±¾
+	HANDLE hFile = CreateFileW(dumpFile.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);//Í³Ò»Ê¹ï¿½ï¿½ Unicode ï¿½æ±¾
 
 	//HANDLE hFile = CreateFile(dumpFile.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile != INVALID_HANDLE_VALUE)
@@ -36,11 +36,11 @@ long  CCreateDump::UnhandleExceptionFilter(_EXCEPTION_POINTERS* ExceptionInfo)
 		if (!bOK)
 		{
 			DWORD dw = GetLastError();
-			//Ð´dumpÎÄ¼þ³ö´í´¦Àí,Òì³£½»¸øwindows´¦Àí
+			//Ð´dumpï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½,ï¿½ì³£ï¿½ï¿½ï¿½ï¿½windowsï¿½ï¿½ï¿½ï¿½
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 		else
-		{    //ÔÚÒì³£´¦½áÊø
+		{    //ï¿½ï¿½ï¿½ì³£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			return EXCEPTION_EXECUTE_HANDLER;
 		}
 	}

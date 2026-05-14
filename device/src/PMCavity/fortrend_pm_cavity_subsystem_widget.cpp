@@ -225,7 +225,9 @@ namespace FC{
 	{
 		Q_D(QPMCavitySubsystemWidget);
 		double  target_position =  d->ui->rotating_axis_target_position_dsp->value();
-		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createRotatingActionCommand(target_position);
+		int model = d->ui->rotating_absolute_model_chk->isChecked() ? 2 : 1;
+		logInform(getSubsystem()->getName().c_str(), "model:%d", model);
+		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createRotatingActionCommand(target_position, model);
 		executeCommand(getSubsystem(), cmd);
 	}
 

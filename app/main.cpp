@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QDateTime>
 #include <cstdlib>
+#include <QtWebEngineWidgets/QWebEngineView>
+#include <QtWebEngine/QtWebEngine>
 #ifdef _WIN32
 #include <Windows.h>
 #include <Dbghelp.h>
@@ -27,8 +29,12 @@ int main(int argc, char *argv[])
 	// 创建应用程序对象
 	 FC::CoreRunner app(argc, argv);
 		
-	 CCreateDump::Instance()->DeclarDumpFile("app_dump");
-	 qDebug() << "The application Dump file has been set";
+	// 初始化QtWebEngine - 必须在QApplication创建之后调用
+	QtWebEngine::initialize();
+	// 提前注册全局异常过滤器
+	SetUnhandledExceptionFilter(CCreateDump::UnhandleExceptionFilter);
+	CCreateDump::Instance()->DeclarDumpFile("app_dump");
+	qDebug() << "The application Dump file has been set";
 	if (app.isRunning()){
 		QMessageBox::warning(0, "Warn", "The gui is already running!!!");
 		return 0;

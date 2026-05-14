@@ -221,11 +221,16 @@ namespace FC{
 
 		// z轴jerk
 		std::string lifting_axis_jerk_address;
-		uint32_t lifting_axis_jerk_value;
+		float lifting_axis_jerk_value;
 
 		// r轴jerk
 		std::string rotating_axis_jerk_address;
-		uint32_t rotating_axis_jerk_value;
+		float rotating_axis_jerk_value;
+
+		//lift pin位置角度 
+		std::string rotating_axis_safe_angle_address;
+		float rotating_axis_safe_angle_value;
+
 	};
 
 	/**
@@ -449,6 +454,10 @@ namespace FC{
 	bool  FortrendPMCavitySubsystem::getVacuumEnable()const {
 		return d->vacuum_enable;
 	}
+
+	bool FortrendPMCavitySubsystem::getWithWaferModeEnable()const{
+		return d->with_wafer_mode;
+	}	
 
 	void FortrendPMCavitySubsystem::setWithWaferModeEnable(const bool value){
 		if (d->with_wafer_mode != value)
@@ -795,6 +804,11 @@ namespace FC{
 	{
 		return d->axis_setting_parameters.rotating_axis_target_position;
 	}
+
+	float FortrendPMCavitySubsystem::getPmLiftPinSafeAnglePos() const
+	{
+		return d->rotating_axis_safe_angle_value;
+	}
 	/**
 
 	* 获取镀膜时间
@@ -927,9 +941,16 @@ namespace FC{
 	void FortrendPMCavitySubsystem::setRotationHome(bool enable)
 	{
 		logInform(getName().c_str(), "写R轴回原开始.");
-		if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
+		if(getRotatingimumPlaneLevelSignal())
 		{
-			logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
+			if (!KeyencePlcSubSystemHelper::writeBit(d->rotating_axis_rest_address, enable))
+			{
+				logError(getName().c_str(), Poco::format("写R轴回原address = %s 失败!", d->rotating_axis_rest_address).c_str());
+			}
+		}
+		else
+		{
+			logError(getName().c_str(), "Z轴不在旋转位置，禁止回原!");
 		}
 	}
 
@@ -1352,6 +1373,7 @@ namespace FC{
 			//TM腔门
 			io_changed |= safe_read_bit(d->open_tm_cavity_door_address, d->tm_cavity_door_opend);
 
+			/*******************************************************升降轴******************************************************/
 			//升降轴当前速度
 			io_changed |= safe_read_float(d->lifting_axis_current_speed_addresss, d->lifting_axis_current_speed);
 			//升降轴当前坐标
@@ -1360,16 +1382,16 @@ namespace FC{
 			//清除轴错误完成
 			io_changed |= safe_read_bit(d->lifting_axis_clear_error_completion_address, d->lifting_axis_clear_done);
 
-			//回原完成
+			//升降轴回原完成
 			io_changed |= safe_read_bit(d->lifting_axis_return_original_completion_address, d->axis_origin_done);
 
-			//回原中
+			//升降轴回原中
 			io_changed |= safe_read_bit(d->lifting_axis_return_original_running_address, d->lifting_axis_return_original_running);
 
-			//JOG运行中
+			//升降轴JOG运行中
 			io_changed |= safe_read_bit(d->lifting_axis_jog_running_address, d->lifting_axis_jog_running);
 
-			//使能ON
+			//升降轴使能ON
 			io_changed |= safe_read_bit(d->lifting_axis_enable_address, d->lifting_axis_enable_done);
 
 			//升降轴移动中
@@ -1392,6 +1414,8 @@ namespace FC{
 			io_changed |= safe_read_bit(d->maximum_plane_level_detection_address, d->pm_cavity_motor_maximum_plane_signal);
 			//顶升销面位检测
 			io_changed |= safe_read_bit(d->liftpin_plane_level_detection_address, d->pm_cavity_motor_liftpin_plane_signal);
+
+			/*******************************************************旋转轴******************************************************/
 			//清除轴错误完成
 			io_changed |= safe_read_bit(d->rotating_axis_clear_error_completion_address, d->rotating_axis_clear_error_done);
 			//轴停止完成
@@ -1404,6 +1428,9 @@ namespace FC{
 			io_changed |= safe_read_bit(d->rotating_axis_moving_address, d->rotating_axis_moving);
 			//移动结束
 			io_changed |= safe_read_bit(d->rotating_axis_move_end_address, d->rotating_axis_move_end);
+			
+			//回原完成
+			io_changed |= safe_read_bit(d->rotating_axis_return_original_completion_address, d->rotating_axis_return_original_done);
 
 			//旋转轴运行速度
 			io_changed |= safe_read_float(d->rotating_axis_current_speed_addresss, d->rotating_axis_current_speed);
@@ -1436,9 +1463,11 @@ namespace FC{
 			io_changed |= safe_read_float(d->rotating_axis_dece_address, d->rotating_axis_dece_value);
 
 			//jerk
-			io_changed |= safe_read_unsignedInt(d->lifting_axis_jerk_address, d->lifting_axis_jerk_value);
+			io_changed |= safe_read_float(d->lifting_axis_jerk_address, d->lifting_axis_jerk_value);
 			//jerk
-			io_changed |= safe_read_unsignedInt(d->rotating_axis_jerk_address, d->rotating_axis_jerk_value);
+			io_changed |= safe_read_float(d->rotating_axis_jerk_address, d->rotating_axis_jerk_value);
+			//lift pin angle
+			io_changed |= safe_read_float(d->rotating_axis_safe_angle_address,d->rotating_axis_safe_angle_value);
 
 
 			if (io_changed)
@@ -1615,6 +1644,8 @@ namespace FC{
 
 			d->rotating_axis_motor_alarm_address = config->getString("Update.rotating_axis_alarm_address","");
 
+			d->rotating_axis_safe_angle_address = config->getString("Update.rotating_axis_safe_Angle_address","");
+
 		}
 		if (config->has("AxisReadParameters"))
 		{
@@ -1703,10 +1734,10 @@ namespace FC{
 		return ret;
 	}
 
-	std::shared_ptr<PMCavityRotatingActionCommand> FortrendPMCavitySubsystem::createRotatingActionCommand(double degree) const
+	std::shared_ptr<PMCavityRotatingActionCommand> FortrendPMCavitySubsystem::createRotatingActionCommand(double degree, int model) const
 	{
 		FortrendPMCavitySubsystem* self = const_cast<FortrendPMCavitySubsystem*>(this);
-		PMCavityRotatingActionCommand::Ptr ret(new PMCavityRotatingActionCommand(self, degree));
+		PMCavityRotatingActionCommand::Ptr ret(new PMCavityRotatingActionCommand(self, degree, model));
 		return ret;
 	}
 

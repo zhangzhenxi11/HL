@@ -100,39 +100,43 @@ namespace FC{
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
-		std::string str_arm = (d->arm == 0) ? "B" : "A";
+		std::string str_arm = (d->arm == 0) ? "A" : "B";
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
 				Poco::format("超时: %s 查询手指有位晶圆超时参数错误.", robot->getName()), this);
 		}
 		std::string command = "";
-		//std::string station_name = d->station->getName();
 		int error_type = 1;
 		int error_code = 0;
 		std::string error_message;
-		//QRY:LOAD/A;
-		//A:机械手手指
-		command = "QRY:LOAD/";
-		command.append(str_arm);
+
+		//MOV:CHECKWAFER/[P1];\r
+		//p1:手指（0：B,1:A）   int
+		//RPS:CHECKWAFER/[R1]; \r
+		//[R1]:0代表无晶圆，1代表手指有晶圆
+
+		command = "MOV:CHECKWAFER/";
+		command.append(std::to_string(d->arm));
 		command.append(";");
 
-		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行.", str_arm).c_str());
+		logInform(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令开始执行.", str_arm).c_str());
 
 		clearRobotMessage();
 		sendRequest(command);
 
 		std::string res = recvResponseRobotMessage(timeout);
-		if (res != std::string("ACK;") && res.find("QRY:LOAD") == std::string::npos)
+		//2026-4-20
+		if (res.find("ACK") == std::string::npos && res.find("RPS:CHECKWAFER") == std::string::npos)
 		{
-			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
+			logError(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 			
 			std::string error_str = "ERR";
 			if (!handleErrorCode(res, error_str, error_type, error_code)) {
 				error_type = 5;
 				error_code = 1;
-				error_message = ("执行查询手指命令执行失败，机械手返回的指令未定义：%s.", res);
-				logError(robot->getName().c_str(), "执行查询手指命令执行失败，机械手返回的指令未定义：%s", res);
+				error_message = ("回原后检测手指命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "回原后检测手指命令执行失败，机械手返回的指令未定义：%s", res);
 			}
 			else
 			{
@@ -149,7 +153,7 @@ namespace FC{
 		}
 		else
 		{
-			// RPS:LOAD/ON;  或者 RPS:LOAD/OFF;
+			// RPS:CHECKWAFER/0;  或者 RPS:CHECKWAFER/1;
 			//等待机械手返回指令
 			auto startTime2 = std::chrono::high_resolution_clock::now();
 			auto timeout3 = std::chrono::seconds(30);
@@ -159,7 +163,7 @@ namespace FC{
 				auto currentTime = std::chrono::high_resolution_clock::now();
 				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-				if (res != std::string("ACK;"))
+				if (res.find("ACK") == std::string::npos)
 				{
 					break;
 				}
@@ -176,23 +180,20 @@ namespace FC{
 			}
 
 			std::string robot_staus = "";
-			//std::string prefix, command;
-			//std::vector<std::string> params;
-			if (res == "RPS:LOAD/ON;")
+			if (res == "RPS:CHECKWAFER/1;")
 			{
 				robot_staus = "ON";
 			}
-			else if (res == "RPS:LOAD/OFF;")
+			else if (res == "RPS:CHECKWAFER/0;")
 			{
 				robot_staus = "OFF";
 			}
 			else
 			{
 				error_code = 101;
-				error_message = ("执行查询手指命令执行失败，机械手返回的指令未定义：%s.", res);
-				logError(robot->getName().c_str(), "执行查询手指命令执行失败，机械手返回的指令未定义：%s", res);
+				error_message = ("回原后检测手指命令执行失败，机械手返回的指令未定义：%s.", res);
+				logError(robot->getName().c_str(), "回原后检测手指命令执行失败，机械手返回的指令未定义：%s", res);
 
-				//robot->getKernel()->getKernelBlockManager()->releaseBlock(robot); //释放资源
 				AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
