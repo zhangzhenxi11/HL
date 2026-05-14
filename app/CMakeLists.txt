@@ -24,11 +24,13 @@ endif()
 target_link_libraries(${EXE_NAME}
 		QtUI::core_runner
 		Qt5::Core
-		Qt5::Widgets)
+		Qt5::Widgets
+		Qt5::WebEngine)
 target_link_libraries(${EXE_NAME}_console
 		QtUI::core_runner
 		Qt5::Core
-		Qt5::Widgets)
+		Qt5::Widgets
+		Qt5::WebEngine)
 
 IF(WIN32)
 	#SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")

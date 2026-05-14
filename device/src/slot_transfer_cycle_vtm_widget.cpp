@@ -605,6 +605,72 @@ namespace FC{
 		const int sleep_time = 5000;
 		int robot_selected_arm = 0;  //机械手臂选择
 
+		// ===== 机械手集中调度：请求标志（由 LL/PM 线程设置，Robot线程读取并清除）=====
+		struct RobotTransferRequest {
+			std::atomic<bool> requested{ false };  // 请求标志
+			std::atomic<bool> done{ false };       // 完成标志
+			std::atomic<bool> success{ false };    // 执行结果
+			std::atomic<int> arm{ 0 };             // 使用哪个手臂 (0=A, 1=B)
+			std::atomic<int> slot{ 1 };            // LL slot编号
+		};
+
+		// 交换操作需要两个arm信息
+		struct ExchangeInfo {
+			std::atomic<int> getArm{ 0 };   // 取片用的arm
+			std::atomic<int> putArm{ 1 };   // 放片用的arm
+		};
+
+		// LL取片请求：从LL取到机械手
+		RobotTransferRequest robot_get_from_lla;
+		RobotTransferRequest robot_get_from_llb;
+
+		// PM放片请求：从机械手放到PM
+		RobotTransferRequest robot_put_to_pm1;
+		RobotTransferRequest robot_put_to_pm2;
+		RobotTransferRequest robot_put_to_pm3;
+		RobotTransferRequest robot_put_to_pm4;
+
+		// PM取片请求：从PM取到机械手
+		RobotTransferRequest robot_get_from_pm1;
+		RobotTransferRequest robot_get_from_pm2;
+		RobotTransferRequest robot_get_from_pm3;
+		RobotTransferRequest robot_get_from_pm4;
+
+		// LL放片请求：从机械手放回LL
+		RobotTransferRequest robot_put_to_lla;
+		RobotTransferRequest robot_put_to_llb;
+
+		// PM交换请求（取出已加工片+放入新片）
+		RobotTransferRequest robot_exchange_pm1;
+		RobotTransferRequest robot_exchange_pm2;
+		RobotTransferRequest robot_exchange_pm3;
+		RobotTransferRequest robot_exchange_pm4;
+
+		ExchangeInfo exchange_info_pm1;
+		ExchangeInfo exchange_info_pm2;
+		ExchangeInfo exchange_info_pm3;
+		ExchangeInfo exchange_info_pm4;
+
+		// 重置所有机械手请求标志
+		void resetAllRobotFlags() {
+			robot_get_from_lla.requested.store(false); robot_get_from_lla.done.store(false);
+			robot_get_from_llb.requested.store(false); robot_get_from_llb.done.store(false);
+			robot_put_to_pm1.requested.store(false); robot_put_to_pm1.done.store(false);
+			robot_put_to_pm2.requested.store(false); robot_put_to_pm2.done.store(false);
+			robot_put_to_pm3.requested.store(false); robot_put_to_pm3.done.store(false);
+			robot_put_to_pm4.requested.store(false); robot_put_to_pm4.done.store(false);
+			robot_get_from_pm1.requested.store(false); robot_get_from_pm1.done.store(false);
+			robot_get_from_pm2.requested.store(false); robot_get_from_pm2.done.store(false);
+			robot_get_from_pm3.requested.store(false); robot_get_from_pm3.done.store(false);
+			robot_get_from_pm4.requested.store(false); robot_get_from_pm4.done.store(false);
+			robot_put_to_lla.requested.store(false); robot_put_to_lla.done.store(false);
+			robot_put_to_llb.requested.store(false); robot_put_to_llb.done.store(false);
+			robot_exchange_pm1.requested.store(false); robot_exchange_pm1.done.store(false);
+			robot_exchange_pm2.requested.store(false); robot_exchange_pm2.done.store(false);
+			robot_exchange_pm3.requested.store(false); robot_exchange_pm3.done.store(false);
+			robot_exchange_pm4.requested.store(false); robot_exchange_pm4.done.store(false);
+		}
+
 	public:
 		const std::string module_name = "Cycle";
 
@@ -3141,20 +3207,13 @@ namespace FC{
 						//互锁条件，TM抽真空会触发关门动作
 						if(lk1->getTMCavityDoorOpend())
 						{
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(lk1, loadLockAPendingTasks.at(0).arm, loadlock1_move_slot_index);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
-							}
-							else
-							{
-								loadlock1_auto_step = 1052;
-							}
+							// 设置请求标志，委托Robot线程执行
+							robot_get_from_lla.arm.store(loadLockAPendingTasks.at(0).arm);
+							robot_get_from_lla.slot.store(loadlock1_move_slot_index);
+							robot_get_from_lla.done.store(false);
+							robot_get_from_lla.success.store(false);
+							robot_get_from_lla.requested.store(true);
+							loadlock1_auto_step = 1055; // 等待Robot线程完成
 						}
 						else
 						{
@@ -3165,6 +3224,17 @@ namespace FC{
 					else
 					{
 						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
+					}
+				}
+				break;
+				case 1055: // 等待Robot线程从LLA取片完成
+				{
+					if (robot_get_from_lla.done.load()) {
+						if (robot_get_from_lla.success.load()) {
+							loadlock1_auto_step = 1052;
+						} else {
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock1_process_name, loadlock1_auto_step);
+						}
 					}
 				}
 				break;
@@ -3469,26 +3539,48 @@ namespace FC{
 							break;
 						}
 
-						wtr_robot_mutex.lock();
-						auto cmd = wtr->createGetCommand(target_pm_sub, get_arm, 1);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						wtr_robot_mutex.unlock();
+						// 根据PM名称选择对应的请求标志
+						RobotTransferRequest* req = nullptr;
+						if (pm_name == "PM1") req = &robot_get_from_pm1;
+						else if (pm_name == "PM2") req = &robot_get_from_pm2;
+						else if (pm_name == "PM3") req = &robot_get_from_pm3;
+						else if (pm_name == "PM4") req = &robot_get_from_pm4;
 
-						if (cmd->hasError())
-						{
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
-								loadlock1_process_name, loadlock1_auto_step);
-						}
-						else
-						{
-							logInform("Cycle", Poco::format("LLA回程：已从%s取回晶圆，准备放入LLA.", pm_name).c_str());
-							loadlock1_auto_step = 2060;
+						if (req != nullptr) {
+							req->arm.store(get_arm);
+							req->done.store(false);
+							req->success.store(false);
+							req->requested.store(true);
+							loadlock1_auto_step = 2056; // 等待Robot线程完成
+						} else {
+							logFailed(lk1->getName(), Poco::format("无法匹配PM请求标志: %s", pm_name));
+							loadlock1_auto_step = 900;
 						}
 					}
 					else
 					{
 						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
+					}
+				}
+				break;
+				case 2056: // 等待Robot线程从PM取片完成（LLA回程）
+				{
+					const auto& task = loadLockAReturnPendingTasks.front();
+					std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
+					RobotTransferRequest* req = nullptr;
+					if (pm_name == "PM1") req = &robot_get_from_pm1;
+					else if (pm_name == "PM2") req = &robot_get_from_pm2;
+					else if (pm_name == "PM3") req = &robot_get_from_pm3;
+					else if (pm_name == "PM4") req = &robot_get_from_pm4;
+
+					if (req != nullptr && req->done.load()) {
+						if (req->success.load()) {
+							logInform("Cycle", Poco::format("LLA回程：已从%s取回晶圆，准备放入LLA.", pm_name).c_str());
+							loadlock1_auto_step = 2060;
+						} else {
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
+								loadlock1_process_name, loadlock1_auto_step);
+						}
 					}
 				}
 				break;
@@ -3508,20 +3600,13 @@ namespace FC{
 
 						if(lk1->getTMCavityDoorOpend())
 						{
-							wtr_robot_mutex.lock();
-							//robot 把手臂A的放到LoadLock1
-							auto cmd = wtr->createPutCommand(lk1, put_arm, loadlock1_move_slot_index);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
-							}
-							else {
-								loadlock1_auto_step = 2070;
-							}
+							// 设置请求标志，委托Robot线程执行放片到LLA
+							robot_put_to_lla.arm.store(put_arm);
+							robot_put_to_lla.slot.store(loadlock1_move_slot_index);
+							robot_put_to_lla.done.store(false);
+							robot_put_to_lla.success.store(false);
+							robot_put_to_lla.requested.store(true);
+							loadlock1_auto_step = 2065; // 等待Robot线程完成
 						}
 						else
 						{
@@ -3535,6 +3620,17 @@ namespace FC{
 					else
 					{
 						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
+					}
+				}
+				break;
+				case 2065: // 等待Robot线程放片到LLA完成
+				{
+					if (robot_put_to_lla.done.load()) {
+						if (robot_put_to_lla.success.load()) {
+							loadlock1_auto_step = 2070;
+						} else {
+							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock1_process_name, loadlock1_auto_step);
+						}
 					}
 				}
 				break;
@@ -4320,20 +4416,13 @@ namespace FC{
 
 						if (lk2->getTMCavityDoorOpend())
 						{
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(lk2, loadLockBPendingTasks.at(0).arm, loadlock2_move_slot_index);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock2_process_name, loadlock2_auto_step);
-							}
-							else
-							{
-								loadlock2_auto_step = 1052;
-							}
+							// 设置请求标志，委托Robot线程执行
+							robot_get_from_llb.arm.store(loadLockBPendingTasks.at(0).arm);
+							robot_get_from_llb.slot.store(loadlock2_move_slot_index);
+							robot_get_from_llb.done.store(false);
+							robot_get_from_llb.success.store(false);
+							robot_get_from_llb.requested.store(true);
+							loadlock2_auto_step = 1055; // 等待Robot线程完成
 						}
 						else
 						{
@@ -4344,6 +4433,17 @@ namespace FC{
 					else
 					{
 						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 1055: // 等待Robot线程从LLB取片完成
+				{
+					if (robot_get_from_llb.done.load()) {
+						if (robot_get_from_llb.success.load()) {
+							loadlock2_auto_step = 1052;
+						} else {
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", loadlock2_process_name, loadlock2_auto_step);
+						}
 					}
 				}
 				break;
@@ -4645,26 +4745,50 @@ namespace FC{
 							break;
 						}
 
-						wtr_robot_mutex.lock();
-						auto cmd = wtr->createGetCommand(target_pm_sub, get_arm, 1);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						wtr_robot_mutex.unlock();
+						// 根据PM名称选择对应的请求标志
+						RobotTransferRequest* req = nullptr;
+						if (pm_name == "PM1") req = &robot_get_from_pm1;
+						else if (pm_name == "PM2") req = &robot_get_from_pm2;
+						else if (pm_name == "PM3") req = &robot_get_from_pm3;
+						else if (pm_name == "PM4") req = &robot_get_from_pm4;
 
-						if (cmd->hasError())
-						{
-							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
-								loadlock2_process_name, loadlock2_auto_step);
-						}
-						else
-						{
-							logInform("Cycle", Poco::format("LLB回程：已从%s取回晶圆，准备放入LLB.", pm_name).c_str());
-							loadlock2_auto_step = 2060;
+						if (req != nullptr) {
+							req->arm.store(get_arm);
+							req->done.store(false);
+							req->success.store(false);
+							req->requested.store(true);
+							loadlock2_auto_step = 2056; // 等待Robot线程完成
+						} else {
+							logFailed(lk2->getName(), Poco::format("无法匹配PM请求标志: %s", pm_name));
+							loadlock2_auto_step = 900;
 						}
 					}
 					else
 					{
 						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2056: // 等待Robot线程从PM取片完成（LLB回程）
+				{
+					const auto& task = loadLockBReturnPendingTasks.front();
+					std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
+					RobotTransferRequest* req = nullptr;
+					if (pm_name == "PM1") req = &robot_get_from_pm1;
+					else if (pm_name == "PM2") req = &robot_get_from_pm2;
+					else if (pm_name == "PM3") req = &robot_get_from_pm3;
+					else if (pm_name == "PM4") req = &robot_get_from_pm4;
+
+					if (req != nullptr && req->done.load()) {
+						if (req->success.load()) {
+							logInform("Cycle", Poco::format("LLB回程：已从%s取回晶圆，准备放入LLB.", pm_name).c_str());
+							loadlock2_auto_step = 2060;
+						} else {
+							logFailedExcuteCommandHasError(wtr->getName(), "取晶圆(回程)",
+								loadlock2_process_name, loadlock2_auto_step);
+							Sleep(2000);
+							loadlock2_auto_step = 2055; // 回退重试
+						}
 					}
 				}
 				break;
@@ -4688,19 +4812,13 @@ namespace FC{
 						//robot 把手臂A的放到Loadlock2
 						if(lk2->getTMCavityDoorOpend())
 						{
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(lk2, put_arm, loadlock2_move_slot_index);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
-							}
-							else {
-								loadlock2_auto_step = 2070;
-							}
+							// 设置请求标志，委托Robot线程执行放片到LLB
+							robot_put_to_llb.arm.store(put_arm);
+							robot_put_to_llb.slot.store(loadlock2_move_slot_index);
+							robot_put_to_llb.done.store(false);
+							robot_put_to_llb.success.store(false);
+							robot_put_to_llb.requested.store(true);
+							loadlock2_auto_step = 2065; // 等待Robot线程完成
 						}
 						else
 						{
@@ -4714,6 +4832,19 @@ namespace FC{
 					else
 					{
 						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
+					}
+				}
+				break;
+				case 2065: // 等待Robot线程放片到LLB完成
+				{
+					if (robot_put_to_llb.done.load()) {
+						if (robot_put_to_llb.success.load()) {
+							loadlock2_auto_step = 2070;
+						} else {
+							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", loadlock2_process_name, loadlock2_auto_step);
+							Sleep(2000);
+							loadlock2_auto_step = 2060; // 回退重试
+						}
 					}
 				}
 				break;
@@ -5074,7 +5205,6 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -5083,7 +5213,6 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
-							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -5167,22 +5296,12 @@ namespace FC{
 						#ifdef DEBUG_TEST_PM
 							{
 								robot_selected_arm = 0; //A手
-								wtr_robot_mutex.lock();
-								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-								wtr->startCommand(cmd);
-								cmd->wait();
-								wtr_robot_mutex.unlock();
-								if (cmd->hasError())
-								{
-									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
-								}
-								else
-								{
-									//下层的
-									//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-									pm1_allow_get_put_wafer = false;
-									pm1_auto_step.store(2000);
-								}
+								// 设置请求标志，委托Robot线程执行放片到PM1
+								robot_put_to_pm1.arm.store(robot_selected_arm);
+								robot_put_to_pm1.done.store(false);
+								robot_put_to_pm1.success.store(false);
+								robot_put_to_pm1.requested.store(true);
+								pm1_auto_step.store(1015); // 等待Robot线程完成
 							}
 						#else
 							//TODO:测试阶段，机械手不去PM放晶圆
@@ -5198,68 +5317,54 @@ namespace FC{
 						}	
 					}
 					break;
-					case 1030:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							#ifdef DEBUG_TEST_PM
-								robot_selected_arm = 1;
-								wtr_robot_mutex.lock();
-								auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-								wtr->startCommand(cmd);
-								cmd->wait();
-								wtr_robot_mutex.unlock();
-								if (cmd->hasError())
-								{
-									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step);
-								}
-								else
-								{
-									//下层的
-									//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-									pm1_allow_get_put_wafer = false;
-									pm1_auto_step.store(2000);
-								}
-							#else
-								//TODO:测试阶段，机械手不去PM放晶圆
-								logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
+					case 1015: // 等待Robot线程放片到PM1完成
+					{
+						if (robot_put_to_pm1.done.load()) {
+							if (robot_put_to_pm1.success.load()) {
+								pm1_allow_get_put_wafer = false;
 								pm1_auto_step.store(2000);
-							#endif
+							} else {
+								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
+							}
 						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
-						}
+					}
+					break;
+					case 1030:
+					{//放片 - B臂放到PM1
+						robot_put_to_pm1.arm.store(1);
+						robot_put_to_pm1.slot.store(1);
+						robot_put_to_pm1.done.store(false);
+						robot_put_to_pm1.success.store(false);
+						robot_put_to_pm1.requested.store(true);
+						pm1_auto_step.store(1015); // 复用同一个等待步骤
 					}
 					break;
 					case 1040:
 					{
-						//取片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 取片 - A臂从PM1取片
+						robot_get_from_pm1.arm.store(0);
+						robot_get_from_pm1.done.store(false);
+						robot_get_from_pm1.success.store(false);
+						robot_get_from_pm1.requested.store(true);
+						pm1_auto_step.store(1045);
+					}
+					break;
+					case 1045:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm1.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm1.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm1_process_name, pm1_auto_step.load());
-							}
-							else
-							{
-								//下层的
 								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-
 								pm1_allow_get_put_wafer = false;
 								pm1_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm1_process_name, pm1_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM1取片失败(A臂)， %s：%d", pm1_process_name, pm1_auto_step.load()));
+							}
 						}
 					}
 					break;
@@ -5269,23 +5374,12 @@ namespace FC{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm1_auto_step.load());
-							}
-							else
-							{
-								//下层的
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-								pm1_allow_get_put_wafer = false;
-								pm1_auto_step.store(10);
-							}
+							// 设置请求标志，委托Robot线程执行从PM1取片（B臂）
+							robot_get_from_pm1.arm.store(robot_selected_arm);
+							robot_get_from_pm1.done.store(false);
+							robot_get_from_pm1.success.store(false);
+							robot_get_from_pm1.requested.store(true);
+							pm1_auto_step.store(1045); // 复用同一个等待步骤
 						}
 						else
 						{
@@ -5296,137 +5390,93 @@ namespace FC{
 #pragma region 交换料
 					case 1060:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm1_auto_step.load());
-							}
-							else {
-								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
-								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm1_auto_step.store(1061);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
-						}
+						// 交换：A臂取 + B臂放 (先取后放)
+						exchange_info_pm1.getArm.store(0);
+						exchange_info_pm1.putArm.store(1);
+						robot_exchange_pm1.done.store(false);
+						robot_exchange_pm1.success.store(false);
+						robot_exchange_pm1.requested.store(true);
+						pm1_auto_step.store(1065);
 					}
 					break;
-					case 1061:
+					case 1065:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm1.done.load())
 						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm1.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
-							}
-							else
-							{
+								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
+								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm1_allow_get_put_wafer = false;
 								pm1_allow_goto_craft = true;
 								pm1_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM1交换料失败(A取B放)， %s：%d", pm_process_name, pm1_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1070:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm_process_name, pm1_auto_step.load());
-							}
-							else {
-
-								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
-								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								//可以呼叫loadlocka/loadlockb 走放片到loadlock的流程
-								pm1_auto_step.store(1071);
-							}
-
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
-						}
+						// 交换：B臂取 + A臂放 (先取后放)
+						exchange_info_pm1.getArm.store(1);
+						exchange_info_pm1.putArm.store(0);
+						robot_exchange_pm1.done.store(false);
+						robot_exchange_pm1.success.store(false);
+						robot_exchange_pm1.requested.store(true);
+						pm1_auto_step.store(1075);
 					}
 					break;
-					case 1071:
+					case 1075:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm1.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm1.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm_process_name, pm1_auto_step.load());
+								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
+								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm1_allow_get_put_wafer = false;
+								pm1_allow_goto_craft = true;
+								pm1_auto_step.store(10);
 							}
 							else
 							{
-								pm1_allow_get_put_wafer = false;
-								pm1_allow_goto_craft = true; //转工艺
-								pm1_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM1交换料失败(B取A放)， %s：%d", pm_process_name, pm1_auto_step.load()));
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm1_auto_step.load());
 						}
 					}
 					break;
 
 					case 1090:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 最终取片（仅取，不放）：A臂从PM1取片
+						robot_get_from_pm1.arm.store(0);
+						robot_get_from_pm1.done.store(false);
+						robot_get_from_pm1.success.store(false);
+						robot_get_from_pm1.requested.store(true);
+						pm1_auto_step.store(1095);
+					}
+					break;
+					case 1095:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm1.done.load())
 						{
-							robot_selected_arm = 0;
-							auto cmd = wtr->createGetCommand(pm1, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							if (robot_get_from_pm1.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm1_process_name, pm1_auto_step.load());
+								pm1_allow_get_put_wafer = false;
+								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
+								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm1_auto_step.store(10);
 							}
 							else
 							{
-								pm1_allow_get_put_wafer = false;
-								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1"); //10
-								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm1_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM1最终取片失败， %s：%d", pm1_process_name, pm1_auto_step.load()));
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm1_process_name, pm1_auto_step.load());
 						}
 					}
 					break;
@@ -5630,7 +5680,6 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -5639,7 +5688,6 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
-							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -5715,270 +5763,172 @@ namespace FC{
 					}
 					break;
 					case 1010:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{//放片 - A臂放到PM2
+						robot_put_to_pm2.arm.store(0);
+						robot_put_to_pm2.slot.store(1);
+						robot_put_to_pm2.done.store(false);
+						robot_put_to_pm2.success.store(false);
+						robot_put_to_pm2.requested.store(true);
+						pm2_auto_step.store(1015);
+					}
+					break;
+					case 1015:
+					{
+						// 等待放片完成
+						if (robot_put_to_pm2.done.load())
 						{
-#ifdef DEBUG_TEST_PM
-						robot_selected_arm = 0;
-						wtr_robot_mutex.lock();
-						auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
-						wtr->startCommand(cmd);
-						cmd->wait();
-						wtr_robot_mutex.unlock();
-						if (cmd->hasError())
-						{
-							logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
-						}
-						else
-						{
-							//下层的
-							//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-							pm2_allow_get_put_wafer = false;	
-							pm2_auto_step.store(2000);
-						}
-#else
-						//TODO:测试阶段，机械手不去PM放晶圆	
-						logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
-						pm2_auto_step.store(2000);
-#endif
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+							if (robot_put_to_pm2.success.load())
+							{
+								pm2_allow_get_put_wafer = false;
+								pm2_auto_step.store(2000);
+							}
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM2放片失败(A臂)， %s：%d", pm2_process_name, pm2_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1030:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-#ifdef DEBUG_TEST_PM
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
-							}
-							else
-							{
-								//下层的
-								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-								pm2_allow_get_put_wafer = false;
-								pm2_auto_step.store(2000);
-							}
-#else
-							//TODO:测试阶段，机械手不去PM放晶圆	
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
-							pm2_auto_step.store(2000);
-#endif
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
-						}
+					{//放片 - B臂放到PM2
+						robot_put_to_pm2.arm.store(1);
+						robot_put_to_pm2.slot.store(1);
+						robot_put_to_pm2.done.store(false);
+						robot_put_to_pm2.success.store(false);
+						robot_put_to_pm2.requested.store(true);
+						pm2_auto_step.store(1015); // 复用同一个等待步骤
 					}
 					break;
 					case 1040:
 					{
-						//取片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 取片 - A臂从PM2取片
+						robot_get_from_pm2.arm.store(0);
+						robot_get_from_pm2.done.store(false);
+						robot_get_from_pm2.success.store(false);
+						robot_get_from_pm2.requested.store(true);
+						pm2_auto_step.store(1045);
+					}
+					break;
+					case 1045:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm2.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm2.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
-							}
-							else
-							{
-								//下层的
 								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-
 								pm2_allow_get_put_wafer = false;
 								pm2_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM2取片失败(A臂)， %s：%d", pm2_process_name, pm2_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1050:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
-							}
-							else
-							{
-								//下层的
-								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-								pm2_allow_get_put_wafer = false;
-								pm2_auto_step.store(10);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step);
-						}
+						// 取片 - B臂从PM2取片
+						robot_get_from_pm2.arm.store(1);
+						robot_get_from_pm2.done.store(false);
+						robot_get_from_pm2.success.store(false);
+						robot_get_from_pm2.requested.store(true);
+						pm2_auto_step.store(1045); // 复用同一个等待步骤
 					}
 					break;
 #pragma region 交换料
 					case 1060:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
-							}
-							else {
-								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10
-								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm2_auto_step.store(1061);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
-						}
+						// 交换：A臂取 + B臂放 (先取后放)
+						exchange_info_pm2.getArm.store(0);
+						exchange_info_pm2.putArm.store(1);
+						robot_exchange_pm2.done.store(false);
+						robot_exchange_pm2.success.store(false);
+						robot_exchange_pm2.requested.store(true);
+						pm2_auto_step.store(1065);
 					}
 					break;
-					case 1061:
+					case 1065:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm2.done.load())
 						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm2.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());	
-							}
-							else
-							{
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm2_allow_get_put_wafer = false;
 								pm2_allow_goto_craft = true;
 								pm2_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM2交换料失败(A取B放)， %s：%d", pm2_process_name, pm2_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1070:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
-							}
-							else {
-
-								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10	
-								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								//可以呼叫loadlocka/loadlockb 走放片到loadlock的流程
-								pm2_auto_step.store(1071);
-							}
-
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
-						}
+						// 交换：B臂取 + A臂放 (先取后放)
+						exchange_info_pm2.getArm.store(1);
+						exchange_info_pm2.putArm.store(0);
+						robot_exchange_pm2.done.store(false);
+						robot_exchange_pm2.success.store(false);
+						robot_exchange_pm2.requested.store(true);
+						pm2_auto_step.store(1075);
 					}
 					break;
-					case 1071:
+					case 1075:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm2.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm2.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm2_process_name, pm2_auto_step.load());
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm2_allow_get_put_wafer = false;
+								pm2_allow_goto_craft = true;
+								pm2_auto_step.store(10);
 							}
 							else
 							{
-								pm2_allow_get_put_wafer = false;
-								pm2_allow_goto_craft = true; //转工艺
-								pm2_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM2交换料失败(B取A放)， %s：%d", pm2_process_name, pm2_auto_step.load()));
 							}
 						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
-						}
 					}
-					break;					
+					break;
 
 #pragma endregion
 					case 1090:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 最终取片（仅取，不放）：A臂从PM2取片
+						robot_get_from_pm2.arm.store(0);
+						robot_get_from_pm2.done.store(false);
+						robot_get_from_pm2.success.store(false);
+						robot_get_from_pm2.requested.store(true);
+						pm2_auto_step.store(1095);
+					}
+					break;
+					case 1095:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm2.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm2, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm2.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm2_process_name, pm2_auto_step.load());
+								pm2_allow_get_put_wafer = false;
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm2_auto_step.store(10);
 							}
 							else
 							{
-								pm2_allow_get_put_wafer = false;
-								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2"); //10
-								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm2_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM2最终取片失败， %s：%d", pm2_process_name, pm2_auto_step.load()));
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
 						}
 					}
 					break;
@@ -6184,7 +6134,6 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -6192,7 +6141,6 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
-							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -6261,273 +6209,173 @@ namespace FC{
 					}
 					break;
 					case 1010:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{//放片 - A臂放到PM3
+						robot_put_to_pm3.arm.store(0);
+						robot_put_to_pm3.slot.store(1);
+						robot_put_to_pm3.done.store(false);
+						robot_put_to_pm3.success.store(false);
+						robot_put_to_pm3.requested.store(true);
+						pm3_auto_step.store(1015);
+					}
+					break;
+					case 1015:
+					{
+						// 等待放片完成
+						if (robot_put_to_pm3.done.load())
 						{
-#ifdef DEBUG_TEST_PM
-							
-							robot_selected_arm = 0; //A手
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_put_to_pm3.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else
-							{
-								//下层的
-								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
 								pm3_allow_get_put_wafer = false;
 								pm3_auto_step.store(2000);
 							}
-							
-#else
-							//TODO:测试阶段，机械手不去PM放晶圆
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
-							pm3_auto_step.store(2000);
-
-#endif  //DEBUG_TEST_PM
-
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step);
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM3放片失败(A臂)， %s：%d", pm3_process_name, pm3_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1030:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-#ifdef DEBUG_TEST_PM
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else
-							{
-								//下层的
-								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-
-								pm3_allow_get_put_wafer = false;
-								pm3_auto_step.store(2000);
-							}
-#else
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
-							pm3_allow_get_put_wafer = false;
-							pm3_auto_step.store(2000);
-#endif
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step);
-						}
+					{//放片 - B臂放到PM3
+						robot_put_to_pm3.arm.store(1);
+						robot_put_to_pm3.slot.store(1);
+						robot_put_to_pm3.done.store(false);
+						robot_put_to_pm3.success.store(false);
+						robot_put_to_pm3.requested.store(true);
+						pm3_auto_step.store(1015); // 复用同一个等待步骤
 					}
 					break;
 					case 1040:
 					{
-						//取片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 取片 - A臂从PM3取片
+						robot_get_from_pm3.arm.store(0);
+						robot_get_from_pm3.done.store(false);
+						robot_get_from_pm3.success.store(false);
+						robot_get_from_pm3.requested.store(true);
+						pm3_auto_step.store(1045);
+					}
+					break;
+					case 1045:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm3.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm3.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else
-							{
-								//下层的
 								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-
 								pm3_allow_get_put_wafer = false;
 								pm3_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM3取片失败(A臂)， %s：%d", pm3_process_name, pm3_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1050:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else
-							{
-								//下层的
-								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pm3PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-								pm3_allow_get_put_wafer = false;
-								pm3_auto_step.store(10);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
-						}
+						// 取片 - B臂从PM3取片
+						robot_get_from_pm3.arm.store(1);
+						robot_get_from_pm3.done.store(false);
+						robot_get_from_pm3.success.store(false);
+						robot_get_from_pm3.requested.store(true);
+						pm3_auto_step.store(1045); // 复用同一个等待步骤
 					}
 					break;
 #pragma region 交换料
 					case 1060:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else {
-								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
-								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm3_auto_step.store(1061);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
-						}
+						// 交换：A臂取 + B臂放 (先取后放)
+						exchange_info_pm3.getArm.store(0);
+						exchange_info_pm3.putArm.store(1);
+						robot_exchange_pm3.done.store(false);
+						robot_exchange_pm3.success.store(false);
+						robot_exchange_pm3.requested.store(true);
+						pm3_auto_step.store(1065);
 					}
 					break;
-					case 1061:
+					case 1065:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm3.done.load())
 						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm3.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else
-							{
+								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3");
+								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm3_allow_get_put_wafer = false;
 								pm3_allow_goto_craft = true;
 								pm3_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM3交换料失败(A取B放)， %s：%d", pm3_process_name, pm3_auto_step.load()));
+							}
 						}
 					}
 					break;
 					case 1070:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
-							}
-							else {
-
-								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
-								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm3_auto_step.store(1071);
-							}
-
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
-						}
+						// 交换：B臂取 + A臂放 (先取后放)
+						exchange_info_pm3.getArm.store(1);
+						exchange_info_pm3.putArm.store(0);
+						robot_exchange_pm3.done.store(false);
+						robot_exchange_pm3.success.store(false);
+						robot_exchange_pm3.requested.store(true);
+						pm3_auto_step.store(1075);
 					}
 					break;
-					case 1071:
+					case 1075:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm3.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm3.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm3_process_name, pm3_auto_step.load());
+								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3");
+								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm3_allow_get_put_wafer = false;
+								pm3_allow_goto_craft = true;
+								pm3_auto_step.store(10);
 							}
 							else
 							{
-								pm3_allow_get_put_wafer = false;
-								pm3_allow_goto_craft = true; //转工艺
-								pm3_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM3交换料失败(B取A放)， %s：%d", pm3_process_name, pm3_auto_step.load()));
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
 						}
 					}
 					break;
 #pragma endregion
 					case 1090:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 最终取片（仅取，不放）：A臂从PM3取片
+						robot_get_from_pm3.arm.store(0);
+						robot_get_from_pm3.done.store(false);
+						robot_get_from_pm3.success.store(false);
+						robot_get_from_pm3.requested.store(true);
+						pm3_auto_step.store(1095);
+					}
+					break;
+					case 1095:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm3.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm3, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm3.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm3_process_name, pm3_auto_step.load());
+								pm3_allow_get_put_wafer = false;
+								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3");
+								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm3_auto_step.store(10);
 							}
 							else
 							{
-								pm3_allow_get_put_wafer = false;
-								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3"); //10
-								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm3_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM3最终取片失败， %s：%d", pm3_process_name, pm3_auto_step.load()));
+								Sleep(2000);
+								pm3_auto_step.store(1090); // 回退重试
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step.load());
 						}
 					}
 					break;
@@ -6692,7 +6540,6 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							wtr_robot_mutex.lock();
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
@@ -6701,7 +6548,6 @@ namespace FC{
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
-							wtr_robot_mutex.unlock();
 
 							if (cmd1->hasError() || cmd2->hasError())
 							{
@@ -6772,272 +6618,189 @@ namespace FC{
 					}
 					break;
 					case 1010:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+					{//放片 - A臂放到PM4
+						robot_put_to_pm4.arm.store(0);
+						robot_put_to_pm4.slot.store(1);
+						robot_put_to_pm4.done.store(false);
+						robot_put_to_pm4.success.store(false);
+						robot_put_to_pm4.requested.store(true);
+						pm4_auto_step.store(1015);
+					}
+					break;
+					case 1015:
+					{
+						// 等待放片完成
+						if (robot_put_to_pm4.done.load())
 						{
-#ifdef DEBUG_TEST_PM
-								robot_selected_arm = 0; //A手
-								wtr_robot_mutex.lock();
-								auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
-								wtr->startCommand(cmd);
-								cmd->wait();
-								wtr_robot_mutex.unlock();
-								if (cmd->hasError())
-								{
-									logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
-								}
+							if (robot_put_to_pm4.success.load())
+							{
+								pm4_allow_get_put_wafer = false;
+								pm4_auto_step.store(2000);
+							}
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM4放片失败(A臂)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								Sleep(2000);
+								// 根据arm判断回退到哪个请求步骤
+								if (robot_put_to_pm4.arm.load() == 0)
+									pm4_auto_step.store(1010);
 								else
-								{
-									//下层的
-									//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId,UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-									pm4_allow_get_put_wafer = false;
-									pm4_auto_step.store(2000);
-								}
-#else
-							//TODO:测试阶段，机械手不去PM放晶圆
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
-							pm4_auto_step.store(2000);
-
-#endif  //DEBUG_TEST_PM
-
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step);
+									pm4_auto_step.store(1030);
+							}
 						}
 					}
 					break;
 					case 1030:
-					{//放片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-
-#ifdef DEBUG_TEST_PM
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step);
-							}
-							else
-							{
-								//下层的
-								//taskManager.updateTaskStatus(pmPendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::IN_PROGRESS);
-
-								pm4_allow_get_put_wafer = false;
-								pm4_auto_step.store(2000);
-							}
-#else
-							logInform1(wtr->getName().c_str(), "测试阶段，机械手不去PM放晶圆.");
-							pm4_auto_step.store(2000);
-#endif
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step);
-						}
+					{//放片 - B臂放到PM4
+						robot_put_to_pm4.arm.store(1);
+						robot_put_to_pm4.slot.store(1);
+						robot_put_to_pm4.done.store(false);
+						robot_put_to_pm4.success.store(false);
+						robot_put_to_pm4.requested.store(true);
+						pm4_auto_step.store(1015); // 复用同一个等待步骤
 					}
 					break;
 					case 1040:
 					{
-						//取片
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 取片 - A臂从PM4取片
+						robot_get_from_pm4.arm.store(0);
+						robot_get_from_pm4.done.store(false);
+						robot_get_from_pm4.success.store(false);
+						robot_get_from_pm4.requested.store(true);
+						pm4_auto_step.store(1045);
+					}
+					break;
+					case 1045:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm4.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm4.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step);
-							}
-							else
-							{
-								//下层的
 								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-
 								pm4_allow_get_put_wafer = false;
 								pm4_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step);
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM4取片失败(A臂)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								Sleep(2000);
+								// 根据arm判断回退到哪个请求步骤
+								if (robot_get_from_pm4.arm.load() == 0)
+									pm4_auto_step.store(1040);
+								else
+									pm4_auto_step.store(1050);
+							}
 						}
 					}
 					break;
 					case 1050:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, robot_auto_step);
-							}
-							else
-							{
-								//下层的
-								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pm4PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-								pm4_allow_get_put_wafer = false;
-								pm4_auto_step.store(10);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, robot_auto_step);
-						}
+						// 取片 - B臂从PM4取片
+						robot_get_from_pm4.arm.store(1);
+						robot_get_from_pm4.done.store(false);
+						robot_get_from_pm4.success.store(false);
+						robot_get_from_pm4.requested.store(true);
+						pm4_auto_step.store(1045); // 复用同一个等待步骤
 					}
 					break;
 #pragma region 交换料
 					case 1060:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
-							}
-							else {
-								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
-								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm4_auto_step.store(1061);
-							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
-						}
+						// 交换：A臂取 + B臂放 (先取后放)
+						exchange_info_pm4.getArm.store(0);
+						exchange_info_pm4.putArm.store(1);
+						robot_exchange_pm4.done.store(false);
+						robot_exchange_pm4.success.store(false);
+						robot_exchange_pm4.requested.store(true);
+						pm4_auto_step.store(1065);
 					}
 					break;
-					case 1061:
+					case 1065:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm4.done.load())
 						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm4.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
-							}
-							else
-							{
+								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4");
+								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm4_allow_get_put_wafer = false;
 								pm4_allow_goto_craft = true;
 								pm4_auto_step.store(10);
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm_process_name, pm4_auto_step.load());
+							else
+							{
+								logFailed(wtr->getName(), Poco::format("PM4交换料失败(A取B放)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								Sleep(2000);
+								pm4_auto_step.store(1060); // 回退重试
+							}
 						}
 					}
 					break;
 					case 1070:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-						{
-							robot_selected_arm = 1;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
-							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
-							}
-							else {
-
-								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
-								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								//可以呼叫loadlocka/loadlockb 走放片到loadlock的流程
-								pm4_auto_step.store(1071);
-							}
-
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
-						}
+						// 交换：B臂取 + A臂放 (先取后放)
+						exchange_info_pm4.getArm.store(1);
+						exchange_info_pm4.putArm.store(0);
+						robot_exchange_pm4.done.store(false);
+						robot_exchange_pm4.success.store(false);
+						robot_exchange_pm4.requested.store(true);
+						pm4_auto_step.store(1075);
 					}
 					break;
-					case 1071:
+					case 1075:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 等待exchange完成
+						if (robot_exchange_pm4.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createPutCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_exchange_pm4.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "放晶圆", pm4_process_name, pm4_auto_step.load());
+								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4");
+								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm4_allow_get_put_wafer = false;
+								pm4_allow_goto_craft = true;
+								pm4_auto_step.store(10);
 							}
 							else
 							{
-								pm4_allow_get_put_wafer = false;
-								pm4_allow_goto_craft = true; //转工艺
-								pm4_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM4交换料失败(B取A放)， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								Sleep(2000);
+								pm4_auto_step.store(1070); // 回退重试
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
 						}
 					}
 					break;
 #pragma endregion
 					case 1090:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						// 最终取片（仅取，不放）：A臂从PM4取片
+						robot_get_from_pm4.arm.store(0);
+						robot_get_from_pm4.done.store(false);
+						robot_get_from_pm4.success.store(false);
+						robot_get_from_pm4.requested.store(true);
+						pm4_auto_step.store(1095);
+					}
+					break;
+					case 1095:
+					{
+						// 等待取片完成
+						if (robot_get_from_pm4.done.load())
 						{
-							robot_selected_arm = 0;
-							wtr_robot_mutex.lock();
-							auto cmd = wtr->createGetCommand(pm4, robot_selected_arm, 1);
-							wtr->startCommand(cmd);
-							cmd->wait();
-							wtr_robot_mutex.unlock();
-							if (cmd->hasError())
+							if (robot_get_from_pm4.success.load())
 							{
-								logFailedExcuteCommandHasError(wtr->getName(), "取晶圆", pm4_process_name, pm4_auto_step.load());
+								pm4_allow_get_put_wafer = false;
+								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4");
+								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+								pm4_auto_step.store(10);
 							}
 							else
 							{
-								pm4_allow_get_put_wafer = false;
-								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4"); //10
-								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-								pm4_auto_step.store(10);
+								logFailed(wtr->getName(), Poco::format("PM4最终取片失败， %s：%d", pm4_process_name, pm4_auto_step.load()));
+								Sleep(2000);
+								pm4_auto_step.store(1090); // 回退重试
 							}
-						}
-						else
-						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step.load());
 						}
 					}
 					break;
@@ -7125,7 +6888,631 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidgetPrivate::executeTMTransfer()
 	{
+		try {
+			auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+			int robot_step = 10;
 
+			while (!stopRequested)
+			{
+				Sleep(50);
+
+				// 暂停等待（与其他线程一致的模式）
+				{
+					std::unique_lock<std::mutex> lock(mtx);
+					cv.wait(lock, [this] { return running.load() || stopRequested.load(); });
+				}
+				if (stopRequested) break;
+
+				switch (robot_step)
+				{
+				// ===================== IDLE：按优先级轮询请求标志 =====================
+				case 10:
+				{
+					// 优先级1: PUT_TO_LL（释放手臂）
+					if (robot_put_to_lla.requested.load()) { robot_step = 4000; break; }
+					if (robot_put_to_llb.requested.load()) { robot_step = 4100; break; }
+					// 优先级2: GET_FROM_PM（取回已完成工艺的片）
+					if (robot_get_from_pm1.requested.load()) { robot_step = 3000; break; }
+					if (robot_get_from_pm2.requested.load()) { robot_step = 3100; break; }
+					if (robot_get_from_pm3.requested.load()) { robot_step = 3200; break; }
+					if (robot_get_from_pm4.requested.load()) { robot_step = 3300; break; }
+					// 优先级3: EXCHANGE_AT_PM
+					if (robot_exchange_pm1.requested.load()) { robot_step = 5000; break; }
+					if (robot_exchange_pm2.requested.load()) { robot_step = 5100; break; }
+					if (robot_exchange_pm3.requested.load()) { robot_step = 5200; break; }
+					if (robot_exchange_pm4.requested.load()) { robot_step = 5300; break; }
+					// 优先级4: PUT_TO_PM
+					if (robot_put_to_pm1.requested.load()) { robot_step = 2000; break; }
+					if (robot_put_to_pm2.requested.load()) { robot_step = 2100; break; }
+					if (robot_put_to_pm3.requested.load()) { robot_step = 2200; break; }
+					if (robot_put_to_pm4.requested.load()) { robot_step = 2300; break; }
+					// 优先级5: GET_FROM_LL
+					if (robot_get_from_lla.requested.load()) { robot_step = 1000; break; }
+					if (robot_get_from_llb.requested.load()) { robot_step = 1100; break; }
+				}
+				break;
+
+				// ===================== 1000: GET_FROM_LLA =====================
+				case 1000:
+				{
+					int arm = robot_get_from_lla.arm.load();
+					int slot = robot_get_from_lla.slot.load();
+					logInform(wtr->getName().c_str(), "Robot线程：从LLA取片, arm=%d, slot=%d", arm, slot);
+					auto cmd = wtr->createGetCommand(lk1, arm, slot);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 745) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							// 查询手指有无晶圆
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (wtr->hasObject(arm)) {
+								robot_get_from_lla.success.store(true);
+							} else {
+								robot_get_from_lla.success.store(false);
+								logFailed(wtr->getName(), "从LLA取片失败, 错误码745, 手臂无晶圆");
+							}
+						} else {
+							robot_get_from_lla.success.store(false);
+							logFailed(wtr->getName(), Poco::format("从LLA取片失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_get_from_lla.success.store(true);
+					}
+					robot_get_from_lla.requested.store(false);
+					robot_get_from_lla.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 1100: GET_FROM_LLB =====================
+				case 1100:
+				{
+					int arm = robot_get_from_llb.arm.load();
+					int slot = robot_get_from_llb.slot.load();
+					logInform(wtr->getName().c_str(), "Robot线程：从LLB取片, arm=%d, slot=%d", arm, slot);
+					auto cmd = wtr->createGetCommand(lk2, arm, slot);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 745) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (wtr->hasObject(arm)) {
+								robot_get_from_llb.success.store(true);
+							} else {
+								robot_get_from_llb.success.store(false);
+								logFailed(wtr->getName(), "从LLB取片失败, 错误码745, 手臂无晶圆");
+							}
+						} else {
+							robot_get_from_llb.success.store(false);
+							logFailed(wtr->getName(), Poco::format("从LLB取片失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_get_from_llb.success.store(true);
+					}
+					robot_get_from_llb.requested.store(false);
+					robot_get_from_llb.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 2000: PUT_TO_PM1 =====================
+				case 2000:
+				{
+					int arm = robot_put_to_pm1.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：放片到PM1, arm=%d", arm);
+					auto cmd = wtr->createPutCommand(pm1, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 734 || alarm_msg->code() == 736) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (!wtr->hasObject(arm)) {
+								robot_put_to_pm1.success.store(true);
+							} else {
+								robot_put_to_pm1.success.store(false);
+								logFailed(wtr->getName(), "放片到PM1失败, 手臂仍有晶圆");
+							}
+						} else {
+							robot_put_to_pm1.success.store(false);
+							logFailed(wtr->getName(), Poco::format("放片到PM1失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_put_to_pm1.success.store(true);
+					}
+					robot_put_to_pm1.requested.store(false);
+					robot_put_to_pm1.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 2100: PUT_TO_PM2 =====================
+				case 2100:
+				{
+					int arm = robot_put_to_pm2.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：放片到PM2, arm=%d", arm);
+					auto cmd = wtr->createPutCommand(pm2, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 734 || alarm_msg->code() == 736) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (!wtr->hasObject(arm)) {
+								robot_put_to_pm2.success.store(true);
+							} else {
+								robot_put_to_pm2.success.store(false);
+								logFailed(wtr->getName(), "放片到PM2失败, 手臂仍有晶圆");
+							}
+						} else {
+							robot_put_to_pm2.success.store(false);
+							logFailed(wtr->getName(), Poco::format("放片到PM2失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_put_to_pm2.success.store(true);
+					}
+					robot_put_to_pm2.requested.store(false);
+					robot_put_to_pm2.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 2200: PUT_TO_PM3 =====================
+				case 2200:
+				{
+					int arm = robot_put_to_pm3.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：放片到PM3, arm=%d", arm);
+					auto cmd = wtr->createPutCommand(pm3, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 734 || alarm_msg->code() == 736) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (!wtr->hasObject(arm)) {
+								robot_put_to_pm3.success.store(true);
+							} else {
+								robot_put_to_pm3.success.store(false);
+								logFailed(wtr->getName(), "放片到PM3失败, 手臂仍有晶圆");
+							}
+						} else {
+							robot_put_to_pm3.success.store(false);
+							logFailed(wtr->getName(), Poco::format("放片到PM3失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_put_to_pm3.success.store(true);
+					}
+					robot_put_to_pm3.requested.store(false);
+					robot_put_to_pm3.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 2300: PUT_TO_PM4 =====================
+				case 2300:
+				{
+					int arm = robot_put_to_pm4.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：放片到PM4, arm=%d", arm);
+					auto cmd = wtr->createPutCommand(pm4, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 734 || alarm_msg->code() == 736) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (!wtr->hasObject(arm)) {
+								robot_put_to_pm4.success.store(true);
+							} else {
+								robot_put_to_pm4.success.store(false);
+								logFailed(wtr->getName(), "放片到PM4失败, 手臂仍有晶圆");
+							}
+						} else {
+							robot_put_to_pm4.success.store(false);
+							logFailed(wtr->getName(), Poco::format("放片到PM4失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_put_to_pm4.success.store(true);
+					}
+					robot_put_to_pm4.requested.store(false);
+					robot_put_to_pm4.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 3000: GET_FROM_PM1 =====================
+				case 3000:
+				{
+					int arm = robot_get_from_pm1.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM1取片, arm=%d", arm);
+					auto cmd = wtr->createGetCommand(pm1, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 745) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (wtr->hasObject(arm)) {
+								robot_get_from_pm1.success.store(true);
+							} else {
+								robot_get_from_pm1.success.store(false);
+								logFailed(wtr->getName(), "从PM1取片失败, 错误码745, 手臂无晶圆");
+							}
+						} else {
+							robot_get_from_pm1.success.store(false);
+							logFailed(wtr->getName(), Poco::format("从PM1取片失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_get_from_pm1.success.store(true);
+					}
+					robot_get_from_pm1.requested.store(false);
+					robot_get_from_pm1.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 3100: GET_FROM_PM2 =====================
+				case 3100:
+				{
+					int arm = robot_get_from_pm2.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片, arm=%d", arm);
+					auto cmd = wtr->createGetCommand(pm2, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 745) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (wtr->hasObject(arm)) {
+								robot_get_from_pm2.success.store(true);
+							} else {
+								robot_get_from_pm2.success.store(false);
+								logFailed(wtr->getName(), "从PM2取片失败, 错误码745, 手臂无晶圆");
+							}
+						} else {
+							robot_get_from_pm2.success.store(false);
+							logFailed(wtr->getName(), Poco::format("从PM2取片失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_get_from_pm2.success.store(true);
+					}
+					robot_get_from_pm2.requested.store(false);
+					robot_get_from_pm2.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 3200: GET_FROM_PM3 =====================
+				case 3200:
+				{
+					int arm = robot_get_from_pm3.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM3取片, arm=%d", arm);
+					auto cmd = wtr->createGetCommand(pm3, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 745) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (wtr->hasObject(arm)) {
+								robot_get_from_pm3.success.store(true);
+							} else {
+								robot_get_from_pm3.success.store(false);
+								logFailed(wtr->getName(), "从PM3取片失败, 错误码745, 手臂无晶圆");
+							}
+						} else {
+							robot_get_from_pm3.success.store(false);
+							logFailed(wtr->getName(), Poco::format("从PM3取片失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_get_from_pm3.success.store(true);
+					}
+					robot_get_from_pm3.requested.store(false);
+					robot_get_from_pm3.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 3300: GET_FROM_PM4 =====================
+				case 3300:
+				{
+					int arm = robot_get_from_pm4.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：从PM4取片, arm=%d", arm);
+					auto cmd = wtr->createGetCommand(pm4, arm, 1);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 745) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (wtr->hasObject(arm)) {
+								robot_get_from_pm4.success.store(true);
+							} else {
+								robot_get_from_pm4.success.store(false);
+								logFailed(wtr->getName(), "从PM4取片失败, 错误码745, 手臂无晶圆");
+							}
+						} else {
+							robot_get_from_pm4.success.store(false);
+							logFailed(wtr->getName(), Poco::format("从PM4取片失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_get_from_pm4.success.store(true);
+					}
+					robot_get_from_pm4.requested.store(false);
+					robot_get_from_pm4.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 4000: PUT_TO_LLA =====================
+				case 4000:
+				{
+					int arm = robot_put_to_lla.arm.load();
+					int slot = robot_put_to_lla.slot.load();
+					logInform(wtr->getName().c_str(), "Robot线程：放片到LLA, arm=%d, slot=%d", arm, slot);
+					auto cmd = wtr->createPutCommand(lk1, arm, slot);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 734 || alarm_msg->code() == 736) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (!wtr->hasObject(arm)) {
+								robot_put_to_lla.success.store(true);
+							} else {
+								robot_put_to_lla.success.store(false);
+								logFailed(wtr->getName(), "放片到LLA失败, 手臂仍有晶圆");
+							}
+						} else {
+							robot_put_to_lla.success.store(false);
+							logFailed(wtr->getName(), Poco::format("放片到LLA失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_put_to_lla.success.store(true);
+					}
+					robot_put_to_lla.requested.store(false);
+					robot_put_to_lla.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 4100: PUT_TO_LLB =====================
+				case 4100:
+				{
+					int arm = robot_put_to_llb.arm.load();
+					int slot = robot_put_to_llb.slot.load();
+					logInform(wtr->getName().c_str(), "Robot线程：放片到LLB, arm=%d, slot=%d", arm, slot);
+					auto cmd = wtr->createPutCommand(lk2, arm, slot);
+					wtr->startCommand(cmd);
+					cmd->wait();
+					if (cmd->hasError()) {
+						auto alarm_msg = cmd->alarmMessage();
+						if (alarm_msg->code() == 734 || alarm_msg->code() == 736) {
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							auto cmd_rq = wtr->createRQLoadCommand(arm);
+							wtr->startCommand(cmd_rq);
+							cmd_rq->wait();
+							if (!wtr->hasObject(arm)) {
+								robot_put_to_llb.success.store(true);
+							} else {
+								robot_put_to_llb.success.store(false);
+								logFailed(wtr->getName(), "放片到LLB失败, 手臂仍有晶圆");
+							}
+						} else {
+							robot_put_to_llb.success.store(false);
+							logFailed(wtr->getName(), Poco::format("放片到LLB失败, 错误码:%d", alarm_msg->code()));
+						}
+					} else {
+						robot_put_to_llb.success.store(true);
+					}
+					robot_put_to_llb.requested.store(false);
+					robot_put_to_llb.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 5000: EXCHANGE_PM1（先取后放）=====================
+				case 5000:
+				{
+					int getArm = exchange_info_pm1.getArm.load();
+					int putArm = exchange_info_pm1.putArm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：PM1交换, getArm=%d, putArm=%d", getArm, putArm);
+					// 第一步：取出已加工片
+					auto cmd_get = wtr->createGetCommand(pm1, getArm, 1);
+					wtr->startCommand(cmd_get);
+					cmd_get->wait();
+					if (cmd_get->hasError()) {
+						robot_exchange_pm1.success.store(false);
+						logFailed(wtr->getName(), "PM1交换取片失败");
+						robot_exchange_pm1.requested.store(false);
+						robot_exchange_pm1.done.store(true);
+						robot_step = 10;
+						break;
+					}
+					// 第二步：放入新片
+					auto cmd_put = wtr->createPutCommand(pm1, putArm, 1);
+					wtr->startCommand(cmd_put);
+					cmd_put->wait();
+					if (cmd_put->hasError()) {
+						robot_exchange_pm1.success.store(false);
+						logFailed(wtr->getName(), "PM1交换放片失败");
+					} else {
+						robot_exchange_pm1.success.store(true);
+					}
+					robot_exchange_pm1.requested.store(false);
+					robot_exchange_pm1.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 5100: EXCHANGE_PM2 =====================
+				case 5100:
+				{
+					int getArm = exchange_info_pm2.getArm.load();
+					int putArm = exchange_info_pm2.putArm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：PM2交换, getArm=%d, putArm=%d", getArm, putArm);
+					auto cmd_get = wtr->createGetCommand(pm2, getArm, 1);
+					wtr->startCommand(cmd_get);
+					cmd_get->wait();
+					if (cmd_get->hasError()) {
+						robot_exchange_pm2.success.store(false);
+						logFailed(wtr->getName(), "PM2交换取片失败");
+						robot_exchange_pm2.requested.store(false);
+						robot_exchange_pm2.done.store(true);
+						robot_step = 10;
+						break;
+					}
+					auto cmd_put = wtr->createPutCommand(pm2, putArm, 1);
+					wtr->startCommand(cmd_put);
+					cmd_put->wait();
+					if (cmd_put->hasError()) {
+						robot_exchange_pm2.success.store(false);
+						logFailed(wtr->getName(), "PM2交换放片失败");
+					} else {
+						robot_exchange_pm2.success.store(true);
+					}
+					robot_exchange_pm2.requested.store(false);
+					robot_exchange_pm2.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 5200: EXCHANGE_PM3 =====================
+				case 5200:
+				{
+					int getArm = exchange_info_pm3.getArm.load();
+					int putArm = exchange_info_pm3.putArm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：PM3交换, getArm=%d, putArm=%d", getArm, putArm);
+					auto cmd_get = wtr->createGetCommand(pm3, getArm, 1);
+					wtr->startCommand(cmd_get);
+					cmd_get->wait();
+					if (cmd_get->hasError()) {
+						robot_exchange_pm3.success.store(false);
+						logFailed(wtr->getName(), "PM3交换取片失败");
+						robot_exchange_pm3.requested.store(false);
+						robot_exchange_pm3.done.store(true);
+						robot_step = 10;
+						break;
+					}
+					auto cmd_put = wtr->createPutCommand(pm3, putArm, 1);
+					wtr->startCommand(cmd_put);
+					cmd_put->wait();
+					if (cmd_put->hasError()) {
+						robot_exchange_pm3.success.store(false);
+						logFailed(wtr->getName(), "PM3交换放片失败");
+					} else {
+						robot_exchange_pm3.success.store(true);
+					}
+					robot_exchange_pm3.requested.store(false);
+					robot_exchange_pm3.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 5300: EXCHANGE_PM4 =====================
+				case 5300:
+				{
+					int getArm = exchange_info_pm4.getArm.load();
+					int putArm = exchange_info_pm4.putArm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：PM4交换, getArm=%d, putArm=%d", getArm, putArm);
+					auto cmd_get = wtr->createGetCommand(pm4, getArm, 1);
+					wtr->startCommand(cmd_get);
+					cmd_get->wait();
+					if (cmd_get->hasError()) {
+						robot_exchange_pm4.success.store(false);
+						logFailed(wtr->getName(), "PM4交换取片失败");
+						robot_exchange_pm4.requested.store(false);
+						robot_exchange_pm4.done.store(true);
+						robot_step = 10;
+						break;
+					}
+					auto cmd_put = wtr->createPutCommand(pm4, putArm, 1);
+					wtr->startCommand(cmd_put);
+					cmd_put->wait();
+					if (cmd_put->hasError()) {
+						robot_exchange_pm4.success.store(false);
+						logFailed(wtr->getName(), "PM4交换放片失败");
+					} else {
+						robot_exchange_pm4.success.store(true);
+					}
+					robot_exchange_pm4.requested.store(false);
+					robot_exchange_pm4.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				default:
+					robot_step = 10;
+					break;
+				}
+			}
+		}
+		catch (std::exception& e) {
+			logFailed(wtr->getName(), Poco::format("Robot线程异常: %s", std::string(e.what())));
+			pauseAllThreads();
+		}
+		catch (...) {
+			logFailed(wtr->getName(), "Robot线程异常: 未知异常");
+			pauseAllThreads();
+		}
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::executeUpdateTransferStatus()
@@ -7337,6 +7724,7 @@ namespace FC{
 		needReset_PM3.store(true);
 		needReset_PM4.store(true);
 		needReset_Update.store(true);
+		resetAllRobotFlags();
 		update_auto_step = 10;
 		Sleep(500);
 
@@ -9789,6 +10177,10 @@ namespace FC{
 		std::thread thread_update(&QSlotTransferCycleVTMWidget::executeUpdateTransferStatus,this);
 		thread_update.detach();
 
+		// 机械手集中调度线程
+		std::thread thd_robot(&QSlotTransferCycleVTMWidget::executeTMTransfer, this);
+		thd_robot.detach();
+
 	}
 
 	void QSlotTransferCycleVTMWidget::initializeThreads()
@@ -9804,6 +10196,7 @@ namespace FC{
 		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM3Transfer, this);
 		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executePM4Transfer, this);
 		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeUpdateTransferStatus, this);
+		d->threads.emplace_back(&QSlotTransferCycleVTMWidget::executeTMTransfer, this);
 	}
 
 	//=============================================================================
@@ -10058,3 +10451,4 @@ namespace FC{
 	}
 
 }
+
