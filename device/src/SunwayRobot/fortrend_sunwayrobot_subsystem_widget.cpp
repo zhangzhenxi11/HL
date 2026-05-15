@@ -391,50 +391,8 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onCheckLoadCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
-		arm = (arm == 0) ? 1 : 0;
-#if  0	
-		std::shared_ptr<FortrendStation> station = getSelectStation();
-
-		/*if (!station){
-			QMessageBox::information(this, "warn", "Please select station");
-			return;
-		}*/
-
-		if (arm < 0){
-			QMessageBox::information(this, "警告", "请选择手臂");
-			return;
-		}
-		int station_id = 1;
-
-		if (station->getName() == "LLA")
-		{
-			station_id = 1;
-		}
-		else if (station->getName() == "LLB")
-		{
-			station_id = 6;
-		}
-		else if (station->getName() == "PM1")
-		{
-			station_id = 2;
-		}
-		else if (station->getName() == "PM2")
-		{
-			station_id = 3;
-		}
-		else if (station->getName() == "PM3")
-		{
-			station_id = 4;
-		}
-		else if (station->getName() == "PM5")
-		{
-			station_id = 6;
-		}
-		else{
-			QMessageBox::information(this, "错误", "查询手指有无晶圆输入工位错误");
-			return;
-		}
-#endif
+		//2026-5-15 不调换保持和机械手界面一致，0代表A臂，1代表B臂
+		//arm = (arm == 0) ? 1 : 0;
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createRQLoadCommand(arm);
 		executeCommand(getSubsystem(), cmd);
 

@@ -195,8 +195,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			}
 			
 		}
-
-		auto cmd_update = robot->createSetSpeedCommand(5);
+		//这里设置默认25比例速度
+		auto cmd_update = robot->createSetSpeedCommand(25);
 		robot->startCommand(cmd_update);
 		cmd_update->wait();
 		if (cmd_update->hasError())

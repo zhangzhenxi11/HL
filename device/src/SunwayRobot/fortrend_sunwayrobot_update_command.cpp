@@ -229,7 +229,7 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			return RunResult::RUN_FAILD;
 		}
 		res = recvResponseRobotMessage(timeout);
-		logInform(sub->getName().c_str(), "查询B机械手有无片子RPS：%s", res.c_str());
+		logInform(sub->getName().c_str(), "查询A机械手有无片子RPS：%s", res.c_str());
 		Sleep(20);
 	}
 

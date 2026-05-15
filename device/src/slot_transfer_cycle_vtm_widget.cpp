@@ -3244,8 +3244,8 @@ namespace FC{
 						Sleep(1000);
 						loadlock1_auto_step = 1051;
 					} else {
-						logInform(lk1->getName().c_str(), "LLA 1055步：等待Robot从LLA取片完成, done=%d, requested=%d, robot_step=%d",
-							robot_get_from_lla.done.load(), robot_get_from_lla.requested.load(), robot_step);
+			/*			logInform(lk1->getName().c_str(), "LLA 1055步：等待Robot从LLA取片完成, done=%d, requested=%d, robot_step=%d",
+							robot_get_from_lla.done.load(), robot_get_from_lla.requested.load(), robot_step)*/;
 					}
 				}
 				break;
@@ -3539,8 +3539,31 @@ namespace FC{
 						}
 
 						const auto& task = loadLockAReturnPendingTasks.front();
-						int get_arm = task.arm;
 						std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
+
+						// 修复：回程取片时自动选择空手臂，而不是使用task.arm
+						// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
+						bool arm1HasWafer = wtr->hasObject(0);  // A臂(索引0)
+						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
+						
+						int get_arm;
+						if (!arm1HasWafer && arm2HasWafer) {
+							get_arm = 0;  // A臂空，使用A臂取片
+						} else if (arm1HasWafer && !arm2HasWafer) {
+							get_arm = 1;  // B臂空，使用B臂取片
+						} else if (!arm1HasWafer && !arm2HasWafer) {
+							// 两臂都空，默认使用A臂
+							get_arm = 0;
+						} else {
+							// 两臂都有片（不应该发生），等待手臂空闲
+							logWarn(wtr->getName().c_str(), "LLA回程2055：两臂都有片，无法取片，等待修正...");
+							loadlock1_auto_step = 200;  // 回退到调度检查
+							break;
+						}
+						
+						logInform(wtr->getName().c_str(), "LLA回程2055：选择手臂%d取片(arm1Has=%d, arm2Has=%d), pm=%s",
+							get_arm, arm1HasWafer, arm2HasWafer, pm_name.c_str());
+
 						auto target_pm_sub = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
 
 						if (target_pm_sub == nullptr)
@@ -3615,8 +3638,8 @@ namespace FC{
 						Sleep(1000);
 						loadlock1_auto_step = 2055;
 					} else {
-						logInform(lk1->getName().c_str(), "LLA回程2056步：等待Robot从%s取片完成, done=%d, requested=%d, robot_step=%d",
-							pm_name.c_str(), req->done.load(), req->requested.load(), robot_step);
+				/*		logInform(lk1->getName().c_str(), "LLA回程2056步：等待Robot从%s取片完成, done=%d, requested=%d, robot_step=%d",
+							pm_name.c_str(), req->done.load(), req->requested.load(), robot_step);*/
 					}
 				}
 				break;
@@ -4493,8 +4516,8 @@ namespace FC{
 						Sleep(1000);
 						loadlock2_auto_step = 1051;
 					} else {
-						logInform(lk2->getName().c_str(), "LLB 1055步：等待Robot从LLB取片完成, done=%d, requested=%d, robot_step=%d",
-							robot_get_from_llb.done.load(), robot_get_from_llb.requested.load(), robot_step);
+				/*		logInform(lk2->getName().c_str(), "LLB 1055步：等待Robot从LLB取片完成, done=%d, requested=%d, robot_step=%d",
+							robot_get_from_llb.done.load(), robot_get_from_llb.requested.load(), robot_step);*/
 					}
 				}
 				break;
@@ -4785,8 +4808,31 @@ namespace FC{
 						}
 
 						const auto& task = loadLockBReturnPendingTasks.front();
-						int get_arm = task.arm;
 						std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
+
+						// 修复：回程取片时自动选择空手臂，而不是使用task.arm
+						// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
+						bool arm1HasWafer = wtr->hasObject(0);  // A臂(索引0)
+						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
+
+						int get_arm;
+						if (!arm1HasWafer && arm2HasWafer) {
+							get_arm = 0;  // A臂空，使用A臂取片
+						} else if (arm1HasWafer && !arm2HasWafer) {
+							get_arm = 1;  // B臂空，使用B臂取片
+						} else if (!arm1HasWafer && !arm2HasWafer) {
+							// 两臂都空，默认使用A臂
+							get_arm = 0;
+						} else {
+							// 两臂都有片（不应该发生），等待手臂空闲
+							logWarn(wtr->getName().c_str(), "LLB回程2055：两臂都有片，无法取片，等待修正...");
+							loadlock2_auto_step = 200;  // 回退到调度检查
+							break;
+						}
+						
+						logInform(wtr->getName().c_str(), "LLB回程2055：选择手臂%d取片(arm1Has=%d, arm2Has=%d), pm=%s",
+							get_arm, arm1HasWafer, arm2HasWafer, pm_name.c_str());
+
 						auto target_pm_sub = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
 
 						if (target_pm_sub == nullptr)
@@ -5278,12 +5324,12 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							auto cmd1 = wtr->createRQLoadCommand(0); //1手
+							auto cmd1 = wtr->createRQLoadCommand(0); //A手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
 
 
-							auto cmd2 = wtr->createRQLoadCommand(1); //1手
+							auto cmd2 = wtr->createRQLoadCommand(1); //B手
 							wtr->startCommand(cmd2);
 							cmd2->wait();
 
@@ -5315,9 +5361,10 @@ namespace FC{
 							}
 							else
 							{
+								// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
 								bool haswaferpm = cassManager->getCassette(pm1.get())->getMapping(1) == Cassette::Present;   //pm中有片
-								bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
-								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片	
+								bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
+								bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)	
 #ifdef DEBUG_TEST_PM
 								//去PM取放片
 								if (!haswaferpm && haswaferarm1) {//手臂1放料
@@ -5492,6 +5539,12 @@ namespace FC{
 							if (robot_exchange_pm1.success.load())
 							{
 								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pmCompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM1交换完成但无已完成任务，回退检查 step=%d", pm1_auto_step.load());
+									pm1_auto_step.store(1060);
+									return;
+								}
 								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm1_allow_get_put_wafer = false;
 								pm1_allow_goto_craft = true;
@@ -5529,6 +5582,12 @@ namespace FC{
 							if (robot_exchange_pm1.success.load())
 							{
 								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pmCompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM1交换完成但无已完成任务，回退检查 step=%d", pm1_auto_step.load());
+									pm1_auto_step.store(1070);
+									return;
+								}
 								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm1_allow_get_put_wafer = false;
 								pm1_allow_goto_craft = true;
@@ -5567,6 +5626,12 @@ namespace FC{
 							{
 								pm1_allow_get_put_wafer = false;
 								pmCompletedTasks = taskManager.getPMCompletedTasks("PM1");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pmCompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM1最终取片完成但无已完成任务，回退检查 step=%d", pm1_auto_step.load());
+									pm1_auto_step.store(1090);
+									return;
+								}
 								taskManager.updateTaskStatus(pmCompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm1_auto_step.store(10);
 							}
@@ -5819,38 +5884,39 @@ namespace FC{
 							}
 							else
 							{
+								// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
 								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm2中有片
-								bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
-								bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
+								bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
+								bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
+								logInform("PM2", "PM2调度200: haswaferpm=%d, haswaferarm1=%d, haswaferarm2=%d",
+									(int)haswaferpm, (int)haswaferarm1, (int)haswaferarm2);
 								
 #ifdef DEBUG_TEST_PM
-								if (!haswaferpm && haswaferarm1) {//手臂1放料
-									pm2_auto_step = 1010;
-								}
-								else if (!haswaferpm && haswaferarm2) {//手臂2放料
-									pm2_auto_step = 1030;
-								}
-
-								else if (haswaferpm && !haswaferarm1) //手臂1取料
-								{
-									pm2_auto_step = 1040;
-								}
-								else if (haswaferpm && !haswaferarm2) //手臂1取料
-								{
-									pm2_auto_step = 1050;
-								}
-								else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放
+								// 交换料场景优先检查
+								if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放 (A臂取，B臂放)
 									pm2_auto_step = 1060;
 								}
-								else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放
+								else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放 (B臂取，A臂放)
 									pm2_auto_step = 1070;
 								}
-								else if (haswaferpm && !haswaferarm2 && !haswaferarm1) {//两个手臂没料，A手取
+								else if (haswaferpm && !haswaferarm1 && !haswaferarm2) {//PM有片，两个手臂都没料，A手取
 									pm2_auto_step = 1090;
 								}
-
+								else if (!haswaferpm && haswaferarm1 && !haswaferarm2) {//手臂1放料
+									pm2_auto_step = 1010;
+								}
+								else if (!haswaferpm && !haswaferarm1 && haswaferarm2) {//手臂2放料
+									pm2_auto_step = 1030;
+								}
+								else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//PM有片，arm1空，arm2有片 → 交换料已在上面处理
+									pm2_auto_step = 1060; // 兜底
+								}
+								else if (haswaferpm && haswaferarm1 && haswaferarm2) {//PM有片，两个手臂都有片（异常）
+									logInform("PM2", "调度异常：PM有片但两个手臂都有片，等待...");
+								}
 								else {
-									logFailedExcuteCommandHasError(wtr->getName(), "机械手晶圆状态不对", pm2_process_name, pm2_auto_step);
+									logInform("PM2", "调度等待：haswaferpm=%d, haswaferarm1=%d, haswaferarm2=%d",
+										(int)haswaferpm, (int)haswaferarm1, (int)haswaferarm2);
 								}
 #else
 								pm2_auto_step.store(1010);
@@ -5956,6 +6022,17 @@ namespace FC{
 #pragma region 交换料
 					case 1060:
 					{
+						// 交换前校验手臂状态：exchange 1060 = A臂取(arm1空), B臂放(arm2有片)
+						// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
+						bool arm1HasWafer = wtr->hasObject(0);  // A臂(索引0)
+						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
+						// 交换1060要求：A臂(putArm)应该为空，B臂(getArm)应该有片
+						if (arm1HasWafer || !arm2HasWafer) {
+							// 状态异常：A臂应该为空才能放入，B臂应该有片才能取出
+							logWarn(wtr->getName().c_str(), "PM2交换前状态异常(1060)：arm1Has=%d, arm2Has=%d，等待修正...", arm1HasWafer, arm2HasWafer);
+							pm2_auto_step.store(200);  // 回退到调度检查
+							return;
+						}
 						// 交换：A臂取 + B臂放 (先取后放)
 						exchange_info_pm2.getArm.store(0);
 						exchange_info_pm2.putArm.store(1);
@@ -5973,6 +6050,12 @@ namespace FC{
 							if (robot_exchange_pm2.success.load())
 							{
 								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm2CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM2交换完成但无已完成任务，回退检查 step=%d", pm2_auto_step.load());
+									pm2_auto_step.store(1060);
+									return;
+								}
 								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm2_allow_get_put_wafer = false;
 								pm2_allow_goto_craft = true;
@@ -5993,6 +6076,17 @@ namespace FC{
 					break;
 					case 1070:
 					{
+						// 交换前校验手臂状态：exchange 1070 = B臂取(arm2空), A臂放(arm1有片)
+						// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
+						bool arm1HasWafer = wtr->hasObject(0);  // A臂(索引0)
+						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
+						// 交换1070要求：B臂(putArm)应该为空，A臂(getArm)应该有片
+						if (!arm1HasWafer || arm2HasWafer) {
+							// 状态异常：A臂应该有片才能取出，B臂应该为空才能放入
+							logWarn(wtr->getName().c_str(), "PM2交换前状态异常(1070)：arm1Has=%d, arm2Has=%d，等待修正...", arm1HasWafer, arm2HasWafer);
+							pm2_auto_step.store(200);  // 回退到调度检查
+							return;
+						}
 						// 交换：B臂取 + A臂放 (先取后放)
 						exchange_info_pm2.getArm.store(1);
 						exchange_info_pm2.putArm.store(0);
@@ -6010,6 +6104,12 @@ namespace FC{
 							if (robot_exchange_pm2.success.load())
 							{
 								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm2CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM2交换完成但无已完成任务，回退检查 step=%d", pm2_auto_step.load());
+									pm2_auto_step.store(1070);
+									return;
+								}
 								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm2_allow_get_put_wafer = false;
 								pm2_allow_goto_craft = true;
@@ -6043,6 +6143,12 @@ namespace FC{
 							{
 								pm2_allow_get_put_wafer = false;
 								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm2CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM2最终取片完成但无已完成任务，回退检查 step=%d", pm2_auto_step.load());
+									pm2_auto_step.store(1090);
+									return;
+								}
 								taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm2_auto_step.store(10);
 							}
@@ -6297,10 +6403,10 @@ namespace FC{
 						//暂不考虑交互手
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-
+							// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
 							bool haswaferpm = cassManager->getCassette(pm3.get())->getMapping(1) == Cassette::Present;   //pm中有片
-							bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
-							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片						
+							bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
+							bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)						
 #ifdef DEBUG_TEST_PM
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
 								pm3_auto_step.store(1010);
@@ -6438,6 +6544,12 @@ namespace FC{
 							if (robot_exchange_pm3.success.load())
 							{
 								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm3CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM3交换完成但无已完成任务，回退检查 step=%d", pm3_auto_step.load());
+									pm3_auto_step.store(1060);
+									return;
+								}
 								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm3_allow_get_put_wafer = false;
 								pm3_allow_goto_craft = true;
@@ -6469,6 +6581,12 @@ namespace FC{
 							if (robot_exchange_pm3.success.load())
 							{
 								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm3CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM3交换完成但无已完成任务，回退检查 step=%d", pm3_auto_step.load());
+									pm3_auto_step.store(1070);
+									return;
+								}
 								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm3_allow_get_put_wafer = false;
 								pm3_allow_goto_craft = true;
@@ -6501,6 +6619,12 @@ namespace FC{
 							{
 								pm3_allow_get_put_wafer = false;
 								pm3CompletedTasks = taskManager.getPMCompletedTasks("PM3");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm3CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM3最终取片完成但无已完成任务，回退检查 step=%d", pm3_auto_step.load());
+									pm3_auto_step.store(1090);
+									return;
+								}
 								taskManager.updateTaskStatus(pm3CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm3_auto_step.store(10);
 							}
@@ -6708,10 +6832,10 @@ namespace FC{
 						//暂不考虑交互手
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-
+							// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
 							bool haswaferpm = cassManager->getCassette(pm4.get())->getMapping(1) == Cassette::Present;   //pm中有片
-							bool haswaferarm1 = cassManager->getCassette(wtr.get())->getMapping(1) == Cassette::Present; //arm1有片
-							bool haswaferarm2 = cassManager->getCassette(wtr.get())->getMapping(2) == Cassette::Present; //arm2有片
+							bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
+							bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
 
 #ifdef DEBUG_TEST_PM
 							if (!haswaferpm && haswaferarm1) {//手臂1放料
@@ -6876,6 +7000,12 @@ namespace FC{
 							if (robot_exchange_pm4.success.load())
 							{
 								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm4CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM4交换完成但无已完成任务，回退检查 step=%d", pm4_auto_step.load());
+									pm4_auto_step.store(1060);
+									return;
+								}
 								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm4_allow_get_put_wafer = false;
 								pm4_allow_goto_craft = true;
@@ -6913,6 +7043,12 @@ namespace FC{
 							if (robot_exchange_pm4.success.load())
 							{
 								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm4CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM4交换完成但无已完成任务，回退检查 step=%d", pm4_auto_step.load());
+									pm4_auto_step.store(1070);
+									return;
+								}
 								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm4_allow_get_put_wafer = false;
 								pm4_allow_goto_craft = true;
@@ -6951,6 +7087,12 @@ namespace FC{
 							{
 								pm4_allow_get_put_wafer = false;
 								pm4CompletedTasks = taskManager.getPMCompletedTasks("PM4");
+								// 防御性检查：防止vector为空导致at(0)崩溃
+								if (pm4CompletedTasks.empty()) {
+									logWarn(wtr->getName().c_str(), "PM4最终取片完成但无已完成任务，回退检查 step=%d", pm4_auto_step.load());
+									pm4_auto_step.store(1090);
+									return;
+								}
 								taskManager.updateTaskStatus(pm4CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
 								pm4_auto_step.store(10);
 							}
@@ -7361,6 +7503,8 @@ namespace FC{
 				{
 					int arm = robot_get_from_pm2.arm.load();
 					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片, arm=%d", arm);
+					bool armHasWafer = wtr->hasObject(arm);
+					logInform(wtr->getName().c_str(), "Robot线程：GET前检查 arm=%d hasObject=%d", arm, (int)armHasWafer);
 					auto cmd = wtr->createGetCommand(pm2, arm, 1);
 					wtr->startCommand(cmd);
 					logInform(wtr->getName().c_str(), "Robot线程：从PM2取片 cmd->wait() 开始");
@@ -7381,6 +7525,16 @@ namespace FC{
 								robot_get_from_pm2.success.store(false);
 								logFailed(wtr->getName(), "从PM2取片失败, 错误码745, 手臂无晶圆");
 							}
+						} else if (alarm_msg->code() == 0x3000) {
+							logInform(wtr->getName().c_str(), "Robot线程：从PM2取片失败, 0x3000手臂已占, arm=%d", arm);
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+							// 0x3000错误：手臂已被占用，取片失败
+							// 手臂上的晶圆是之前的 wafer，不是从PM2取到的
+							// 应该设置 success=false，让 PM2 调度重新检查手臂状态后重试
+							robot_get_from_pm2.success.store(false);
+							logInform(wtr->getName().c_str(), "Robot线程：0x3000错误，取片失败，等待PM2调度重试");
 						} else {
 							robot_get_from_pm2.success.store(false);
 							logFailed(wtr->getName(), Poco::format("从PM2取片失败, 错误码:%d", alarm_msg->code()));
@@ -7589,6 +7743,13 @@ namespace FC{
 					wtr->startCommand(cmd_get);
 					cmd_get->wait();
 					if (cmd_get->hasError()) {
+						auto alarm_msg = cmd_get->alarmMessage();
+						if (alarm_msg->code() == 0x3000) {
+							logInform(wtr->getName().c_str(), "Robot线程：PM2交换失败, 0x3000手臂已占, getArm=%d", getArm);
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+						}
 						robot_exchange_pm2.success.store(false);
 						logFailed(wtr->getName(), "PM2交换取片失败");
 						robot_exchange_pm2.requested.store(false);
@@ -7621,6 +7782,13 @@ namespace FC{
 					wtr->startCommand(cmd_get);
 					cmd_get->wait();
 					if (cmd_get->hasError()) {
+						auto alarm_msg = cmd_get->alarmMessage();
+						if (alarm_msg->code() == 0x3000) {
+							logInform(wtr->getName().c_str(), "Robot线程：PM3交换失败, 0x3000手臂已占, getArm=%d", getArm);
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+						}
 						robot_exchange_pm3.success.store(false);
 						logFailed(wtr->getName(), "PM3交换取片失败");
 						robot_exchange_pm3.requested.store(false);
@@ -7653,6 +7821,13 @@ namespace FC{
 					wtr->startCommand(cmd_get);
 					cmd_get->wait();
 					if (cmd_get->hasError()) {
+						auto alarm_msg = cmd_get->alarmMessage();
+						if (alarm_msg->code() == 0x3000) {
+							logInform(wtr->getName().c_str(), "Robot线程：PM4交换失败, 0x3000手臂已占, getArm=%d", getArm);
+							auto cmd_clear = wtr->createClearErrorCommand();
+							wtr->startCommand(cmd_clear);
+							cmd_clear->wait();
+						}
 						robot_exchange_pm4.success.store(false);
 						logFailed(wtr->getName(), "PM4交换取片失败");
 						robot_exchange_pm4.requested.store(false);
@@ -8228,10 +8403,10 @@ namespace FC{
 
 		finished_time_llb = 0;
 		
-		while (!vacumm_step_once_finished || !loadlock1_step_once_finished || !loadlock2_step_once_finished)
-		{
-			Sleep(100);
-		}
+		//while (!vacumm_step_once_finished || !loadlock1_step_once_finished || !loadlock2_step_once_finished)
+		//{
+		//	Sleep(100);
+		//}
 		onUpdateControlEnabled("reset_pbt", false);
 		onUpdateControlEnabled("execute_pbt", false);
 		onUpdateControlEnabled("pause_pbt", false);

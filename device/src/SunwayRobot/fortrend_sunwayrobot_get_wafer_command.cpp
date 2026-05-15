@@ -193,7 +193,7 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		//get command configure
 		std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 		//fill params
-		std::string str_arm = (getArm() == 0) ? "A" : "B"; //这里不对调，因为自己执行规则只要UI和指令对上就行。
+		std::string str_arm = (getArm() == 0) ? "A" : "B"; //这里不对调，因为机械手接口指令支持传字符A/B,不纠结传0/1了，自己默认0是A，1是B
 		int timeout = command_config->getInt("timeout", 300000);
 		std::string command = "";
 		std::string station_name = getStation()->getName();
