@@ -268,6 +268,16 @@ FC::UnifiedWaferTask FC::TaskManager::getByIDFindTask(int taskID)
     }     
 }
 
+FC::UnifiedWaferTask FC::TaskManager::getRobotTaskInfo(int arm)
+{
+    auto it = std::find_if(tasks_.begin(), tasks_.end(), [arm](const UnifiedWaferTask& t) { 
+        return t.arm == arm ; });
+    if (it != tasks_.end())
+    {
+        return (*it);
+	}
+}
+
 bool FC::TaskManager::hasPendingTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);

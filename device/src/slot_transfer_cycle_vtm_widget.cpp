@@ -247,6 +247,8 @@ namespace FC{
 
 		void stopAllThreads();
 
+		bool getArmWaferIsPmPending(int arm);
+
 		//上料互锁条件
 		bool llA_condition = false; //true 满足互锁 ， false不满足没锁
 
@@ -547,6 +549,11 @@ namespace FC{
 		bool pm2_allow_get_put_wafer = false;//PM2允许取放  
 		bool pm2_allow_goto_craft = false;   //PM2允许转到工艺
 		bool pm2_need_return_wafer = false;  //PM2工艺完成后需取回晶圆（非交换场景）
+
+		//2026-5-16
+		bool pm2_allow_loading_wafer = false; //PM2上料请求
+		bool pm2_allow_down_wafer = false;    //PM2下料请求
+
 
 		bool pm3_allow_get_put_wafer = false;//PM3允许取放  
 		bool pm3_allow_goto_craft = false;   //PM3允许转到工艺
@@ -3210,6 +3217,22 @@ namespace FC{
 						if(lk1->getTMCavityDoorOpend())
 						{
 							logInform(lk1->getName().c_str(), "step:1051,loadLockA PendingTasks 有片,触发Robot取片流程.");
+
+							////判断wtr手上是否有片，如果有片，记录日志，等待下一次循环再取片
+							//bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
+							//bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
+
+							//if (haswaferarm1 && getArmWaferIsPmPending(0))
+							//{
+							//	logInform(lk1->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
+							//	loadlock1_auto_step = 1050;
+							//}
+							//else if (haswaferarm2 && getArmWaferIsPmPending(1))
+							//{
+							//	logInform(lk1->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
+							//	loadlock1_auto_step = 1050;
+							//}
+
 							// 设置请求标志，委托Robot线程执行
 							robot_get_from_lla.arm.store(loadLockAPendingTasks.at(0).arm);
 							robot_get_from_lla.slot.store(loadlock1_move_slot_index);
@@ -3299,7 +3322,9 @@ namespace FC{
 							}
 							else if (LLAPmName == "PM2")
 							{
-								pm2_allow_get_put_wafer = true;
+								//pm2_allow_get_put_wafer = true;
+
+								pm2_allow_loading_wafer = true;
 							}
 							else if (LLAPmName == "PM3")
 							{
@@ -3345,7 +3370,8 @@ namespace FC{
 									}
 									else if (LLAPmName == "PM2")
 									{
-										pm2_allow_get_put_wafer = true;
+										//pm2_allow_get_put_wafer = true;
+										pm2_allow_loading_wafer = true;
 									}
 									else if (LLAPmName == "PM3")
 									{
@@ -3397,7 +3423,19 @@ namespace FC{
 						if(loadLockAReturnPendingTasks.size() > 0)
 						{
 							loadlock1_move_slot_index = loadLockAReturnPendingTasks.at(0).targetBlankingSlot;
-							loadlock1_auto_step = 2010;
+							int put_arm = loadLockAReturnPendingTasks.at(0).arm;
+
+							bool haswaferarm1 = wtr->hasObject(put_arm);
+
+							if(haswaferarm1)
+							{
+								loadlock1_auto_step = 2010;
+							}
+							else
+							{
+								logInform(lk1->getName().c_str(), "WTR手臂没有晶圆，无法放片，等待下一次循环.");
+								loadlock1_auto_step = 2000;
+							}
 						}
 						else
 						{
@@ -3474,7 +3512,7 @@ namespace FC{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "大气模式，不关闭隔膜阀!");
-							loadlock1_auto_step = 2055; //先取片再放片
+							loadlock1_auto_step = 2060; 
 						}
 						else 
 						{
@@ -3673,12 +3711,17 @@ namespace FC{
 							loadlock1_auto_step = 900;
 							break;
 						}
+						//2026-5-16 ：手上有片 且 做完工艺的片子
+
 						loadlock1_move_slot_index = loadLockAReturnPendingTasks.front().targetBlankingSlot;
 						const auto put_arm = loadLockAReturnPendingTasks.front().arm;
 
-						logInform(lk2->getName().c_str(), "准备放片到LLA，目标槽位%d，使用手臂%d", loadlock1_move_slot_index, put_arm);
+						bool haswaferarm1 = wtr->hasObject(put_arm);
 
-						if(lk1->getTMCavityDoorOpend())
+						//logInform(lk2->getName().c_str(), "准备放片到LLA，目标槽位%d，使用手臂%d", loadlock1_move_slot_index, put_arm);
+						logInform(lk1->getName().c_str(), "准备放片到LLA，目标槽位%d，使用手臂%d", loadlock1_move_slot_index, put_arm);
+
+						if(lk1->getTMCavityDoorOpend() && haswaferarm1)
 						{
 							// 设置请求标志，委托Robot线程执行放片到LLA
 							robot_put_to_lla.arm.store(put_arm);
@@ -3690,7 +3733,7 @@ namespace FC{
 						}
 						else
 						{
-							loadlock1_auto_step = 2050;
+							loadlock1_auto_step = 2000;
 						}
 					}
 					else if (lk1->hasDoorOpend() == false)
@@ -4513,6 +4556,22 @@ namespace FC{
 						if (lk2->getTMCavityDoorOpend())
 						{
 							logInform(lk2->getName().c_str(), "step:1051,loadLockB PendingTasks 有片,触发Robot取片流程.");
+
+
+							//bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
+							//bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
+
+							//if (haswaferarm1 && getArmWaferIsPmPending(0))
+							//{
+							//	logInform(lk2->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
+							//	loadlock1_auto_step = 1050;
+							//}
+							//else if (haswaferarm2 && getArmWaferIsPmPending(1))
+							//{
+							//	logInform(lk2->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
+							//	loadlock1_auto_step = 1050;
+							//}
+
 							// 设置请求标志，委托Robot线程执行
 							robot_get_from_llb.arm.store(loadLockBPendingTasks.at(0).arm);
 							robot_get_from_llb.slot.store(loadlock2_move_slot_index);
@@ -4604,7 +4663,8 @@ namespace FC{
 							}
 							else if (LLBPmName == "PM2")
 							{
-								pm2_allow_get_put_wafer = true;
+								//pm2_allow_get_put_wafer = true;
+								pm2_allow_loading_wafer = true;
 
 							}
 							else if (LLBPmName == "PM3")
@@ -4653,7 +4713,8 @@ namespace FC{
 									}
 									else if (LLBPmName == "PM2")
 									{
-										pm2_allow_get_put_wafer = true;
+										//pm2_allow_get_put_wafer = true;
+										pm2_allow_loading_wafer = true;
 
 									}
 									else if (LLBPmName == "PM3")
@@ -4703,7 +4764,20 @@ namespace FC{
 						if(loadLockBReturnPendingTasks.size() > 0 )
 						{
 							loadlock2_move_slot_index = loadLockBReturnPendingTasks.at(0).targetBlankingSlot;
-							loadlock2_auto_step = 2010;
+							int put_arm = loadLockBReturnPendingTasks.at(0).arm;
+
+							bool haswaferarm = wtr->hasObject(put_arm);
+							if (haswaferarm)
+							{
+								loadlock2_auto_step = 2010;
+							}
+							else
+							{
+								logInform(lk2->getName().c_str(), "WTR手臂%d没有晶圆，等待取片完成后再放片.", put_arm);
+								loadlock2_auto_step = 2000;
+							}
+
+							
 						}
 					}
 					else
@@ -4781,7 +4855,7 @@ namespace FC{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "大气模式，不关闭隔膜阀!");
-							loadlock2_auto_step = 2055; //先取片再放片
+							loadlock2_auto_step = 2060;
 						}
 						else
 						{
@@ -4962,13 +5036,15 @@ namespace FC{
 					}
 					loadlock2_move_slot_index = loadLockBReturnPendingTasks.front().targetBlankingSlot;
 					const auto put_arm = loadLockBReturnPendingTasks.front().arm;
+					bool haswaferarm = wtr->hasObject(put_arm);
+
 
 					logInform(lk2->getName().c_str(), "准备放片到LLB，目标槽位%d，使用手臂%d", loadlock2_move_slot_index, put_arm);
 
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk2->hasDoorOpend())
 					{
 						//robot 把手臂A的放到Loadlock2
-						if(lk2->getTMCavityDoorOpend())
+						if(lk2->getTMCavityDoorOpend() && haswaferarm)
 						{
 							// 设置请求标志，委托Robot线程执行放片到LLB
 							robot_put_to_llb.arm.store(put_arm);
@@ -4980,7 +5056,7 @@ namespace FC{
 						}
 						else
 						{
-							loadlock2_auto_step = 2050;
+							loadlock2_auto_step = 2000; //跳转到2000
 						}
 					}
 					else if (lk2->hasDoorOpend() == false)
@@ -5271,6 +5347,7 @@ namespace FC{
 
 
 	}
+
 
 
 	/*
@@ -5824,30 +5901,34 @@ namespace FC{
 					}
 
 					pm_step_once_finished = false;
-					
 
+					bool isArmAPmCompleted = false; //ARMA是否工艺完成的标志
+					bool isArmBPmCompleted = false; //ARAMB是否工艺完成的标志
+					
 					switch (pm2_auto_step.load())
 					{
 					case 10:
 					{
-						//获取待放片晶圆
-						if (pm2_allow_get_put_wafer)
-						{//允许取放
-							UpdatePmSubTransferDatas("PM2");
-							pm2_auto_step.store(100);
-							logInform("Cycle", Poco::format("%s = %d", pm2_process_name, pm2_auto_step.load()).c_str());
-						}
-						else if (pm2_allow_goto_craft)
+						UpdatePmSubTransferDatas("PM2");
+						pm2_auto_step.store(100);
+
+						////获取待放片晶圆
+						//if (pm2_allow_loading_wafer)
+						//{//允许取放
+						//	UpdatePmSubTransferDatas("PM2");
+						//	pm2_auto_step.store(100);
+						//	logInform("Cycle", Poco::format("%s = %d", pm2_process_name, pm2_auto_step.load()).c_str());
+						//}
+
+						if (pm2_allow_goto_craft)
 						{//转工艺
 							pm2_auto_step.store(2000);
 						}
-						else if (pm2_need_return_wafer)
-						{//PM2工艺完成，需取回晶圆（非交换场景）
-							pm2_auto_step.store(300);
-						}
 						else {
-							Sleep(200);
+							pm2_auto_step.store(100);
+							
 						}
+						Sleep(200);
 					}
 					break;
 
@@ -5904,7 +5985,34 @@ namespace FC{
 					break;
 					case 200:
 					{
-						//暂不考虑交互手
+
+						auto task1 = taskManager.getRobotTaskInfo(0); //A臂任务状态
+						auto task2 = taskManager.getRobotTaskInfo(1); //B臂任务状态
+
+
+
+						if (task1.taskType == UnifiedWaferTask::PM_PROCESS && task1.status == UnifiedWaferTask::COMPLETED)
+						{
+							isArmAPmCompleted = true; //A臂晶圆工艺完成
+							logInform("PM2", "A臂工艺完成，taskId=%d, taskType=%d, status=%d", task1.taskId, task1.taskType, task1.status);
+						}
+						else
+						{
+							isArmAPmCompleted = false;//A臂晶圆未完成
+							logInform("PM2", "A臂工艺未完成，taskId=%d, taskType=%d, status=%d", task1.taskId, task1.taskType, task1.status);
+						}
+
+						if (task2.taskType == UnifiedWaferTask::PM_PROCESS && task2.status == UnifiedWaferTask::COMPLETED)
+						{
+							isArmBPmCompleted = true;//B臂晶圆工艺完成
+							logInform("PM2", "B臂工艺完成，taskId=%d, taskType=%d, status=%d", task2.taskId, task2.taskType, task2.status);
+						}
+						else
+						{
+							isArmBPmCompleted = false;//B臂晶圆未完成
+							logInform("PM2", "B臂工艺未完成，taskId=%d, taskType=%d, status=%d", task2.taskId, task2.taskType, task2.status);
+						}
+						
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
@@ -5916,47 +6024,74 @@ namespace FC{
 								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm2中有片
 								bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
 								bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
+
 								logInform("PM2", "PM2调度200: haswaferpm=%d, haswaferarm1=%d, haswaferarm2=%d",
 									(int)haswaferpm, (int)haswaferarm1, (int)haswaferarm2);
-								
-#ifdef DEBUG_TEST_PM
-								// 交换料场景优先检查
-								if (haswaferpm && !haswaferarm1 && haswaferarm2) {//手1先取，手2后放 (A臂取，B臂放)
-									pm2_auto_step = 1060;
-								}
-								else if (haswaferpm && haswaferarm1 && !haswaferarm2) {//手2先取，手1后放 (B臂取，A臂放)
-									pm2_auto_step = 1070;
-								}
-								else if (haswaferpm && !haswaferarm1 && !haswaferarm2) {//PM有片，两个手臂都没料，A手取
-									pm2_auto_step = 1090;
-								}
-								else if (!haswaferpm && haswaferarm1 && !haswaferarm2) {//手1放料 
-									pm2_auto_step = 1010;
-								}
-								else if (!haswaferpm && !haswaferarm1 && haswaferarm2) {//手2放料
-									pm2_auto_step = 1030;
-								}
-								else if (haswaferpm && !haswaferarm1)
+
+								pm2PendingTasks = taskManager.getPMPendingTasks("PM2");
+								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
+
+								//pm上料
+								if (!haswaferpm)
 								{
-									pm2_auto_step = 1040; //手1取
+									if (pm2PendingTasks.size() > 0)
+									{
+										if (haswaferarm1 && !isArmAPmCompleted)
+										{//A手放料
+
+											pm2_auto_step.store(1010);
+										}
+										else if (haswaferarm2 && !isArmBPmCompleted)
+										{//B手放料
+
+											pm2_auto_step.store(1030);
+										}
+										else if (!haswaferarm1 && !haswaferarm2)
+										{
+											logInform("PM2", "PM2没有晶圆，两个手臂也没有晶圆，等待放料...");
+											pm2_auto_step.store(10);
+										}
+									}
+									else
+									{
+										logWarn("PM2", "PM2无片且没有待加工任务，无法判断取放，等待中...");
+										pm2_auto_step.store(10);
+										Sleep(100);
+									}
 								}
-								else if (haswaferpm && !haswaferarm2)
+								else //PM下料
 								{
-									pm2_auto_step = 1050; //手2取
+									if (!haswaferarm1 && !haswaferarm2)
+									{
+										//A手取片
+										logInform("PM2", "step:200 send--->A,B臂都无片,优先A臂从PM2取片.");
+										pm2_auto_step.store(1040);
+									}
+
+									logInform("PM2", "PM2有已完成任务且有待加工的任务，执行交换料流程.");
+
+									if (pm2PendingTasks.size() > 0)
+									{
+										if (!haswaferarm1 && haswaferarm2 && !isArmBPmCompleted)//B待工艺,B有片,A无料
+										{
+											//A取B放
+											pm2_auto_step.store(1060);
+
+										}
+										else if (haswaferarm1 && !haswaferarm2 && !isArmAPmCompleted) //A待工艺,A有片,B无料
+										{
+											//B取A放
+											pm2_auto_step.store(1070);
+										}
+									}
+									else
+									{
+										logWarn("PM2", "PM2有片但没有待加工任务，无法判断取放，等待中...");
+										pm2_auto_step.store(10);
+										Sleep(100);
+									}
 								}
-								else if (haswaferpm && !haswaferarm1 && haswaferarm2) {//PM有片，arm1空，arm2有片 → 交换料已在上面处理
-									pm2_auto_step = 1060; // 兜底
-								}
-								else if (haswaferpm && haswaferarm1 && haswaferarm2) {//PM有片，两个手臂都有片（异常）
-									logInform("PM2", "调度异常：PM有片但两个手臂都有片，等待...");
-								}
-								else {
-									logInform("PM2", "调度等待：haswaferpm=%d, haswaferarm1=%d, haswaferarm2=%d",
-										(int)haswaferpm, (int)haswaferarm1, (int)haswaferarm2);
-								}
-#else
-								pm2_auto_step.store(1010);
-#endif // DEBUG_TEST_PM
+
 							}
 						}
 						else
@@ -5986,7 +6121,9 @@ namespace FC{
 							if (robot_put_to_pm2.success.load())
 							{
 								logInform("PM2", "step:1015,arm=%d,放到PM2成功-->recive", robot_put_to_pm2.arm);
-								pm2_allow_get_put_wafer = false;
+								//pm2_allow_get_put_wafer = false;
+								//pm2_allow_loading_wafer = false;
+								pm2_allow_goto_craft = true;
 								pm2_auto_step.store(2000);
 							}
 							else
@@ -6039,7 +6176,10 @@ namespace FC{
 								logInform("PM2", "step:1045,arm=%d,从PM2取片成功-->recive", robot_get_from_pm2.arm);
 								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
-								pm2_allow_get_put_wafer = false;
+
+								//pm2_allow_get_put_wafer = false;
+								//pm2_allow_loading_wafer = false;
+
 								pm2_auto_step.store(10);
 							}
 							else
@@ -6098,7 +6238,8 @@ namespace FC{
 							if (robot_exchange_pm2.success.load())
 							{
 								logInform(wtr->getName().c_str(), "PM2交换料成功(A取B放)，step=%d，转到工艺步骤2000", pm2_auto_step.load());
-								pm2_allow_get_put_wafer = false;
+								//pm2_allow_get_put_wafer = false;
+								//pm2_allow_loading_wafer = false;
 								pm2_allow_goto_craft = true; //转到工艺
 								pm2_auto_step.store(10);
 							}
@@ -6148,7 +6289,8 @@ namespace FC{
 							if (robot_exchange_pm2.success.load())
 							{
 								logInform(wtr->getName().c_str(), "PM2交换料成功(B取A放)，step=%d，转到工艺步骤2000", pm2_auto_step.load());
-								pm2_allow_get_put_wafer = false;
+								//pm2_allow_get_put_wafer = false;
+								//pm2_allow_loading_wafer = false;
 								pm2_allow_goto_craft = true;
 								pm2_auto_step.store(10);
 							}
@@ -6191,7 +6333,8 @@ namespace FC{
 							if (robot_get_from_pm2.success.load())
 							{
 								logInform("PM2", "step:1095,arm=%d,从PM2取片成功-->recive", robot_get_from_pm2.arm);
-								pm2_allow_get_put_wafer = false;
+								//pm2_allow_loading_wafer = false;
+								//pm2_allow_get_put_wafer = false;
 								pm2_auto_step.store(10);
 							}
 							else
@@ -6213,35 +6356,35 @@ namespace FC{
 					}
 					break;
 
-					case 300:
-					{//PM2工艺完成，等待LL取回晶圆（非交换场景）
+					//case 300:
+					//{//PM2工艺完成，等待LL取回晶圆（非交换场景）
 
-						logInform("PM2", "step:300 send--->PM2工艺完成，等待LL取回晶圆,非交换场景.");
+					//	logInform("PM2", "step:300 send--->PM2工艺完成，等待LL取回晶圆,非交换场景.");
 
-						auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
-						bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;
-						if (!haswaferpm)
-						{
-							logInform("PM2", "LL已取回晶圆，PM2回程流程结束.");
-							pm2_need_return_wafer = false;
+					//	auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+					//	bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;
+					//	if (!haswaferpm)
+					//	{
+					//		logInform("PM2", "LL已取回晶圆，PM2回程流程结束.");
+					//		pm2_need_return_wafer = false;
 
-							// 检查是否还有待处理的晶圆（如另一片LL在WTR上等待）
-							UpdatePmSubTransferDatas("PM2");
-							if (pm2PendingTasks.size() > 0 || pm2CompletedTasks.size() > 0)
-							{
-								pm2_allow_get_put_wafer = true;
-								logInform("PM2", "PM2回程结束后检测到待处理任务，重新允许取放片");
-							}
+					//		// 检查是否还有待处理的晶圆（如另一片LL在WTR上等待）
+					//		UpdatePmSubTransferDatas("PM2");
+					//		if (pm2PendingTasks.size() > 0 || pm2CompletedTasks.size() > 0)
+					//		{
+					//			pm2_allow_get_put_wafer = true;
+					//			logInform("PM2", "PM2回程结束后检测到待处理任务，重新允许取放片");
+					//		}
 
-							pm2_auto_step.store(10);
-						}
-						else
-						{
-							Sleep(200);
-						}
+					//		pm2_auto_step.store(10);
+					//	}
+					//	else
+					//	{
+					//		Sleep(200);
+					//	}
 
-					}
-					break;
+					//}
+					//break;
 
 					case 2000:
 					{
@@ -6280,7 +6423,8 @@ namespace FC{
 						{
 							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 							taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-							pm2_need_return_wafer = true;
+							//pm2_need_return_wafer = true;
+							pm2_allow_goto_craft = false;
 							pm2_auto_step.store(10);
 						}
 						else
@@ -6295,7 +6439,8 @@ namespace FC{
 						if(pm2CompletedTasks.size() > 0)
 						{
 							taskManager.updateTaskStatus(pm2CompletedTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
-							pm2_allow_get_put_wafer = false;
+							//pm2_allow_get_put_wafer = false;
+							//pm2_allow_loading_wafer = false;
 
 							pm2_auto_step.store(10);
 							Sleep(10);
@@ -8107,6 +8252,27 @@ namespace FC{
 		return false;
 	}
 
+	bool QSlotTransferCycleVTMWidgetPrivate::getArmWaferIsPmPending(int arm)
+	{
+		auto task = taskManager.getRobotTaskInfo(arm); //任务状态
+
+		if (task.taskType == UnifiedWaferTask::PM_PROCESS)
+		{
+			if (task.status == UnifiedWaferTask::COMPLETED)
+			{
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
+		else
+		{
+			logWarn("Cyclelog", "getArmWaferIsPmPending: arm %d 没有PM_PROCESS任务.", arm);
+			return false;
+		}
+	}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::CheckTMVacuumMeetsStandard(int preStep)
 	{
@@ -9877,6 +10043,11 @@ namespace FC{
 				QMessageBox::warning(this, "警告", "传送流程配置错误.");
 				return;
 			}
+
+			//auto task1 = taskManager.getRobotTaskInfo(0); //A臂任务状态
+			//auto task2 = taskManager.getRobotTaskInfo(1); //B臂任务状态
+
+
 			//2025-8-14 默认已经手动处理机台片子，重新把wafer数据刷新到初始状态
 			//暂停过，检测机台状态
 			if (d->ispause && taskManager.detectionHasNoInitialTypeTasks()) {
@@ -10239,6 +10410,8 @@ namespace FC{
 		Q_D(QSlotTransferCycleVTMWidget);
 		d->executePM4Transfer();
 	}
+
+
 
 	void QSlotTransferCycleVTMWidget::executeTMTransfer()
 	{

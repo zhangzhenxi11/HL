@@ -57,6 +57,9 @@ namespace FC {
 
         UnifiedWaferTask getByIDFindTask(int taskID);
 
+        //查找机械手上的任务
+		UnifiedWaferTask getRobotTaskInfo(int arm);
+
         // 检查是否有待处理任务
         bool hasPendingTasks();
 
