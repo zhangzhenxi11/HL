@@ -54,6 +54,8 @@ namespace FC {
         Location source;  //来源模组   lp
         Location target;  //目标模组   loadlock
         Location target_pm;//目标模组2  PM
+        //2026-5-17
+		Location realTimePosition; // 任务的实时位置，初始值为source，过程中根据实际位置更新
 
         int sourceSlot;  //来源模组槽
         int targetSlot;  //目标模组槽

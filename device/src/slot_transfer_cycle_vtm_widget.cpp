@@ -3433,7 +3433,11 @@ namespace FC{
 							}
 							else
 							{
-								logInform(lk1->getName().c_str(), "WTR手臂没有晶圆，无法放片，等待下一次循环.");
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0) {
+									logInform(lk1->getName().c_str(), "WTR手臂没有晶圆，无法放片，等待下一次循环.");
+								}
+								Sleep(500);
 								loadlock1_auto_step = 2000;
 							}
 						}
@@ -4773,11 +4777,13 @@ namespace FC{
 							}
 							else
 							{
-								logInform(lk2->getName().c_str(), "WTR手臂%d没有晶圆，等待取片完成后再放片.", put_arm);
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0) {
+									logInform(lk2->getName().c_str(), "WTR手臂%d没有晶圆，等待取片完成后再放片.", put_arm);
+								}
+								Sleep(200);
 								loadlock2_auto_step = 2000;
 							}
-
-							
 						}
 					}
 					else
@@ -5088,7 +5094,7 @@ namespace FC{
 						// 添加等待状态提示
 						static int wait_count = 0;
 						if ((wait_count++ % 20) == 0) {
-							logInform(wtr->getName().c_str(), "step 2065,等待放LLA晶圆完成...");
+							logInform(wtr->getName().c_str(), "step 2065,等待放LLB晶圆完成...");
 						}
 						Sleep(500);
 					}
@@ -5910,6 +5916,7 @@ namespace FC{
 					case 10:
 					{
 						UpdatePmSubTransferDatas("PM2");
+						
 						pm2_auto_step.store(100);
 
 						////获取待放片晶圆
@@ -5936,7 +5943,11 @@ namespace FC{
 					{
 						UpdatePmSubTransferDatas("PM2");
 						//判断是放、取,不考虑交互手
-						if (pm2PendingTasks.size() > 0 || pm2CompletedTasks.size() > 0)
+						// 2026-5-17 当片子做完工艺会置为EFEM_RETURN/QUEUED，那么要下料了，这个条件会卡主流程，取消条件
+
+						auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+
+						if (pm2PendingTasks.size() > 0 ||  loadlockReturnPendingTasks.size() > 0)
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
@@ -5944,12 +5955,15 @@ namespace FC{
 							}
 							else
 							{
-								pm2_auto_step.store(199); //取放片
+								//2026-5-17,不能一直查询RQLoad，会污染wtr收取放rps信息
+								//pm2_auto_step.store(199); //取放片
+								pm2_auto_step.store(200);
 							}
 							
 						}
 						else
 						{
+							pm2_auto_step.store(10);
 							Sleep(10);
 						}
 					}
@@ -5989,9 +6003,10 @@ namespace FC{
 						auto task1 = taskManager.getRobotTaskInfo(0); //A臂任务状态
 						auto task2 = taskManager.getRobotTaskInfo(1); //B臂任务状态
 
+						
 
-
-						if (task1.taskType == UnifiedWaferTask::PM_PROCESS && task1.status == UnifiedWaferTask::COMPLETED)
+						if ((task1.taskType == UnifiedWaferTask::PM_PROCESS && task1.status == UnifiedWaferTask::COMPLETED)|| 
+							(task1.taskType == UnifiedWaferTask::LOADLOCK_RETURN && task1.status == UnifiedWaferTask::QUEUED))
 						{
 							isArmAPmCompleted = true; //A臂晶圆工艺完成
 							logInform("PM2", "A臂工艺完成，taskId=%d, taskType=%d, status=%d", task1.taskId, task1.taskType, task1.status);
@@ -6002,7 +6017,8 @@ namespace FC{
 							logInform("PM2", "A臂工艺未完成，taskId=%d, taskType=%d, status=%d", task1.taskId, task1.taskType, task1.status);
 						}
 
-						if (task2.taskType == UnifiedWaferTask::PM_PROCESS && task2.status == UnifiedWaferTask::COMPLETED)
+						if ((task2.taskType == UnifiedWaferTask::PM_PROCESS && task2.status == UnifiedWaferTask::COMPLETED)||
+							(task2.taskType == UnifiedWaferTask::LOADLOCK_RETURN && task2.status == UnifiedWaferTask::QUEUED))
 						{
 							isArmBPmCompleted = true;//B臂晶圆工艺完成
 							logInform("PM2", "B臂工艺完成，taskId=%d, taskType=%d, status=%d", task2.taskId, task2.taskType, task2.status);
@@ -6031,6 +6047,8 @@ namespace FC{
 								pm2PendingTasks = taskManager.getPMPendingTasks("PM2");
 								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
 
+								auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+
 								//pm上料
 								if (!haswaferpm)
 								{
@@ -6054,41 +6072,70 @@ namespace FC{
 									}
 									else
 									{
-										logWarn("PM2", "PM2无片且没有待加工任务，无法判断取放，等待中...");
+										static int wait_count = 0;
+										if ((wait_count++ % 20) == 0) {
+											logWarn("PM2", "PM2无片且没有待加工任务，无法判断取放，等待中...");
+										}
+										Sleep(500);
 										pm2_auto_step.store(10);
-										Sleep(100);
+										
 									}
 								}
 								else //PM下料
 								{
 									if (!haswaferarm1 && !haswaferarm2)
 									{
-										//A手取片
-										logInform("PM2", "step:200 send--->A,B臂都无片,优先A臂从PM2取片.");
-										pm2_auto_step.store(1040);
-									}
-
-									logInform("PM2", "PM2有已完成任务且有待加工的任务，执行交换料流程.");
-
-									if (pm2PendingTasks.size() > 0)
-									{
-										if (!haswaferarm1 && haswaferarm2 && !isArmBPmCompleted)//B待工艺,B有片,A无料
+										//查找pm中晶圆task,找到arm
+										if (loadlockReturnPendingTasks.size() > 0)
 										{
-											//A取B放
-											pm2_auto_step.store(1060);
-
+											auto task = loadlockReturnPendingTasks.at(0);
+											if (task.arm == 0)
+											{
+												logInform("PM2", "step:200 send--->A臂从PM2取片,因为有待下料任务且是A臂的.");
+												pm2_auto_step.store(1040);
+											}
+											else if (task.arm == 1)
+											{
+												logInform("PM2", "step:200 send--->B臂从PM2取片,因为有待下料任务且是B臂的.");
+												pm2_auto_step.store(1050);
+											}
+											else
+											{
+												logWarn("PM2", "待下料任务的arm字段异常，无法判断是A臂还是B臂取片，等待中...");
+												pm2_auto_step.store(10);
+												Sleep(100);
+											}
 										}
-										else if (haswaferarm1 && !haswaferarm2 && !isArmAPmCompleted) //A待工艺,A有片,B无料
+										else
 										{
-											//B取A放
-											pm2_auto_step.store(1070);
+											logWarn("PM2", "PM2有片但没有待下料任务，默认B臂从PM2取片.");
+											pm2_auto_step.store(1050);
 										}
+
 									}
 									else
 									{
-										logWarn("PM2", "PM2有片但没有待加工任务，无法判断取放，等待中...");
-										pm2_auto_step.store(10);
-										Sleep(100);
+										logInform("PM2", "PM2有已完成任务且有待加工的任务，执行交换料流程.");
+										if (pm2PendingTasks.size() > 0)
+										{
+											if (!haswaferarm1 && haswaferarm2 && !isArmBPmCompleted)//B待工艺,B有片,A无料
+											{
+												//A取B放
+												pm2_auto_step.store(1060);
+
+											}
+											else if (haswaferarm1 && !haswaferarm2 && !isArmAPmCompleted) //A待工艺,A有片,B无料
+											{
+												//B取A放
+												pm2_auto_step.store(1070);
+											}
+										}
+										else
+										{
+											logWarn("PM2", "PM2有片但没有待加工任务，无法判断取放，等待中...");
+											pm2_auto_step.store(10);
+											Sleep(100);
+										}
 									}
 								}
 
@@ -6174,8 +6221,8 @@ namespace FC{
 							if (robot_get_from_pm2.success.load())
 							{
 								logInform("PM2", "step:1045,arm=%d,从PM2取片成功-->recive", robot_get_from_pm2.arm);
-								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
-								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);
+						/*		taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
+								taskManager.updateTaskStatus(pm2PendingTasks.at(0).taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);*/
 
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
