@@ -133,6 +133,8 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     }
     IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 
+   float realRAxleLocation =  sub->getPMCavityRAxleLocation();
+   logInform(sub->getName().c_str(), "旋转轴实时位置：%.3f", realRAxleLocation);
     if (readRes)
     {
         sub->setPMCavitySafeSignal(true);
@@ -141,7 +143,7 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
         {
             throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 置位定位开始命令地址错误，地址%s", sub->getName(), start_address), this);
         }
-
+        
         ret = IKernelCommand::RunResult::RUN_OK;
         logInform(sub->getName().c_str(), "旋转轴定位开始命令执行完成.");
     }

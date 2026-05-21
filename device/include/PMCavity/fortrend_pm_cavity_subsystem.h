@@ -233,15 +233,15 @@ namespace FC{
 		float getPMCavityZAxleDcc()const;
 
 		//Z轴jerk 加加速度
-		uint32_t getPMCavityZAxleJerk() const;
+		float getPMCavityZAxleJerk() const;
 
-		void setPMCavityZAxleJerk(uint32_t value);
+		void setPMCavityZAxleJerk(float value);
 
 		/*=================R轴========================*/
 		//R轴速度
-		double getPMCavityRAxleSpeed()const;
+		float getPMCavityRAxleSpeed()const;
 		//R轴位置
-		double getPMCavityRAxleLocation()const;
+		float getPMCavityRAxleLocation()const;
 
 		//R轴加速度
 		float getPMCavityRAxleAcc()const;
@@ -254,9 +254,9 @@ namespace FC{
 		void setPMCavityRAxleDcc(float dccValue);
 
 		//R轴jerk
-		uint32_t getPMCavityZRxleJerk() const;
+		float getPMCavityZRxleJerk() const;
 		
-		void setPMCavityRAxleJerk(uint32_t value);
+		void setPMCavityRAxleJerk(float value);
 
 		//JOG运行中
 		bool getZAxleJogRunning()const; 

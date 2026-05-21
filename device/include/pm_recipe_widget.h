@@ -99,6 +99,8 @@ namespace FC {
 		void startPmMotorRun(int pmIndex);
 		void stopPmMotor(int pmIndex); // 修改：支持指定PM索引停止
 		bool isPmMotorRunning(int pmIndex) const; // 新增：检查PM配方是否在运行
+		bool hasPmMotorError(int pmIndex) const;
+		std::string getPmMotorError(int pmIndex) const;
 
 	private slots:
 		void onStartCycle();
@@ -156,6 +158,8 @@ namespace FC {
 			std::atomic<bool> isRunning{false};
 			std::atomic<bool> stopRequested{false};
 			std::atomic<bool> timerFinished{false};
+			std::atomic<bool> hasError{false};
+			std::string errorMessage;
 			std::mutex cycleMutex;
 			std::condition_variable cycleCv;
 			std::string currentRecipeName;

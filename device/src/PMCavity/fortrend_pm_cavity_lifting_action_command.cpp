@@ -108,6 +108,9 @@ PMCavityLiftingActionCommand::RunResult PMCavityLiftingActionCommand::onRun() th
 
 	IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 
+    float realZAxleLocation = sub->getPMCavityZAxleLocation();
+    logInform(sub->getName().c_str(), "升降轴实时位置：%.3f", realZAxleLocation);
+
     if (readRes)
     {
         sub->setPMCavitySafeSignal(true);

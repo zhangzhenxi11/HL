@@ -5800,6 +5800,11 @@ namespace FC{
 									{
 										Sleep(100);
 									}
+									if (PmInstance->hasPmMotorError(0))
+									{
+										logFailed(pm1->getName(), Poco::format("工艺执行失败: %s， %s：%d", PmInstance->getPmMotorError(0), pm1_process_name, pm1_auto_step.load()));
+										break;
+									}
 								}
 								else
 								{
@@ -6448,6 +6453,11 @@ namespace FC{
 									{
 										Sleep(100);
 									}
+									if (PmInstance->hasPmMotorError(1))
+									{
+										logFailed(pm2->getName(), Poco::format("工艺执行失败: %s， %s：%d", PmInstance->getPmMotorError(1), pm2_process_name, pm2_auto_step.load()));
+										break;
+									}
 								}
 								else
 								{
@@ -6899,6 +6909,11 @@ namespace FC{
 							while (PmInstance->isPmMotorRunning(2) && !stopRequested)
 							{
 								Sleep(100);
+							}
+							if (PmInstance->hasPmMotorError(2))
+							{
+								logFailed("PM3", Poco::format("工艺执行失败: %s， %s：%d", PmInstance->getPmMotorError(2), pm3_process_name, pm3_auto_step.load()));
+								break;
 							}
 						}
 
@@ -7369,6 +7384,11 @@ namespace FC{
 							while (PmInstance->isPmMotorRunning(3) && !stopRequested)
 							{
 								Sleep(100);
+							}
+							if (PmInstance->hasPmMotorError(3))
+							{
+								logFailed("PM4", Poco::format("工艺执行失败: %s， %s：%d", PmInstance->getPmMotorError(3), pm4_process_name, pm4_auto_step.load()));
+								break;
 							}
 						}
 

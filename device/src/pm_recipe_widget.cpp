@@ -1014,6 +1014,8 @@ namespace FC {
 
 		ctx.isRunning = true;
 		ctx.stopRequested = false;
+		ctx.hasError = false;
+		ctx.errorMessage = "";
 		d->ui->start_pm_pbt->setEnabled(false);
 		d->ui->stop_pm_pbt->setEnabled(true);
 
@@ -1048,7 +1050,7 @@ namespace FC {
 			auto waitAngleInTolerance = [&](double target, int timeoutMs) {
 				const int stepMs = 50;
 				int waitedMs = 0;
-				double current = pmSubsystem->getPMCavityRAxleLocation();
+				float current = pmSubsystem->getPMCavityRAxleLocation();
 				while (!ctx.stopRequested && waitedMs < timeoutMs && !isAngleInTolerance(current, target)) {
 					Sleep(stepMs);
 					waitedMs += stepMs;
@@ -1078,6 +1080,57 @@ namespace FC {
 					logInform(pmSubsystem->getName().c_str(), "===== Cycle %d/%d =====", cycleIdx + 1, cycleCount);
 					QMetaObject::invokeMethod(this, "updateCycleCountDisplay", Qt::QueuedConnection, 
 						Q_ARG(int, cycleIdx + 1), Q_ARG(int, cycleCount));
+
+					int processExecCount = 0;
+					auto waitTimerFinished = [&]() {
+						std::unique_lock<std::mutex> lk(ctx.cycleMutex);
+						ctx.cycleCv.wait(lk, [&]() {
+							return ctx.timerFinished.load() || ctx.stopRequested.load();
+							});
+					};
+					auto runProcessWaitOnce = [&](const QPmRecipeWidget::PMMotorRow& motor) {
+						if (processCount <= 0) return;
+						if (processExecCount >= processCount) return;
+						if (!pmSubsystem->getMaximumPlaneLevelSignal()) {
+							logInform(pmSubsystem->getName().c_str(), "Maximum Plane Level Signal False, skipping Process Wait");
+							return;
+						}
+
+						int stepTotal = processCount;
+						int stepIndex = processExecCount + 1;
+						double waitTime = 0.0;
+						if (processExecCount < processCount - 1) {
+							waitTime = avgTime;
+						}
+						else {
+							waitTime = lastTime;
+						}
+						if (processExecCount >= processCount) {
+							waitTime = lastTime;
+							stepIndex = processCount;
+						}
+
+						if (motor.pre_process_wait_s > 0) {
+							logInform(pmSubsystem->getName().c_str(), "Pre Process Wait (soak): %.3f s (Step %d/%d)", motor.pre_process_wait_s, stepIndex, stepTotal);
+							d->runTimer(motor.pre_process_wait_s, pmIndex);
+							waitTimerFinished();
+							if (ctx.stopRequested) return;
+						}
+
+						logInform(pmSubsystem->getName().c_str(), "Process Wait (Dep): %.3f s (Step %d/%d)", waitTime, stepIndex, stepTotal);
+						d->runTimer(waitTime, pmIndex);
+						waitTimerFinished();
+						if (ctx.stopRequested) return;
+
+						if (motor.post_process_wait_s > 0) {
+							logInform(pmSubsystem->getName().c_str(), "Post Process Wait (time7): %.3f s (Step %d/%d)", motor.post_process_wait_s, stepIndex, stepTotal);
+							d->runTimer(motor.post_process_wait_s, pmIndex);
+							waitTimerFinished();
+							if (ctx.stopRequested) return;
+						}
+
+						++processExecCount;
+					};
 
 					for (size_t sIdx = 0; sIdx < cfg.steps.size(); ++sIdx) {
 						if (ctx.stopRequested) break;
@@ -1119,7 +1172,8 @@ namespace FC {
 					logInform(pmSubsystem->getName().c_str(), "Step %d: %s -> %s (%s)", sIdx + 1, from.c_str(), to.c_str(), rName.c_str());
 
 					// 执行循环（内表列）
-					int loopCount = recipe.motors.size();
+					int loopCount = recipe.motors.size();//参数表得step数量
+
 					for (int i = 0; i < loopCount; ++i) {
 						if (ctx.stopRequested) break;
 
@@ -1134,39 +1188,18 @@ namespace FC {
 						const auto& m = recipe.motors[i];
 
 						// 设置电机参数
-						pmSubsystem->setPMCavityZAxleAcc(m.lifting_acc);
-						pmSubsystem->setPMCavityZAxleDcc(m.lifting_dec);
-						pmSubsystem->setPMCavityZAxleJerk((uint32_t)m.lifting_jerk);
-						pmSubsystem->setPMCavityAxleSpeed(m.lifting_vel);
+						pmSubsystem->setPMCavityZAxleAcc((float)m.lifting_acc);
+						pmSubsystem->setPMCavityZAxleDcc((float)m.lifting_dec);
+						pmSubsystem->setPMCavityZAxleJerk((float)m.lifting_jerk);
+						pmSubsystem->setPMCavityAxleSpeed((float)m.lifting_vel);
 
-						pmSubsystem->setPMCavityRAxleAcc(m.rotating_acc);
-						pmSubsystem->setPMCavityRAxleDcc(m.rotating_dec);
-						pmSubsystem->setPMCavityRAxleJerk((uint32_t)m.rotating_jerk);
-						pmSubsystem->setPMCavityRAxleSpeed(m.rotating_vel);
+						pmSubsystem->setPMCavityRAxleAcc((float)m.rotating_acc);
+						pmSubsystem->setPMCavityRAxleDcc((float)m.rotating_dec);
+						pmSubsystem->setPMCavityRAxleJerk((float)m.rotating_jerk);
+						pmSubsystem->setPMCavityRAxleSpeed((float)m.rotating_vel);
 
-						// 1. Z轴移动（标准 From!=To） 往高位走的情况
-						if (from != to && !(to == "Transfer"))
-						{
-							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
-							pmSubsystem->startCommand(cmd);
-							cmd->wait();
 
-							if (from == "Process" && d->pmSignalServer) {
-								d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, from);
-							}
-
-							if (cmd->hasError() || ctx.stopRequested) {
-								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
-
-								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
-								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
-								throw std::runtime_error("Move Z Failed");
-							}
-							if (to == "Process" && d->pmSignalServer) {
-								d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, to);
-							}
-						}
-						// 2. 返回到Transfer面时需要先旋转再移动（From!=To且To==Transfer）往低位走的情况
+						// 1. 返回到Transfer面时需要先旋转再移动（From!=To且To==Transfer）往低位走的情况
 						if (to == "Transfer")
 						{
 							double rotatePos = posMap["Rotate"];
@@ -1194,8 +1227,8 @@ namespace FC {
 								throw std::runtime_error("Rotate Plane Level Signal False");
 							}
 
-							double targetAngle = pmSubsystem->getPmLiftPinSafeAnglePos();
-							double currentAngle = pmSubsystem->getPMCavityRAxleLocation();
+							float targetAngle = pmSubsystem->getPmLiftPinSafeAnglePos();
+							float currentAngle = pmSubsystem->getPMCavityRAxleLocation();
 							if (!isAngleInTolerance(currentAngle, targetAngle))
 							{
 								for (int attempt = 1; attempt <= 3; ++attempt)
@@ -1241,7 +1274,7 @@ namespace FC {
 								}
 							}
 
-							double finalAngle = pmSubsystem->getPMCavityRAxleLocation();
+							float finalAngle = pmSubsystem->getPMCavityRAxleLocation();
 							if (!isAngleInTolerance(finalAngle, targetAngle)) {
 								logFailed(pmSubsystem->getName(), Poco::format("Final Angle Check Failed, target=%.3f, current=%.3f", targetAngle, finalAngle));
 								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
@@ -1250,14 +1283,26 @@ namespace FC {
 							}
 						}
 
-						// 2. Rotate Action
-						//到达旋转面时且是from：Process to:Rotate
-
+						// 2.到达旋转面时且是from：Process to:Rotate
 						if (from == "Process" && to == "Rotate")
 						{
-							//先旋转一定角度,必须在旋转面时才能旋转
-							if (pmSubsystem->getRotatingimumPlaneLevelSignal())
+							if (i < loopCount - 1)
 							{
+								if (!pmSubsystem->getRotatingimumPlaneLevelSignal())
+								{
+									double rotatePos = posMap["Rotate"];
+									auto cmd = pmSubsystem->createLiftingActionCommand(rotatePos);
+									pmSubsystem->startCommand(cmd);
+									cmd->wait();
+
+									if (cmd->hasError() || ctx.stopRequested) {
+										logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", "Rotate");
+										QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+										throw std::runtime_error("Move Z Failed");
+									}
+								}
+
 								auto cmd = pmSubsystem->createRotatingActionCommand(rotation_angle_deg);
 								pmSubsystem->startCommand(cmd);
 								cmd->wait();
@@ -1268,11 +1313,11 @@ namespace FC {
 									QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 									throw std::runtime_error("Rotate Failed");
 								}
-								else
+								else //组合动作，触发上升到process面
 								{
 									//再Move Z Process面
-									double targetPos = posMap["Process"];
-									auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
+									double targetPos_1 = posMap["Process"];
+									auto cmd = pmSubsystem->createLiftingActionCommand(targetPos_1);
 									pmSubsystem->startCommand(cmd);
 									cmd->wait();
 									if (cmd->hasError() || ctx.stopRequested) {
@@ -1284,67 +1329,41 @@ namespace FC {
 									if (d->pmSignalServer) {
 										d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, "Process");
 									}
+									runProcessWaitOnce(m);
 								}
 
-							}
-							else
-							{
-								//未达到报警，并停止
-								throw std::runtime_error("Move Z Failed");
+								continue;
+
 							}
 							
 						}
 
-
-						// 3. Process Wait  只有from == "Process" && to == "Rotate"的配方且真实达到了Process面，才去做工艺
-						if (from == "Process" && to == "Rotate")
+						// Z轴移动（标准 From!=To） 不降到Transfer的情况
+						if (from != to && !(to == "Transfer"))
 						{
-							// 3.1 前处理Wait时间 (soak)
-							if (m.pre_process_wait_s > 0) {
-								logInform(pmSubsystem->getName().c_str(), "Pre Process Wait (soak): %.3f s (Step %d/%d)", m.pre_process_wait_s, i + 1, loopCount);
-								d->runTimer(m.pre_process_wait_s, pmIndex);
-								{
-									std::unique_lock<std::mutex> lk(ctx.cycleMutex);
-									ctx.cycleCv.wait(lk, [&]() {
-										return ctx.timerFinished.load() || ctx.stopRequested.load();
-									});
-								}
-								if (ctx.stopRequested) return;
+							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
+							pmSubsystem->startCommand(cmd);
+							cmd->wait();
+
+							if (from == "Process" && d->pmSignalServer) {
+								d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, from);
 							}
 
-							// 3.2 工艺时间 (Dep)
-							double waitTime = 0.0;
-							if (i < processCount - 1)
-							{
-								waitTime = avgTime;
-							}
-							else
-							{
-								waitTime = lastTime;
-							}
+							if (cmd->hasError() || ctx.stopRequested) {
+								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
 
-							logInform(pmSubsystem->getName().c_str(), "Process Wait (Dep): %.3f s (Step %d/%d)", waitTime, i + 1, loopCount);
-
-							d->runTimer(waitTime, pmIndex);
-							{
-								std::unique_lock<std::mutex> lk(ctx.cycleMutex);
-								ctx.cycleCv.wait(lk, [&]() {
-									return ctx.timerFinished.load() || ctx.stopRequested.load();
-								});
+								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
+								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
+								throw std::runtime_error("Move Z Failed");
 							}
-
-							// 3.3 后处理Wait时间 (time7)
-							if (m.post_process_wait_s > 0) {
-								logInform(pmSubsystem->getName().c_str(), "Post Process Wait (time7): %.3f s (Step %d/%d)", m.post_process_wait_s, i + 1, loopCount);
-								d->runTimer(m.post_process_wait_s, pmIndex);
-								{
-									std::unique_lock<std::mutex> lk(ctx.cycleMutex);
-									ctx.cycleCv.wait(lk, [&]() {
-										return ctx.timerFinished.load() || ctx.stopRequested.load();
-									});
-								}
+							if (to == "Process" && d->pmSignalServer) {
+								d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, to);
+							}
+							if (to == "Process") {
+								runProcessWaitOnce(m);
 							}
 						}
+
 
 						QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::white));
 
@@ -1361,9 +1380,13 @@ namespace FC {
 
 			}
 			catch (const std::exception& e) {
+				ctx.hasError = true;
+				ctx.errorMessage = e.what();
 				// Logged already
 			}
 			catch (...) {
+				ctx.hasError = true;
+				ctx.errorMessage = "Unknown Exception";
 				logFailed(pmSubsystem->getName(), "Unknown Exception");
 			}
 
@@ -1393,6 +1416,18 @@ namespace FC {
 	{
 		if (pmIndex < 0 || pmIndex >= 4) return false;
 		return pmContexts[pmIndex].isRunning.load();
+	}
+
+	bool QPmRecipeWidget::hasPmMotorError(int pmIndex) const
+	{
+		if (pmIndex < 0 || pmIndex >= 4) return false;
+		return pmContexts[pmIndex].hasError.load();
+	}
+
+	std::string QPmRecipeWidget::getPmMotorError(int pmIndex) const
+	{
+		if (pmIndex < 0 || pmIndex >= 4) return "";
+		return pmContexts[pmIndex].errorMessage;
 	}
 
 	void QPmRecipeWidget::onStopCycle()

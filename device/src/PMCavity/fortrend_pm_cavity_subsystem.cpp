@@ -993,27 +993,27 @@ namespace FC{
 		return d->lifting_axis_dece_value;
 	}
 
-	uint32_t FortrendPMCavitySubsystem::getPMCavityZAxleJerk() const
+	float FortrendPMCavitySubsystem::getPMCavityZAxleJerk() const
 	{
 		logInform(getName().c_str(), "读取R轴jerk.");
 		return  d->rotating_axis_jerk_value;
 	}
 
-	void FortrendPMCavitySubsystem::setPMCavityZAxleJerk(uint32_t value)
+	void FortrendPMCavitySubsystem::setPMCavityZAxleJerk(float value)
 	{
 		logInform(getName().c_str(), "设置R轴jerk.");
-		if (!KeyencePlcSubSystemHelper::writeUnsignedInt(d->rotating_axis_jerk_address, value))
+		if (!KeyencePlcSubSystemHelper::writeFloat(d->rotating_axis_jerk_address, value))
 		{
 			logError(getName().c_str(), Poco::format("写R轴jerk address = %s 失败!", d->rotating_axis_jerk_address).c_str());
 		}
 	}
 
-	double FortrendPMCavitySubsystem::getPMCavityRAxleSpeed() const
+	float FortrendPMCavitySubsystem::getPMCavityRAxleSpeed() const
 	{
 		return d->rotating_axis_current_speed;
 	}
 
-	double FortrendPMCavitySubsystem::getPMCavityRAxleLocation() const
+	float FortrendPMCavitySubsystem::getPMCavityRAxleLocation() const
 	{
 		//logInform(getName().c_str(), Poco::format("获取r轴位置：address = %s, result = %f", d->rotating_axis_current_coordinate_addresss, 
 		// d->rotating_axis_current_coordinate).c_str());
@@ -1048,16 +1048,16 @@ namespace FC{
 		}
 	}
 
-	uint32_t FortrendPMCavitySubsystem::getPMCavityZRxleJerk() const
+	float FortrendPMCavitySubsystem::getPMCavityZRxleJerk() const
 	{
 		logInform(getName().c_str(),"读取Z轴jerk.");
 		return  d->lifting_axis_jerk_value;
 	}
 
-	void FortrendPMCavitySubsystem::setPMCavityRAxleJerk(uint32_t value)
+	void FortrendPMCavitySubsystem::setPMCavityRAxleJerk(float value)
 	{
 		logInform(getName().c_str(), "设置Z轴jerk.");
-		if (!KeyencePlcSubSystemHelper::writeUnsignedInt(d->lifting_axis_jerk_address, value))
+		if (!KeyencePlcSubSystemHelper::writeFloat(d->lifting_axis_jerk_address, value))
 		{
 			logError(getName().c_str(), Poco::format("写Z轴jerk address = %s 失败!", d->lifting_axis_jerk_address).c_str());
 		}

@@ -256,14 +256,14 @@ namespace FC{
         double key = QCPAxisTickerDateTime::dateTimeToKey(QDateTime::currentDateTime());
         
         // Fetch Data
-        double accZ = d->currentSubsystem->getPMCavityZAxleAcc();
-        double accR = d->currentSubsystem->getPMCavityRAxleAcc();
+        double accZ = double(d->currentSubsystem->getPMCavityZAxleAcc());
+        double accR = double(d->currentSubsystem->getPMCavityRAxleAcc());
         
-        double velZ = d->currentSubsystem->getPMCavityZAxleSpeed();
-        double velR = d->currentSubsystem->getPMCavityRAxleSpeed();
+        double velZ = double(d->currentSubsystem->getPMCavityZAxleSpeed());
+        double velR = double(d->currentSubsystem->getPMCavityRAxleSpeed());
         
-        double posZ = d->currentSubsystem->getPMCavityZAxleLocation();
-        double posR = d->currentSubsystem->getPMCavityRAxleLocation();
+        double posZ = double(d->currentSubsystem->getPMCavityZAxleLocation());
+        double posR = double(d->currentSubsystem->getPMCavityRAxleLocation());
         
         // Save to database
         QString timestampStr = QDateTime::fromMSecsSinceEpoch(now).toString("yyyy-MM-dd HH:mm:ss");
