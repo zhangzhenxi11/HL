@@ -1050,11 +1050,11 @@ namespace FC {
 			auto waitAngleInTolerance = [&](double target, int timeoutMs) {
 				const int stepMs = 50;
 				int waitedMs = 0;
-				float current = pmSubsystem->getPMCavityRAxleLocation();
+				float current = pmSubsystem->getRealPMCavityRAxleLocation();
 				while (!ctx.stopRequested && waitedMs < timeoutMs && !isAngleInTolerance(current, target)) {
 					Sleep(stepMs);
 					waitedMs += stepMs;
-					current = pmSubsystem->getPMCavityRAxleLocation();
+					current = pmSubsystem->getRealPMCavityRAxleLocation();
 				}
 				return current;
 			};
@@ -1117,10 +1117,17 @@ namespace FC {
 							if (ctx.stopRequested) return;
 						}
 
+						if (d->pmSignalServer) {
+							d->pmSignalServer->notifyStartProcess(pmIndex, "Process");
+						}
 						logInform(pmSubsystem->getName().c_str(), "Process Wait (Dep): %.3f s (Step %d/%d)", waitTime, stepIndex, stepTotal);
 						d->runTimer(waitTime, pmIndex);
 						waitTimerFinished();
 						if (ctx.stopRequested) return;
+
+						if (d->pmSignalServer) {
+							d->pmSignalServer->notifyEndProcess(pmIndex, "Process");
+						}
 
 						if (motor.post_process_wait_s > 0) {
 							logInform(pmSubsystem->getName().c_str(), "Post Process Wait (time7): %.3f s (Step %d/%d)", motor.post_process_wait_s, stepIndex, stepTotal);
@@ -1228,7 +1235,8 @@ namespace FC {
 							}
 
 							float targetAngle = pmSubsystem->getPmLiftPinSafeAnglePos();
-							float currentAngle = pmSubsystem->getPMCavityRAxleLocation();
+							float currentAngle = pmSubsystem->getRealPMCavityRAxleLocation(); //2026-5-22 改成实时读取得接口
+
 							if (!isAngleInTolerance(currentAngle, targetAngle))
 							{
 								for (int attempt = 1; attempt <= 3; ++attempt)
@@ -1250,7 +1258,7 @@ namespace FC {
 									if (isAngleInTolerance(currentAngle, targetAngle)) break;
 
 									if (attempt >= 3) {
-										logFailed(pmSubsystem->getName(), Poco::format("Rotate Angle Not Reached, target=%.3f, current=%.3f", targetAngle, currentAngle));
+										logFailed(pmSubsystem->getName(), Poco::format("Rotate Angle Not Reached, target=%f, current=%f", targetAngle, currentAngle));
 										QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
 										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 										throw std::runtime_error("Rotate Angle Not Reached");
@@ -1276,7 +1284,7 @@ namespace FC {
 
 							float finalAngle = pmSubsystem->getPMCavityRAxleLocation();
 							if (!isAngleInTolerance(finalAngle, targetAngle)) {
-								logFailed(pmSubsystem->getName(), Poco::format("Final Angle Check Failed, target=%.3f, current=%.3f", targetAngle, finalAngle));
+								logFailed(pmSubsystem->getName(), Poco::format("Final Angle Check Failed, target=%f, current=%f", targetAngle, finalAngle));
 								QMetaObject::invokeMethod(this, "updateSequenceRowHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, sIdx), Q_ARG(QColor, Qt::red));
 								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 								throw std::runtime_error("Final Angle Check Failed");

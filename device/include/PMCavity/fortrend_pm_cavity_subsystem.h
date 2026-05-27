@@ -218,8 +218,10 @@ namespace FC{
 		/*=================Z轴========================*/
 		//Z轴速度
 		float getPMCavityZAxleSpeed()const;
-		//Z轴位置
+		//Z轴位置(缓存值)
 		float getPMCavityZAxleLocation()const;
+		//Z轴实时位置(直接读取PLC)
+		float getRealPMCavityZAxleLocation();
 
 		//设置Z轴加速度
 		void setPMCavityZAxleAcc(float accValue);
@@ -240,8 +242,10 @@ namespace FC{
 		/*=================R轴========================*/
 		//R轴速度
 		float getPMCavityRAxleSpeed()const;
-		//R轴位置
+		//R轴位置(缓存值)
 		float getPMCavityRAxleLocation()const;
+		//R轴实时位置(直接读取PLC)
+		float getRealPMCavityRAxleLocation();
 
 		//R轴加速度
 		float getPMCavityRAxleAcc()const;

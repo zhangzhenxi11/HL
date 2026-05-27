@@ -179,7 +179,7 @@ bool EFEMAsciiApi::sendNAK(const std::shared_ptr<Message>& message, int code){
 		msg = msg + item;
 	}
 
-	std::string str = Poco::format("NAK:%s|%s;", msg, code);
+	std::string str = Poco::format("NAK:%s|%d;", msg, code);
 	return sendMessage(str.data(), str.size());
 }
 

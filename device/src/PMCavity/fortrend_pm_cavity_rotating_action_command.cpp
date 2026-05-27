@@ -117,6 +117,7 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
     int count = 0;
     bool readRes;
     bool failedRes;
+    float realRAxleLocation;
     bool warnRes;
     while (count <= loopCount)
     {
@@ -124,20 +125,23 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
         readBit(finish_address, readRes);
         readBit(failed_address, failedRes);
         readBit(warning_address, warnRes);
+        realRAxleLocation = sub->getRealPMCavityRAxleLocation();
 
         if (readRes || failedRes || warnRes)
         {
+            logInform(sub->getName().c_str(), "旋转轴实时位置：%.3f", realRAxleLocation);
             break;
         }
         count++;
     }
     IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_FAILD;
 
-   float realRAxleLocation =  sub->getPMCavityRAxleLocation();
-   logInform(sub->getName().c_str(), "旋转轴实时位置：%.3f", realRAxleLocation);
+
     if (readRes)
     {
         sub->setPMCavitySafeSignal(true);
+        realRAxleLocation = sub->getRealPMCavityRAxleLocation();
+        logInform(sub->getName().c_str(), "定位完成，旋转轴实时位置：%.3f,定位位置:%.3f", realRAxleLocation, d->_degree);
 
         if (!writeBit(start_address, false))
         {
@@ -162,6 +166,7 @@ PMCavityRotatingActionCommand::RunResult PMCavityRotatingActionCommand::onRun() 
         AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, KernelSysException::KR_MODULE_COMMUNICATION_TIMEOUT, "执行去定位开始命令信号超时"));
         setAlarm(alarm);
     }
+    logInform(sub->getName().c_str(), "定位失败，旋转轴实时位置：%.3f,定位位置:%.3f", realRAxleLocation, d->_degree);
     return ret;
 
 }

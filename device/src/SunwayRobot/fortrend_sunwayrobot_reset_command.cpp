@@ -196,15 +196,17 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			
 		}
 		//这里设置默认25比例速度
-		auto cmd_update = robot->createSetSpeedCommand(25);
-		robot->startCommand(cmd_update);
-		cmd_update->wait();
-		if (cmd_update->hasError())
-		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "设置手臂速度命令执行失败！"));
-			setAlarm(alarm);
-			return RunResult::RUN_FAILD;
-		}
+		// 2026-5-23:不重设速度
+		//auto cmd_update = robot->createSetSpeedCommand(25);
+		//robot->startCommand(cmd_update);
+		//cmd_update->wait();
+		//if (cmd_update->hasError())
+		//{
+		//	AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "设置手臂速度命令执行失败！"));
+		//	setAlarm(alarm);
+		//	return RunResult::RUN_FAILD;
+		//}
+
 		robot->setHasResetFlag(true);
 
 		//2026-3-30 增加checkload

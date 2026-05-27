@@ -964,6 +964,16 @@ namespace FC{
 		return d->lifting_axis_current_coordinate;
 	}
 
+	float FortrendPMCavitySubsystem::getRealPMCavityZAxleLocation()
+	{
+		float value = 0.0f;
+		if (KeyencePlcSubSystemHelper::readFloat(d->lifting_axis_current_coordinate_addresss, value))
+		{
+			d->lifting_axis_current_coordinate = value;
+		}
+		return d->lifting_axis_current_coordinate;
+	}
+
 	void FortrendPMCavitySubsystem::setPMCavityZAxleAcc(float accValue)
 	{
 
@@ -1017,6 +1027,16 @@ namespace FC{
 	{
 		//logInform(getName().c_str(), Poco::format("获取r轴位置：address = %s, result = %f", d->rotating_axis_current_coordinate_addresss, 
 		// d->rotating_axis_current_coordinate).c_str());
+		return d->rotating_axis_current_coordinate;
+	}
+
+	float FortrendPMCavitySubsystem::getRealPMCavityRAxleLocation()
+	{
+		float value = 0.0f;
+		if (KeyencePlcSubSystemHelper::readFloat(d->rotating_axis_current_coordinate_addresss, value))
+		{
+			d->rotating_axis_current_coordinate = value;
+		}
 		return d->rotating_axis_current_coordinate;
 	}
 

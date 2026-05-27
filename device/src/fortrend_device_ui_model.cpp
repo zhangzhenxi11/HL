@@ -107,8 +107,8 @@
 #endif
 
 //手动版本号管理
-#define VERSION_NUMBER  "1.0.7.0513_alpha"
-#define GIT_COMMIT   "0898bfec60b8fc9870b7f650c186f2a5799eb572"
+#define VERSION_NUMBER  "1.0.7.0522_alpha"
+#define GIT_COMMIT   "ac2f81df17ca80c7502c239c91abf4323f895b90"
 #define GIT_BRANCH  "dev"
 
 using namespace FC;
