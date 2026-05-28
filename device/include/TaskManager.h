@@ -171,6 +171,16 @@ namespace FC {
         //获得经过LLA/LLB 的有上料标签
         bool CollectionPassedThroughLL(const std::string &LLName);
 
+        bool hasLoadLockLowerPriorityReturn(const std::string& LLName);
+
+        bool hasEfemUnloadInProgress(const std::string& LLName);
+
+		//通过来源位置获取EFEM下料完成的任务
+        std::vector<UnifiedWaferTask> getEfemRuturnCompletedTasksBySource(UnifiedWaferTask::Location source);
+
+        bool canResetEfemReturnCompletedTasks(UnifiedWaferTask::Location source);
+
+        bool hasInFlightTasksExceptCompletedEfemReturn();
 
         // 更新任务映射关系 ,根据taskId先移除旧映射
         void updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type, UnifiedWaferTask::Status status);

@@ -259,7 +259,7 @@ namespace FC{
 		std::string LLBPmName; //llb当前处理的pm
 
 
-		//情景：当一个LL的料下到位，另一个没下料时，为了不让另一个LL继续发送上料请求的互锁条件
+		//仅在真实下料冲突，或对侧LL下层完成片需要优先回LP时上锁。
 		bool isLoadingInterlock(const std::string& LLName);
 
 	private:
@@ -928,8 +928,13 @@ namespace FC{
 
 				case 11:
 				{
+					auto efemReturnPendingLLATasks = taskManager.getTasksByLocation(efemReturnPendingTasks, UnifiedWaferTask::Location::LLA);
+					auto efemReturnPendingLLBTasks = taskManager.getTasksByLocation(efemReturnPendingTasks, UnifiedWaferTask::Location::LLB);
+					auto efemPendingLLATasks = taskManager.getTasksByLocation(efemPendingTasks, UnifiedWaferTask::Location::LLA);
+					auto efemPendingLLBTasks = taskManager.getTasksByLocation(efemPendingTasks, UnifiedWaferTask::Location::LLB);
+
 					// 处理下料请求（优先）
-					if (tool_allow_put_wafer_LLA || efemReturnPendingTasks.size() > 0) {
+					if (tool_allow_put_wafer_LLA || efemReturnPendingLLATasks.size() > 0) {
 
 						if (!efem_robot_mutex.is_locked())
 						{
@@ -938,7 +943,7 @@ namespace FC{
 						current_loadlock = "LLA";
 						efem_auto_step = 200;  // 下料流程
 					}
-					else if (tool_allow_put_wafer_LLB || efemReturnPendingTasks.size() > 0) {
+					else if (tool_allow_put_wafer_LLB || efemReturnPendingLLBTasks.size() > 0) {
 						if (!efem_robot_mutex.is_locked())
 						{
 							efem_robot_mutex.lock();
@@ -947,7 +952,7 @@ namespace FC{
 						efem_auto_step = 200;  // 下料流程
 					}
 					// 处理上料请求
-					else if (tool_allow_get_wafer_LLA || efemPendingTasks.size() > 0) {
+					else if (tool_allow_get_wafer_LLA || efemPendingLLATasks.size() > 0) {
 						if (!efem_robot_mutex.is_locked())
 						{
 							efem_robot_mutex.lock();
@@ -955,7 +960,7 @@ namespace FC{
 						current_loadlock = "LLA";
 						efem_auto_step = 100;  // 上料流程
 					}
-					else if (tool_allow_get_wafer_LLB || efemPendingTasks.size() > 0) {
+					else if (tool_allow_get_wafer_LLB || efemPendingLLBTasks.size() > 0) {
 						if (!efem_robot_mutex.is_locked())
 						{
 							efem_robot_mutex.lock();
@@ -972,19 +977,21 @@ namespace FC{
 				case 100:
 				{
 					//logWarn("EFEM", "efem_auto_step:100,给%s上料 Lock thread...", current_loadlock.c_str());
-
-					if (efemUnkownStatusTasks.size() > 0)
+					std::vector<UnifiedWaferTask> currentLoadLockUnknownTasks;
+					if (current_loadlock == "LLA")
 					{
-						elp = efemUnkownStatusTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
-						//找到当前loadLock的elp，lk
-						if (current_loadlock == "LLA")
-						{
-							lk = lk1;
-						}
-						else
-						{
-							lk = lk2;
-						}
+						currentLoadLockUnknownTasks = taskManager.getEfemUnkownStatusLLATasks();
+						lk = lk1;
+					}
+					else
+					{
+						currentLoadLockUnknownTasks = taskManager.getEfemUnkownStatusLLBTasks();
+						lk = lk2;
+					}
+
+					if (currentLoadLockUnknownTasks.size() > 0)
+					{
+						elp = currentLoadLockUnknownTasks.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 						logWarn("EFEM", "step:100,当前lk:%s", lk->getName().c_str());
 
 						//UI中确定的数据，elp就是确定的
@@ -1094,12 +1101,14 @@ namespace FC{
 							efemAllocationLLAInitTasks = taskManager.getEfemUnkownStatusLLATasks();
 							if(efemAllocationLLAInitTasks.size() > 0)
 							{
-								for (int i = 0; i < count; i++)
+								int allocatedTaskIndex = 0;
+								for (int i = 0; i < lkmaps.size() && allocatedTaskIndex < count && allocatedTaskIndex < efemAllocationLLAInitTasks.size(); i++)
 								{
 									if (lkmaps[i] == Cassette::Empty) //空片的槽号
 									{
-										taskManager.updateTaskStatus(efemAllocationLLAInitTasks[i].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
+										taskManager.updateTaskStatus(efemAllocationLLAInitTasks[allocatedTaskIndex].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
 											UnifiedWaferTask::Status::QUEUED);
+										allocatedTaskIndex++;
 									}
 								}
 							}
@@ -1110,12 +1119,14 @@ namespace FC{
 
 							if(efemAllocationLLBInitTasks.size() > 0)
 							{
-								for (int i = 0; i < count; i++)
+								int allocatedTaskIndex = 0;
+								for (int i = 0; i < lkmaps.size() && allocatedTaskIndex < count && allocatedTaskIndex < efemAllocationLLBInitTasks.size(); i++)
 								{
 									if (lkmaps[i] == Cassette::Empty) //空片的槽号
 									{
-										taskManager.updateTaskStatus(efemAllocationLLBInitTasks[i].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
+										taskManager.updateTaskStatus(efemAllocationLLBInitTasks[allocatedTaskIndex].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
 											UnifiedWaferTask::Status::QUEUED);
+										allocatedTaskIndex++;
 									}
 								}
 							}
@@ -1133,7 +1144,9 @@ namespace FC{
 				case 110:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
-					efemPendingTasks = taskManager.getEfemPendingTasks();
+					efemPendingTasks = taskManager.getTasksByLocation(
+						taskManager.getEfemPendingTasks(),
+						current_loadlock == "LLA" ? UnifiedWaferTask::Location::LLA : UnifiedWaferTask::Location::LLB);
 					
 					if (efemPendingTasks.size() == 1)
 					{
@@ -2735,22 +2748,39 @@ namespace FC{
 					}
 
 					//在LLA槽中，没有传输任务,说明没有上料需求，所有wafer都完成下料到LP中
-					if (loadLockAPendingTasks.size() == 0 && current_lp_cycle)
+					if (loadLockAPendingTasks.size() == 0 && loadLockAReturnPendingTasks.size() == 0 && loadLockAReturnCompletedTasks.size() == 0 && current_lp_cycle)
 					{
 						logInform(lk1->getName().c_str(), "此时current_lp_cycle循环.");
 						loadlock1_auto_step = 6000;
 					}
 
-					//优先
-					if (!tool_allow_get_wafer_LLA && (loadLockAPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0) )
-					{
-						//有wafer，直接抽真空，走取放晶圆流程/下料流程
-						loadlock1_auto_step = 400;
-					}
+                    const bool hasLlaWaferReady =
+                        (!tool_allow_get_wafer_LLA) &&
+                        (loadLockAPendingTasks.size() > 0 || loadLockAReturnPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0);
 
-					//需上料 
-					else if ((!isInterlock) && (loadLockAPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size()== 0 ||  0 < efemUnkownStatusTasks.size() <= originTaskSize))
-					{
+					/*
+					本侧LL上层已空
+					&& LP还有待上料片
+					&& 跨侧互锁没触发
+					=> 才允许上料
+					*/
+                    const bool canRequestLlaLoad =
+                        (!tool_allow_get_wafer_LLA) &&
+                        loadLockAPendingTasks.size() == 0 &&
+                        loadLockAReturnPendingTasks.size() == 0 &&
+                        loadLockAReturnCompletedTasks.size() == 0 &&
+                        (efemUnkownStatusTasks.size() > 0 && efemUnkownStatusTasks.size() <= originTaskSize);
+
+                    //优先
+                    if (hasLlaWaferReady)
+                    {
+                        //有wafer，直接抽真空，走取放晶圆流程/下料流程
+                        loadlock1_auto_step = 400;
+                    }
+
+                    //需上料
+                    else if ((!isInterlock) && canRequestLlaLoad)
+                    {
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 						if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
@@ -2777,6 +2807,12 @@ namespace FC{
 				break;
 				case 20://需要上晶圆,先破真空
 				{
+					UpdateLLASubTransferDatas();
+					if (loadLockAReturnPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0)
+					{
+						loadlock1_auto_step = 400;
+						break;
+					}
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
 						logInform("Cycle", "step 20:大气cycle,跳过真空检测.");
@@ -3093,6 +3129,10 @@ namespace FC{
 					else if (loadLockAReturnCompletedTasks.size() > 0)
 					{
 						loadlock1_auto_step = 5000;//出空Cassette流程
+					}
+					else if (!abortCycle)
+					{
+						loadlock1_auto_step = 10;
 					}
 					Sleep(500);
 				}
@@ -4076,7 +4116,6 @@ namespace FC{
 					lp1TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP1).size();
 					lp2TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP2).size();
 					UpdateLLBSubTransferDatas();
-					UpdateLLASubTransferDatas();
 					
 					bool isInterlock = isLoadingInterlock("LLB");
 					if (isInterlock)
@@ -4084,23 +4123,33 @@ namespace FC{
 						//logWarn(lk1->getName().c_str(), "有片下料没完成时情景，LLB上料互锁.");
 					}
 
-					//判断是否lp2循环
-					if (loadLockBPendingTasks.size() == 0 && current_lp_cycle)
-					{
-						logInform(lk2->getName().c_str(), "此时current_lp_cycle循环.");
-						loadlock2_auto_step = 6000;
-					}
+                    //判断是否lp2循环
+					if (loadLockBPendingTasks.size() == 0 && loadLockBReturnPendingTasks.size() == 0 && loadLockBReturnCompletedTasks.size() == 0 && current_lp_cycle)
+                    {
+                        logInform(lk2->getName().c_str(), "此时current_lp_cycle循环.");
+                        loadlock2_auto_step = 6000;
+                    }
 
-					//走Loadlock流程：自己的上料完成
-					if (!tool_allow_get_wafer_LLB && (loadLockBPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0))
-					{
-						//有wafer，直接抽真空，走取放晶圆流程，下料流程，
-						loadlock2_auto_step = 400;
-					}
-					
-					//上料条件：自己的下料完成且LLA下料完成才行。。。。。
-					else if ((!isInterlock) && (loadLockBPendingTasks.size() == 0 || loadLockAReturnCompletedTasks.size() == 0 || 0 < efemUnkownStatusTasks.size() <= originTaskSize))
-					{
+                    const bool hasLlbWaferReady =
+                        (!tool_allow_get_wafer_LLB) &&
+                        (loadLockBPendingTasks.size() > 0 || loadLockBReturnPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0);
+                    const bool canRequestLlbLoad =
+                        (!tool_allow_get_wafer_LLB) &&
+                        loadLockBPendingTasks.size() == 0 &&
+                        loadLockBReturnPendingTasks.size() == 0 &&
+                        loadLockBReturnCompletedTasks.size() == 0 &&
+                        (efemUnkownStatusTasks.size() > 0 && efemUnkownStatusTasks.size() <= originTaskSize);
+
+                    //走Loadlock流程：自己的上料完成
+                    if (hasLlbWaferReady)  
+                    {
+                        //有wafer，直接抽真空，走取放晶圆流程，下料流程，
+                        loadlock2_auto_step = 400;
+                    }
+
+                    //上料条件：仅根据当前LL自身状态判断是否需要上料
+                    else if ((!isInterlock) && canRequestLlbLoad)
+                    {
 						//无wafer,破真空，让efem上料, 此时lp中的wafer状态是unkown
 
 						if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
@@ -4124,6 +4173,12 @@ namespace FC{
 				break;
 				case 20://需要上晶圆,先破真空
 				{
+					UpdateLLBSubTransferDatas();
+					if (loadLockBReturnPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0)
+					{
+						loadlock2_auto_step = 400;
+						break;
+					}
 					if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 					{
 						logInform("Cycle", "step 20:大气cycle,跳过真空检测.");
@@ -4439,6 +4494,10 @@ namespace FC{
 					else if (loadLockBReturnCompletedTasks.size() > 0)
 					{
 						loadlock2_auto_step = 5000;//出空Cassette流程
+					}
+					else if (!abortCycle)
+					{
+						loadlock2_auto_step = 10;
 					}
 					Sleep(500);
 				}
@@ -7978,6 +8037,31 @@ namespace FC{
 			elp1 = kernel->getKernelModule<EFEMLPSubsystem>("ELP1");
 			elp2 = kernel->getKernelModule<EFEMLPSubsystem>("ELP2");
 
+			auto resetEfemReturnCompletedTasksSafely = [this](UnifiedWaferTask::Location source)
+			{
+				//判断是否可以重置EFEM搬回任务
+				if (!taskManager.canResetEfemReturnCompletedTasks(source))
+				{
+					return;
+				}
+
+				const auto completedTasks = taskManager.getEfemRuturnCompletedTasksBySource(source);
+				for (const auto& task : completedTasks)
+				{
+					taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+				}
+
+				if (!completedTasks.empty())
+				{
+					taskManager.lessTaskIdSortAlgorithm();
+				}
+			};
+
+			auto isSafeCycleBoundary = [this]()
+			{
+				return !taskManager.hasInFlightTasksExceptCompletedEfemReturn();
+			};
+
 			while (!stopRequested)
 			{
 				update_step_once_finished = false;
@@ -7985,7 +8069,8 @@ namespace FC{
 				//onGetStep();
 				
 				if (((finished_time_lla == cycle_times_lla) || (finished_time_llb == cycle_times_llb)) 
-					&& (!elp1->hasDoorOpend() && !elp2->hasDoorOpend()))
+					&& (!elp1->hasDoorOpend() && !elp2->hasDoorOpend())
+					&& isSafeCycleBoundary())
 				{
 					
 					//update lla
@@ -8036,14 +8121,14 @@ namespace FC{
 					if (lp1_cycle_one_time_finished && !cycleFinished_lla)
 					{//Lp1的一次Cycle已做完
 						//2025-11-17: 多加一条检测条件：
-						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0))
+						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0) && isSafeCycleBoundary())
 						{
 							update_auto_step = 1030;
 						}
 					}
 					else if (lp2_cycle_one_time_finished && !cycleFinished_llb)
 					{//Lp2的一次Cycle已做完
-						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0))
+						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0) && isSafeCycleBoundary())
 						{
 							update_auto_step = 1040;
 						}
@@ -8075,13 +8160,7 @@ namespace FC{
 					}
 					else
 					{
-						// 4---> 0
-						efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
-						for (auto& task : efemReturnCompletedTasks)
-						{
-							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
-						}
-						taskManager.lessTaskIdSortAlgorithm();
+						resetEfemReturnCompletedTasksSafely(UnifiedWaferTask::Location::LP1);
 					}
 					onUpdateCycleInfo();
 					lp1_cycle_one_time_finished = false;
@@ -8117,12 +8196,7 @@ namespace FC{
 					}
 					else
 					{
-						efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks();//4
-						for (auto& task : efemReturnCompletedTasks)
-						{
-							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::TaskType::UNKNOWN, UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
-						}
-						taskManager.lessTaskIdSortAlgorithm();
+						resetEfemReturnCompletedTasksSafely(UnifiedWaferTask::Location::LP2);
 					}
 					onUpdateCycleInfo();
 					lp2_cycle_one_time_finished = false;
@@ -8248,75 +8322,34 @@ namespace FC{
 
 	bool QSlotTransferCycleVTMWidgetPrivate::isLoadingInterlock(const std::string &LLName)
 	{
-		//logInform("check Interlock","检查LLName:%s 上料互锁.",LLName.c_str());
-
+		// 仅在真实下料冲突，或对侧LL下层完成片需要优先回LP时上锁。
 		UpdateLLBSubTransferDatas();
-		UpdateLLASubTransferDatas();			
-		lk1 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLA");
-		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
-		bool downHaswaferlk1 = false;
-		bool downHaswaferlk2 = false;
-		if(lk1!=nullptr && lk2!=nullptr)
-		{
-			auto cass1Manager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
-			auto cass2Manager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
-			downHaswaferlk1 = cass1Manager->getCassette(lk1.get())->getMapping(1) == Cassette::Present; //1层有片
-			downHaswaferlk2 = cass1Manager->getCassette(lk2.get())->getMapping(1) == Cassette::Present; //1层有片
-		}
-		else
-		{
-			logError("Cyclelog", "isLoadingInterlock  crashed!");
-			return false;
-		}
+		UpdateLLASubTransferDatas();
 
-		//获得经过LLA的所有料集合，
-		if(LLName == "LLB")
+		std::string otherLL;
+		bool otherUnloadRequested = false;
+		if (LLName == "LLB")
 		{
-			//1.下料请求，获得经过LLA 的有上料标签，或下层有片
-			if (tool_allow_put_wafer_LLA || taskManager.CollectionPassedThroughLL("LLA") || downHaswaferlk1)
-			{
-				//logWarn("Cyclelog", "LLA有待下料或者还没下料,LLB上料 LoadingInterlock!");
-				return true; //LLA有待下料或者还没下料
-			}
-			// LLA下料完成 
-			else if (!taskManager.CollectionPassedThroughLL("LLA") && !tool_allow_put_wafer_LLA)
-			{
-				//LLA下料完成或者初始状态
-				//logWarn("Cyclelog", "LLA下料完成,对LLB上料不上锁.");
-				return false;
-			}
-			else
-			{
-				logWarn("Cyclelog", "未知情况,对LLB上料不上锁.");
-				return false;
-			}
+			otherLL = "LLA";
+			otherUnloadRequested = tool_allow_put_wafer_LLA;
 		}
 		else if (LLName == "LLA")
 		{
-			//下料请求,获得经过LLB的有上料标签，或下层有片
-			if (tool_allow_put_wafer_LLB || taskManager.CollectionPassedThroughLL("LLB") || downHaswaferlk2)//或下层有片
-			{
-				//logWarn("Cyclelog", "LLB有待下料或者还没下料,LLA 上料 LoadingInterlock!");
-				return true; //LLB有待下料或者还没下的料
-			}
-			//true呼叫LP下料， false LP下料完成 
-			else if (!taskManager.CollectionPassedThroughLL("LLB") && !tool_allow_put_wafer_LLB)
-			{
-				//LLA下料完成或者初始状态
-				//logWarn("Cyclelog", "LLB下料完成,对LLA上料不上锁.");
-				return false;
-			}
-			else
-			{
-				logWarn("Cyclelog", " 未知情况,对LLA上料不上锁.");
-				return false;
-			}
+			otherLL = "LLB";
+			otherUnloadRequested = tool_allow_put_wafer_LLB;
 		}
 		else
 		{
 			return false;
 		}
-		return false;
+
+		const bool hasUnloadConflict =
+			otherUnloadRequested || taskManager.hasEfemUnloadInProgress(otherLL);
+
+		const bool hasLowerSlotPriorityReturn =
+			taskManager.hasLoadLockLowerPriorityReturn(otherLL);
+
+		return hasUnloadConflict || hasLowerSlotPriorityReturn;
 	}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::getArmWaferIsPmPending(int arm)

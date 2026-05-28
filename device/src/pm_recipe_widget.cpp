@@ -1072,6 +1072,33 @@ namespace FC {
 				avgTime = totalTime; // 或者仅作为最后一次时间处理
 			}
 
+			bool axisInProcess = false;
+			auto notifyAxisArrivedProcessIfNeeded = [&]() {
+				if (!axisInProcess) {
+					if (d->pmSignalServer)
+					{
+						if(pmSubsystem->getMaximumPlaneLevelSignal())
+						{
+							d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, "Process");
+						}
+						else
+						{
+							logInform(pmSubsystem->getName().c_str(), "Maximum Plane Level Signal False, skipping notifyAxisArrivedProcess");
+							axisInProcess = false;
+						}
+					}
+					axisInProcess = true;
+				}
+			};
+			auto notifyAxisDepartedProcessIfNeeded = [&]() {
+				if (axisInProcess) {
+					if (d->pmSignalServer) {
+						d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, "Process");
+					}
+					axisInProcess = false;
+				}
+			};
+
 			try {
 				// 循环执行配方
 				for (int cycleIdx = 0; cycleIdx < cycleCount; ++cycleIdx) {
@@ -1080,6 +1107,8 @@ namespace FC {
 					logInform(pmSubsystem->getName().c_str(), "===== Cycle %d/%d =====", cycleIdx + 1, cycleCount);
 					QMetaObject::invokeMethod(this, "updateCycleCountDisplay", Qt::QueuedConnection, 
 						Q_ARG(int, cycleIdx + 1), Q_ARG(int, cycleCount));
+
+					axisInProcess = pmSubsystem->getMaximumPlaneLevelSignal();
 
 					int processExecCount = 0;
 					auto waitTimerFinished = [&]() {
@@ -1213,11 +1242,8 @@ namespace FC {
 							{
 								auto cmd = pmSubsystem->createLiftingActionCommand(rotatePos);
 								pmSubsystem->startCommand(cmd);
+								//notifyAxisDepartedProcessIfNeeded();
 								cmd->wait();
-
-								if (d->pmSignalServer) {
-									d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, from);
-								}
 
 								if (cmd->hasError() || ctx.stopRequested) {
 									logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", "Rotate");
@@ -1301,6 +1327,7 @@ namespace FC {
 									double rotatePos = posMap["Rotate"];
 									auto cmd = pmSubsystem->createLiftingActionCommand(rotatePos);
 									pmSubsystem->startCommand(cmd);
+									notifyAxisDepartedProcessIfNeeded();
 									cmd->wait();
 
 									if (cmd->hasError() || ctx.stopRequested) {
@@ -1334,9 +1361,7 @@ namespace FC {
 										QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 										throw std::runtime_error("Move Z Failed");
 									}
-									if (d->pmSignalServer) {
-										d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, "Process");
-									}
+									notifyAxisArrivedProcessIfNeeded();
 									runProcessWaitOnce(m);
 								}
 
@@ -1346,16 +1371,15 @@ namespace FC {
 							
 						}
 
-						// Z轴移动（标准 From!=To） 不降到Transfer的情况
+						// 3.Z轴移动（标准 From!=To） 不降到Transfer的情况
 						if (from != to && !(to == "Transfer"))
 						{
 							auto cmd = pmSubsystem->createLiftingActionCommand(targetPos);
 							pmSubsystem->startCommand(cmd);
-							cmd->wait();
-
-							if (from == "Process" && d->pmSignalServer) {
-								d->pmSignalServer->notifyAxisDepartedProcess(pmIndex, from);
+							if (to != "Process") {
+								notifyAxisDepartedProcessIfNeeded();
 							}
+							cmd->wait();
 
 							if (cmd->hasError() || ctx.stopRequested) {
 								logFailedExcuteCommandHasError(pmSubsystem->getName(), "Move Z Failed", to.c_str());
@@ -1364,8 +1388,9 @@ namespace FC {
 								QMetaObject::invokeMethod(this, "updateInnerColumnHighlight", Qt::QueuedConnection, Q_ARG(int, pmIndex), Q_ARG(int, i), Q_ARG(QColor, Qt::red));
 								throw std::runtime_error("Move Z Failed");
 							}
-							if (to == "Process" && d->pmSignalServer) {
-								d->pmSignalServer->notifyAxisArrivedProcess(pmIndex, to);
+
+							if (to == "Process") {
+								notifyAxisArrivedProcessIfNeeded();
 							}
 							if (to == "Process") {
 								runProcessWaitOnce(m);

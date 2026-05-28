@@ -825,6 +825,113 @@ bool FC::TaskManager::CollectionPassedThroughLL(const std::string& LLName)
     return false;
 }
 
+bool FC::TaskManager::hasLoadLockLowerPriorityReturn(const std::string& LLName)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    const auto loc = stringToLocation(LLName);
+
+    return std::any_of(tasks_.begin(), tasks_.end(), [loc](const UnifiedWaferTask& task) {
+        if (task.target != loc || task.targetBlankingSlot != 1)
+        {
+            return false;
+        }
+
+        const bool loadLockReturnReady =
+            task.taskType == UnifiedWaferTask::TaskType::LOADLOCK_RETURN &&
+            task.status == UnifiedWaferTask::Status::COMPLETED;
+
+        const bool efemReturnWaiting =
+            task.taskType == UnifiedWaferTask::TaskType::EFEM_RETURN &&
+            task.status != UnifiedWaferTask::Status::COMPLETED &&
+            task.status != UnifiedWaferTask::Status::UNKNOWN_PROGRESS;
+
+		return loadLockReturnReady || efemReturnWaiting; //如果有LoadLock下料完成的任务，或者有EFEM搬回任务正在进行中（不论是否完成），都认为存在优先级较低的下料任务
+    });
+}
+
+bool FC::TaskManager::hasEfemUnloadInProgress(const std::string& LLName)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    const auto loc = stringToLocation(LLName);
+
+    return std::any_of(tasks_.begin(), tasks_.end(), [loc](const UnifiedWaferTask& task) {
+        return task.target == loc &&
+            task.taskType == UnifiedWaferTask::TaskType::EFEM_RETURN &&
+            task.status != UnifiedWaferTask::Status::COMPLETED &&
+            task.status != UnifiedWaferTask::Status::UNKNOWN_PROGRESS;
+    });
+}
+
+std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemRuturnCompletedTasksBySource(UnifiedWaferTask::Location source)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<UnifiedWaferTask> result;
+
+    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::EFEM_RETURN];
+    for (int taskId : efemTasks[UnifiedWaferTask::COMPLETED])
+    {
+        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, source](const UnifiedWaferTask& t) {
+            return t.taskId == taskId && t.source == source;
+        });
+        if (it != tasks_.end()) result.push_back(*it);
+    }
+
+    return result;
+}
+
+// 判断是否可以重置EFEM搬回任务，条件是：同一来源的所有任务要么是未知状态，要么是已完成的搬回任务，并且至少有一个已完成的搬回任务
+bool FC::TaskManager::canResetEfemReturnCompletedTasks(UnifiedWaferTask::Location source)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    bool hasCompletedReturnTask = false;
+
+    for (const auto& task : tasks_)
+    {
+        if (task.source != source)
+        {
+            continue;
+        }
+
+        const bool isUnknownTask =
+            task.taskType == UnifiedWaferTask::TaskType::UNKNOWN &&
+            task.status == UnifiedWaferTask::Status::UNKNOWN_PROGRESS;
+        const bool isCompletedReturnTask =
+            task.taskType == UnifiedWaferTask::TaskType::EFEM_RETURN &&
+            task.status == UnifiedWaferTask::Status::COMPLETED;
+
+        if (isCompletedReturnTask)
+        {
+            hasCompletedReturnTask = true;
+            continue;
+        }
+
+        if (!isUnknownTask)
+        {
+            return false;
+        }
+    }
+
+    return hasCompletedReturnTask;
+}
+
+// 判断是否存在除 已完成搬回任务以外的其他未完成任务
+bool FC::TaskManager::hasInFlightTasksExceptCompletedEfemReturn()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    return std::any_of(tasks_.begin(), tasks_.end(), [](const UnifiedWaferTask& task) {
+        const bool isUnknownTask =
+            task.taskType == UnifiedWaferTask::TaskType::UNKNOWN &&
+            task.status == UnifiedWaferTask::Status::UNKNOWN_PROGRESS;
+
+        const bool isCompletedReturnTask =
+            task.taskType == UnifiedWaferTask::TaskType::EFEM_RETURN &&
+            task.status == UnifiedWaferTask::Status::COMPLETED;
+
+        return !isUnknownTask && !isCompletedReturnTask;
+    });
+}
+
 FC::UnifiedWaferTask::Location FC::TaskManager::stringToLocation(const std::string& locStr)
 {
     static const std::unordered_map<std::string, UnifiedWaferTask::Location> locMap = {
