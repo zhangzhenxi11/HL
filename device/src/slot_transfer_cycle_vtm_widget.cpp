@@ -3115,10 +3115,9 @@ namespace FC{
 				{
 					//logInform("Cycle", "llA step 950");
 					UpdateLLASubTransferDatas();
-					if (loadLockAPendingTasks.size() > 0 && !abortCycle)
+					if (loadLockAReturnCompletedTasks.size() > 0)
 					{
-						loadlock1_auto_step = 1000;//允许取晶圆流程
-
+						loadlock1_auto_step = 5000;//出空Cassette流程
 					}
 					else if (loadLockAReturnPendingTasks.size() > 0 && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
 					{
@@ -3126,9 +3125,9 @@ namespace FC{
 						loadlock1_auto_step = 2000;//允许放晶圆流程
 							
 					}
-					else if (loadLockAReturnCompletedTasks.size() > 0)
+					else if (loadLockAPendingTasks.size() > 0 && !abortCycle)
 					{
-						loadlock1_auto_step = 5000;//出空Cassette流程
+						loadlock1_auto_step = 1000;//允许取晶圆流程
 					}
 					else if (!abortCycle)
 					{
@@ -3227,7 +3226,7 @@ namespace FC{
 								}
 								else
 								{
-									loadlock1_auto_step = 1051;
+									loadlock1_auto_step = 1999;
 								}
 							}
 							else
@@ -3244,6 +3243,48 @@ namespace FC{
 
 				}
 				break;
+				case 1999:
+				{
+					if (wtr == nullptr)
+					{
+						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+					}
+
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy())
+					{
+						auto cmd1 = wtr->createRQLoadCommand(0); //A手
+						wtr->startCommand(cmd1);
+						cmd1->wait();
+
+
+						auto cmd2 = wtr->createRQLoadCommand(1); //B手
+						wtr->startCommand(cmd2);
+						cmd2->wait();
+
+						if (cmd1->hasError() || cmd2->hasError())
+						{
+							logFailedExcuteCommandHasError(lk1->getName(), "查询手指有无晶圆", loadlock1_process_name, loadlock1_auto_step);
+						}
+						else
+						{
+							loadlock1_auto_step = 1051;
+						}
+					}
+					else
+					{
+						static int wait_count = 0;
+						if ((wait_count++ % 20) == 0)
+						{
+							logWarn(lk1->getName().c_str(), "wait WTR is idle.");
+						}
+						Sleep(200);
+						loadlock1_auto_step = 1999;
+						//logFailedNotNormal(lk1->getName(), loadlock1_process_name, loadlock1_auto_step);
+					}
+
+				}
+				break;
+
 				case 1051:
 				{
 					if (wtr == nullptr)
@@ -3258,28 +3299,72 @@ namespace FC{
 						{
 							logInform(lk1->getName().c_str(), "step:1051,loadLockA PendingTasks 有片,触发Robot取片流程.");
 
-							////判断wtr手上是否有片，如果有片，记录日志，等待下一次循环再取片
-							//bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
-							//bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
 
-							//if (haswaferarm1 && getArmWaferIsPmPending(0))
-							//{
-							//	logInform(lk1->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
-							//	loadlock1_auto_step = 1050;
-							//}
-							//else if (haswaferarm2 && getArmWaferIsPmPending(1))
-							//{
-							//	logInform(lk1->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
-							//	loadlock1_auto_step = 1050;
-							//}
+							if (!wtr->isBusy())
+							{
+								logInform(lk1->getName().c_str(), "step 1051 WTR空闲，准备取片.");
+							}
+							else
+							{
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0)
+								{
+									logWarn(lk1->getName().c_str(), "WTR忙碌中,等待空闲. busy=%s", wtr->isBusy()?"true":"false");
+								}
+								Sleep(200);
+								break;
+							}
 
-							// 设置请求标志，委托Robot线程执行
-							robot_get_from_lla.arm.store(loadLockAPendingTasks.at(0).arm);
-							robot_get_from_lla.slot.store(loadlock1_move_slot_index);
-							robot_get_from_lla.done.store(false);
-							robot_get_from_lla.success.store(false);
-							robot_get_from_lla.requested.store(true);
-							loadlock1_auto_step = 1055; // 等待Robot线程完成
+							auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+							auto pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+							const bool pm2HasWafer =
+								(pm2 != nullptr && cassManager != nullptr) &&
+								(cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present);
+							const int desiredArm = loadLockAPendingTasks.at(0).arm;
+
+							const bool armAHasWafer = wtr->hasObject(0);
+							const bool armBHasWafer = wtr->hasObject(1);
+
+							logWarn(lk1->getName().c_str(),
+								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
+								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+
+							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
+							{
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0)
+								{
+									logWarn(lk1->getName().c_str(),
+										"PM2有片且WTR手臂已有晶圆,回退到950优先处理回片/下料. pm2Has=%d, armA_has=%d, armB_has=%d",
+										(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+								}
+								loadlock1_auto_step = 950;
+								Sleep(200);
+								break;
+							}
+							else if ((desiredArm >= 0 && desiredArm <= 1) && wtr->hasObject(desiredArm))
+							{
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0)
+								{
+									logWarn(lk1->getName().c_str(),
+										"WTR手臂占用,禁止从LLA取片. armA=%d, armB=%d, desiredArm=%d",
+										(int)armAHasWafer, (int)armBHasWafer, desiredArm);
+								}
+								Sleep(200);
+								break;
+							}
+							else
+							{
+								logInform(lk1->getName().c_str(), "step 1051 send robot_get_from_lla");
+								// 设置请求标志，委托Robot线程执行
+								robot_get_from_lla.arm.store(loadLockAPendingTasks.at(0).arm);
+								robot_get_from_lla.slot.store(loadlock1_move_slot_index);
+								robot_get_from_lla.done.store(false);
+								robot_get_from_lla.success.store(false);
+								robot_get_from_lla.requested.store(true);
+								loadlock1_auto_step = 1055; // 等待Robot线程完成
+							}
 						}
 						else
 						{
@@ -3610,140 +3695,6 @@ namespace FC{
 					}
 				}
 				break;
-				case 2055:
-				{//LLA回程：从目标PM取回晶圆
-
-					logInform(lk1->getName().c_str(), "step:2055,LLA回程取片流程.");
-
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-					{
-						if (loadLockAReturnPendingTasks.empty())
-						{
-							logFailed(lk1->getName(), Poco::format("%s 回程取片任务队列为空 %s：%d",
-								lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
-							loadlock1_auto_step = 900;
-							break;
-						}
-
-						const auto& task = loadLockAReturnPendingTasks.front();
-						std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
-
-						// 修复：回程取片时自动选择空手臂，而不是使用task.arm
-						// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
-
-						bool arm1HasWafer = wtr->hasObject(0);  // A臂(索引0)
-						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
-						
-						int get_arm;
-
-						if (!arm1HasWafer && arm2HasWafer) 
-						{
-							get_arm = 0;  // A臂空，使用A臂取片
-						}
-						else if (arm1HasWafer && !arm2HasWafer)
-						{
-							get_arm = 1;  // B臂空，使用B臂取片
-						} 
-						else if (!arm1HasWafer && !arm2HasWafer) 
-						{
-							// 两臂都空，默认使用A臂
-							get_arm = 0;
-						} 
-						else 
-						{
-							// 两臂都有片（不应该发生），等待手臂空闲
-							logWarn(wtr->getName().c_str(), "LLA回程2055：两臂都有片，无法取片，等待修正...");
-							loadlock1_auto_step = 200;  // 回退到调度检查
-							break;
-						}
-						
-						logInform(wtr->getName().c_str(), "LLA回程2055：选择手臂%d取片 (arm1Has=%d, arm2Has=%d), pm=%s",
-							get_arm, arm1HasWafer, arm2HasWafer, pm_name.c_str());
-
-						auto target_pm_sub = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
-
-						if (target_pm_sub == nullptr)
-						{
-							logFailed(lk1->getName(), Poco::format("回程取片目标PM无效: %s", pm_name));
-							loadlock1_auto_step = 900;
-							break;
-						}
-
-						// 根据PM名称选择对应的请求标志
-						RobotTransferRequest* req = nullptr;
-						if (pm_name == "PM1") req = &robot_get_from_pm1;
-
-						else if (pm_name == "PM2") req = &robot_get_from_pm2;
-
-						else if (pm_name == "PM3") req = &robot_get_from_pm3;
-
-						else if (pm_name == "PM4") req = &robot_get_from_pm4;
-
-
-						if (req != nullptr) 
-						{
-							req->arm.store(get_arm);
-							req->done.store(false);
-							req->success.store(false);
-							req->requested.store(true);
-							loadlock1_auto_step = 2056; // 等待Robot线程完成
-						} 
-						else 
-						{
-							logFailed(lk1->getName(), Poco::format("无法匹配PM请求标志: %s", pm_name));
-							loadlock1_auto_step = 900;
-						}
-					}
-					else
-					{
-						logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
-					}
-				}
-				break;
-				case 2056: // 等待Robot线程从PM取片完成（LLA回程）
-				{
-					if (loadLockAReturnPendingTasks.empty())
-					{
-						logFailed(lk1->getName(), Poco::format("%s 2056步回程任务队列为空 %s：%d",
-							lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
-						loadlock1_auto_step = 900;
-						break;
-					}
-
-					const auto& task = loadLockAReturnPendingTasks.front();
-					std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
-					RobotTransferRequest* req = nullptr;
-					if (pm_name == "PM1") req = &robot_get_from_pm1;
-					else if (pm_name == "PM2") req = &robot_get_from_pm2;
-					else if (pm_name == "PM3") req = &robot_get_from_pm3;
-					else if (pm_name == "PM4") req = &robot_get_from_pm4;
-
-					logInform("Cycle", Poco::format("LLA回程：pm_name:%s.", pm_name).c_str());
-
-					if (req == nullptr) {
-						logFailed(lk1->getName(), Poco::format("LLA回程2056步：无法匹配PM请求标志, pm_name=%s", pm_name));
-						loadlock1_auto_step = 900;
-						break;
-					}
-
-					if (req->done.load()) {
-						if (req->success.load()) {
-							logInform("Cycle", Poco::format("LLA回程：已从%s取回晶圆，准备放入LLA.", pm_name).c_str());
-							loadlock1_auto_step = 2060;
-						} else {
-							logInform(wtr->getName().c_str(), "LLA回程从%s取片失败，2秒后重试 step=%d", pm_name.c_str(), loadlock1_auto_step);
-							Sleep(2000);
-							loadlock1_auto_step = 2055; // 回退重试
-						}
-					} else if (!req->requested.load()) {
-						// done未完成且requested已被清除（可能是reset导致），重新发起请求
-						logInform(lk1->getName().c_str(), "LLA回程2056步：%s请求标志异常(done=false,requested=false)，回退重发 step=%d", pm_name.c_str(), loadlock1_auto_step);
-						Sleep(1000);
-						loadlock1_auto_step = 2055;
-					} 
-				}
-				break;
-
 				case 2060:
 				{
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->hasDoorOpend())
@@ -3761,8 +3712,6 @@ namespace FC{
 						const auto put_arm = loadLockAReturnPendingTasks.front().arm;
 
 						bool haswaferarm1 = wtr->hasObject(put_arm);
-
-						//logInform(lk2->getName().c_str(), "准备放片到LLA，目标槽位%d，使用手臂%d", loadlock1_move_slot_index, put_arm);
 						logInform(lk1->getName().c_str(), "准备放片到LLA，目标槽位%d，使用手臂%d", loadlock1_move_slot_index, put_arm);
 
 						if(lk1->getTMCavityDoorOpend() && haswaferarm1)
@@ -3818,7 +3767,6 @@ namespace FC{
 				}
 				break;
 
-				
 				case 2070:
 				{
 					if (loadLockAReturnPendingTasks.empty())
@@ -3842,7 +3790,6 @@ namespace FC{
 						}
 						else
 						{
-
 							//2026-3-27 检测mapping，再去关门
 							auto cassManager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto station_cass = cassManager->getCassette(lk1.get());
@@ -4133,7 +4080,8 @@ namespace FC{
                     const bool hasLlbWaferReady =
                         (!tool_allow_get_wafer_LLB) &&
                         (loadLockBPendingTasks.size() > 0 || loadLockBReturnPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0);
-                    const bool canRequestLlbLoad =
+                   
+					const bool canRequestLlbLoad =
                         (!tool_allow_get_wafer_LLB) &&
                         loadLockBPendingTasks.size() == 0 &&
                         loadLockBReturnPendingTasks.size() == 0 &&
@@ -4480,20 +4428,19 @@ namespace FC{
 					//logInform("Cycle", "LLB step 950");
 					UpdateLLBSubTransferDatas();
 
-					if (loadLockBPendingTasks.size() > 0 && !abortCycle)
+					if (loadLockBReturnCompletedTasks.size() > 0)
 					{
-						//取晶圆
-						loadlock2_auto_step = 1000;//允许取晶圆流程
+						loadlock2_auto_step = 5000;//出空Cassette流程
 					}
 					else if (loadLockBReturnPendingTasks.size() > 0 && !abortCycle)
 					{
 						//放晶圆
 						loadlock2_auto_step = 2000;//允许放晶圆流程
 					}
-					//下料条件：放回到loadlock，就执行下料吗？
-					else if (loadLockBReturnCompletedTasks.size() > 0)
+					else if (loadLockBPendingTasks.size() > 0 && !abortCycle)
 					{
-						loadlock2_auto_step = 5000;//出空Cassette流程
+						//取晶圆
+						loadlock2_auto_step = 1000;//允许取晶圆流程
 					}
 					else if (!abortCycle)
 					{
@@ -4590,7 +4537,7 @@ namespace FC{
 								}
 								else
 								{
-									loadlock2_auto_step = 1051;
+									loadlock2_auto_step = 1999;
 								}
 							}
 							else
@@ -4606,6 +4553,48 @@ namespace FC{
 
 				}
 				break;
+				case 1999:
+				{
+					if (wtr == nullptr)
+					{
+						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+					}
+
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy())
+					{
+						auto cmd1 = wtr->createRQLoadCommand(0); //A手
+						wtr->startCommand(cmd1);
+						cmd1->wait();
+
+
+						auto cmd2 = wtr->createRQLoadCommand(1); //B手
+						wtr->startCommand(cmd2);
+						cmd2->wait();
+
+						if (cmd1->hasError() || cmd2->hasError())
+						{
+							logFailedExcuteCommandHasError(lk2->getName(), "查询手指有无晶圆", loadlock2_process_name, loadlock2_auto_step);
+						}
+						else
+						{
+							loadlock2_auto_step = 1051;
+						}
+					}
+					else
+					{
+						//logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
+						static int wait_count = 0;
+						if ((wait_count++ % 20) == 0)
+						{
+							logWarn(lk2->getName().c_str(),"wait WTR is idle.");
+						}
+						Sleep(200);
+						loadlock2_auto_step = 1999;
+					}
+
+				}
+				break;
+
 				case 1051:
 				{
 					if (wtr == nullptr)
@@ -4616,32 +4605,77 @@ namespace FC{
 					{
 						//robot 用手臂A 从loadlock2 取wafer
 
+						if (!wtr->isBusy())
+						{
+							logInform(lk2->getName().c_str(), "step 1051 WTR空闲，准备取片.");
+						}
+						else
+						{
+							static int wait_count = 0;
+							if ((wait_count++ % 20) == 0)
+							{
+								logWarn(lk2->getName().c_str(), "WTR忙碌中,等待空闲. busy=%s", wtr->isBusy() ? "true" : "false");
+							}
+							Sleep(200);
+							break;
+						}
+
 						if (lk2->getTMCavityDoorOpend())
 						{
 							logInform(lk2->getName().c_str(), "step:1051,loadLockB PendingTasks 有片,触发Robot取片流程.");
 
+							auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
+							auto pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 
-							//bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
-							//bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
+							const bool pm2HasWafer =
+								(pm2 != nullptr && cassManager != nullptr) &&
+								(cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present);
 
-							//if (haswaferarm1 && getArmWaferIsPmPending(0))
-							//{
-							//	logInform(lk2->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
-							//	loadlock1_auto_step = 1050;
-							//}
-							//else if (haswaferarm2 && getArmWaferIsPmPending(1))
-							//{
-							//	logInform(lk2->getName().c_str(), "WTR手臂有片且是待PM工艺片，等待下一次循环再取片.");
-							//	loadlock1_auto_step = 1050;
-							//}
+							const int desiredArm = loadLockBPendingTasks.at(0).arm;
 
-							// 设置请求标志，委托Robot线程执行
-							robot_get_from_llb.arm.store(loadLockBPendingTasks.at(0).arm);
-							robot_get_from_llb.slot.store(loadlock2_move_slot_index);
-							robot_get_from_llb.done.store(false);
-							robot_get_from_llb.success.store(false);
-							robot_get_from_llb.requested.store(true);
-							loadlock2_auto_step = 1055; // 等待Robot线程完成
+							const bool armAHasWafer = wtr->hasObject(0);
+							const bool armBHasWafer = wtr->hasObject(1);
+
+							logWarn(lk2->getName().c_str(),
+								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
+								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+
+							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
+							{
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0)
+								{
+									logWarn(lk2->getName().c_str(),
+										"PM2有片且WTR手臂已有晶圆,回退到950优先处理回片/下料. pm2Has=%d, armA_has=%d, armB_has=%d",
+										(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+								}
+								loadlock2_auto_step = 950;
+								Sleep(200);
+								break;
+							}
+							else if ((desiredArm >= 0 && desiredArm <= 1) && wtr->hasObject(desiredArm))
+							{
+								static int wait_count = 0;
+								if ((wait_count++ % 20) == 0)
+								{
+									logWarn(lk2->getName().c_str(),
+										"WTR手臂占用,禁止从LLB取片. armA=%d, armB=%d, desiredArm=%d",
+										(int)armAHasWafer, (int)armBHasWafer, desiredArm);
+								}
+								Sleep(200);
+								break;
+							}
+							else
+							{
+								logInform(lk2->getName().c_str(), "step 1051 send robot_get_from_llb");
+								// 设置请求标志，委托Robot线程执行
+								robot_get_from_llb.arm.store(loadLockBPendingTasks.at(0).arm);
+								robot_get_from_llb.slot.store(loadlock2_move_slot_index);
+								robot_get_from_llb.done.store(false);
+								robot_get_from_llb.success.store(false);
+								robot_get_from_llb.requested.store(true);
+								loadlock2_auto_step = 1055; // 等待Robot线程完成
+							}
 						}
 						else
 						{
@@ -4960,7 +4994,7 @@ namespace FC{
 							}
 							else
 							{
-								loadlock2_auto_step = 2060;//不走2055
+								loadlock2_auto_step = 2060;
 							}
 						}
 						else
@@ -4971,119 +5005,6 @@ namespace FC{
 					else
 					{
 						logFailedNotNormal(lk2->getName(), loadlock2_process_name, loadlock2_auto_step);
-					}
-				}
-				break;
-				case 2055:
-				{//LLB回程：从目标PM取回晶圆
-					logInform(lk2->getName().c_str(), "step:2055,LLA回程取片流程.");
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
-					{
-						if (loadLockBReturnPendingTasks.empty())
-						{
-							logFailed(lk2->getName(), Poco::format("%s 回程取片任务队列为空 %s：%d",
-								lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
-							loadlock2_auto_step = 900;
-							break;
-						}
-
-						const auto& task = loadLockBReturnPendingTasks.front();
-						std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
-
-						// 修复：回程取片时自动选择空手臂，而不是使用task.arm
-						// 使用hasObject(arm)检查手臂状态，更符合硬件安全检查机制
-						bool arm1HasWafer = wtr->hasObject(0);  // A臂(索引0)
-						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
-
-						int get_arm;
-						if (!arm1HasWafer && arm2HasWafer) {
-							get_arm = 0;  // A臂空，使用A臂取片
-						} else if (arm1HasWafer && !arm2HasWafer) {
-							get_arm = 1;  // B臂空，使用B臂取片
-						} else if (!arm1HasWafer && !arm2HasWafer) {
-							// 两臂都空，默认使用A臂
-							get_arm = 0;
-						} else {
-							// 两臂都有片（不应该发生），等待手臂空闲
-							logWarn(wtr->getName().c_str(), "LLB回程2055：两臂都有片，无法取片，等待修正...");
-							loadlock2_auto_step = 200;  // 回退到调度检查
-							break;
-						}
-						
-						logInform(wtr->getName().c_str(), "LLB回程2055：选择手臂%d取片(arm1Has=%d, arm2Has=%d), pm=%s",
-							get_arm, arm1HasWafer, arm2HasWafer, pm_name.c_str());
-
-						auto target_pm_sub = kernel->getKernelModule<FortrendPMCavitySubsystem>(pm_name);
-
-						if (target_pm_sub == nullptr)
-						{
-							logFailed(lk2->getName(), Poco::format("回程取片目标PM无效: %s", pm_name));
-							loadlock2_auto_step = 900;
-							break;
-						}
-
-						// 根据PM名称选择对应的请求标志
-						RobotTransferRequest* req = nullptr;
-						if (pm_name == "PM1") req = &robot_get_from_pm1;
-						else if (pm_name == "PM2") req = &robot_get_from_pm2;
-						else if (pm_name == "PM3") req = &robot_get_from_pm3;
-						else if (pm_name == "PM4") req = &robot_get_from_pm4;
-
-						if (req != nullptr) {
-							req->arm.store(get_arm);
-							req->done.store(false);
-							req->success.store(false);
-							req->requested.store(true);
-							loadlock2_auto_step = 2056; // 等待Robot线程完成
-						} else {
-							logFailed(lk2->getName(), Poco::format("无法匹配PM请求标志: %s", pm_name));
-							loadlock2_auto_step = 900;
-						}
-					}
-					else
-					{
-						logFailedNotNormal(wtr->getName(), loadlock2_process_name, loadlock2_auto_step);
-					}
-				}
-				break;
-				case 2056: // 等待Robot线程从PM取片完成（LLB回程）
-				{
-					if (loadLockBReturnPendingTasks.empty())
-					{
-						logFailed(lk2->getName(), Poco::format("%s 2056步回程任务队列为空 %s：%d",
-							lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
-						loadlock2_auto_step = 900;
-						break;
-					}
-
-					const auto& task = loadLockBReturnPendingTasks.front();
-					std::string pm_name = UnifiedWaferTask::locationToString(task.target_pm);
-					RobotTransferRequest* req = nullptr;
-					if (pm_name == "PM1") req = &robot_get_from_pm1;
-					else if (pm_name == "PM2") req = &robot_get_from_pm2;
-					else if (pm_name == "PM3") req = &robot_get_from_pm3;
-					else if (pm_name == "PM4") req = &robot_get_from_pm4;
-
-					if (req == nullptr) {
-						logFailed(lk2->getName(), Poco::format("LLB回程2056步：无法匹配PM请求标志, pm_name=%s", pm_name));
-						loadlock2_auto_step = 900;
-						break;
-					}
-
-					if (req->done.load()) {
-						if (req->success.load()) {
-							logInform("Cycle", Poco::format("LLB回程：已从%s取回晶圆，准备放入LLB.", pm_name).c_str());
-							loadlock2_auto_step = 2060;
-						} else {
-							logInform(wtr->getName().c_str(), "LLB回程从%s取片失败，2秒后重试 step=%d", pm_name.c_str(), loadlock2_auto_step);
-							Sleep(2000);
-							loadlock2_auto_step = 2055; // 回退重试
-						}
-					} else if (!req->requested.load()) {
-						// done未完成且requested已被清除（可能是reset导致），重新发起请求
-						logInform(lk2->getName().c_str(), "LLB回程2056步：%s请求标志异常(done=false,requested=false)，回退重发 step=%d", pm_name.c_str(), loadlock2_auto_step);
-						Sleep(1000);
-						loadlock2_auto_step = 2055;
 					}
 				}
 				break;
@@ -5971,9 +5892,6 @@ namespace FC{
 					}
 
 					pm_step_once_finished = false;
-
-					bool isArmAPmCompleted = false; //ARMA是否工艺完成的标志
-					bool isArmBPmCompleted = false; //ARAMB是否工艺完成的标志
 					
 					switch (pm2_auto_step.load())
 					{
@@ -6063,36 +5981,6 @@ namespace FC{
 					break;
 					case 200:
 					{
-
-						auto task1 = taskManager.getRobotTaskInfo(0); //A臂任务状态
-						auto task2 = taskManager.getRobotTaskInfo(1); //B臂任务状态
-
-						
-
-						if ((task1.taskType == UnifiedWaferTask::PM_PROCESS && task1.status == UnifiedWaferTask::COMPLETED)|| 
-							(task1.taskType == UnifiedWaferTask::LOADLOCK_RETURN && task1.status == UnifiedWaferTask::QUEUED))
-						{
-							isArmAPmCompleted = true; //A臂晶圆工艺完成
-							logInform("PM2", "A臂工艺完成，taskId=%d, taskType=%d, status=%d", task1.taskId, task1.taskType, task1.status);
-						}
-						else
-						{
-							isArmAPmCompleted = false;//A臂晶圆未完成
-							logInform("PM2", "A臂工艺未完成，taskId=%d, taskType=%d, status=%d", task1.taskId, task1.taskType, task1.status);
-						}
-
-						if ((task2.taskType == UnifiedWaferTask::PM_PROCESS && task2.status == UnifiedWaferTask::COMPLETED)||
-							(task2.taskType == UnifiedWaferTask::LOADLOCK_RETURN && task2.status == UnifiedWaferTask::QUEUED))
-						{
-							isArmBPmCompleted = true;//B臂晶圆工艺完成
-							logInform("PM2", "B臂工艺完成，taskId=%d, taskType=%d, status=%d", task2.taskId, task2.taskType, task2.status);
-						}
-						else
-						{
-							isArmBPmCompleted = false;//B臂晶圆未完成
-							logInform("PM2", "B臂工艺未完成，taskId=%d, taskType=%d, status=%d", task2.taskId, task2.taskType, task2.status);
-						}
-						
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
 							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
@@ -6104,26 +5992,34 @@ namespace FC{
 								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm2中有片
 								bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
 								bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
-
-								logInform("PM2", "PM2调度200: haswaferpm=%d, haswaferarm1=%d, haswaferarm2=%d",
-									(int)haswaferpm, (int)haswaferarm1, (int)haswaferarm2);
-
 								pm2PendingTasks = taskManager.getPMPendingTasks("PM2");
 								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
 
 								auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+								const bool arm1HasPending = haswaferarm1 && std::any_of(pm2PendingTasks.begin(), pm2PendingTasks.end(), [](const UnifiedWaferTask& t) { return t.arm == 0; });
+								const bool arm2HasPending = haswaferarm2 && std::any_of(pm2PendingTasks.begin(), pm2PendingTasks.end(), [](const UnifiedWaferTask& t) { return t.arm == 1; });
+
+								logInform("PM2",
+									"PM2调度200: haswaferpm=%d, armA_has=%d, armA_pending=%d, armB_has=%d, armB_pending=%d, pending=%d, return_pending=%d",
+									(int)haswaferpm,
+									(int)haswaferarm1,
+									(int)arm1HasPending,
+									(int)haswaferarm2,
+									(int)arm2HasPending,
+									(int)pm2PendingTasks.size(),
+									(int)loadlockReturnPendingTasks.size());
 
 								//pm上料
 								if (!haswaferpm)
 								{
 									if (pm2PendingTasks.size() > 0)
 									{
-										if (haswaferarm1 && !isArmAPmCompleted)
+										if (arm1HasPending)
 										{//A手放料
 
 											pm2_auto_step.store(1010);
 										}
-										else if (haswaferarm2 && !isArmBPmCompleted)
+										else if (arm2HasPending)
 										{//B手放料
 
 											pm2_auto_step.store(1030);
@@ -6133,12 +6029,18 @@ namespace FC{
 											logInform("PM2", "PM2没有晶圆，两个手臂也没有晶圆，等待放料...");
 											pm2_auto_step.store(10);
 										}
+										else
+										{
+											logWarn("PM2", "PM2无片但手臂有片，且未匹配到待加工任务，等待修正...");
+											pm2_auto_step.store(10);
+											Sleep(100);
+										}
 									}
 									else
 									{
 										static int wait_count = 0;
 										if ((wait_count++ % 20) == 0) {
-											logWarn("PM2", "PM2无片且没有待加工任务，无法判断取放，等待中...");
+											logInform("PM2", "PM2无片且没有待加工任务，等待中...");
 										}
 										Sleep(500);
 										pm2_auto_step.store(10);
@@ -6179,19 +6081,24 @@ namespace FC{
 									}
 									else
 									{
-										logInform("PM2", "PM2有已完成任务且有待加工的任务，执行交换料流程.");
 										if (pm2PendingTasks.size() > 0)
 										{
-											if (!haswaferarm1 && haswaferarm2 && !isArmBPmCompleted)//B待工艺,B有片,A无料
+											if (!haswaferarm1 && arm2HasPending)
 											{
-												//A取B放
+												logInform("PM2", "PM2交换料：A取B放.");
 												pm2_auto_step.store(1060);
 
 											}
-											else if (haswaferarm1 && !haswaferarm2 && !isArmAPmCompleted) //A待工艺,A有片,B无料
+											else if (arm1HasPending && !haswaferarm2)
 											{
-												//B取A放
+												logInform("PM2", "PM2交换料：B取A放.");
 												pm2_auto_step.store(1070);
+											}
+											else
+											{
+												logWarn("PM2", "PM2交换料前状态异常，无法判断取放，等待修正...");
+												pm2_auto_step.store(10);
+												Sleep(100);
 											}
 										}
 										else
@@ -7895,9 +7802,12 @@ namespace FC{
 					int putArm = exchange_info_pm2.putArm.load();
 					logInform(wtr->getName().c_str(), "Robot线程：step：5100,PM2交换片, getArm=%d, putArm=%d", getArm, putArm);
 					
+					auto get_start = std::chrono::steady_clock::now();
 					auto cmd_get = wtr->createGetCommand(pm2, getArm, 1);
 					wtr->startCommand(cmd_get);
 					cmd_get->wait();
+					auto get_end = std::chrono::steady_clock::now();
+					logInform(wtr->getName().c_str(), "Robot线程：PM2交换取片耗时(ms)=%lld, getArm=%d", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(get_end - get_start).count(), getArm);
 
 					if (cmd_get->hasError())
 					{
@@ -7915,9 +7825,12 @@ namespace FC{
 					}
 					else
 					{
+						auto put_start = std::chrono::steady_clock::now();
 						auto cmd_put = wtr->createPutCommand(pm2, putArm, 1);
 						wtr->startCommand(cmd_put);
 						cmd_put->wait();
+						auto put_end = std::chrono::steady_clock::now();
+						logInform(wtr->getName().c_str(), "Robot线程：PM2交换放片耗时(ms)=%lld, putArm=%d", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(put_end - put_start).count(), putArm);
 						if (cmd_put->hasError())
 						{
 							robot_exchange_pm2.success.store(false);
