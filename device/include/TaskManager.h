@@ -188,7 +188,11 @@ namespace FC {
         // 更新任务状态（线程安全）
         void updateTaskStatus(int taskId, UnifiedWaferTask::TaskType newTaskType,UnifiedWaferTask::Status newStatus);
 
-        //将字符串转换为Location枚举
+        // 同步任务当前实际执行手指。
+        // 连续交互片时，回片阶段的真实持片手可能和初始配方手不同，
+        // 这里用于在不扩字段的前提下，把 task.arm 更新为当前阶段实际持片手。
+        void updateTaskArm(int taskId, int arm);
+
         UnifiedWaferTask::Location stringToLocation(const std::string& locStr);
 
         //taskId排序

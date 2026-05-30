@@ -159,6 +159,22 @@ void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType ne
     }
 }
 
+void FC::TaskManager::updateTaskArm(int taskId, int arm)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    for (auto& task : tasks_)
+    {
+        if (task.taskId == taskId)
+        {
+            const int oldArm = task.arm;
+            task.arm = arm;
+            logInform("TaskManager", "Updated task %d arm: %d -> %d", taskId, oldArm, arm);
+            break;
+        }
+    }
+}
+
 const std::pair<FC::UnifiedWaferTask::TaskType, FC::UnifiedWaferTask::Status>& FC::TaskManager::getTaskStatusAndType(int taskId)
 {
     std::lock_guard<std::mutex> lock(mutex_);
