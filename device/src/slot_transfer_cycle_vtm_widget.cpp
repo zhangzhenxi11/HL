@@ -3389,8 +3389,16 @@ namespace FC{
 									returnIt = std::find_if(loadLockAReturnPendingTasks.begin(), loadLockAReturnPendingTasks.end(),
 										[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
 
-									pendingIt = std::find_if(loadLockAPendingTasks.begin(), loadLockAPendingTasks.end(),
-										[emptyArm](const UnifiedWaferTask& task) { return task.arm == emptyArm; });
+									if (!loadLockAPendingTasks.empty())
+									{
+										pendingIt = loadLockAPendingTasks.begin();
+										if (pendingIt->arm != emptyArm)
+										{
+											taskManager.updateTaskArm(pendingIt->taskId, emptyArm);
+											pendingIt->arm = emptyArm;
+											logInform(lk1->getName().c_str(), "LLA回片后立即补取: 动态分配空闲手臂%d给任务%d", emptyArm, pendingIt->taskId);
+										}
+									}
 
 								}
 
@@ -3426,23 +3434,36 @@ namespace FC{
 									break;
 								}
 							}
-							else if ((desiredArm >= 0 && desiredArm <= 1) && wtr->hasObject(desiredArm))
-							{
-								static int wait_count = 0;
-								if ((wait_count++ % 20) == 0)
-								{
-									logWarn(lk1->getName().c_str(),
-										"WTR手臂占用,禁止从LLA取片. armA=%d, armB=%d, desiredArm=%d",
-										(int)armAHasWafer, (int)armBHasWafer, desiredArm);
-								}
-								Sleep(200);
-								break;
-							}
 							else
 							{
+								int targetArm = desiredArm;
+								if ((targetArm >= 0 && targetArm <= 1) && wtr->hasObject(targetArm))
+								{
+									int otherArm = getOtherArm(targetArm);
+									if (!wtr->hasObject(otherArm))
+									{
+										targetArm = otherArm;
+										taskManager.updateTaskArm(loadLockAPendingTasks.at(0).taskId, targetArm);
+										loadLockAPendingTasks.at(0).arm = targetArm;
+										logInform(lk1->getName().c_str(), "WTR手臂%d被占用, 动态切换到空闲手臂%d取片", desiredArm, targetArm);
+									}
+									else
+									{
+										static int wait_count = 0;
+										if ((wait_count++ % 20) == 0)
+										{
+											logWarn(lk1->getName().c_str(),
+												"WTR双臂均被占用,禁止从LLA取片. armA=%d, armB=%d, desiredArm=%d",
+												(int)armAHasWafer, (int)armBHasWafer, desiredArm);
+										}
+										Sleep(200);
+										break;
+									}
+								}
+
 								logInform(lk1->getName().c_str(), "step 1051 send robot_get_from_lla");
 								// 设置请求标志，委托Robot线程执行
-								robot_get_from_lla.arm.store(loadLockAPendingTasks.at(0).arm);
+								robot_get_from_lla.arm.store(targetArm);
 								robot_get_from_lla.slot.store(loadlock1_move_slot_index);
 								robot_get_from_lla.done.store(false);
 								robot_get_from_lla.success.store(false);
@@ -4894,8 +4915,16 @@ namespace FC{
 									returnIt = std::find_if(loadLockBReturnPendingTasks.begin(), loadLockBReturnPendingTasks.end(),
 										[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
 
-									pendingIt = std::find_if(loadLockBPendingTasks.begin(), loadLockBPendingTasks.end(),
-										[emptyArm](const UnifiedWaferTask& task) { return task.arm == emptyArm; });
+									if (!loadLockBPendingTasks.empty())
+									{
+										pendingIt = loadLockBPendingTasks.begin();
+										if (pendingIt->arm != emptyArm)
+										{
+											taskManager.updateTaskArm(pendingIt->taskId, emptyArm);
+											pendingIt->arm = emptyArm;
+											logInform(lk2->getName().c_str(), "LLB回片后立即补取: 动态分配空闲手臂%d给任务%d", emptyArm, pendingIt->taskId);
+										}
+									}
 
 								}
 
@@ -4931,23 +4960,36 @@ namespace FC{
 									break;
 								}
 							}
-							else if ((desiredArm >= 0 && desiredArm <= 1) && wtr->hasObject(desiredArm))
-							{
-								static int wait_count = 0;
-								if ((wait_count++ % 20) == 0)
-								{
-									logWarn(lk2->getName().c_str(),
-										"WTR手臂占用,禁止从LLB取片. armA=%d, armB=%d, desiredArm=%d",
-										(int)armAHasWafer, (int)armBHasWafer, desiredArm);
-								}
-								Sleep(200);
-								break;
-							}
 							else
 							{
+								int targetArm = desiredArm;
+								if ((targetArm >= 0 && targetArm <= 1) && wtr->hasObject(targetArm))
+								{
+									int otherArm = getOtherArm(targetArm);
+									if (!wtr->hasObject(otherArm))
+									{
+										targetArm = otherArm;
+										taskManager.updateTaskArm(loadLockBPendingTasks.at(0).taskId, targetArm);
+										loadLockBPendingTasks.at(0).arm = targetArm;
+										logInform(lk2->getName().c_str(), "WTR手臂%d被占用, 动态切换到空闲手臂%d取片", desiredArm, targetArm);
+									}
+									else
+									{
+										static int wait_count = 0;
+										if ((wait_count++ % 20) == 0)
+										{
+											logWarn(lk2->getName().c_str(),
+												"WTR双臂均被占用,禁止从LLB取片. armA=%d, armB=%d, desiredArm=%d",
+												(int)armAHasWafer, (int)armBHasWafer, desiredArm);
+										}
+										Sleep(200);
+										break;
+									}
+								}
+
 								logInform(lk2->getName().c_str(), "step 1051 send robot_get_from_llb");
 								// 设置请求标志，委托Robot线程执行
-								robot_get_from_llb.arm.store(loadLockBPendingTasks.at(0).arm);
+								robot_get_from_llb.arm.store(targetArm);
 								robot_get_from_llb.slot.store(loadlock2_move_slot_index);
 								robot_get_from_llb.done.store(false);
 								robot_get_from_llb.success.store(false);

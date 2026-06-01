@@ -1,4 +1,4 @@
-﻿// Library: VTM
+// Library: VTM
 // Package: VTM
 
 #include "kernel/kernel_subsystem.h"
@@ -1162,13 +1162,13 @@ namespace FC{
 		else if (station == d->stationidpm2 && arm == 0){
 			armangle = 30;
 			if (currentRotationAngle >= 114 && currentRotationAngle <= -246){
-				rotationangle == rotationangle ? rotationangle = 270 : rotationangle = 270 - currentRotationAngle;
+				rotationangle == rotationangle ? rotationangle = 294 : rotationangle = 294 - currentRotationAngle;
 			}
 			/*else if (currentRotationAngle == -297){
 				rotationangle = -450;
 			}*/
 			else{
-				rotationangle == rotationangle ? rotationangle = -90 : rotationangle = -90 - currentRotationAngle;
+				rotationangle == rotationangle ? rotationangle = -66 : rotationangle = -66 - currentRotationAngle;
 			}
 		}
 		else if (station == d->stationidpm3 && arm == 0){
@@ -1215,10 +1215,10 @@ namespace FC{
 		else if (station == d->stationidpm2 && arm == 1){
 			armangle = 30;
 			if (currentRotationAngle >= -270 && currentRotationAngle <= -114){
-				rotationangle == rotationangle ? rotationangle = -270 : rotationangle = -270 - currentRotationAngle;
+				rotationangle == rotationangle ? rotationangle = -246 : rotationangle = -246 - currentRotationAngle;
 			}
 			else{
-				rotationangle == rotationangle ? rotationangle = 90 : rotationangle = 90 - currentRotationAngle;
+				rotationangle == rotationangle ? rotationangle = 114 : rotationangle = 114 - currentRotationAngle;
 			}
 		}
 		else if (station == d->stationidpm3 && arm == 1){
