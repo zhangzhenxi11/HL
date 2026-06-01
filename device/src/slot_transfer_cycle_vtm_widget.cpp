@@ -250,6 +250,8 @@ namespace FC{
 
 		bool getArmWaferIsPmPending(int arm);
 
+		bool syncPm2ReturnTaskArm(int actualReturnArm);
+
 		int getOtherArm(const int arm) const
 		{
 			return arm == 0 ? 1 : (arm == 1 ? 0 : -1);
@@ -822,6 +824,38 @@ namespace FC{
 		return UnifiedWaferTask::Location();
 	}
 
+	bool QSlotTransferCycleVTMWidgetPrivate::syncPm2ReturnTaskArm(int actualReturnArm)
+	{
+		auto returnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+		auto returnTaskIt = std::find_if(returnPendingTasks.begin(), returnPendingTasks.end(),
+			[](const UnifiedWaferTask& task)
+			{
+				return task.target_pm == UnifiedWaferTask::PM2;
+			});
+		if (returnTaskIt != returnPendingTasks.end())
+		{
+			taskManager.updateTaskArm(returnTaskIt->taskId, actualReturnArm);
+			logInform("PM2", "PM2交换后同步回片task手指: taskId=%d, actualReturnArm=%d", returnTaskIt->taskId, actualReturnArm);
+			return true;
+		}
+
+		auto completedTasks = taskManager.getPMCompletedTasks("PM2");
+		auto completedTaskIt = std::find_if(completedTasks.begin(), completedTasks.end(),
+			[](const UnifiedWaferTask& task)
+			{
+				return task.target_pm == UnifiedWaferTask::PM2;
+			});
+		if (completedTaskIt != completedTasks.end())
+		{
+			taskManager.updateTaskArm(completedTaskIt->taskId, actualReturnArm);
+			logInform("PM2", "PM2交换后提前同步PM完成task手指: taskId=%d, actualReturnArm=%d", completedTaskIt->taskId, actualReturnArm);
+			return true;
+		}
+
+		logWarn("PM2", "PM2交换成功后未找到待回LL任务或PM完成任务，无法同步实际回片手指.");
+		return false;
+	}
+
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLASubTransferDatas()
 	{
 		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();						// LP中初始状态的晶圆
@@ -854,26 +888,26 @@ namespace FC{
 		if(pmName == "PM1")
 		{
 			pmPendingTasks = taskManager.getPMPendingTasks(pmName);
-			pmCompletedTasks = taskManager.getPMPendingTasks(pmName);
-			pmProgressingTasks = taskManager.getPMPendingTasks(pmName);
+			pmCompletedTasks = taskManager.getPMCompletedTasks(pmName);
+			pmProgressingTasks = taskManager.getPMProcessTasks(pmName);
 		}
 		else if (pmName == "PM2")
 		{
 			pm2PendingTasks = taskManager.getPMPendingTasks(pmName);
-			pm2CompletedTasks = taskManager.getPMPendingTasks(pmName);
-			pm2ProgressingTasks = taskManager.getPMPendingTasks(pmName);
+			pm2CompletedTasks = taskManager.getPMCompletedTasks(pmName);
+			pm2ProgressingTasks = taskManager.getPMProcessTasks(pmName);
 		}
 		else if (pmName == "PM3")
 		{
 			pm3PendingTasks = taskManager.getPMPendingTasks(pmName);
-			pm3CompletedTasks = taskManager.getPMPendingTasks(pmName);
-			pm3ProgressingTasks = taskManager.getPMPendingTasks(pmName);
+			pm3CompletedTasks = taskManager.getPMCompletedTasks(pmName);
+			pm3ProgressingTasks = taskManager.getPMProcessTasks(pmName);
 		}
 		else
 		{
 			pm4PendingTasks = taskManager.getPMPendingTasks(pmName);
-			pm4CompletedTasks = taskManager.getPMPendingTasks(pmName);
-			pm4ProgressingTasks = taskManager.getPMPendingTasks(pmName);
+			pm4CompletedTasks = taskManager.getPMCompletedTasks(pmName);
+			pm4ProgressingTasks = taskManager.getPMProcessTasks(pmName);
 		}
 	}
 
@@ -6397,6 +6431,13 @@ namespace FC{
 						// 2026-5-17 当片子做完工艺会置为EFEM_RETURN/QUEUED，那么要下料了，这个条件会卡主流程，取消条件
 
 						auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
+						loadlockReturnPendingTasks.erase(
+							std::remove_if(loadlockReturnPendingTasks.begin(), loadlockReturnPendingTasks.end(),
+								[](const UnifiedWaferTask& task)
+								{
+									return task.target_pm != UnifiedWaferTask::PM2;
+								}),
+							loadlockReturnPendingTasks.end());
 
 						if (pm2PendingTasks.size() > 0 ||  loadlockReturnPendingTasks.size() > 0)
 						{
@@ -6465,8 +6506,31 @@ namespace FC{
 								pm2CompletedTasks = taskManager.getPMCompletedTasks("PM2");
 
 								auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-								const bool arm1HasPending = haswaferarm1 && std::any_of(pm2PendingTasks.begin(), pm2PendingTasks.end(), [](const UnifiedWaferTask& t) { return t.arm == 0; });
-								const bool arm2HasPending = haswaferarm2 && std::any_of(pm2PendingTasks.begin(), pm2PendingTasks.end(), [](const UnifiedWaferTask& t) { return t.arm == 1; });
+								loadlockReturnPendingTasks.erase(
+									std::remove_if(loadlockReturnPendingTasks.begin(), loadlockReturnPendingTasks.end(),
+										[](const UnifiedWaferTask& task)
+										{
+											return task.target_pm != UnifiedWaferTask::PM2;
+										}),
+									loadlockReturnPendingTasks.end());
+
+								bool arm1HasPending = haswaferarm1 && std::any_of(pm2PendingTasks.begin(), pm2PendingTasks.end(), [](const UnifiedWaferTask& t) { return t.arm == 0; });
+								bool arm2HasPending = haswaferarm2 && std::any_of(pm2PendingTasks.begin(), pm2PendingTasks.end(), [](const UnifiedWaferTask& t) { return t.arm == 1; });
+								if (!arm1HasPending && !arm2HasPending &&
+									pm2PendingTasks.size() == 1 &&
+									(haswaferarm1 ^ haswaferarm2))
+								{
+									if (haswaferarm1)
+									{
+										arm1HasPending = true;
+										logWarn("PM2", "PM2待加工任务手指与物理持片状态短时不一致，按A臂实际持片兜底判定.");
+									}
+									else
+									{
+										arm2HasPending = true;
+										logWarn("PM2", "PM2待加工任务手指与物理持片状态短时不一致，按B臂实际持片兜底判定.");
+									}
+								}
 
 								logInform("PM2",
 									"PM2调度200: haswaferpm=%d, armA_has=%d, armA_pending=%d, armB_has=%d, armB_pending=%d, pending=%d, return_pending=%d",
@@ -6537,6 +6601,26 @@ namespace FC{
 											else
 											{
 												logWarn("PM2", "待下料任务的arm字段异常，无法判断是A臂还是B臂取片，等待中...");
+												pm2_auto_step.store(10);
+												Sleep(100);
+											}
+										}
+										else if (pm2CompletedTasks.size() > 0)
+										{
+											auto task = pm2CompletedTasks.at(0);
+											if (task.arm == 0)
+											{
+												logInform("PM2", "step:200 send--->A臂从PM2取片,因为PM完成任务记录为A臂.");
+												pm2_auto_step.store(1040);
+											}
+											else if (task.arm == 1)
+											{
+												logInform("PM2", "step:200 send--->B臂从PM2取片,因为PM完成任务记录为B臂.");
+												pm2_auto_step.store(1050);
+											}
+											else
+											{
+												logWarn("PM2", "PM完成任务的arm字段异常，无法判断是A臂还是B臂取片，等待中...");
 												pm2_auto_step.store(10);
 												Sleep(100);
 											}
@@ -6725,24 +6809,10 @@ namespace FC{
 							if (robot_exchange_pm2.success.load())
 							{
 								// PM2交换后，从PM2取出工艺完成片的是 getArm。
-								// 后续LL回片(case 2060/2065)和立即补取(case 1051)都依赖 task.arm 判断实际持片手，
-								// 因此这里把回片任务的 arm 同步成真实 getArm，避免继续沿用初始配方手指导致回LL选错手。
-								auto returnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-								auto returnTaskIt = std::find_if(returnPendingTasks.begin(), returnPendingTasks.end(),
-									[](const UnifiedWaferTask& task)
-									{
-										return task.target_pm == UnifiedWaferTask::PM2;
-									});
-								if (returnTaskIt != returnPendingTasks.end())
-								{
-									const int actualReturnArm = exchange_info_pm2.getArm.load();
-									taskManager.updateTaskArm(returnTaskIt->taskId, actualReturnArm);
-									logInform("PM2", "PM2交换后同步回片task手指: taskId=%d, actualReturnArm=%d", returnTaskIt->taskId, actualReturnArm);
-								}
-								else
-								{
-									logWarn("PM2", "PM2交换成功后未找到待回LL任务，无法同步实际回片手指.");
-								}
+								// 这片在交换成功瞬间可能仍处于 PM_PROCESS/COMPLETED，
+								// 尚未推进到 LOADLOCK_RETURN/QUEUED，所以这里要兼容两种状态。
+								const int actualReturnArm = exchange_info_pm2.getArm.load();
+								syncPm2ReturnTaskArm(actualReturnArm);
 								logInform(wtr->getName().c_str(), "PM2交换料成功(A取B放)，step=%d，转到工艺步骤2000", pm2_auto_step.load());
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
@@ -6794,22 +6864,8 @@ namespace FC{
 						{
 							if (robot_exchange_pm2.success.load())
 							{
-								auto returnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-								auto returnTaskIt = std::find_if(returnPendingTasks.begin(), returnPendingTasks.end(),
-									[](const UnifiedWaferTask& task)
-									{
-										return task.target_pm == UnifiedWaferTask::PM2;
-									});
-								if (returnTaskIt != returnPendingTasks.end())
-								{
-									const int actualReturnArm = exchange_info_pm2.getArm.load();
-									taskManager.updateTaskArm(returnTaskIt->taskId, actualReturnArm);
-									logInform("PM2", "PM2交换后同步回片task手指: taskId=%d, actualReturnArm=%d", returnTaskIt->taskId, actualReturnArm);
-								}
-								else
-								{
-									logWarn("PM2", "PM2交换成功后未找到待回LL任务，无法同步实际回片手指.");
-								}
+								const int actualReturnArm = exchange_info_pm2.getArm.load();
+								syncPm2ReturnTaskArm(actualReturnArm);
 								logInform(wtr->getName().c_str(), "PM2交换料成功(B取A放)，step=%d，转到工艺步骤2000", pm2_auto_step.load());
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
