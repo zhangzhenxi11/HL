@@ -1,0 +1,16 @@
+﻿﻿﻿﻿﻿﻿- [ ] `SchedulerV3` 规格明确要求新增文件实现，不修改当前 `SchedulerV2` 主调度逻辑
+- [ ] 规格中包含 `SchedulerV3` 架构图，并覆盖 `Facade / Planner / Dispatcher / Recovery / Snapshot / EFEM / LL / WTR / PM`
+- [ ] 规格中定义了 6 个命名状态 FSM：`Task / WTR / LL / PM / Recovery / EFEM Robot`
+- [ ] 规格中明确所有 FSM 必须使用命名状态、entry/exit 动作、超时和错误路径
+- [ ] 规格中定义了路径选择能力，支持自由支配 `LoadLock` 与 `LoadPort` 路径
+- [ ] 规格中定义了统一优先级调度，并覆盖回片优先、PM不断片、堵塞避免和模式偏好
+- [ ] 规格中定义了异常恢复机制，并覆盖暂停、继续、中止、局部恢复、全局重建
+- [ ] 规格中定义了模式化策略扩展，并覆盖“抓1片即进PM”和“抓2片再进PM”
+- [ ] 规格中明确了“LLA进、LLB出、LLA尽量常满、PM尽量不断片”的目标导向
+- [ ] 规格中定义了事件驱动通信，覆盖 Planner、Dispatcher、Exec、Recovery 之间的事件通道
+- [ ] 规格中定义了关键事件族、事件元信息、优先级、队列容量和超时重试策略
+- [ ] 规格中定义了 Exec 层统一接口、`ResourceManager` 协议和检查点恢复约束
+- [ ] 规格中明确禁用 `step++`、全局 flag 轮询和跨模块同步等待
+- [ ] 规格中明确 EFEM 单臂配置不属于 V3 首版，但保留后续扩展点
+- [ ] `tasks.md` 中包含架构、FSM、事件通信、Exec/资源管理、路径选择、优先级、恢复和版本边界任务
+- [ ] 规格整体与 `SchedulerSkills.md` 的分层、串行共享资源、异常恢复、死锁规避原则一致

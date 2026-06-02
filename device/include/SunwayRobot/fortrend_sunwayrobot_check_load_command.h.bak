@@ -1,0 +1,38 @@
+﻿﻿﻿﻿/**
+* @file     fortrend_sunwayrobot_check_load_command.h
+* @brief    check load command for sunway robot
+* @author   kai
+*/
+
+// Library: Fortrend
+// Package: SubSystem/SunwayRobot
+
+#ifndef _XLH_FORTREND_SUNWAYROBOT_CHECK_LOAD_INCLUDE_
+#define _XLH_FORTREND_SUNWAYROBOT_CHECK_LOAD_INCLUDE_ 
+
+#include "kernel/kernel_subsystem_command.h"
+#include "Kernel/Fortrend/robot_getwafer_abstract_command.h"
+
+#include "SunwayRobot/sunway_subsystem_helper.h"
+#include "SunwayRobot/sunway_command_executer.h"
+
+namespace FC{
+
+	/**
+	* @brief check load command for SunwayRobot
+	*/
+	class  SunwayRobotCheckLoadCommand : public  KernelSubsystemCommand, public SunwayCommandExecuter
+	{
+	public:
+		DECLARE_PTR(SunwayRobotCheckLoadCommand)
+		SunwayRobotCheckLoadCommand(int arm, int station_id, SunwaySubSystemHelper* helper);
+		virtual std::string getName()const override { return "CheckLoad"; }
+	protected:
+		virtual RunResult onRun() throw(KernelException);
+
+	private:
+		DECLARE_PRIVATE(SunwayRobotCheckLoadCommand)
+	};
+
+}
+#endif

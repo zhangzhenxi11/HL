@@ -1,0 +1,223 @@
+#pragma once
+#include <vector>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include "UnifiedWaferTask.h"
+#include  "kernel/kernel_log.h"
+
+namespace FC {
+
+    // ǰ������
+    class slot_transfer_cycle_vtm_widget;
+    struct UnifiedWaferTask;
+
+    class TaskManager {
+    public:
+        // ����ģʽ����
+        static TaskManager& getInstance();
+
+        // ɾ���������캯���͸�ֵ������
+        TaskManager(const TaskManager&) = delete;
+        void operator=(const TaskManager&) = delete;
+
+        // ����������һƬ��Բ��һ��task
+        void addTask(const UnifiedWaferTask& task);
+
+        void popTask(const UnifiedWaferTask& task);
+
+        void addWorkTask(const UnifiedWaferTask& task);
+
+        // ��ȡ�ض�λ�õ�����
+        std::vector<UnifiedWaferTask> getTasksByLocation(UnifiedWaferTask::Location location);
+
+        //��ȡ�ض�λ�õ�����
+        std::vector<UnifiedWaferTask> getTasksByLocation(std::vector<UnifiedWaferTask> tasks, UnifiedWaferTask::Location location);
+
+
+        // ͨ������ID��ȡ����״̬������
+        const std::pair<UnifiedWaferTask::TaskType, UnifiedWaferTask::Status>& getTaskStatusAndType(int taskId);
+
+        UnifiedWaferTask::TaskType& getTaskType(int taskId);
+
+        //��ȡ��������
+        std::vector<UnifiedWaferTask>& getAllTasks();
+
+        std::vector<UnifiedWaferTask>& getAllWorksTasks();
+
+        int getAllTasksSize();
+
+        std::vector<int> getAllTaskIDs();
+            
+        //�������
+        void clearTasks();
+
+        // ��ȡ������������
+        std::vector<UnifiedWaferTask> getPendingTasks();
+
+        UnifiedWaferTask getByIDFindTask(int taskID);
+
+        //���һ�е���ϵ�����
+		UnifiedWaferTask getRobotTaskInfo(int arm);
+
+        // ����Ƿ��д���������
+        bool hasPendingTasks();
+
+        // ͨ�������ѯ����
+        std::vector<UnifiedWaferTask> getTasksByTypeAndStatus(
+            UnifiedWaferTask::TaskType type,
+            UnifiedWaferTask::Status status);
+
+        //�ܷ��ҵ�������������
+        bool  getByTypeAndStatus(
+            UnifiedWaferTask::TaskType type,
+            UnifiedWaferTask::Status status);
+
+
+        // ��λ�ù��˵�ͨ�������ѯ����
+        std::vector<UnifiedWaferTask> getTasksByTypeStatusAndLocation(
+            UnifiedWaferTask::TaskType type,
+            UnifiedWaferTask::Status status,
+            UnifiedWaferTask::Location location);
+
+        //����зǳ�ʼ״̬������
+        bool detectionHasNoInitialTypeTasks();
+
+        //����дʵʱ����ɫ���߼���ֻ��ÿ����������϶�������
+
+        //״̬ת�� 
+        // ��һ��ѭ��  0---> 1---> 5��2�� ---> 6  ---> 9---> 10 --->11 --->7 --->8��3��
+        // �ڶ���ѭ��  4---> 0---> 1---> 5��2�� ---> 6  ---> 9---> 10 --->11--->7 --->8��3��
+
+         /*-----------------------------------------EFEM-------------------------------------------------------------*/
+        //��ȡ��EFEM ��ʼ״̬������
+        std::vector<UnifiedWaferTask> getEfemUnkownStatusTasks();//0
+
+        //�ָ�LLA������
+        std::vector<UnifiedWaferTask> getEfemUnkownStatusLLATasks();
+
+        //�ָ�LLB������
+        std::vector<UnifiedWaferTask> getEfemUnkownStatusLLBTasks();
+
+
+        //��ȡ��EFEM�����ϵ����� QUEUED (����LLK MAPPING������Ҫ���ϵľ�Բ)
+        std::vector<UnifiedWaferTask> getEfemPendingTasks();//1
+
+        //��ȡEFEM������ɵ����� COMPLETED (ʵ���ϵ�LL�ϵľ�Բ����)��LockPendingTasks һ��
+        std::vector<UnifiedWaferTask> getEfemCompletedTasks();//2
+
+        //��ȡEFEM�����ϵ�����
+        std::vector<UnifiedWaferTask> getEfemRuturnPendingTasks();//3
+
+        //��ȡEFEM������ɵ�����(�ɹ��ص�LP)   �´�ѭ�����¸���ΪEfemPendingTasks
+        std::vector<UnifiedWaferTask> getEfemRuturnCompletedTasks();//4
+
+        /*-----------------------------------------LoadLock-------------------------------------------------------------*/
+        //��ȡLoadlock�����յ�����   ���������,casste�ſ�,efem�ŵ�LL���ϣ�������գ���ȡ�ߵľ�Բ�� QUEUED 
+        std::vector<UnifiedWaferTask> getLoadLockPendingTasks(std::string LLName);//5
+
+        //��ȡLoadlock������ɵ����񣺣�������գ��������ź�,csrȡ��Ƭ, ��һ���Ǵ���Pmǻ���ӹ��ľ�Բ����  COMPLETED��
+        std::vector<UnifiedWaferTask> getLoadLockCompletedTasks(std::string LLName);//6
+
+
+        //��ȡLoadlock�����ϵ����񣺣�������,�������ź�����PM���պ��,���ŵ�LL�ľ�Բ����  ��PMǻ�ռ���QUEUED��
+        std::vector<UnifiedWaferTask> getLoadLockReturnPendingTasks(std::string LLName);//7
+
+        //��ȡLoadlock������ɵ����� (����PM���պ��,�Żص�LL�ľ�Բ����)
+        std::vector<UnifiedWaferTask> getLoadLockReturnCompletedTasks(std::string LLName);//8
+
+
+        //��ȡLoadlock�����յ�����   
+        std::vector<UnifiedWaferTask> getLoadLockPendingTasks();//5
+
+        //��ȡLoadlock������ɵ�����
+        std::vector<UnifiedWaferTask> getLoadLockCompletedTasks();//6
+
+
+        //��ȡLoadlock�����ϵ�����
+        std::vector<UnifiedWaferTask> getLoadLockReturnPendingTasks();//7
+
+        //��ȡLoadlock������ɵ�����
+        std::vector<UnifiedWaferTask> getLoadLockReturnCompletedTasks();//8
+
+        /*-----------------------------------------PM-------------------------------------------------------------*/
+        //��ȡPM�����յ����� ��csr��ȡ����Ƭ�ӣ����ŵ�PMȡ��Ƭλ��Ƭ�ӣ� QUEUED
+        std::vector<UnifiedWaferTask> getPMPendingTasks(std::string PM); //9
+
+        std::vector<UnifiedWaferTask> getPMProcessTasks(std::string PM); //10
+
+        //��ȡPM������ɵ����� �����ս����󣬻ص�ȡ��Ƭλ������е��ȡ�ߵ�Ƭ�ӣ� COMPLETED
+        std::vector<UnifiedWaferTask> getPMCompletedTasks(std::string PM); //11
+
+        // �ȴ������񣨴���ʱ��
+        bool waitForTasks(int timeoutMs = 100);
+
+        bool waitLLBForTasks(int timeoutMs = 100);
+        // ����Ƿ�������
+        bool hasTasks();
+
+        // ����ֹͣ��־
+        void stop();
+
+        void start();
+
+        bool isStopped() const;
+
+        //Ϊ���ϴ�������ɱ�ǩ��
+        void setLoadingInPlaceFlag(int taskID,bool flag);
+
+        bool getLoadingInPlaceFlag(int taskID);
+
+        //��þ���LLA/LLB �������ϱ�ǩ
+        bool CollectionPassedThroughLL(const std::string &LLName);
+
+        bool hasLoadLockLowerPriorityReturn(const std::string& LLName);
+
+        bool hasEfemUnloadInProgress(const std::string& LLName);
+
+		//ͨ����Դλ�û�ȡEFEM������ɵ�����
+        std::vector<UnifiedWaferTask> getEfemRuturnCompletedTasksBySource(UnifiedWaferTask::Location source);
+
+        bool canResetEfemReturnCompletedTasks(UnifiedWaferTask::Location source);
+
+        bool hasInFlightTasksExceptCompletedEfemReturn();
+
+        // ��������ӳ���ϵ ,����taskId���Ƴ���ӳ��
+        void updateTaskMaps(int taskId, UnifiedWaferTask::TaskType type, UnifiedWaferTask::Status status);
+
+        // ��������״̬���̰߳�ȫ��
+        void updateTaskStatus(int taskId, UnifiedWaferTask::TaskType newTaskType,UnifiedWaferTask::Status newStatus);
+
+        // 同步任务当前实际执行手指。
+        // 连续交互片时，回片阶段的真实持片手可能和初始配方手不同，
+        // 这里用于在不扩字段的前提下，把 task.arm 更新为当前阶段实际持片手。
+        void updateTaskArm(int taskId, int arm);
+
+        //���ַ���ת��ΪLocationö��
+        UnifiedWaferTask::Location stringToLocation(const std::string& locStr);
+
+        //taskId����
+        void lessTaskIdSortAlgorithm();
+
+        void largeTaskIdSortAlgorithm();
+  public:
+    bool stopped_{ false };
+
+    private:
+        TaskManager() = default; // ˽�й��캯��
+        ~TaskManager() = default;
+
+        std::vector<UnifiedWaferTask> tasks_; //�������
+        std::vector<UnifiedWaferTask> workTasks_;//ʵ�ʵĹ�������
+
+        std::map<int, std::pair<UnifiedWaferTask::TaskType, UnifiedWaferTask::Status>> taskStatusMap_; //   taskID:{TYPE:STATUS}  ����״̬ӳ��
+        std::map<UnifiedWaferTask::TaskType, std::map< UnifiedWaferTask::Status, std::vector<int>>> taskTypeStatusMap_; //���ڲ�int������ID
+
+        std::mutex mutex_;
+        std::condition_variable cv_;
+        //std::atomic<bool> stopped_{ false };
+        int nextTaskId_ = 0;
+
+    };
+
+}

@@ -1,4 +1,4 @@
-﻿/**
+/**
 * @file            slot_transfer_cycle_test_widget.h
 * @brief           slot transfer cycle test widget
 * @author			xielonghua
@@ -251,17 +251,6 @@ namespace FC{
 		bool getArmWaferIsPmPending(int arm);
 
 		bool syncPm2ReturnTaskArm(int actualReturnArm);
-		struct PM2ScheduleSnapshot;
-
-		bool isSimulationModeEnabled() const
-		{
-			return simulation_mode_enabled.load();
-		}
-
-		bool tryGetPmHasWafer(const std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem, const char* pmName, bool& hasWafer) const;
-		bool tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot) const;
-		bool shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const;
-		bool isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const;
 
 		int getOtherArm(const int arm) const
 		{
@@ -319,8 +308,6 @@ namespace FC{
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = nullptr;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = nullptr;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = nullptr;
-		std::atomic<bool> simulation_mode_enabled{ false };
-		std::atomic<bool> pm2_exchange_in_flight{ false };
 		std::shared_ptr<Cassette> cass1;
 		std::shared_ptr<Cassette> cass2;
 		std::shared_ptr<Cassette> lk1_cass;
@@ -668,18 +655,6 @@ namespace FC{
 			std::atomic<int> putArm{ 1 };   // 放片用的arm
 		};
 
-		struct PM2ScheduleSnapshot {
-			bool hasWaferPm = false;
-			bool armAHasWafer = false;
-			bool armAHasPending = false;
-			bool armBHasWafer = false;
-			bool armBHasPending = false;
-			int pm2PendingCount = 0;
-			int pm2CompletedCount = 0;
-			int returnPendingCount = 0;
-			int preferredPmArm = -1;
-		};
-
 		// LL取片请求：从LL取到机械手
 		RobotTransferRequest robot_get_from_lla;
 		RobotTransferRequest robot_get_from_llb;
@@ -878,277 +853,6 @@ namespace FC{
 		}
 
 		logWarn("PM2", "PM2交换成功后未找到待回LL任务或PM完成任务，无法同步实际回片手指.");
-		return false;
-	}
-
-	bool QSlotTransferCycleVTMWidgetPrivate::tryGetPmHasWafer(const std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem, const char* pmName, bool& hasWafer) const
-	{
-		hasWafer = false;
-		if (pmSubsystem == nullptr)
-		{
-			logWarn(pmName, "读取PM占片状态失败: pm为空.");
-			return false;
-		}
-
-		auto pmKernel = pmSubsystem->getKernel();
-		if (pmKernel == nullptr)
-		{
-			logWarn(pmName, "读取PM占片状态失败: pmKernel为空.");
-			return false;
-		}
-
-		auto cassManager = pmKernel->getKernelModule<FortrendCassetteManager>();
-		if (cassManager == nullptr)
-		{
-			logWarn(pmName, "读取PM占片状态失败: cassManager为空.");
-				return false;
-		}
-
-		auto cassette = cassManager->getCassette(pmSubsystem.get());
-		if (cassette == nullptr)
-		{
-			logWarn(pmName, "读取PM占片状态失败: cassette为空.");
-			return false;
-		}
-
-		hasWafer = cassette->getMapping(1) == Cassette::Present;
-		return true;
-	}
-
-	bool QSlotTransferCycleVTMWidgetPrivate::tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot) const
-	{
-		snapshot = PM2ScheduleSnapshot{};
-		if (wtr == nullptr)
-		{
-			logWarn("PM2", "构建PM2调度快照失败: WTR为空.");
-			return false;
-		}
-
-		if (!tryGetPmHasWafer(pm2, "PM2", snapshot.hasWaferPm))
-		{
-			return false;
-		}
-
-		snapshot.armAHasWafer = wtr->hasObject(0);
-		snapshot.armBHasWafer = wtr->hasObject(1);
-
-		auto pm2PendingTasksLocal = taskManager.getPMPendingTasks("PM2");
-		snapshot.pm2PendingCount = static_cast<int>(pm2PendingTasksLocal.size());
-
-		auto pm2CompletedTasksLocal = taskManager.getPMCompletedTasks("PM2");
-		snapshot.pm2CompletedCount = static_cast<int>(pm2CompletedTasksLocal.size());
-
-		auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-		loadlockReturnPendingTasks.erase(
-			std::remove_if(loadlockReturnPendingTasks.begin(), loadlockReturnPendingTasks.end(),
-				[](const UnifiedWaferTask& task)
-				{
-					return task.target_pm != UnifiedWaferTask::PM2;
-				}),
-			loadlockReturnPendingTasks.end());
-		snapshot.returnPendingCount = static_cast<int>(loadlockReturnPendingTasks.size());
-
-		snapshot.armAHasPending = snapshot.armAHasWafer &&
-			std::any_of(pm2PendingTasksLocal.begin(), pm2PendingTasksLocal.end(), [](const UnifiedWaferTask& t) { return t.arm == 0; });
-		snapshot.armBHasPending = snapshot.armBHasWafer &&
-			std::any_of(pm2PendingTasksLocal.begin(), pm2PendingTasksLocal.end(), [](const UnifiedWaferTask& t) { return t.arm == 1; });
-
-		if (!snapshot.armAHasPending && !snapshot.armBHasPending &&
-			pm2PendingTasksLocal.size() == 1 &&
-			(snapshot.armAHasWafer ^ snapshot.armBHasWafer))
-		{
-			if (snapshot.armAHasWafer)
-			{
-				snapshot.armAHasPending = true;
-			}
-			else
-			{
-				snapshot.armBHasPending = true;
-			}
-		}
-
-		if (!loadlockReturnPendingTasks.empty())
-		{
-			snapshot.preferredPmArm = loadlockReturnPendingTasks.front().arm;
-		}
-		else if (!pm2CompletedTasksLocal.empty())
-		{
-			snapshot.preferredPmArm = pm2CompletedTasksLocal.front().arm;
-		}
-
-		return true;
-	}
-
-	bool QSlotTransferCycleVTMWidgetPrivate::shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const
-	{
-		if (!snapshot.hasWaferPm)
-		{
-			reason.clear();
-			return false;
-		}
-
-		int expectedPmArm = snapshot.preferredPmArm;
-		std::string waitReason = "PM2有片优先";
-
-		if (snapshot.returnPendingCount > 0)
-		{
-			waitReason = "PM2待回片优先";
-		}
-		else if (!snapshot.armAHasWafer && !snapshot.armBHasWafer)
-		{
-			waitReason = "PM2有片且双手为空,应先从PM2取片";
-			if (expectedPmArm < 0)
-			{
-				expectedPmArm = 1;
-			}
-		}
-		else if (!snapshot.armAHasWafer && snapshot.armBHasPending)
-		{
-			waitReason = "PM2应执行A取B放";
-			expectedPmArm = 0;
-		}
-		else if (snapshot.armAHasPending && !snapshot.armBHasWafer)
-		{
-			waitReason = "PM2应执行B取A放";
-			expectedPmArm = 1;
-		}
-		else if (snapshot.pm2CompletedCount > 0)
-		{
-			waitReason = "PM2已有完成片待取";
-		}
-
-		reason =
-			"reason=" + waitReason +
-			", pm2Has=" + std::to_string(static_cast<int>(snapshot.hasWaferPm)) +
-			", armA_has=" + std::to_string(static_cast<int>(snapshot.armAHasWafer)) +
-			", armA_pending=" + std::to_string(static_cast<int>(snapshot.armAHasPending)) +
-			", armB_has=" + std::to_string(static_cast<int>(snapshot.armBHasWafer)) +
-			", armB_pending=" + std::to_string(static_cast<int>(snapshot.armBHasPending)) +
-			", pending=" + std::to_string(snapshot.pm2PendingCount) +
-			", completed=" + std::to_string(snapshot.pm2CompletedCount) +
-			", return_pending=" + std::to_string(snapshot.returnPendingCount) +
-			", expectedPmArm=" + std::to_string(expectedPmArm);
-		return true;
-	}
-
-	bool QSlotTransferCycleVTMWidgetPrivate::isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const
-	{
-		if (targetArm < 0 || targetArm > 1)
-		{
-			reason = "targetArm非法";
-			return true;
-		}
-
-		if (wtr == nullptr)
-		{
-			reason = "WTR为空";
-			return true;
-		}
-
-		if (wtr->hasObject(targetArm))
-		{
-			reason = "目标手臂实物已有片";
-			return true;
-		}
-
-		auto checkRequest = [&](const RobotTransferRequest& request, const char* requestName) -> bool
-		{
-			if (request.requested.load() && request.arm.load() == targetArm)
-			{
-				reason = std::string(requestName) + ".requested=1";
-				return true;
-			}
-			return false;
-		};
-
-		auto checkExchange = [&](const RobotTransferRequest& request, const ExchangeInfo& info, const char* requestName) -> bool
-		{
-			if (request.requested.load())
-			{
-				const int getArm = info.getArm.load();
-				const int putArm = info.putArm.load();
-				if (getArm == targetArm || putArm == targetArm)
-				{
-					reason = std::string(requestName) + ".requested=1(getArm=" + std::to_string(getArm) +
-						", putArm=" + std::to_string(putArm) + ")";
-					return true;
-				}
-			}
-			return false;
-		};
-
-		if (checkRequest(robot_get_from_lla, "robot_get_from_lla")) return true;
-		if (checkRequest(robot_get_from_llb, "robot_get_from_llb")) return true;
-		if (checkRequest(robot_put_to_lla, "robot_put_to_lla")) return true;
-		if (checkRequest(robot_put_to_llb, "robot_put_to_llb")) return true;
-		if (checkRequest(robot_put_to_pm1, "robot_put_to_pm1")) return true;
-		if (checkRequest(robot_put_to_pm2, "robot_put_to_pm2")) return true;
-		if (checkRequest(robot_put_to_pm3, "robot_put_to_pm3")) return true;
-		if (checkRequest(robot_put_to_pm4, "robot_put_to_pm4")) return true;
-		if (checkRequest(robot_get_from_pm1, "robot_get_from_pm1")) return true;
-		if (checkRequest(robot_get_from_pm2, "robot_get_from_pm2")) return true;
-		if (checkRequest(robot_get_from_pm3, "robot_get_from_pm3")) return true;
-		if (checkRequest(robot_get_from_pm4, "robot_get_from_pm4")) return true;
-		if (checkExchange(robot_exchange_pm1, exchange_info_pm1, "robot_exchange_pm1")) return true;
-		if (checkExchange(robot_exchange_pm2, exchange_info_pm2, "robot_exchange_pm2")) return true;
-		if (checkExchange(robot_exchange_pm3, exchange_info_pm3, "robot_exchange_pm3")) return true;
-		if (checkExchange(robot_exchange_pm4, exchange_info_pm4, "robot_exchange_pm4")) return true;
-
-		switch (robot_step)
-		{
-		case 1000:
-			if (robot_get_from_lla.arm.load() == targetArm) { reason = "robot_step=1000(GET_FROM_LLA)"; return true; }
-			break;
-		case 1100:
-			if (robot_get_from_llb.arm.load() == targetArm) { reason = "robot_step=1100(GET_FROM_LLB)"; return true; }
-			break;
-		case 2000:
-			if (robot_put_to_pm1.arm.load() == targetArm) { reason = "robot_step=2000(PUT_TO_PM1)"; return true; }
-			break;
-		case 2100: 
-			if (robot_put_to_pm2.arm.load() == targetArm) { reason = "robot_step=2100(PUT_TO_PM2)"; return true; }
-			break;
-		case 2200:
-			if (robot_put_to_pm3.arm.load() == targetArm) { reason = "robot_step=2200(PUT_TO_PM3)"; return true; }
-			break;
-		case 2300:
-			if (robot_put_to_pm4.arm.load() == targetArm) { reason = "robot_step=2300(PUT_TO_PM4)"; return true; }
-			break;
-		case 3000:
-			if (robot_get_from_pm1.arm.load() == targetArm) { reason = "robot_step=3000(GET_FROM_PM1)"; return true; }
-			break;
-		case 3100:
-			if (robot_get_from_pm2.arm.load() == targetArm) { reason = "robot_step=3100(GET_FROM_PM2)"; return true; }
-			break;
-		case 3200:
-			if (robot_get_from_pm3.arm.load() == targetArm) { reason = "robot_step=3200(GET_FROM_PM3)"; return true; }
-			break;
-		case 3300:
-			if (robot_get_from_pm4.arm.load() == targetArm) { reason = "robot_step=3300(GET_FROM_PM4)"; return true; }
-			break;
-		case 4000:
-			if (robot_put_to_lla.arm.load() == targetArm) { reason = "robot_step=4000(PUT_TO_LLA)"; return true; }
-			break;
-		case 4100:
-			if (robot_put_to_llb.arm.load() == targetArm) { reason = "robot_step=4100(PUT_TO_LLB)"; return true; }
-			break;
-		case 5000:
-			if (exchange_info_pm1.getArm.load() == targetArm || exchange_info_pm1.putArm.load() == targetArm) { reason = "robot_step=5000(EXCHANGE_PM1)"; return true; }
-			break;
-		case 5100:
-			if (exchange_info_pm2.getArm.load() == targetArm || exchange_info_pm2.putArm.load() == targetArm) { reason = "robot_step=5100(EXCHANGE_PM2)"; return true; }
-			break;
-		case 5200:
-			if (exchange_info_pm3.getArm.load() == targetArm || exchange_info_pm3.putArm.load() == targetArm) { reason = "robot_step=5200(EXCHANGE_PM3)"; return true; }
-			break;
-		case 5300:
-			if (exchange_info_pm4.getArm.load() == targetArm || exchange_info_pm4.putArm.load() == targetArm) { reason = "robot_step=5300(EXCHANGE_PM4)"; return true; }
-			break;
-		default:
-			break;
-		}
-
-		reason.clear();
 		return false;
 	}
 
@@ -1363,7 +1067,7 @@ namespace FC{
 
 						if (elp->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								logInform(elp->getName().c_str(), "step:100,模拟EFEM程序....");
 								efem_auto_step = 101;
@@ -1516,7 +1220,7 @@ namespace FC{
 					
 					if (efemPendingTasks.size() == 1)
 					{
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							efem_auto_step = 3000;
 						}
@@ -1527,7 +1231,7 @@ namespace FC{
 					}
 					else if (efemPendingTasks.size() >= 2)
 					{
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							efem_auto_step = 3001;
 						}
@@ -1550,7 +1254,7 @@ namespace FC{
 							// 2026-1-09  下料完成步骤去执行关lp..
 #if 0
 
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								//tool_allow_get_wafer = false; //LP上料完成						
 								if (current_loadlock == "LLA") {
@@ -2305,7 +2009,7 @@ namespace FC{
 						break;
 					}
 
-					if (isSimulationModeEnabled())
+					if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 					{
 						logInform(elp->getName().c_str(), "step:200,模拟EFEM给TOOL下料程序....");
 						efem_auto_step = 201;
@@ -2349,7 +2053,7 @@ namespace FC{
 
 					if (efemReturnPendingTasks.size() == 1)
 					{
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							efem_auto_step = 4000;
 						}
@@ -2361,7 +2065,7 @@ namespace FC{
 					}
 					else if (efemReturnPendingTasks.size() >= 2)
 					{
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							efem_auto_step = 4001;
 						}
@@ -2375,7 +2079,7 @@ namespace FC{
 					{
 						UpdateEfemSubTransferDatas();
 
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							//tool_allow_put_wafer = false;//下料到LP完成
 							if (current_loadlock == "LLA") {
@@ -3521,7 +3225,7 @@ namespace FC{
 					{
 						auto cassManager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
 						auto station_cass = cassManager->getCassette(lk1.get());
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							logInform(elp->getName().c_str(), "step:1010,模拟取晶圆流程程序....");
 							efem_auto_step = 1052;
@@ -3682,23 +3386,11 @@ namespace FC{
 								break;
 							}
 
+							auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-							bool pm2HasWafer = false;
-							if (pm2_exchange_in_flight.load())
-							{
-								static int exchange_wait_count = 0;
-								if ((exchange_wait_count++ % 20) == 0)
-								{
-									logInform(lk1->getName().c_str(), "PM2交换进行中, LLA暂不发起新的取片请求.");
-								}
-								Sleep(200);
-								break;
-							}
-							if (!tryGetPmHasWafer(pm2, "PM2", pm2HasWafer))
-							{
-								Sleep(200);
-								break;
-							}
+							const bool pm2HasWafer =
+								(pm2 != nullptr && cassManager != nullptr) &&
+								(cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present);
 							const int desiredArm = loadLockAPendingTasks.at(0).arm;
 
 							const bool armAHasWafer = wtr->hasObject(0);
@@ -3778,47 +3470,16 @@ namespace FC{
 							}
 							else
 							{
-								PM2ScheduleSnapshot pm2Snapshot;
-								std::string pm2WaitReason;
-								if (!tryBuildPm2ScheduleSnapshot(pm2Snapshot))
-								{
-									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
-									{
-										logWarn(lk1->getName().c_str(), "step 1051读取PM2调度快照失败，回退等待后重试.");
-									}
-									loadlock1_auto_step = 950;
-									Sleep(200);
-									break;
-								}
-								if (shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
-								{
-									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
-									{
-										logWarn(lk1->getName().c_str(),
-											"step 1051禁止从LLA取片，当前应等待PM2优先. %s",
-											pm2WaitReason.c_str());
-									}
-									loadlock1_auto_step = 950;
-									Sleep(200);
-									break;
-								}
-
 								int targetArm = desiredArm;
-								std::string armBusyReason;
-								if ((targetArm >= 0 && targetArm <= 1) && isRobotArmOccupiedForLlRequest(targetArm, armBusyReason))
+								if ((targetArm >= 0 && targetArm <= 1) && wtr->hasObject(targetArm))
 								{
 									int otherArm = getOtherArm(targetArm);
-									std::string otherArmBusyReason;
-									if (!isRobotArmOccupiedForLlRequest(otherArm, otherArmBusyReason))
+									if (!wtr->hasObject(otherArm))
 									{
 										targetArm = otherArm;
 										taskManager.updateTaskArm(loadLockAPendingTasks.at(0).taskId, targetArm);
 										loadLockAPendingTasks.at(0).arm = targetArm;
-										logInform(lk1->getName().c_str(),
-											"WTR手臂%d发送前不可用(%s), 动态切换到空闲手臂%d取片",
-											desiredArm, armBusyReason.c_str(), targetArm);
+										logInform(lk1->getName().c_str(), "WTR手臂%d被占用, 动态切换到空闲手臂%d取片", desiredArm, targetArm);
 									}
 									else
 									{
@@ -3826,8 +3487,8 @@ namespace FC{
 										if ((wait_count++ % 20) == 0)
 										{
 											logWarn(lk1->getName().c_str(),
-												"WTR双臂均不满足发送条件,禁止从LLA取片. desiredArm=%d, desiredReason=%s, otherArm=%d, otherReason=%s",
-												desiredArm, armBusyReason.c_str(), otherArm, otherArmBusyReason.c_str());
+												"WTR双臂均被占用,禁止从LLA取片. armA=%d, armB=%d, desiredArm=%d",
+												(int)armAHasWafer, (int)armBHasWafer, desiredArm);
 										}
 										Sleep(200);
 										break;
@@ -4065,7 +3726,7 @@ namespace FC{
 						auto station_cass = cassManager->getCassette(lk1.get());
 						if (station_cass->getMapping(loadlock1_move_slot_index) == Cassette::Mapping::Empty)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								logInform(elp->getName().c_str(), "step:2010,模拟放晶圆流程程序....");
 								loadlock1_auto_step = 2070;
@@ -4338,42 +3999,13 @@ namespace FC{
 						break;
 					}
 
-					if (!lk1->getTMCavityDoorOpend())
+					if (!lk1->getTMCavityDoorOpend() || wtr->hasObject(llaImmediateRepick.arm))
 					{
 						logWarn(lk1->getName().c_str(),
-							"LLA立即补取前状态不满足: tmDoor=%d, arm=%d，跳过补取.",
+							"LLA立即补取前状态不满足: tmDoor=%d, arm=%d, armHasWafer=%d，跳过补取.",
 							(int)lk1->getTMCavityDoorOpend(),
-							llaImmediateRepick.arm);
-						llaImmediateRepick.reset();
-						loadlock1_auto_step = 2071;
-						break;
-					}
-
-					PM2ScheduleSnapshot pm2Snapshot;
-					std::string pm2WaitReason;
-					if (!tryBuildPm2ScheduleSnapshot(pm2Snapshot))
-					{
-						logWarn(lk1->getName().c_str(), "LLA立即补取前读取PM2调度快照失败，跳过补取.");
-						llaImmediateRepick.reset();
-						loadlock1_auto_step = 2071;
-						break;
-					}
-					if (shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
-					{
-						logWarn(lk1->getName().c_str(),
-							"LLA立即补取前检测到当前应等待PM2优先，跳过补取. arm=%d, %s",
-							llaImmediateRepick.arm, pm2WaitReason.c_str());
-						llaImmediateRepick.reset();
-						loadlock1_auto_step = 2071;
-						break;
-					}
-
-					std::string armBlockedReason;
-					if (isRobotArmOccupiedForLlRequest(llaImmediateRepick.arm, armBlockedReason))
-					{
-						logWarn(lk1->getName().c_str(),
-							"LLA立即补取前状态不满足: arm=%d, blockReason=%s，跳过补取.",
-							llaImmediateRepick.arm, armBlockedReason.c_str());
+							llaImmediateRepick.arm,
+							(int)wtr->hasObject(llaImmediateRepick.arm));
 						llaImmediateRepick.reset();
 						loadlock1_auto_step = 2071;
 						break;
@@ -5124,7 +4756,7 @@ namespace FC{
 					{
 						auto cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 						auto station_cass = cassManager->getCassette(lk2.get());
-						if (isSimulationModeEnabled())
+						if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 						{
 							logInform(elp->getName().c_str(), "step:1010,LLB模拟取晶圆流程程序....");
 							loadlock2_auto_step = 1052;
@@ -5282,23 +4914,12 @@ namespace FC{
 						{
 							logInform(lk2->getName().c_str(), "step:1051,loadLockB PendingTasks 有片,触发Robot取片流程.");
 
+							auto cassManager = wtr->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
-							bool pm2HasWafer = false;
-							if (pm2_exchange_in_flight.load())
-							{
-								static int exchange_wait_count = 0;
-								if ((exchange_wait_count++ % 20) == 0)
-								{
-									logInform(lk2->getName().c_str(), "PM2交换进行中, LLB暂不发起新的取片请求.");
-								}
-								Sleep(200);
-								break;
-							}
-							if (!tryGetPmHasWafer(pm2, "PM2", pm2HasWafer))
-							{
-								Sleep(200);
-								break;
-							}
+
+							const bool pm2HasWafer =
+								(pm2 != nullptr && cassManager != nullptr) &&
+								(cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present);
 
 							const int desiredArm = loadLockBPendingTasks.at(0).arm;
 
@@ -5375,47 +4996,16 @@ namespace FC{
 							}
 							else
 							{
-								PM2ScheduleSnapshot pm2Snapshot;
-								std::string pm2WaitReason;
-								if (!tryBuildPm2ScheduleSnapshot(pm2Snapshot))
-								{
-									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
-									{
-										logWarn(lk2->getName().c_str(), "step 1051读取PM2调度快照失败，回退等待后重试.");
-									}
-									loadlock2_auto_step = 950;
-									Sleep(200);
-									break;
-								}
-								if (shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
-								{
-									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
-									{
-										logWarn(lk2->getName().c_str(),
-											"step 1051禁止从LLB取片，当前应等待PM2优先. %s",
-											pm2WaitReason.c_str());
-									}
-									loadlock2_auto_step = 950;
-									Sleep(200);
-									break;
-								}
-
 								int targetArm = desiredArm;
-								std::string armBusyReason;
-								if ((targetArm >= 0 && targetArm <= 1) && isRobotArmOccupiedForLlRequest(targetArm, armBusyReason))
+								if ((targetArm >= 0 && targetArm <= 1) && wtr->hasObject(targetArm))
 								{
 									int otherArm = getOtherArm(targetArm);
-									std::string otherArmBusyReason;
-									if (!isRobotArmOccupiedForLlRequest(otherArm, otherArmBusyReason))
+									if (!wtr->hasObject(otherArm))
 									{
 										targetArm = otherArm;
 										taskManager.updateTaskArm(loadLockBPendingTasks.at(0).taskId, targetArm);
 										loadLockBPendingTasks.at(0).arm = targetArm;
-										logInform(lk2->getName().c_str(),
-											"WTR手臂%d发送前不可用(%s), 动态切换到空闲手臂%d取片",
-											desiredArm, armBusyReason.c_str(), targetArm);
+										logInform(lk2->getName().c_str(), "WTR手臂%d被占用, 动态切换到空闲手臂%d取片", desiredArm, targetArm);
 									}
 									else
 									{
@@ -5423,8 +5013,8 @@ namespace FC{
 										if ((wait_count++ % 20) == 0)
 										{
 											logWarn(lk2->getName().c_str(),
-												"WTR双臂均不满足发送条件,禁止从LLB取片. desiredArm=%d, desiredReason=%s, otherArm=%d, otherReason=%s",
-												desiredArm, armBusyReason.c_str(), otherArm, otherArmBusyReason.c_str());
+												"WTR双臂均被占用,禁止从LLB取片. armA=%d, armB=%d, desiredArm=%d",
+												(int)armAHasWafer, (int)armBHasWafer, desiredArm);
 										}
 										Sleep(200);
 										break;
@@ -5658,7 +5248,7 @@ namespace FC{
 						auto station_cass = cassManager->getCassette(lk2.get());
 						if (station_cass->getMapping(loadlock2_move_slot_index) == Cassette::Mapping::Empty)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								logInform(elp->getName().c_str(), "step:2010,LLB模拟放晶圆流程程序....");
 								loadlock2_auto_step = 2070;
@@ -5937,42 +5527,13 @@ namespace FC{
 						break;
 					}
 
-					if (!lk2->getTMCavityDoorOpend())
+					if (!lk2->getTMCavityDoorOpend() || wtr->hasObject(llbImmediateRepick.arm))
 					{
 						logWarn(lk2->getName().c_str(),
-							"LLB立即补取前状态不满足: tmDoor=%d, arm=%d，跳过补取.",
+							"LLB立即补取前状态不满足: tmDoor=%d, arm=%d, armHasWafer=%d，跳过补取.",
 							(int)lk2->getTMCavityDoorOpend(),
-							llbImmediateRepick.arm);
-						llbImmediateRepick.reset();
-						loadlock2_auto_step = 2071;
-						break;
-					}
-
-					PM2ScheduleSnapshot pm2Snapshot;
-					std::string pm2WaitReason;
-					if (!tryBuildPm2ScheduleSnapshot(pm2Snapshot))
-					{
-						logWarn(lk2->getName().c_str(), "LLB立即补取前读取PM2调度快照失败，跳过补取.");
-						llbImmediateRepick.reset();
-						loadlock2_auto_step = 2071;
-						break;
-					}
-					if (shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
-					{
-						logWarn(lk2->getName().c_str(),
-							"LLB立即补取前检测到当前应等待PM2优先，跳过补取. arm=%d, %s",
-							llbImmediateRepick.arm, pm2WaitReason.c_str());
-						llbImmediateRepick.reset();
-						loadlock2_auto_step = 2071;
-						break;
-					}
-
-					std::string armBlockedReason;
-					if (isRobotArmOccupiedForLlRequest(llbImmediateRepick.arm, armBlockedReason))
-					{
-						logWarn(lk2->getName().c_str(),
-							"LLB立即补取前状态不满足: arm=%d, blockReason=%s，跳过补取.",
-							llbImmediateRepick.arm, armBlockedReason.c_str());
+							llbImmediateRepick.arm,
+							(int)wtr->hasObject(llbImmediateRepick.arm));
 						llbImmediateRepick.reset();
 						loadlock2_auto_step = 2071;
 						break;
@@ -6360,7 +5921,7 @@ namespace FC{
 						//判断是放、取,考虑交互手
 						if (pmPendingTasks.size() > 0 || pmCompletedTasks.size() > 0)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								pm1_auto_step.store(200); //取放片
 							}
@@ -6410,7 +5971,7 @@ namespace FC{
 						//考虑交互手
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								pm1_auto_step.store(1010);
 								//pm1_auto_step = 1010;
@@ -6866,9 +6427,10 @@ namespace FC{
 					case 100:
 					{
 						UpdatePmSubTransferDatas("PM2");
+						//判断是放、取,不考虑交互手
+						// 2026-5-17 当片子做完工艺会置为EFEM_RETURN/QUEUED，那么要下料了，这个条件会卡主流程，取消条件
 
 						auto loadlockReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-
 						loadlockReturnPendingTasks.erase(
 							std::remove_if(loadlockReturnPendingTasks.begin(), loadlockReturnPendingTasks.end(),
 								[](const UnifiedWaferTask& task)
@@ -6877,10 +6439,9 @@ namespace FC{
 								}),
 							loadlockReturnPendingTasks.end());
 
-
 						if (pm2PendingTasks.size() > 0 ||  loadlockReturnPendingTasks.size() > 0)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								pm2_auto_step.store(200); //取放片
 							}
@@ -6932,19 +6493,13 @@ namespace FC{
 					{
 						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 						{
-							if (isSimulationModeEnabled())
+							if (ui->simulation_cbx->checkState() == Qt::CheckState::Checked)
 							{
 								pm2_auto_step.store(1030);
 							}
 							else
 							{
-								bool haswaferpm = false;
-								if (!tryGetPmHasWafer(pm2, "PM2", haswaferpm))
-								{
-									pm2_auto_step.store(10);
-									Sleep(100);
-									break;
-								}
+								bool haswaferpm = cassManager->getCassette(pm2.get())->getMapping(1) == Cassette::Present;   //pm2中有片
 								bool haswaferarm1 = wtr->hasObject(0); //arm1有片  A臂(索引0)
 								bool haswaferarm2 = wtr->hasObject(1); //arm2有片  B臂(索引1)
 								pm2PendingTasks = taskManager.getPMPendingTasks("PM2");
@@ -7081,24 +6636,15 @@ namespace FC{
 									{
 										if (pm2PendingTasks.size() > 0)
 										{
-											if (pm2_exchange_in_flight.load() || robot_exchange_pm2.requested.load())
-											{
-												logInform("PM2", "PM2交换请求已在处理中，等待Robot线程消费. step=%d", pm2_auto_step.load());
-												pm2_auto_step.store(10);
-												Sleep(100);
-												break;
-											}
 											if (!haswaferarm1 && arm2HasPending)
 											{
 												logInform("PM2", "PM2交换料：A取B放.");
-												pm2_exchange_in_flight.store(true);
 												pm2_auto_step.store(1060);
 
 											}
 											else if (arm1HasPending && !haswaferarm2)
 											{
 												logInform("PM2", "PM2交换料：B取A放.");
-												pm2_exchange_in_flight.store(true);
 												pm2_auto_step.store(1070);
 											}
 											else
@@ -7243,14 +6789,12 @@ namespace FC{
 						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
 						if (arm1HasWafer || !arm2HasWafer) {
 							logError(wtr->getName().c_str(), "PM2交换前状态异常(1060)：arm1Has=%d, arm2Has=%d，等待修正...", arm1HasWafer, arm2HasWafer);
-							pm2_exchange_in_flight.store(false);
 							pm2_auto_step.store(200);  
 							return;
 						}
 						// 交换：A臂取 + B臂放 (先取后放)
 						exchange_info_pm2.getArm.store(0);//a
 						exchange_info_pm2.putArm.store(1);//b
-						logInform("PM2", "step:1060, 置位PM2交换请求 getArm=%d, putArm=%d", exchange_info_pm2.getArm.load(), exchange_info_pm2.putArm.load());
 						robot_exchange_pm2.done.store(false);
 						robot_exchange_pm2.success.store(false);
 						robot_exchange_pm2.requested.store(true);
@@ -7262,7 +6806,6 @@ namespace FC{
 						// 等待exchange完成
 						if (robot_exchange_pm2.done.load())
 						{
-							pm2_exchange_in_flight.store(false);
 							if (robot_exchange_pm2.success.load())
 							{
 								// PM2交换后，从PM2取出工艺完成片的是 getArm。
@@ -7302,14 +6845,12 @@ namespace FC{
 						if (!arm1HasWafer || arm2HasWafer) 
 						{
 							logWarn(wtr->getName().c_str(), "PM2交换前状态异常(1070)：arm1Has=%d, arm2Has=%d，等待修正...", arm1HasWafer, arm2HasWafer);
-							pm2_exchange_in_flight.store(false);
 							pm2_auto_step.store(200);
 							return;
 						}
 						// 交换：B臂取 + A臂放 (先取后放)
 						exchange_info_pm2.getArm.store(1);
 						exchange_info_pm2.putArm.store(0);
-						logInform("PM2", "step:1070, 置位PM2交换请求 getArm=%d, putArm=%d", exchange_info_pm2.getArm.load(), exchange_info_pm2.putArm.load());
 						robot_exchange_pm2.done.store(false);
 						robot_exchange_pm2.success.store(false);
 						robot_exchange_pm2.requested.store(true);
@@ -7321,7 +6862,6 @@ namespace FC{
 						// 等待exchange完成
 						if (robot_exchange_pm2.done.load())
 						{
-							pm2_exchange_in_flight.store(false);
 							if (robot_exchange_pm2.success.load())
 							{
 								const int actualReturnArm = exchange_info_pm2.getArm.load();
@@ -8826,7 +8366,6 @@ namespace FC{
 					int getArm = exchange_info_pm2.getArm.load();
 					int putArm = exchange_info_pm2.putArm.load();
 					logInform(wtr->getName().c_str(), "Robot线程：step：5100,PM2交换片, getArm=%d, putArm=%d", getArm, putArm);
-					logInform("PM2", "Robot线程开始消费PM2交换请求, getArm=%d, putArm=%d", getArm, putArm);
 
 					// 这里才是真正的一放一取“组合动作”：
 					// 同一个 robot_step 里先从 PM2 取，再向 PM2 放，底层上是一组连续的交换片命令。
@@ -10548,12 +10087,6 @@ namespace FC{
 		d->ui->wph_test_gbx->hide();
 		d->ui->loadlock1_put_cassette_finished_pbt->hide();
 		d->ui->loadlock2_put_cassette_finished_pbt->hide();
-		d->simulation_mode_enabled.store(d->ui->simulation_cbx->checkState() == Qt::CheckState::Checked);
-		connect(d->ui->simulation_cbx, &QCheckBox::stateChanged, this,
-			[d](int state)
-			{
-				d->simulation_mode_enabled.store(state == Qt::CheckState::Checked);
-			});
 
 		d->ui->spb_min->hide();
 		d->ui->spb_max->hide();
@@ -11047,7 +10580,7 @@ namespace FC{
 		std::shared_ptr<FortrendTMCavitySubsystem> tm = d->kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		d->plcauto = tm->getPlcMode();
 
-		if(!d->isSimulationModeEnabled())
+		if(d->ui->simulation_cbx->checkState() != Qt::CheckState::Checked)
 		{
 			if (!isEnabledplcAuto()) {
 				QMessageBox::warning(this, "警告", "PLC不在自动模式.");
