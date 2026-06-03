@@ -1,0 +1,37 @@
+
+Source LP2 Group 0 -> LLA FeedingSlot 2  BlankingSlot  1 taskID 0  Status UNKNOWN  PM2 
+Source LP2 Group 1 -> LLB FeedingSlot 2  BlankingSlot  1 taskID 1  Status UNKNOWN  PM2 
+Source LP2 Group 2 -> LLA FeedingSlot 2  BlankingSlot  1 taskID 2  Status UNKNOWN  PM2 
+Source LP2 Group 3 -> LLB FeedingSlot 2  BlankingSlot  1 taskID 3  Status UNKNOWN  PM2 
+Source LP2 Group 4 -> LLA FeedingSlot 2  BlankingSlot  1 taskID 4  Status UNKNOWN  PM2
+
+
+1.lla上料task0     llb上料task1
+2.wtr-a llA取task0  --->放PM2
+3.wtr-b LLB取task1在手,待上pm2
+4.task0，pm2工艺完成
+4.wtr-a空手取pm2,task0 ,wtr-b task1 放pm2 （交互料）
+5.wtr-a task0放LLA走LLa下料
+6.wtr-b，wtr-a都是空手
+7.wtr-a 到llA取task2在手,待上pm2
+8.task1，pm2工艺完成
+9.wtr-b空手取pm2,task1 ,wtr-a task2 放pm2 （交互料）
+10.wtr-b task1放LLb走LLb下料
+11.wtr-b，wtr-a都是空手
+
+12.wtr-b 到LLB取task3在手，待上pm2
+13.task2，pm2工艺完成
+14.wtr-a空手取pm2,task2 ,wtr-b task3 放pm2 （交互料）
+15.wtr-a task2放LLA走LLa下料
+16.wtr-b，wtr-a都是空手
+17.wtr-a 到llA取task4在手,待上pm2
+18.task3，pm2工艺完成
+19.wtr-b空手取pm2,task3 ,wtr-a task4 放pm2 （交互料）
+20.wtr-b task3放LLb走LLb下料
+21.wtr-b，wtr-a都是空手
+22.LLA,LLBD都没有料可上，停止上料
+23.task4，pm2工艺完成
+25.wtr-a取pm2，放LLA
+26.走LLA下料
+
+

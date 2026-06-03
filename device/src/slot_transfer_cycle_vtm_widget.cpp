@@ -683,6 +683,7 @@ namespace FC{
 
 		struct PM2ScheduleSnapshot {
 			bool hasWaferPm = false;
+			bool pm2CraftInProgress = false;
 			bool armAHasWafer = false;
 			bool armAHasPending = false;
 			bool armBHasWafer = false;
@@ -995,6 +996,11 @@ namespace FC{
 				}),
 			loadlockReturnPendingTasks.end());
 		snapshot.returnPendingCount = static_cast<int>(loadlockReturnPendingTasks.size());
+		snapshot.pm2CraftInProgress =
+			snapshot.hasWaferPm &&
+			snapshot.pm2PendingCount > 0 &&
+			snapshot.pm2CompletedCount == 0 &&
+			snapshot.returnPendingCount == 0;
 
 		snapshot.armAHasPending = snapshot.armAHasWafer &&
 			std::any_of(pm2PendingTasksLocal.begin(), pm2PendingTasksLocal.end(), [](const UnifiedWaferTask& t) { return t.arm == 0; });
@@ -1042,8 +1048,28 @@ namespace FC{
 		{
 			waitReason = "PM2待回片优先";
 		}
+		else if (snapshot.pm2CompletedCount > 0)
+		{
+			waitReason = "PM2已有完成片待取";
+		}
 		else if (!snapshot.armAHasWafer && !snapshot.armBHasWafer)
 		{
+			if (snapshot.pm2CraftInProgress)
+			{
+				reason =
+					"reason=PM2加工中且双手为空,允许LL预装下一片" +
+					std::string(", pm2Has=") + std::to_string(static_cast<int>(snapshot.hasWaferPm)) +
+					", pm2Crafting=" + std::to_string(static_cast<int>(snapshot.pm2CraftInProgress)) +
+					", armA_has=" + std::to_string(static_cast<int>(snapshot.armAHasWafer)) +
+					", armA_pending=" + std::to_string(static_cast<int>(snapshot.armAHasPending)) +
+					", armB_has=" + std::to_string(static_cast<int>(snapshot.armBHasWafer)) +
+					", armB_pending=" + std::to_string(static_cast<int>(snapshot.armBHasPending)) +
+					", pending=" + std::to_string(snapshot.pm2PendingCount) +
+					", completed=" + std::to_string(snapshot.pm2CompletedCount) +
+					", return_pending=" + std::to_string(snapshot.returnPendingCount) +
+					", expectedPmArm=" + std::to_string(expectedPmArm);
+				return false;
+			}
 			waitReason = "PM2有片且双手为空,应先从PM2取片";
 			if (expectedPmArm < 0)
 			{
@@ -1060,14 +1086,10 @@ namespace FC{
 			waitReason = "PM2应执行B取A放";
 			expectedPmArm = 1;
 		}
-		else if (snapshot.pm2CompletedCount > 0)
-		{
-			waitReason = "PM2已有完成片待取";
-		}
-
 		reason =
 			"reason=" + waitReason +
 			", pm2Has=" + std::to_string(static_cast<int>(snapshot.hasWaferPm)) +
+			", pm2Crafting=" + std::to_string(static_cast<int>(snapshot.pm2CraftInProgress)) +
 			", armA_has=" + std::to_string(static_cast<int>(snapshot.armAHasWafer)) +
 			", armA_pending=" + std::to_string(static_cast<int>(snapshot.armAHasPending)) +
 			", armB_has=" + std::to_string(static_cast<int>(snapshot.armBHasWafer)) +
@@ -1086,6 +1108,11 @@ namespace FC{
 			return false;
 		}
 
+		if (!snapshot.pm2CraftInProgress)
+		{
+			return false;
+		}
+
 		if (snapshot.returnPendingCount > 0 || snapshot.pm2CompletedCount > 0)
 		{
 			return false;
@@ -1096,17 +1123,7 @@ namespace FC{
 			return false;
 		}
 
-		if (repickArm == 0)
-		{
-			return snapshot.pm2PendingCount > 0;
-		}
-
-		if (repickArm == 1)
-		{
-			return snapshot.pm2PendingCount > 0;
-		}
-
-		return false;
+		return repickArm == 0 || repickArm == 1;
 	}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const
@@ -3876,7 +3893,8 @@ namespace FC{
 									Sleep(200);
 									break;
 								}
-								if (shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
+								const bool allowPreloadWaitForCraft = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, desiredArm);
+								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
 								{
 									static int wait_count = 0;
 									if ((wait_count++ % 20) == 0)
@@ -3888,6 +3906,12 @@ namespace FC{
 									loadlock1_auto_step = 950;
 									Sleep(200);
 									break;
+								}
+								if (allowPreloadWaitForCraft)
+								{
+									logInform(lk1->getName().c_str(),
+										"step 1051命中预装窗口: PM2加工中,允许LLA按固定arm=%d预装下一片等待交换.",
+										desiredArm);
 								}
 
 								int targetArm = desiredArm;
@@ -5485,7 +5509,8 @@ namespace FC{
 									Sleep(200);
 									break;
 								}
-								if (shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
+								const bool allowPreloadWaitForCraft = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, desiredArm);
+								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
 								{
 									static int wait_count = 0;
 									if ((wait_count++ % 20) == 0)
@@ -5497,6 +5522,12 @@ namespace FC{
 									loadlock2_auto_step = 950;
 									Sleep(200);
 									break;
+								}
+								if (allowPreloadWaitForCraft)
+								{
+									logInform(lk2->getName().c_str(),
+										"step 1051命中预装窗口: PM2加工中,允许LLB按固定arm=%d预装下一片等待交换.",
+										desiredArm);
 								}
 
 								int targetArm = desiredArm;
