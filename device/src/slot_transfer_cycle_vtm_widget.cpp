@@ -265,10 +265,13 @@ namespace FC{
 
 		// 统一组装PM2调度快照，供1051和立即补取等发送前判断复用同一套上下文。
 		bool tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot);
+
 		// 把“当前LL是否必须让PM2优先”集中在一处，避免不同step各写一套规则。
 		bool shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const;
+
 		// 发送LL取片请求前统一检查目标手臂是否已被实物、挂起请求或当前robot_step占用。
 		bool isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const;
+
 
 		int getOtherArm(const int arm) const
 		{
@@ -691,7 +694,7 @@ namespace FC{
 		RobotTransferRequest robot_get_from_lla;
 		RobotTransferRequest robot_get_from_llb;
 		LLImmediateRepickState llaImmediateRepick;
-		LLImmediateRepickState llbImmediateRepick;
+		LLImmediateRepickState llbImmediateRepick;// 记录LL回片后是否需要立即补取，以及补取的taskId、手臂和槽位信息
 
 		// PM放片请求：从机械手放到PM
 		RobotTransferRequest robot_put_to_pm1;
@@ -3741,6 +3744,7 @@ namespace FC{
 								Sleep(200);
 								break;
 							}
+
 							if (!tryGetPmHasWafer(pm2Subsystem, "PM2", pm2HasWafer))
 							{
 								Sleep(200);
@@ -5302,6 +5306,7 @@ namespace FC{
 
 				case 1051:
 				{
+					UpdateLLBSubTransferDatas();
 					if (wtr == nullptr)
 					{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
@@ -5346,14 +5351,14 @@ namespace FC{
 								Sleep(200);
 								break;
 							}
+							// 读取 PM 占片状态是否成功，成功读到了 PM 状态，继续取片流程；否则，等待 200ms 后重试
 							if (!tryGetPmHasWafer(pm2Subsystem, "PM2", pm2HasWafer))
 							{
 								Sleep(200);
 								break;
 							}
 
-							const int desiredArm = loadLockBPendingTasks.at(0).arm;
-
+							const int desiredArm = loadLockBPendingTasks.at(0).arm;//任务手臂
 							const bool armAHasWafer = wtr->hasObject(0);
 							const bool armBHasWafer = wtr->hasObject(1);
 
@@ -5361,31 +5366,32 @@ namespace FC{
 								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
 								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
 
+							// 如果 PM2 有片，且 WTR 有片，且任务手臂与 WTR 手臂不一致，说明是回片后立即补取场景
 							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
 								llbImmediateRepick.reset();
 
-								const bool hasSingleArmBusy = armAHasWafer ^ armBHasWafer;
+								const bool hasSingleArmBusy = armAHasWafer ^ armBHasWafer;//是否有手臂有晶圆
 
-								const int occupiedArm = armAHasWafer ? 0 : (armBHasWafer ? 1 : -1);
+								const int occupiedArm = armAHasWafer ? 0 : (armBHasWafer ? 1 : -1);//有晶圆的手臂
 
-								const int emptyArm = getOtherArm(occupiedArm);
+								const int emptyArm = getOtherArm(occupiedArm);//空闲手臂
 
-								auto returnIt = loadLockBReturnPendingTasks.end();
+								auto returnIt = loadLockBReturnPendingTasks.end();//返回任务
 
-								auto pendingIt = loadLockBPendingTasks.end();
+								auto pendingIt = loadLockBPendingTasks.end();//待处理任务
 
-								if (hasSingleArmBusy && occupiedArm >= 0 && emptyArm >= 0)
+								if (hasSingleArmBusy && occupiedArm >= 0 && emptyArm >= 0)//是否有手臂有晶圆，且有空闲手臂
 								{
 									returnIt = std::find_if(loadLockBReturnPendingTasks.begin(), loadLockBReturnPendingTasks.end(),
-										[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
+										[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });//返回任务
 
-									if (!loadLockBPendingTasks.empty())
+									if (!loadLockBPendingTasks.empty())//是否有待处理任务
 									{
 										pendingIt = loadLockBPendingTasks.begin();
 										if (pendingIt->arm != emptyArm)
 										{
-											taskManager.updateTaskArm(pendingIt->taskId, emptyArm);
+											taskManager.updateTaskArm(pendingIt->taskId, emptyArm);//更新任务手臂
 											pendingIt->arm = emptyArm;
 											logInform(lk2->getName().c_str(), "LLB回片后立即补取: 动态分配空闲手臂%d给任务%d", emptyArm, pendingIt->taskId);
 										}
@@ -5393,6 +5399,7 @@ namespace FC{
 
 								}
 
+								// 如果有返回任务，且有待处理任务，说明是回片后立即补取场景
 								if (returnIt != loadLockBReturnPendingTasks.end() && pendingIt != loadLockBPendingTasks.end())
 								{
 									llbImmediateRepick.enabled = true;
@@ -5427,6 +5434,7 @@ namespace FC{
 							}
 							else
 							{
+								// 如果 PM2 无片，且 WTR 无片，说明是正常取片场景
 								PM2ScheduleSnapshot pm2Snapshot;
 								std::string pm2WaitReason;
 								if (!tryBuildPm2ScheduleSnapshot(pm2Snapshot))
@@ -5667,6 +5675,7 @@ namespace FC{
 #pragma region 允许放晶圆流程
 				case 2000:
 				{
+					UpdateLLBSubTransferDatas();
 					//放片原则，1.是上进下出， 只能放下层的， 2.是上下两层都可放，原则从下到上放，默认第2种
 					//放回到指定ll,对应的槽
 					if(lk2== nullptr)
@@ -5972,6 +5981,7 @@ namespace FC{
 					taskManager.updateTaskStatus(loadLockBReturnPendingTasks.front().taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
 					UpdateLLBSubTransferDatas();
 
+					// 检测是否满足立即补取条件，满足则直接进入补取流程，不满足则进入正常收尾流程
 					if (!llbImmediateRepick.enabled)
 					{
 						loadlock2_auto_step = 2071;
