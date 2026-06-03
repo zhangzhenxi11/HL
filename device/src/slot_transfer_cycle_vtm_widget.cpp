@@ -258,9 +258,16 @@ namespace FC{
 			return simulation_mode_enabled.load();
 		}
 
+		bool ensurePm2SubsystemReady(std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem);
+
+		// 统一读取PM占片状态，避免各状态机分支重复判空和打印不一致的失败日志。
 		bool tryGetPmHasWafer(const std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem, const char* pmName, bool& hasWafer) const;
-		bool tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot) const;
+
+		// 统一组装PM2调度快照，供1051和立即补取等发送前判断复用同一套上下文。
+		bool tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot);
+		// 把“当前LL是否必须让PM2优先”集中在一处，避免不同step各写一套规则。
 		bool shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const;
+		// 发送LL取片请求前统一检查目标手臂是否已被实物、挂起请求或当前robot_step占用。
 		bool isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const;
 
 		int getOtherArm(const int arm) const
@@ -881,6 +888,34 @@ namespace FC{
 		return false;
 	}
 
+	bool QSlotTransferCycleVTMWidgetPrivate::ensurePm2SubsystemReady(std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem)
+	{
+		pmSubsystem.reset();
+		if (kernel == nullptr)
+		{
+			logWarn("PM2", "获取PM2子系统失败: kernel为空.");
+			return false;
+		}
+
+		if (pm2 == nullptr)
+		{
+			pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+			if (pm2 != nullptr)
+			{
+				logInform("PM2", "检测到成员pm2为空，已重新获取PM2子系统.");
+			}
+		}
+
+		pmSubsystem = pm2;
+		if (pmSubsystem == nullptr)
+		{
+			logWarn("PM2", "获取PM2子系统失败: 成员pm2为空，刷新后仍为空.");
+			return false;
+		}
+
+		return true;
+	}
+
 	bool QSlotTransferCycleVTMWidgetPrivate::tryGetPmHasWafer(const std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem, const char* pmName, bool& hasWafer) const
 	{
 		hasWafer = false;
@@ -915,7 +950,7 @@ namespace FC{
 		return true;
 	}
 
-	bool QSlotTransferCycleVTMWidgetPrivate::tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot) const
+	bool QSlotTransferCycleVTMWidgetPrivate::tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot)
 	{
 		snapshot = PM2ScheduleSnapshot{};
 		if (wtr == nullptr)
@@ -924,7 +959,14 @@ namespace FC{
 			return false;
 		}
 
-		if (!tryGetPmHasWafer(pm2, "PM2", snapshot.hasWaferPm))
+		std::shared_ptr<FortrendPMCavitySubsystem> pm2Subsystem;
+		if (!ensurePm2SubsystemReady(pm2Subsystem))
+		{
+			logWarn("PM2", "构建PM2调度快照失败: PM2子系统未就绪.");
+			return false;
+		}
+
+		if (!tryGetPmHasWafer(pm2Subsystem, "PM2", snapshot.hasWaferPm))
 		{
 			return false;
 		}
@@ -3682,7 +3724,12 @@ namespace FC{
 								break;
 							}
 
-							auto pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+							std::shared_ptr<FortrendPMCavitySubsystem> pm2Subsystem;
+							if (!ensurePm2SubsystemReady(pm2Subsystem))
+							{
+								Sleep(200);
+								break;
+							}
 							bool pm2HasWafer = false;
 							if (pm2_exchange_in_flight.load())
 							{
@@ -3694,7 +3741,7 @@ namespace FC{
 								Sleep(200);
 								break;
 							}
-							if (!tryGetPmHasWafer(pm2, "PM2", pm2HasWafer))
+							if (!tryGetPmHasWafer(pm2Subsystem, "PM2", pm2HasWafer))
 							{
 								Sleep(200);
 								break;
@@ -5282,7 +5329,12 @@ namespace FC{
 						{
 							logInform(lk2->getName().c_str(), "step:1051,loadLockB PendingTasks 有片,触发Robot取片流程.");
 
-							auto pm2 = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
+							std::shared_ptr<FortrendPMCavitySubsystem> pm2Subsystem;
+							if (!ensurePm2SubsystemReady(pm2Subsystem))
+							{
+								Sleep(200);
+								break;
+							}
 							bool pm2HasWafer = false;
 							if (pm2_exchange_in_flight.load())
 							{
@@ -5294,7 +5346,7 @@ namespace FC{
 								Sleep(200);
 								break;
 							}
-							if (!tryGetPmHasWafer(pm2, "PM2", pm2HasWafer))
+							if (!tryGetPmHasWafer(pm2Subsystem, "PM2", pm2HasWafer))
 							{
 								Sleep(200);
 								break;
