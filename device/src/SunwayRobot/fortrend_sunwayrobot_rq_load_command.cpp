@@ -103,12 +103,23 @@ namespace FC{
 
 		logInform(robot->getName().c_str(), Poco::format("查询手指%s有无晶圆命令开始执行.", str_arm).c_str());
 
-		clearRobotMessage();
 		sendRequest(command);
 
-		std::string res = recvResponseRobotMessage(timeout);
+		const std::string ackPrefix = "ACK:LOAD/" + str_arm + ";";
+		const std::string context = "RQLoad-" + str_arm;
+		std::string res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:LOAD/", "ERR", "NAK" }, context);
 
-		if (res.find("ACK") == std::string::npos && res.find("QRY:LOAD") == std::string::npos)
+		if (res.empty())
+		{
+			error_message = "机械手返回指令超时";
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+
+		if (res.find(ackPrefix) == std::string::npos && res.find("RPS:LOAD/") == std::string::npos)
 		{
 			logError(robot->getName().c_str(), Poco::format("执行查询手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 
@@ -156,7 +167,8 @@ namespace FC{
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ "RPS:LOAD/", "ERR", "NAK" }, context + "-RPS");
 				Sleep(200);
 			}
 

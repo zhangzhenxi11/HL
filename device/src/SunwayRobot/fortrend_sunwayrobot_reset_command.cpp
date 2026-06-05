@@ -78,8 +78,9 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 
 	logInform(getName().c_str(), "复位命令开始执行.");
 	std::string res;
+	const std::string ackPrefix = "ACK:CLEAR;";
+	const std::string commandContext = "Reset";
 	//send
-	clearRobotMessage();
 	if (!sendRequest("ALARM:CLEAR;"))
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, 
@@ -92,7 +93,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(60);
 
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ ackPrefix, "RPS:CLEAR;", "ERR", "NAK" }, commandContext);
 
 	Sleep(200);
 	while (true)
@@ -112,12 +114,13 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:CLEAR;", "ERR", "NAK" }, commandContext);
 		Sleep(200);
 	}
 	//2026-4-20:ack后面加上指令名称
 
-	if (res.find("ACK") == std::string::npos && res != "RPS:CLEAR;")
+	if (res.find(ackPrefix) == std::string::npos && res != "RPS:CLEAR;")
 	{
 		logError(robot->getName().c_str(), "机械手复位命令发生错误.");
 
@@ -157,7 +160,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	else
 	{
 		//clearRobotMessage();
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "RPS:CLEAR;", "ERR", "NAK" }, commandContext + "-RPS");
 		//握手了
 		auto startTime2 = std::chrono::high_resolution_clock::now();
 		auto timeout3 = std::chrono::seconds(30);
@@ -179,7 +183,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ "RPS:CLEAR;", "ERR", "NAK" }, commandContext + "-RPS");
 			Sleep(200);
 		}
 

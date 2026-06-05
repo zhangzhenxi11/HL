@@ -1,4 +1,4 @@
-﻿﻿/**
+/**
 * @file     fortrend_sunwayrobot_reset_command.h
 * @brief    reset command for SunwayRobot
 * @author   xielonghua
@@ -79,6 +79,10 @@ namespace FC{
 		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_SAFE_ALARM, Poco::format("%s 查询手指有无晶圆工位ID只能是20或者21.", robot->getName()), this);
 		//}
 
+		if (robot->getBusyState())
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s 处于忙碌中.", robot->getName()), this);
+		}
 
 		//if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(getStation()))
 		//{
@@ -100,7 +104,7 @@ namespace FC{
 		int timeout = command_config->getInt("timeout", 100000);
 		if (timeout < 10){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE, 
-		std::string str_arm = (d->arm == 0) ? "A" : "B";
+				Poco::format("超时: %s 查询手指有位晶圆超时参数错误.", robot->getName()), this);
 		}
 		std::string command = "";
 		int error_type = 1;
@@ -117,12 +121,15 @@ namespace FC{
 		command.append(";");
 
 		logInform(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令开始执行.", str_arm).c_str());
-		command.append(std::to_string(d->arm));
-		clearRobotMessage();
-		sendRequest(command);
 
-		std::string res = recvResponseRobotMessage(timeout);
-		if (res != std::string("ACK;") && res.find("RPS:CHECKWAFER") == std::string::npos)
+		sendRequest(command);
+		const std::string ackPrefix = "ACK:" + command.substr(4);
+		const std::string commandContext = "CheckLoad-" + str_arm;
+
+		std::string res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:CHECKWAFER/", "ERR", "NAK" }, commandContext);
+		//2026-4-20
+		if (res.find(ackPrefix) == std::string::npos && res.find("RPS:CHECKWAFER") == std::string::npos)
 		{
 			logError(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 			
@@ -158,7 +165,7 @@ namespace FC{
 				auto currentTime = std::chrono::high_resolution_clock::now();
 				auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-				if (res != std::string("ACK;"))
+				if (res.find("ACK") == std::string::npos)
 				{
 					break;
 				}
@@ -170,7 +177,8 @@ namespace FC{
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ "RPS:CHECKWAFER/", "ERR", "NAK" }, commandContext + "-RPS");
 				Sleep(200);
 			}
 
@@ -231,7 +239,7 @@ namespace FC{
 					robot_cass->setMapping(2, Cassette::Mapping::Empty);
 				}
 				else
-					logInform(robot->getName().c_str(), Poco::format("查询手指%s有晶圆.", str_arm).c_str());
+				{
 					robot->setObject(1, false);
 					robot_cass->setMapping(2, Cassette::Mapping::Unknown);
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, 

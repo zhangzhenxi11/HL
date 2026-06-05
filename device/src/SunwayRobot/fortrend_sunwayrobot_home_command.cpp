@@ -66,9 +66,10 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 	std::string res;
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(30);
+	const std::string ackPrefix = "ACK:" + command.substr(4);
+	const std::string commandContext = "Home";
 
 	Sleep(500);
-	clearRobotMessage();
 	if (!sendRequest(command))
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
@@ -78,7 +79,8 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 		return RunResult::RUN_FAILD;
 	};
 	logInform(sub->getName().c_str(), "机械手HOME命令开始.");
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ ackPrefix, "RPS:ALLAXISHOMESAFE;", "ERR", "NAK" }, commandContext);
 
 	while (true)
 	{
@@ -97,11 +99,12 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:ALLAXISHOMESAFE;", "ERR", "NAK" }, commandContext);
 		Sleep(200);
 	}
 
-	if (res.find("ACK") == std::string::npos && res!= std::string("RPS:ALLAXISHOMESAFE;"))
+	if (res.find(ackPrefix) == std::string::npos && res!= std::string("RPS:ALLAXISHOMESAFE;"))
 	{
 		logError(sub->getName().c_str(), "机械手HOME时存在一个错误.");
 		int error_type = 1;
@@ -130,8 +133,8 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 
 	else
 	{
-		clearRobotMessage();
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "RPS:ALLAXISHOMESAFE;", "ERR", "NAK" }, commandContext + "-RPS");
 
 		auto startTime2 = std::chrono::high_resolution_clock::now();
 		auto timeout3 = std::chrono::seconds(60);
@@ -153,7 +156,8 @@ SunwayRobotHomeCommand::RunResult SunwayRobotHomeCommand::onRun() throw(KernelEx
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ "RPS:ALLAXISHOMESAFE;", "ERR", "NAK" }, commandContext + "-RPS");
 			Sleep(200);
 		}
 

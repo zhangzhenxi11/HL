@@ -76,10 +76,12 @@ public:
 		
 		auto startTime = std::chrono::high_resolution_clock::now();
 		auto timeout2 = std::chrono::seconds(30);
-		clearRobotMessage();
+		const std::string ackPrefix = "ACK:" + macro.substr(4);
+		const std::string commandContext = "SetSpeed";
 		sendRequest(macro);
 		
-		std::string res = recvResponseRobotMessage(timeout);
+		std::string res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:RUN_SPEED;", "ERR", "NAK" }, commandContext);
 
 		while (true)
 		{
@@ -98,18 +100,20 @@ public:
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ ackPrefix, "RPS:RUN_SPEED;", "ERR", "NAK" }, commandContext);
 			Sleep(200);
 		}
 
 
-		if (res.find("ACK") != std::string::npos || res == "RPS:RUN_SPEED;")
+		if (res.find(ackPrefix) != std::string::npos || res == "RPS:RUN_SPEED;")
 		{
 
 			auto startTime2 = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(10);
 
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ "RPS:RUN_SPEED;", "ERR", "NAK" }, commandContext + "-RPS");
 
 			while (true)
 			{
@@ -128,7 +132,8 @@ public:
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ "RPS:RUN_SPEED;", "ERR", "NAK" }, commandContext + "-RPS");
 				Sleep(200);
 			}
 			std::string recvMessage = "RPS:RUN_SPEED;";

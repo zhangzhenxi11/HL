@@ -80,13 +80,15 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(30);
 
-	clearRobotMessage();
 	sendRequest(command);
+	const std::string servoAckPrefix = "ACK:" + command.substr(4);
+	const std::string servoContext = "Update-Servos";
 
 	logInform(sub->getName().c_str(), "机械手上使能命令开始.");
 	Sleep(500);
 
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ servoAckPrefix, "RPS:SERVOS;", "ERR", "NAK" }, servoContext);
 	while (true)
 	{
 		auto currentTime = std::chrono::high_resolution_clock::now();
@@ -104,11 +106,12 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ servoAckPrefix, "RPS:SERVOS;", "ERR", "NAK" }, servoContext);
 		Sleep(200);
 	}
 
-	if (res.find("ACK") == std::string::npos && res != "RPS:SERVOS;")
+	if (res.find(servoAckPrefix) == std::string::npos && res != "RPS:SERVOS;")
 	{
 		logError(sub->getName().c_str(), "上使能命令发生错误.");
 
@@ -134,7 +137,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	}
 	else
 	{
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "RPS:SERVOS;", "ERR", "NAK" }, servoContext + "-RPS");
 
 		auto startTime2 = std::chrono::high_resolution_clock::now();
 		auto timeout3 = std::chrono::seconds(30);
@@ -155,7 +159,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ "RPS:SERVOS;", "ERR", "NAK" }, servoContext + "-RPS");
 			Sleep(200);
 		}
 
@@ -177,9 +182,9 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 	}
 	//ARM A
 	command = "QRY:LOAD/A;";
-	clearRobotMessage();
 	sendRequest(command);
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ "ACK:LOAD/A;", "RPS:LOAD/", "ERR", "NAK" }, "Update-Load-A");
 
 	while (true)
 	{
@@ -198,7 +203,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "ACK:LOAD/A;", "RPS:LOAD/", "ERR", "NAK" }, "Update-Load-A");
 		logInform(sub->getName().c_str(), "查询A机械手有无片子ACK：%s", res.c_str());
 		Sleep(10);
 	}
@@ -228,7 +234,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "RPS:LOAD/", "ERR", "NAK" }, "Update-Load-A-RPS");
 		logInform(sub->getName().c_str(), "查询A机械手有无片子RPS：%s", res.c_str());
 		Sleep(20);
 	}
@@ -252,9 +259,9 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 
 	//ARM B
 	command = "QRY:LOAD/B;";
-	clearRobotMessage();
 	sendRequest(command);
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ "ACK:LOAD/B;", "RPS:LOAD/", "ERR", "NAK" }, "Update-Load-B");
 
 	while (true)
 	{
@@ -273,7 +280,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "ACK:LOAD/B;", "RPS:LOAD/", "ERR", "NAK" }, "Update-Load-B");
 		logInform(sub->getName().c_str(), "查询B机械手有无片子ACK：%s", res.c_str());
 		Sleep(10);
 	}
@@ -299,7 +307,8 @@ SunwayRobotUpdateCommand::RunResult SunwayRobotUpdateCommand::onRun() throw(Kern
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "RPS:LOAD/", "ERR", "NAK" }, "Update-Load-B-RPS");
 		logInform(sub->getName().c_str(), "查询B机械手有无片子RPS：%s", res.c_str());
 		Sleep(20);
 	}

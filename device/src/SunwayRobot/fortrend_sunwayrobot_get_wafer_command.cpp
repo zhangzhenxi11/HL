@@ -242,7 +242,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			auto startTime = std::chrono::high_resolution_clock::now();
 			auto timeout2 = std::chrono::seconds(120); //--->60 改成120
 
-			clearRobotMessage();
 			if (!sendRequest(command))
 			{
 				AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
@@ -252,8 +251,10 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 				return RunResult::RUN_FAILD;
 			};
 
-			
-			res = recvResponseRobotMessage(timeout);
+			const std::string ackPrefix = "ACK:" + command.substr(4);
+			const std::string commandContext = "GetWafer-" + std::to_string(getStation()->getStationId(robot->getName())) + "-" + str_arm;
+			res = recvResponseRobotMessageMatching(timeout,
+				{ ackPrefix, "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext);
 			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
 
 			while (true)
@@ -273,7 +274,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ ackPrefix, "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext);
 				logInform(robot->getName().c_str(), "机械手取晶圆ACK：%s", res.c_str());
 				Sleep(10);
 			}
@@ -309,7 +311,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			else
 			{//"ACK;"
 				
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext + "-RPS");
 				//等待机械手返回指令
 				auto startTime2 = std::chrono::high_resolution_clock::now();
 				auto timeout3 = std::chrono::seconds(120);
@@ -331,7 +334,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						setAlarm(alarm);
 						return RunResult::RUN_FAILD;
 					}
-					res = recvResponseRobotMessage(timeout);
+					res = recvResponseRobotMessageMatching(timeout,
+						{ "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext + "-RPS");
 					Sleep(20);
 				}
 				logInform(robot->getName().c_str(), "获取取晶圆RPS：%s", res.c_str());
@@ -415,9 +419,11 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 			d->busy = false;
 			robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
 
-			clearRobotMessage();
 			sendRequest(command);
-			res = recvResponseRobotMessage(timeout);
+			const std::string ackPrefix = "ACK:" + command.substr(4);
+			const std::string commandContext = "GetWafer-PM-" + std::to_string(stationid) + "-" + str_arm;
+			res = recvResponseRobotMessageMatching(timeout,
+				{ ackPrefix, "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext);
 			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
 
 			auto startTime = std::chrono::high_resolution_clock::now();
@@ -440,13 +446,14 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ ackPrefix, "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext);
 				Sleep(20);
 			}
 
 			logInform(robot->getName().c_str(), "取晶圆ACK：%s", res.c_str());
 
-			if (res.find("ACK") == std::string::npos)
+			if (res.find(ackPrefix) == std::string::npos)
 			{
 				logError(robot->getName().c_str(), "执行取晶圆时存在一个错误.");
 
@@ -500,7 +507,8 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 						setAlarm(alarm);
 						return RunResult::RUN_FAILD;
 					}
-					res = recvResponseRobotMessage(timeout);
+					res = recvResponseRobotMessageMatching(timeout,
+						{ "RPS:GETOBJECT;", "ERR", "NAK" }, commandContext + "-RPS");
 					Sleep(200);
 				}
 				logInform(robot->getName().c_str(), "取晶圆RPS：%s", res.c_str());

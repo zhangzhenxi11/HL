@@ -122,12 +122,14 @@ namespace FC{
 
 		logInform(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令开始执行.", str_arm).c_str());
 
-		clearRobotMessage();
 		sendRequest(command);
+		const std::string ackPrefix = "ACK:" + command.substr(4);
+		const std::string commandContext = "CheckLoad-" + str_arm;
 
-		std::string res = recvResponseRobotMessage(timeout);
+		std::string res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:CHECKWAFER/", "ERR", "NAK" }, commandContext);
 		//2026-4-20
-		if (res.find("ACK") == std::string::npos && res.find("RPS:CHECKWAFER") == std::string::npos)
+		if (res.find(ackPrefix) == std::string::npos && res.find("RPS:CHECKWAFER") == std::string::npos)
 		{
 			logError(robot->getName().c_str(), Poco::format("回原后检测手指%s有无晶圆命令存在一个错误.", str_arm).c_str());
 			
@@ -175,7 +177,8 @@ namespace FC{
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ "RPS:CHECKWAFER/", "ERR", "NAK" }, commandContext + "-RPS");
 				Sleep(200);
 			}
 

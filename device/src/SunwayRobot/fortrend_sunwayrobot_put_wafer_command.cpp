@@ -84,8 +84,6 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::performRobotOp
 	const std::function<std::string()>& commandBuilder,
 	const std::function<bool()>& onSuccess)
 {
-
-	clearRobotMessage();
 	if (robotRobotOperation(commandBuilder) == RunResult::RUN_OK)
 	{
 		if (!onSuccess())
@@ -209,13 +207,15 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 
 	logInform(robot->getName().c_str(), "VerificationMessage:%s", VerificationMessage.c_str());
 
-	clearRobotMessage();
 	sendRequest(command);
+	const std::string ackPrefix = "ACK:" + command.substr(command.find(':') + 1);
+	const std::string commandContext = "PutWafer-" + prefix;
 
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(120);
 
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ ackPrefix, VerificationMessage, "ERR", "NAK" }, commandContext);
 	while (true)
 	{
 		auto currentTime = std::chrono::high_resolution_clock::now();
@@ -233,7 +233,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 			
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, VerificationMessage, "ERR", "NAK" }, commandContext);
 		Sleep(10);
 	}
 	logInform(robot->getName().c_str(), "ACK res:%s", res.c_str());
@@ -267,7 +268,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 	{
 		//等待机械手返回指令
 		//clearRobotMessage();
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ VerificationMessage, "ERR", "NAK" }, commandContext + "-RPS");
 		auto startTime2 = std::chrono::high_resolution_clock::now();
 		auto timeout3 = std::chrono::seconds(120);
 
@@ -288,7 +290,8 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOper
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ VerificationMessage, "ERR", "NAK" }, commandContext + "-RPS");
 			Sleep(10);
 		}
 		logInform(robot->getName().c_str(), "RPS: res:%s", res.c_str());

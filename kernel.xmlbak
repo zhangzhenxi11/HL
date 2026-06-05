@@ -34,7 +34,7 @@
 		</SMIF>
 		
 		<EFEMClient>
-			<port>13000</port>
+			<port>13001</port>
 			<!-- 192.168.127.123 -->
 			<ip>192.168.4.212</ip>
 			<!--自动通讯使能192.168.0.200-->			
@@ -598,7 +598,7 @@
 				<finish_address>MR29613</finish_address>
 				<error_code_address>DM5540</error_code_address>
 				<!-- LLB-机械手抓放料完成信号  -->
-				<safe_Interlock_signal_address> MR30301</safe_Interlock_signal_address>
+				<safe_Interlock_signal_address>MR30301</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
 			<MoveToSlot>

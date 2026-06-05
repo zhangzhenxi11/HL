@@ -18,7 +18,7 @@
 #include "Poco/StringTokenizer.h"
 #include "Poco/NumberParser.h"
 
-#include <queue>
+#include <deque>
 #include <condition_variable>
 #include <list>
 #include <mutex>
@@ -60,6 +60,9 @@ public:
 	void recvResponse2(unsigned int timeout_ms)throw(KernelException);
 
 	bool getBusyState();
+	std::string recvResponseRobotMessageMatching(unsigned int timeout_ms,
+		const std::vector<std::string>& expectedPrefixes,
+		const std::string& context) throw(KernelException);
 public:
 	int port = 1102;
 	std::string ip_address = "192.168.1.100";
@@ -79,7 +82,7 @@ public:
 	bool isConnected = false;
 
 	// 添加消息队列和同步机制
-	std::queue<std::string> messageQueue;
+	std::deque<std::string> messageQueue;
 	std::mutex queueMutex;
 	std::condition_variable queueCV;
 
@@ -476,7 +479,7 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 			{
 				std::lock_guard<std::mutex> lock(queueMutex);
 				logInform1(name.c_str(), "Rcv_Format_: %s", message.c_str());
-				messageQueue.push(message);// 这里message不包含\r
+				messageQueue.push_back(message);// 这里message不包含\r
 			}
 			queueCV.notify_one();
 		}
@@ -530,6 +533,71 @@ void SunwaySubSystemHelperPrivate::recvResponse2(unsigned int timeout_ms)throw(K
 
 bool SunwaySubSystemHelperPrivate::getBusyState(){
 	return is_busy;
+}
+
+std::string SunwaySubSystemHelperPrivate::recvResponseRobotMessageMatching(
+	unsigned int timeout_ms,
+	const std::vector<std::string>& expectedPrefixes,
+	const std::string& context) throw(KernelException)
+{
+	auto matchesExpectedMessage = [&expectedPrefixes](const std::string& message) {
+		if (expectedPrefixes.empty())
+		{
+			return true;
+		}
+		return std::any_of(expectedPrefixes.begin(), expectedPrefixes.end(),
+			[&message](const std::string& prefix) {
+				return !prefix.empty() && message.find(prefix) == 0;
+			});
+	};
+
+	auto buildExpectedSummary = [&expectedPrefixes]() {
+		std::ostringstream oss;
+		for (size_t i = 0; i < expectedPrefixes.size(); ++i)
+		{
+			if (i > 0)
+			{
+				oss << ",";
+			}
+			oss << expectedPrefixes[i];
+		}
+		return oss.str();
+	};
+
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+	const std::string expectedSummary = buildExpectedSummary();
+	std::unique_lock<std::mutex> lock(queueMutex);
+	while (true)
+	{
+		for (auto it = messageQueue.begin(); it != messageQueue.end(); ++it)
+		{
+			if (!matchesExpectedMessage(*it))
+			{
+				continue;
+			}
+
+			auto msg = *it;
+			messageQueue.erase(it);
+			logInform1("WTR", "messageQueue pop[%s]: %s ", context.c_str(), msg.c_str());
+			return msg;
+		}
+
+		if (std::chrono::steady_clock::now() >= deadline)
+		{
+			if (!context.empty() && !expectedSummary.empty())
+			{
+				logInform1(name.c_str(), "messageQueue timeout[%s], expected: %s", context.c_str(), expectedSummary.c_str());
+			}
+			return "";
+		}
+
+		if (!context.empty() && !expectedSummary.empty() && !messageQueue.empty())
+		{
+			logInform1(name.c_str(), "messageQueue keep waiting[%s], expected: %s, head: %s",
+				context.c_str(), expectedSummary.c_str(), messageQueue.front().c_str());
+		}
+		queueCV.wait_until(lock, deadline);
+	}
 }
 
 void SunwaySubSystemHelperPrivate::configure(const std::shared_ptr<KernelConfiguration> & config){
@@ -639,37 +707,23 @@ std::shared_ptr<SunwaySubSystemHelper::DefinedError> SunwaySubSystemHelper::getE
 
 std::string SunwaySubSystemHelper::recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException)
 {
-	//return d->robotMessage;
+	return d->recvResponseRobotMessageMatching(timeout_ms, {}, "legacy");
+}
 
-	//if (!d->messageQueue.empty())
-	//{
-	//	auto msg = d->messageQueue.front();
-	//	d->messageQueue.pop();
-	//	logInform1("WTR", "messageQueue pop: %s ", msg.c_str());
-	//	return msg;
-	//}
-	//return ""; // 超时返回空
-
-
-	std::unique_lock<std::mutex> lock(d->queueMutex);
-	if (d->queueCV.wait_for(lock, std::chrono::milliseconds(timeout_ms),
-		[this] { return !d->messageQueue.empty(); }))
-	{
-		auto msg = d->messageQueue.front();
-		logInform1("WTR", "messageQueue pop: %s ", msg.c_str());
-		d->messageQueue.pop();
-		return msg;
-	}
-	return ""; // 超时返回空
+std::string SunwaySubSystemHelper::recvResponseRobotMessageMatching(
+	unsigned int timeout_ms,
+	const std::vector<std::string>& expectedPrefixes,
+	const std::string& context) throw(KernelException)
+{
+	return d->recvResponseRobotMessageMatching(timeout_ms, expectedPrefixes, context);
 }
 
 void SunwaySubSystemHelper::clearRobotMessage() throw(KernelException)
 {
-	//d->robotMessage = "";
-	//std::lock_guard<std::mutex> lock(d->queueMutex);
+	std::lock_guard<std::mutex> lock(d->queueMutex);
 	while (!d->messageQueue.empty())
 	{
-		d->messageQueue.pop();
+		d->messageQueue.pop_front();
 	}
 
 }

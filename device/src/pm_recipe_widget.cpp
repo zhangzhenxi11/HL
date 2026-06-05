@@ -1451,16 +1451,36 @@ namespace FC {
 		return pmContexts[pmIndex].isRunning.load();
 	}
 
+	void QPmRecipeWidget::startPmMotorRunInvoke(int pmIndex)
+	{
+		startPmMotorRun(pmIndex);
+	}
+
+	bool QPmRecipeWidget::isPmMotorRunningInvoke(int pmIndex) const
+	{
+		return isPmMotorRunning(pmIndex);
+	}
+
 	bool QPmRecipeWidget::hasPmMotorError(int pmIndex) const
 	{
 		if (pmIndex < 0 || pmIndex >= 4) return false;
 		return pmContexts[pmIndex].hasError.load();
 	}
 
+	bool QPmRecipeWidget::hasPmMotorErrorInvoke(int pmIndex) const
+	{
+		return hasPmMotorError(pmIndex);
+	}
+
 	std::string QPmRecipeWidget::getPmMotorError(int pmIndex) const
 	{
 		if (pmIndex < 0 || pmIndex >= 4) return "";
 		return pmContexts[pmIndex].errorMessage;
+	}
+
+	QString QPmRecipeWidget::getPmMotorErrorQString(int pmIndex) const
+	{
+		return QString::fromStdString(getPmMotorError(pmIndex));
 	}
 
 	void QPmRecipeWidget::onStopCycle()

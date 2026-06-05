@@ -1,4 +1,4 @@
-﻿﻿/**
+/**
 * @file     fortrend_sunwayrobot_reset_command.h
 * @brief    reset command for SunwayRobot
 * @author   xielonghua
@@ -78,8 +78,9 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 
 	logInform(getName().c_str(), "复位命令开始执行.");
 	std::string res;
+	const std::string ackPrefix = "ACK:CLEAR;";
+	const std::string commandContext = "Reset";
 	//send
-	clearRobotMessage();
 	if (!sendRequest("ALARM:CLEAR;"))
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE, 
@@ -92,7 +93,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	auto startTime = std::chrono::high_resolution_clock::now();
 	auto timeout2 = std::chrono::seconds(60);
 
-	res = recvResponseRobotMessage(timeout);
+	res = recvResponseRobotMessageMatching(timeout,
+		{ ackPrefix, "RPS:CLEAR;", "ERR", "NAK" }, commandContext);
 
 	Sleep(200);
 	while (true)
@@ -112,10 +114,13 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, "RPS:CLEAR;", "ERR", "NAK" }, commandContext);
 		Sleep(200);
 	}
-	if (res != "ACK;" && res != "RPS:CLEAR;")
+	//2026-4-20:ack后面加上指令名称
+
+	if (res.find(ackPrefix) == std::string::npos && res != "RPS:CLEAR;")
 	{
 		logError(robot->getName().c_str(), "机械手复位命令发生错误.");
 
@@ -155,7 +160,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 	else
 	{
 		//clearRobotMessage();
-		res = recvResponseRobotMessage(timeout);
+		res = recvResponseRobotMessageMatching(timeout,
+			{ "RPS:CLEAR;", "ERR", "NAK" }, commandContext + "-RPS");
 		//握手了
 		auto startTime2 = std::chrono::high_resolution_clock::now();
 		auto timeout3 = std::chrono::seconds(30);
@@ -165,7 +171,7 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			auto currentTime = std::chrono::high_resolution_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
 
-			if (res != std::string("ACK;"))
+			if (res.find("ACK") == std::string::npos)
 			{
 				break;
 			}
@@ -177,7 +183,8 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 				setAlarm(alarm);
 				return RunResult::RUN_FAILD;
 			}
-			res = recvResponseRobotMessage(timeout);
+			res = recvResponseRobotMessageMatching(timeout,
+				{ "RPS:CLEAR;", "ERR", "NAK" }, commandContext + "-RPS");
 			Sleep(200);
 		}
 
@@ -193,22 +200,24 @@ SunwayRobotResetCommand::RunResult SunwayRobotResetCommand::onRun() throw(Kernel
 			}
 			
 		}
+		//这里设置默认25比例速度
+		// 2026-5-23:不重设速度
+		//auto cmd_update = robot->createSetSpeedCommand(25);
+		//robot->startCommand(cmd_update);
+		//cmd_update->wait();
+		//if (cmd_update->hasError())
+		//{
+		//	AlarmMessage::Ptr alarm(new AlarmMessage(0, 0, "设置手臂速度命令执行失败！"));
+		//	setAlarm(alarm);
+		//	return RunResult::RUN_FAILD;
+		//}
 
-		auto cmd_update = robot->createSetSpeedCommand(5);
-		robot->startCommand(cmd_update);
-		cmd_update->wait();
-		if (cmd_update->hasError())
-		{
-		auto cmd1 = robot->createCheckLoadCommand(0);
-			setAlarm(alarm);
-			return RunResult::RUN_FAILD;
-		}
 		robot->setHasResetFlag(true);
 
 		//2026-3-30 增加checkload
 		/*	
 		auto cmd1 = robot->createCheckLoadCommand(0);
-		auto cmd2 = robot->createCheckLoadCommand(1);
+		robot->startCommand(cmd1);
 		cmd1->wait();
 		if (cmd1->hasError())
 		{

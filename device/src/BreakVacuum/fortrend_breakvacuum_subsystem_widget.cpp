@@ -54,7 +54,8 @@ namespace FC{
 			{
 				AlarmMessage::Ptr alarm = cmd->alarmMessage();
 				std::cout << "message:%s" << alarm->message().c_str() << std::endl;
-				logInform("AlarmMessage", "alarm type:%d,code:%d,message:%s,name:%s", alarm->type(), alarm->code(), alarm->message().c_str());
+				//2026-6-5 崩溃点
+				//logInform("AlarmMessage", "alarm type:%d,code:%d,message:%s,name:%s", alarm->type(), alarm->code(), alarm->message().c_str());
 				QString msg;
 				if (alarm == nullptr)
 				{

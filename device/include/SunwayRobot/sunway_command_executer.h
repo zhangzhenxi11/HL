@@ -1,4 +1,4 @@
-﻿/**
+/**
 * @file            sunway_command_executer.h
 * @brief           sunway command executer for fortrend
 * @author			kai
@@ -75,6 +75,10 @@ protected:
 	bool getBusyState();
 
 	std::string recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException);
+
+	std::string recvResponseRobotMessageMatching(unsigned int timeout_ms,
+		const std::vector<std::string>& expectedPrefixes,
+		const std::string& context = "") throw(KernelException);
 
 	void clearRobotMessage()throw(KernelException);
 

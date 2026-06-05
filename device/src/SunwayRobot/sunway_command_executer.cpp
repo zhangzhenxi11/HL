@@ -81,6 +81,14 @@ std::string SunwayCommandExecuter::recvResponseRobotMessage(unsigned int timeout
 	return d->helper->recvResponseRobotMessage(timeout_ms);
 }
 
+std::string SunwayCommandExecuter::recvResponseRobotMessageMatching(
+	unsigned int timeout_ms,
+	const std::vector<std::string>& expectedPrefixes,
+	const std::string& context) throw(KernelException)
+{
+	return d->helper->recvResponseRobotMessageMatching(timeout_ms, expectedPrefixes, context);
+}
+
 void SunwayCommandExecuter::clearRobotMessage() throw(KernelException)
 {
 	d->helper->clearRobotMessage();

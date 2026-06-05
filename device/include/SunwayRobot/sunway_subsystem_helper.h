@@ -1,4 +1,4 @@
-﻿/**
+/**
 * @file            sunway_subsystem_helper.h
 * @brief           helper for sunway  protocol subsystem
 * @author		   kai
@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 
 KERNEL_NS_BEGIN
 class KernelConfiguration;
@@ -66,6 +67,10 @@ public:
 	* 
 	*/
 	std::string recvResponseRobotMessage(unsigned int timeout_ms) throw(KernelException);
+
+	std::string recvResponseRobotMessageMatching(unsigned int timeout_ms,
+		const std::vector<std::string>& expectedPrefixes,
+		const std::string& context = "") throw(KernelException);
 
 	void clearRobotMessage()throw(KernelException);
 

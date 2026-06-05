@@ -102,9 +102,6 @@ namespace FC{
 		
 		auto startTime = std::chrono::high_resolution_clock::now();
 		auto timeout2 = std::chrono::seconds(30);
-		clearRobotMessage();
-
-		
 		if (str_arm == "A")
 		{
 			//ARM A
@@ -113,8 +110,11 @@ namespace FC{
 			command.append(";");
 			logInform(getSubsystem()->getName().c_str(),"command:%s", command);
 			sendRequest(command);
+			const std::string ackPrefix = "ACK:" + command.substr(4);
+			const std::string commandContext = "SetLoad-A";
 
-			std::string res = recvResponseRobotMessage(timeout);
+			std::string res = recvResponseRobotMessageMatching(timeout,
+				{ ackPrefix, "RPS:LOAD;", "ERR", "NAK" }, commandContext);
 
 			while (true)
 			{
@@ -133,11 +133,12 @@ namespace FC{
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ ackPrefix, "RPS:LOAD;", "ERR", "NAK" }, commandContext);
 				Sleep(200);
 			}
 
-			if (res.find("ACK") != std::string::npos || res == "RPS:LOAD;")
+			if (res.find(ackPrefix) != std::string::npos || res == "RPS:LOAD;")
 			{
 				if(str_state=="1")
 				{
@@ -167,8 +168,11 @@ namespace FC{
 			logInform(getSubsystem()->getName().c_str(), "command:%s", command);
 
 			sendRequest(command);
+			const std::string ackPrefix = "ACK:" + command.substr(4);
+			const std::string commandContext = "SetLoad-B";
 
-			std::string res = recvResponseRobotMessage(timeout);
+			std::string res = recvResponseRobotMessageMatching(timeout,
+				{ ackPrefix, "RPS:LOAD;", "ERR", "NAK" }, commandContext);
 
 			while (true)
 			{
@@ -187,11 +191,12 @@ namespace FC{
 					setAlarm(alarm);
 					return RunResult::RUN_FAILD;
 				}
-				res = recvResponseRobotMessage(timeout);
+				res = recvResponseRobotMessageMatching(timeout,
+					{ ackPrefix, "RPS:LOAD;", "ERR", "NAK" }, commandContext);
 				Sleep(200);
 			}
 
-			if (res.find("ACK") != std::string::npos || res == "RPS:LOAD;")
+			if (res.find(ackPrefix) != std::string::npos || res == "RPS:LOAD;")
 			{
 				if (str_state == "1")
 				{

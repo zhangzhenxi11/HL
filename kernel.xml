@@ -494,7 +494,7 @@
 				<!-- LLA-机械手抓放料完成信号 -->
 				<WtrActionCompletionSignalAddress>MR30300</WtrActionCompletionSignalAddress>
 				<!--EFEM 允许关_LLA上料门互锁 -->
-				<EFEMAlloweCloseCassteDoorSignal> MR30210</EFEMAlloweCloseCassteDoorSignal>
+				<EFEMAlloweCloseCassteDoorSignal>MR30210</EFEMAlloweCloseCassteDoorSignal>
 				<!--LL1上下料门阀_开到位 -->
 				<open_cassette_door_address>MR30000</open_cassette_door_address>
 				<!--LL1上下料门阀_关到位-->
@@ -613,7 +613,7 @@
 				<finish_address>MR29613</finish_address>
 				<error_code_address>DM5540</error_code_address>
 				<!-- LLB-机械手抓放料完成信号  -->
-				<safe_Interlock_signal_address> MR30301</safe_Interlock_signal_address>
+				<safe_Interlock_signal_address>MR30301</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
 			<MoveToSlot>

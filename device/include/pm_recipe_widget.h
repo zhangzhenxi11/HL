@@ -101,6 +101,10 @@ namespace FC {
 		bool isPmMotorRunning(int pmIndex) const; // 新增：检查PM配方是否在运行
 		bool hasPmMotorError(int pmIndex) const;
 		std::string getPmMotorError(int pmIndex) const;
+		Q_INVOKABLE void startPmMotorRunInvoke(int pmIndex);
+		Q_INVOKABLE bool isPmMotorRunningInvoke(int pmIndex) const;
+		Q_INVOKABLE bool hasPmMotorErrorInvoke(int pmIndex) const;
+		Q_INVOKABLE QString getPmMotorErrorQString(int pmIndex) const;
 
 	private slots:
 		void onStartCycle();
