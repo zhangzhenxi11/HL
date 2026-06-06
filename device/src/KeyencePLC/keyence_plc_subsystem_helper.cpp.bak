@@ -1,0 +1,1295 @@
+﻿﻿
+/**
+* @file            keyence_plc_subsystem_helper.h
+* @brief           helper for keyence plc protocol subsystem
+* @author		   kai
+*/
+
+// Library: Fortrend
+// Package: Subsystem/KeyencePLC
+
+
+#include "Kernel/kernel_log.h"
+#include "Kernel/kernel_configure.h"
+
+#include "Poco/String.h"
+#include "Poco/Format.h"
+#include "Poco/StringTokenizer.h"
+#include "Poco/NumberParser.h"
+
+#include <list>
+#include <mutex>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+#include <thread>
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#pragma once
+
+#include "KeyencePLC/keyence_plc_subsystem_helper.h" 
+
+#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+
+KERNEL_NS_BEGIN
+
+
+
+/**
+* KeyencePlcSubSystemHelperPrivate
+*/
+class KeyencePlcSubSystemHelperPrivate{
+public:
+	KeyencePlcSubSystemHelperPrivate(KeyencePlcSubSystemHelper* p, const std::string& name);
+	//IO config
+	struct IOConfig{
+		std::vector<std::string> input_names;
+		std::string input_address;
+		std::vector<std::string> output_names;
+		std::vector<std::string> output_addresses;
+	} ioConfig;
+	bool open()throw(KernelException);
+	void close()throw(KernelException);
+
+	bool setTimeout(const uint32_t milsecTime);
+	void configure(const std::shared_ptr<KernelConfiguration> & config);
+	std::shared_ptr<KeyencePlcSubSystemHelper::DefinedError> getErrorCode(const int code_type, const int code_id);
+
+public:
+	bool readBit(const std::string address, bool &value);
+	bool readBits(const std::string address, const uint16_t length, bool *value);
+	bool readShort(const std::string address, int16_t &value);
+	bool readShorts(const std::string address, const uint16_t length, int16_t *value);
+	bool readUnsignedShort(const std::string address, uint16_t &value);
+	bool readUnsignedShorts(const std::string address, const uint16_t length, uint16_t *value);
+	bool readInt(const std::string address, int32_t &value);
+	bool readInts(const std::string address, const uint16_t length, int32_t *value);
+	bool readUnsignedInt(const std::string address, uint32_t &value);
+	bool readUnsignedInts(const std::string address, const uint16_t length, uint32_t *value);
+	bool readFloat(const std::string address, float &value);
+	bool readFloats(const std::string address, const uint16_t length, float *value);
+	bool readDouble(const std::string address, double &value);
+	bool readDoubles(const std::string address, const uint16_t length, double *value);
+	bool readString(const std::string address, const uint16_t length, std::string &value);
+
+	bool writeBit(const std::string address, const bool value);
+	bool writeBits(const std::string address, const uint16_t length, const bool *values);
+	bool writeShort(const std::string address, const int16_t value);
+	bool writeShorts(const std::string address, const uint16_t length, const int16_t *values);
+	bool writeUnsignedShort(const std::string address, const uint16_t value);
+	bool writeUnsignedShorts(const std::string address, const uint16_t length, const uint16_t *values);
+	bool writeInt(const std::string address, const int32_t value);
+	bool writeInts(const std::string address, const uint16_t length, const int32_t *values);
+	bool writeUnsignedInt(const std::string address, const uint32_t value);
+	bool writeUnsignedInts(const std::string address, const uint16_t length, const uint32_t *values);
+	bool writeFloat(const std::string address, const float value);
+	bool writeFloats(const std::string address, const uint16_t length, const float *values);
+	bool writeDouble(const std::string address, const double value);
+	bool writeDoubles(const std::string address, const uint16_t length, const double *values);
+	bool writeString(const std::string address, const std::string value);
+public:
+	uint16_t port = 8501;
+	std::string ip_address = "192.168.0.10";
+	uint32_t plc_timeout_milsec = 2000;
+	std::shared_ptr<SOCKET> client;
+	std::string name;
+
+	std::string send_data_to_plc = "\r\n";
+	const std::string WRITE_SUCESS_RESPONSE_DATA = "OK";
+	std::mutex mtx;
+
+	KeyencePlcSubSystemHelper* p;
+	mutable std::mutex mutex;
+
+	std::list<std::shared_ptr<KeyencePlcSubSystemHelper::DefinedError> > definedErrors;  //defined error from hardware
+
+private:
+	bool initialize();
+	bool receiveMessage(std::string &data);
+	bool sendMessage(const std::string data);
+	bool sendAndReceiveMessage(const std::string sendData, std::string &recvData);
+	std::vector<std::string> splitData(const std::string& data, char delimiter);
+
+	bool monitorHeartbeats();
+	
+private:
+	bool isConnected = false;
+};
+
+
+KeyencePlcSubSystemHelperPrivate::KeyencePlcSubSystemHelperPrivate(KeyencePlcSubSystemHelper*p, const std::string& name)
+	:p(p)
+	, name(name)
+{
+
+}
+
+
+bool KeyencePlcSubSystemHelperPrivate::open(){
+	isConnected = initialize();
+	if (!isConnected)
+	{
+		throw KernelSysException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR, Poco::format("无法连接到PLC服务器: %d", port));
+	}
+	return isConnected;
+}
+
+
+void KeyencePlcSubSystemHelperPrivate::close(){
+	//if (isConnected)
+	if (client)
+	{
+		if ((*client) != INVALID_SOCKET)
+		{
+			shutdown(*client, SD_BOTH);
+			closesocket(*client);
+			*client = INVALID_SOCKET;
+		}
+		WSACleanup();
+	}
+	isConnected = false;
+	return;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::initialize()
+{
+	WORD verision = MAKEWORD(2, 2);
+	WSADATA lpData;
+	int intEr = WSAStartup(verision, &lpData);
+	if (intEr != 0)
+	{
+		logError(name.c_str(), "初始化Winsock失败！");
+		return false;
+	}
+	client = std::make_shared<SOCKET>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+	if (*client == INVALID_SOCKET)
+	{
+		logError(name.c_str(), "创建socket失败！");
+		WSACleanup();
+		return false;
+	}
+	DWORD timeout = 1000; 
+	setsockopt(*client, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+	// 设置服务器地址信息
+	sockaddr_in serverAddr{};
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(port);
+	if (inet_pton(AF_INET, ip_address.c_str(), &(serverAddr.sin_addr)) <= 0)
+	{
+		logError(name.c_str(), "IP地址验证失败.");
+		closesocket(*client);
+		WSACleanup();
+		return false;
+	}
+
+	// 连接服务器
+	if (connect(*client, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) < 0)
+	{
+		logError(name.c_str(), "连接服务器失败！");
+		closesocket(*client);
+		WSACleanup();
+		return false;
+	}
+	isConnected = true;
+	setTimeout(1000);
+	bool isconnected = false;
+
+	if (!sendMessage(""))
+	{
+		if (monitorHeartbeats())
+		{
+			return true;
+		}
+		else
+		{
+			logError(name.c_str(), "连接到PLC失败.");
+			closesocket(*client);
+			return false;
+		}
+	}
+	std::string data = "";
+	if (!receiveMessage(data))
+	{
+		if (monitorHeartbeats())
+		{
+			return true;
+		}
+		else
+		{
+			logError(name.c_str(), "接收PLC返回数据失败！");
+			return false;
+		}
+	}
+	return true;
+}
+
+void KeyencePlcSubSystemHelperPrivate::configure(const std::shared_ptr<KernelConfiguration> & config){
+
+	port = std::stoi(config->getString("port", "8501"));
+	ip_address = config->getString("ip", "192.168.1.100");
+	plc_timeout_milsec = std::stoul(config->getString("plc_timeout", "1000"));
+
+	//鼎能光电，错误文本加载
+	if (config->has("ErrorTxt"))
+	{
+		std::string errFileName = config->getString("ErrorTxt", name + ".txt");
+		// read file
+		std::ifstream infile;
+		std::string buffstr;
+		infile.open(errFileName, std::ios::in);
+		if (!infile.is_open()){
+			throw KernelSysException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, Poco::format("错误文件定义: %s 打开失败.", errFileName));
+		}
+		// read line and line
+		while (getline(infile, buffstr))
+		{
+			std::shared_ptr<KeyencePlcSubSystemHelper::DefinedError> errorObj(new KeyencePlcSubSystemHelper::DefinedError);
+			Poco::StringTokenizer token(buffstr, ",", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
+			if (token.count() != 3){
+				throw KernelSysException(__FILE__, KernelSysException::KR_SYSTEM_UNKNOWN_ERROR, Poco::format("错误文件定义: %s 格式错误.", errFileName));
+			}
+
+			errorObj->type = Poco::NumberParser::parse(token[0]);//type
+			errorObj->code = Poco::NumberParser::parse(token[1]);//code
+			errorObj->message = Poco::trim(token[2]);  //message
+			errorObj->needReset = errorObj->message.back() == '*';  //need to reset
+			if (errorObj->needReset) errorObj->message.pop_back();
+			//add to defined errors
+			definedErrors.push_back(errorObj);
+		}
+	}
+	if (config->has("IO"))
+	{
+		//mapping input names
+		do{
+			Poco::StringTokenizer token(config->getString("IO.InPutNames", ""), ",", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
+			for (int i = 0; i < token.count(); i++){
+				ioConfig.input_names.push_back(token[i]);
+			}
+		} while (false);
+		ioConfig.input_address = config->getString("IO.InputAddress", "RM1000");
+		//mapping output names
+		do{
+			Poco::StringTokenizer token(config->getString("IO.OutPutNames", ""), ",", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
+			for (int i = 0; i < token.count(); i++){
+				ioConfig.output_names.push_back(token[i]);
+			}
+		} while (false);
+		//mapping output addresses
+		do{
+			Poco::StringTokenizer token(config->getString("IO.OutputAddresses", ""), ",", Poco::StringTokenizer::TOK_IGNORE_EMPTY);
+			for (int i = 0; i < token.count(); i++){
+				ioConfig.output_addresses.push_back(token[i]);
+			}
+		} while (false);
+	}
+}
+
+std::shared_ptr<KeyencePlcSubSystemHelper::DefinedError> KeyencePlcSubSystemHelperPrivate::getErrorCode(const int code_type, const int code_id)
+{
+	std::shared_ptr<KeyencePlcSubSystemHelper::DefinedError> res = std::make_shared<KeyencePlcSubSystemHelper::DefinedError>(KeyencePlcSubSystemHelper::DefinedError{ code_type, code_id, "", false });;
+	for (const auto err : definedErrors)
+	{
+		if (code_type == err->type && code_id == err->code)
+		{
+			res = err;
+			return res;
+		}
+	}
+	res->type = code_type;
+	res->code = code_id;
+	res->message = "硬件中未找到错误代码定义";
+	res->needReset = false;
+	return res;
+}
+
+
+
+bool KeyencePlcSubSystemHelperPrivate::setTimeout(const uint32_t milsecTime)
+{
+	int ret = setsockopt(*client, SOL_SOCKET, SO_RCVTIMEO, (const char*)&milsecTime, sizeof(milsecTime));
+	return ret != SOCKET_ERROR;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::sendMessage(const std::string data)
+{
+	if (!isConnected)
+	{
+		return false;
+	}
+	send_data_to_plc = data + "\r\n";
+	int err = send(*client, send_data_to_plc.c_str(), send_data_to_plc.size(), 0);
+	if (err == SOCKET_ERROR || err == 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::receiveMessage(std::string &data)
+{
+	data.clear();
+	char receiveBuf[1024 * 50];
+	int recvLen = recv(*client, receiveBuf, 1024 * 50, 0);
+	if (recvLen == SOCKET_ERROR || recvLen == 0)
+	{
+		data = "error";
+		return false;
+	}
+	data.append(receiveBuf, recvLen);
+	size_t found = data.find("\r\n");
+	if (found != std::string::npos)
+	{
+		data.erase(found, -2);
+		return true;
+	}
+	data = "Timeout";
+	return false;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::sendAndReceiveMessage(const std::string sendData, std::string &recvData)
+{
+	bool res = false;
+	mtx.lock();
+	if (sendMessage(sendData) && receiveMessage(recvData) && (recvData.find("E") == std::string::npos))
+	{
+		res = true;
+	}
+	mtx.unlock();
+	return res;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readBit(const std::string address, bool &value)
+{
+	std::string command = "RD";
+	command.append(" ");
+	command.append(address);
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	value = (std::stoi(recvData) == 1);
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readBits(const std::string address, const uint16_t length, bool *value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != length)
+	{
+		return false;
+	}
+	for (size_t i = 0; i < length; i++)
+	{
+		value[i] = (std::stoi(vec_data[i]) == 1);
+	}
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readShort(const std::string address, int16_t &value)
+{
+	std::string command = "RD";
+	command.append(" ");
+	command.append(address);
+	command.append(".S");
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	value = std::stoi(recvData);
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readShorts(const std::string address, const uint16_t length, int16_t *value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".S");
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != length)
+	{
+		return false;
+	}
+	for (size_t i = 0; i < length; i++)
+	{
+		value[i] = std::stoi(vec_data[i]);
+	}
+
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readUnsignedShort(const std::string address, uint16_t &value)
+{
+	std::string command = "RD";
+	command.append(" ");
+	command.append(address);
+	command.append(".U");
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	value = std::stoi(recvData);
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readUnsignedShorts(const std::string address, const uint16_t length, uint16_t *value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".U");
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != length)
+	{
+		return false;
+	}
+	for (size_t i = 0; i < length; i++)
+	{
+		value[i] = std::stoi(vec_data[i]);
+	}
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readInt(const std::string address, int32_t &value)
+{
+	std::string command = "RD";
+	command.append(" ");
+	command.append(address);
+	command.append(".L");
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	value = std::stoi(recvData);
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readInts(const std::string address, const uint16_t length, int32_t *value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".L");
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != length)
+	{
+		return false;
+	}
+	for (size_t i = 0; i < length; i++)
+	{
+		value[i] = std::stoi(vec_data[i]);
+	}
+	return true;
+
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readUnsignedInt(const std::string address, uint32_t &value)
+{
+	std::string command = "RD";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	value = std::stoul(recvData);
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readUnsignedInts(const std::string address, const uint16_t length, uint32_t *value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != length)
+	{
+		return false;
+	}
+	for (size_t i = 0; i < length; i++)
+	{
+		value[i] = std::stoul(vec_data[i]);
+	}
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readFloat(const std::string address, float &value)
+{
+	std::string command = "RD";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	unsigned long unsigned_integer = std::stoul(recvData);
+	//value = *(reinterpret_cast<float*>(&unsigned_integer));
+	union {
+		float f;
+		unsigned char bytes[4];
+	} u;
+	for (int i = 0; i < 4; ++i) {
+		u.bytes[i] = (unsigned_integer >> (i * 8)) & 0xFF;
+	}
+	value = u.f;
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readFloats(const std::string address, const uint16_t length, float *value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != length)
+	{
+		return false;
+	}
+	unsigned long unsigned_integer;
+	union {
+		float f;
+		unsigned char bytes[4];
+	} u;
+	for (size_t i = 0; i < length; i++)
+	{
+		unsigned_integer = std::stoul(vec_data[i]);
+		for (size_t j = 0; j < 4; j++)
+		{
+			u.bytes[j] = (unsigned_integer >> (j * 8)) & 0xFF;
+		}
+		value[i] = u.f;
+		//unsigned long unsigned_integer = std::stoul(vec_data[i]);
+		//value[i] = *(reinterpret_cast<float*>(&unsigned_integer));
+
+	}
+
+	return true;
+}
+
+
+bool KeyencePlcSubSystemHelperPrivate::readDouble(const std::string address, double &value)
+{
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append("2");
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != 2)
+	{
+		return false;
+	}
+	unsigned long num1 = std::stoul(vec_data[0]);
+	unsigned long num2 = std::stoul(vec_data[1]);
+	union {
+		double d;
+		unsigned char bytes[8];
+	} u;
+	for (int i = 0; i < 4; ++i) {
+		u.bytes[i] = (num1 >> (i * 8)) & 0xFF;
+	}
+	for (int i = 0; i < 4; ++i) {
+		u.bytes[i + 4] = (num2 >> (i * 8)) & 0xFF;
+	}
+	value = u.d;
+
+	return true;
+
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readDoubles(const std::string address, const uint16_t length, double *value)
+{
+	int readLength = length * 2;
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(readLength));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	auto vec_data = splitData(recvData, ' ');
+	if (vec_data.size() != readLength)
+	{
+		return false;
+	}
+	unsigned long num1;
+	unsigned long num2;
+	union {
+		double d;
+		unsigned char bytes[8];
+	} u;
+	for (size_t j = 0; j < length; j++)
+	{
+		num1 = std::stoul(vec_data[2 * j]);
+		num2 = std::stoul(vec_data[2 * j + 1]);
+
+		for (int i = 0; i < 4; ++i) {
+			u.bytes[i] = (num1 >> (i * 8)) & 0xFF;
+		}
+		for (int i = 0; i < 4; ++i) {
+			u.bytes[i + 4] = (num2 >> (i * 8)) & 0xFF;
+		}
+		value[j] = u.d;
+	}
+
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::readString(const std::string address, const uint16_t length, std::string &value)
+{
+	value.clear();
+	std::string command = "RDS";
+	command.append(" ");
+	command.append(address);
+	command.append(".H");
+	command.append(" ");
+	command.append(std::to_string(length));
+	std::string recvData;
+	if (!sendAndReceiveMessage(command, recvData))
+	{
+		return false;
+	}
+	recvData.erase(std::remove(recvData.begin(), recvData.end(), 0x20), recvData.end());
+	std::string resultTwoChar;
+	for (size_t i = 0; i < recvData.length(); i += 2)
+	{
+		if (i + 1 < recvData.length())
+		{
+			resultTwoChar.clear();
+			resultTwoChar += recvData[i];
+			resultTwoChar += recvData[i + 1];
+			int num = std::stoi(resultTwoChar, nullptr, 16); // 将十六进制字符串转换为十进制整数
+			value += static_cast<char>(num);
+		}
+
+	}
+	return true;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::writeBit(const std::string address, const bool value)
+{
+	bool res = false;
+	std::string command = "WR";
+	command.append(" ");
+	command.append(address);
+	command.append(" ");
+	std::string data = value ? "1" : "0";
+	command.append(data);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeBits(const std::string address, const uint16_t length, const bool *values)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(" ");
+	command.append(std::to_string(length));
+	command.append(" ");
+	for (size_t i = 0; i < length; i++)
+	{
+		std::string data = values[i] ? "1" : "0";
+		command.append(data);
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	delete values;
+	values = nullptr;
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeShort(const std::string address, const int16_t value)
+{
+	bool res = false;
+	std::string command = "WR";
+	command.append(" ");
+	command.append(address);
+	command.append(".S");
+	command.append(" ");
+	if (value >= 0)
+	{
+		command.append("+");
+	}
+	command.append(std::to_string(value));
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeShorts(const std::string address, const uint16_t length, const int16_t *values)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".S");
+	command.append(" ");
+	command.append(std::to_string(length));
+	command.append(" ");
+	for (size_t i = 0; i < length; i++)
+	{
+		if (values[i] >= 0)
+		{
+			command.append("+");
+		}
+		command.append(std::to_string(values[i]));
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	delete values;
+	values = nullptr;
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeUnsignedShort(const std::string address, const uint16_t value)
+{
+	bool res = false;
+	std::string command = "WR";
+	command.append(" ");
+	command.append(address);
+	command.append(".U");
+	command.append(" ");
+	command.append(std::to_string(value));
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeUnsignedShorts(const std::string address, const uint16_t length, const uint16_t *values)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".U");
+	command.append(" ");
+	command.append(std::to_string(length));
+	command.append(" ");
+	for (size_t i = 0; i < length; i++)
+	{
+		command.append(std::to_string(values[i]));
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	delete values;
+	values = nullptr;
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeInt(const std::string address, const int32_t value)
+{
+	bool res = false;
+	std::string command = "WR";
+	command.append(" ");
+	command.append(address);
+	command.append(".L");
+	command.append(" ");
+	if (value >= 0)
+	{
+		command.append("+");
+	}
+	command.append(std::to_string(value));
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeInts(const std::string address, const uint16_t length, const int32_t *values)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".L");
+	command.append(" ");
+	command.append(std::to_string(length));
+	command.append(" ");
+	for (size_t i = 0; i < length; i++)
+	{
+		if (values[i] >= 0)
+		{
+			command.append("+");
+		}
+		command.append(std::to_string(values[i]));
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	delete values;
+	values = nullptr;
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeUnsignedInt(const std::string address, const uint32_t value)
+{
+	bool res = false;
+	std::string command = "WR";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(value));
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeUnsignedInts(const std::string address, const uint16_t length, const uint32_t *values)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(length));
+	command.append(" ");
+	for (size_t i = 0; i < length; i++)
+	{
+		command.append(std::to_string(values[i]));
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	delete values;
+	values = nullptr;
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeFloat(const std::string address, const float value)
+{
+	float buffValue = value;
+	uint32_t uint_num = *(reinterpret_cast<uint32_t*>(&buffValue));
+	bool res = false;
+	std::string command = "WR";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(uint_num));
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeFloats(const std::string address, const uint16_t length, const float *values)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(length));
+	command.append(" ");
+	for (size_t i = 0; i < length; i++)
+	{
+		float buffValue = values[i];
+		uint32_t uint_num = *(reinterpret_cast<uint32_t*>(&buffValue));
+		command.append(std::to_string(uint_num));
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	delete values;
+	values = nullptr;
+	return res;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::writeDouble(const std::string address, const double value)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append("2");
+	command.append(" ");
+	union {
+		double d;
+		unsigned char bytes[8];
+	} u;
+	u.d = value;
+	uint32_t unValue = (static_cast<uint32_t>(u.bytes[3]) << 24) |
+		(static_cast<uint32_t>(u.bytes[2]) << 16) |
+		(static_cast<uint32_t>(u.bytes[1]) << 8) |
+		static_cast<uint32_t>(u.bytes[0]);
+	command.append(std::to_string(unValue));
+	command.append(" ");
+	unValue = (static_cast<uint32_t>(u.bytes[7]) << 24) |
+		(static_cast<uint32_t>(u.bytes[6]) << 16) |
+		(static_cast<uint32_t>(u.bytes[5]) << 8) |
+		static_cast<uint32_t>(u.bytes[4]);
+	command.append(std::to_string(unValue));
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+bool KeyencePlcSubSystemHelperPrivate::writeDoubles(const std::string address, const uint16_t length, const double *values)
+{
+	uint32_t sendLength = length * 2;
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".D");
+	command.append(" ");
+	command.append(std::to_string(sendLength));
+	command.append(" ");
+	union {
+		double d;
+		unsigned char bytes[8];
+	} u;
+	for (size_t i = 0; i < length; i++)
+	{
+		u.d = values[i];
+		uint32_t unValue = (static_cast<uint32_t>(u.bytes[3]) << 24) |
+			(static_cast<uint32_t>(u.bytes[2]) << 16) |
+			(static_cast<uint32_t>(u.bytes[1]) << 8) |
+			static_cast<uint32_t>(u.bytes[0]);
+		command.append(std::to_string(unValue));
+		command.append(" ");
+		unValue = (static_cast<uint32_t>(u.bytes[7]) << 24) |
+			(static_cast<uint32_t>(u.bytes[6]) << 16) |
+			(static_cast<uint32_t>(u.bytes[5]) << 8) |
+			static_cast<uint32_t>(u.bytes[4]);
+		command.append(std::to_string(unValue));
+		command.append(" ");
+	}
+	command = command.substr(0, command.length() - 1);
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+}
+
+bool KeyencePlcSubSystemHelperPrivate::writeString(const std::string address, const std::string data)
+{
+	bool res = false;
+	std::string command = "WRS";
+	command.append(" ");
+	command.append(address);
+	command.append(".H");
+	command.append(" ");
+	int length = data.length();
+	int sendLength = 0;
+	if (length % 2 == 0)
+	{
+		sendLength = length / 2;
+	}
+	else
+	{
+		sendLength = length / 2 + 1;
+	}
+	command.append(std::to_string(sendLength));
+	command.append(" ");
+	int i = 1;
+	for (const char c : data)
+	{
+		std::stringstream ss;
+		ss << std::hex << std::uppercase << static_cast<int>(c);
+		command.append(ss.str());
+		if (i < length)
+		{
+			if (i % 2 == 0)
+			{
+				command.append(" ");
+			}
+			++i;
+		}
+	}
+	//奇数长度结尾增加空字符
+	if (i % 2 == 1)
+	{
+		command.append("00");
+	}
+	std::string recvData;
+	if (sendAndReceiveMessage(command, recvData) && recvData == WRITE_SUCESS_RESPONSE_DATA)
+	{
+		res = true;
+	}
+	return res;
+	return false;
+}
+
+std::vector<std::string> KeyencePlcSubSystemHelperPrivate::splitData(const std::string& data, char delimiter) {
+	std::vector<std::string> tokens;
+	std::string token;
+	std::istringstream tokenStream(data);
+	while (std::getline(tokenStream, token, delimiter)) {
+		tokens.push_back(token);
+	}
+	return tokens;
+}
+//心跳信号,时间间隔1s，尝试5次
+bool KeyencePlcSubSystemHelperPrivate::monitorHeartbeats()
+{
+	int count = 0;
+	bool isConnected = false;
+	while (count < 4)
+	{
+		readBit("MR9000", isConnected);
+		if (isConnected)
+		{
+			return true;
+		}
+		else
+		{
+			Sleep(500);
+		}
+	}
+
+	return false;
+}
+
+
+
+
+/**
+* KeyencePlcSubSystemHelper
+*/
+KeyencePlcSubSystemHelper::KeyencePlcSubSystemHelper(const std::string& name)
+	: d(new KeyencePlcSubSystemHelperPrivate(this, name)){
+
+}
+
+
+/**
+* initialize
+*/
+bool KeyencePlcSubSystemHelper::enableProtocol(){
+	return d->open();
+}
+
+
+/**
+* unInitialize
+*/
+void KeyencePlcSubSystemHelper::disableProtocol(){
+	d->close();
+}
+
+/**
+*@brief  input count in module
+*/
+int KeyencePlcSubSystemHelper::helperInputCount()const
+{
+	return d->ioConfig.input_names.size();
+}
+
+/**
+*@brief  output count in module
+*/
+int KeyencePlcSubSystemHelper::helperOutputCount()const
+{
+	return d->ioConfig.output_names.size();
+}
+
+/**
+*@brief  get input address
+*/
+std::string KeyencePlcSubSystemHelper::getHelperInputAddress() const
+{
+	return d->ioConfig.input_address;
+}
+
+/**
+*@brief  get input status
+*/
+std::string KeyencePlcSubSystemHelper::getHelperOutputAddress(const int index)const
+{
+	int count = d->ioConfig.output_addresses.size();
+	if (index <count)
+	{
+		return d->ioConfig.output_addresses[index];
+	}
+	return "";
+}
+
+
+/**
+*@brief  get input name
+*/
+std::string KeyencePlcSubSystemHelper::getHelperInputName(int index) const
+{
+	int count = d->ioConfig.input_names.size();
+	if (index < count)
+	{
+		return d->ioConfig.input_names[index];
+	}
+	return "";
+}
+
+/**
+*@brief  get input name
+*/
+std::string KeyencePlcSubSystemHelper::getHelperOutputName(int index) const
+{
+	int count = d->ioConfig.output_names.size();
+	if (index < count)
+	{
+		return d->ioConfig.output_names[index];
+	}
+	return "";
+}
+
+/**
+* get error code
+*/
+std::shared_ptr<KeyencePlcSubSystemHelper::DefinedError> KeyencePlcSubSystemHelper::getErrorCode(const int code_type, const int code_id){
+	return d->getErrorCode(code_type, code_id);
+}
+
+
+void KeyencePlcSubSystemHelper::configKeyencePlc(const std::shared_ptr<KernelConfiguration> & config){
+	d->configure(config);
+}
+
+bool KeyencePlcSubSystemHelper::readBit(const std::string address, bool &value){ return d->readBit(address, value); }
+bool KeyencePlcSubSystemHelper::readBits(const std::string address, const uint16_t length, bool *value){ return d->readBits(address, length, value); }
+bool KeyencePlcSubSystemHelper::readShort(const std::string address, int16_t &value){ return d->readShort(address, value); }
+bool KeyencePlcSubSystemHelper::readShorts(const std::string address, const uint16_t length, int16_t *value){ return d->readShorts(address, length, value); }
+bool KeyencePlcSubSystemHelper::readUnsignedShort(const std::string address, uint16_t &value){ return d->readUnsignedShort(address, value); }
+bool KeyencePlcSubSystemHelper::readUnsignedShorts(const std::string address, const uint16_t length, uint16_t *value){ return d->readUnsignedShorts(address, length, value); }
+bool KeyencePlcSubSystemHelper::readInt(const std::string address, int32_t &value){ return d->readInt(address, value); }
+bool KeyencePlcSubSystemHelper::readInts(const std::string address, const uint16_t length, int32_t *value){ return d->readInts(address, length, value); }
+bool KeyencePlcSubSystemHelper::readUnsignedInt(const std::string address, uint32_t &value){ return d->readUnsignedInt(address, value); }
+bool KeyencePlcSubSystemHelper::readUnsignedInts(const std::string address, const uint16_t length, uint32_t *value){ return d->readUnsignedInts(address, length, value); }
+bool KeyencePlcSubSystemHelper::readFloat(const std::string address, float &value){ return d->readFloat(address, value); }
+bool KeyencePlcSubSystemHelper::readFloats(const std::string address, const uint16_t length, float *value){ return d->readFloats(address, length, value); }
+bool KeyencePlcSubSystemHelper::readDouble(const std::string address, double &value){ return d->readDouble(address, value); }
+bool KeyencePlcSubSystemHelper::readDoubles(const std::string address, const uint16_t length, double *value){ return d->readDoubles(address, length, value); }
+bool KeyencePlcSubSystemHelper::readString(const std::string address, const uint16_t length, std::string &value){ return d->readString(address, length, value); }
+
+bool KeyencePlcSubSystemHelper::writeBit(const std::string address, const bool value){ return d->writeBit(address, value); }
+bool KeyencePlcSubSystemHelper::writeBits(const std::string address, const uint16_t length, const bool *values){ return d->writeBits(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeShort(const std::string address, const int16_t value){ return d->writeShort(address, value); }
+bool KeyencePlcSubSystemHelper::writeShorts(const std::string address, const uint16_t length, const int16_t *values){ return d->writeShorts(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeUnsignedShort(const std::string address, const uint16_t value){ return d->writeUnsignedShort(address, value); }
+bool KeyencePlcSubSystemHelper::writeUnsignedShorts(const std::string address, const uint16_t length, const uint16_t *values){ return d->writeUnsignedShorts(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeInt(const std::string address, const int32_t value){ return d->writeInt(address, value); }
+bool KeyencePlcSubSystemHelper::writeInts(const std::string address, const uint16_t length, const int32_t *values){ return d->writeInts(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeUnsignedInt(const std::string address, const uint32_t value){ return d->writeUnsignedInt(address, value); }
+bool KeyencePlcSubSystemHelper::writeUnsignedInts(const std::string address, const uint16_t length, const uint32_t *values){ return d->writeUnsignedInts(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeFloat(const std::string address, const float value){ return d->writeFloat(address, value); }
+bool KeyencePlcSubSystemHelper::writeFloats(const std::string address, const uint16_t length, const float *values){ return d->writeFloats(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeDouble(const std::string address, const double value){ return d->writeDouble(address, value); }
+bool KeyencePlcSubSystemHelper::writeDoubles(const std::string address, const uint16_t length, const double *values){ return d->writeDoubles(address, length, values); }
+bool KeyencePlcSubSystemHelper::writeString(const std::string address, const std::string value){ return d->writeString(address, value); }
+
+KERNEL_NS_END

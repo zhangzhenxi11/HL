@@ -63,7 +63,7 @@ namespace FC {
         int targetFeedingSlot;  //目标模组上料槽
         int targetBlankingSlot; //目标模组下料槽
 
-        int arm;         // 真空机械臂选择0=A, 1=B
+        int arm;         // binding arm: 0=A, 1=B (immutable after creation)
         AlignerStatus Aligner_status;
 
         std::array<int, 4> selectPmEnableList;

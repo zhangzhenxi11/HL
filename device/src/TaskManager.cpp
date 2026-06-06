@@ -1,4 +1,4 @@
-﻿#include "TaskManager.h"
+#include "TaskManager.h"
 #include <algorithm>
 #include <iterator>
 #include <unordered_map>
@@ -154,22 +154,6 @@ void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType ne
                 task.typeToString(newTaskType).c_str(),
                 task.statusToString(newStatus).c_str());
 
-            break;
-        }
-    }
-}
-
-void FC::TaskManager::updateTaskArm(int taskId, int arm)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (auto& task : tasks_)
-    {
-        if (task.taskId == taskId)
-        {
-            const int oldArm = task.arm;
-            task.arm = arm;
-            logInform("TaskManager", "Updated task %d arm: %d -> %d", taskId, oldArm, arm);
             break;
         }
     }

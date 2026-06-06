@@ -252,8 +252,9 @@ namespace FC{
 
 		bool getArmWaferIsPmPending(int arm);
 
-		bool syncPm2ReturnTaskArm(int actualReturnArm);
 		struct PM2ScheduleSnapshot;
+		struct PM2ExchangePlan;
+		struct LLImmediateRepickState;
 		struct LoadLockTaskSnapshot;
 		struct PmTaskSnapshot;
 
@@ -270,11 +271,27 @@ namespace FC{
 		// 统一组装PM2调度快照，供1051和立即补取等发送前判断复用同一套上下文。
 		bool tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot);
 
+		// PM2交换必须先在任务层确定“哪片回、哪片进、各自绑定哪只手”，
+		// 再由状态机决定是否具备发起交换的物理条件。
+		bool tryBuildPm2ExchangePlan(const PmTaskSnapshot& pm2Snapshot,
+			const std::vector<UnifiedWaferTask>& loadlockReturnPendingTasks,
+			bool armAHasWafer,
+			bool armBHasWafer,
+			PM2ExchangePlan& plan,
+			std::string& reason);
+
 		// 把“当前LL是否必须让PM2优先”集中在一处，避免不同step各写一套规则。
 		bool shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const;
 
 		// 对齐交互片时序：PM2仍在加工且双手都空时，允许LL按固定arm预装下一片在手等待交换。
 		bool canLlImmediateRepickWaitForPm2Craft(const PM2ScheduleSnapshot& snapshot, int repickArm) const;
+
+		bool tryPlanImmediateRepick(const char* loadLockName,
+			const LoadLockTaskSnapshot& snapshot,
+			bool armAHasWafer,
+			bool armBHasWafer,
+			UnifiedWaferTask::Location requiredTargetPm,
+			LLImmediateRepickState& plan);
 
 		LoadLockTaskSnapshot buildLoadLockTaskSnapshot(const char* loadLockName) const;
 		PmTaskSnapshot buildPmTaskSnapshot(const std::string& pmName) const;
@@ -702,6 +719,13 @@ namespace FC{
 			int preferredPmArm = -1;
 		};
 
+		struct PM2ExchangePlan {
+			int returnTaskId = -1;
+			int pendingTaskId = -1;
+			int getArm = -1;
+			int putArm = -1;
+		};
+
 		struct LoadLockTaskSnapshot {
 			std::vector<UnifiedWaferTask> pendingTasks;
 			std::vector<UnifiedWaferTask> completedTasks;
@@ -747,6 +771,11 @@ namespace FC{
 		ExchangeInfo exchange_info_pm2;
 		ExchangeInfo exchange_info_pm3;
 		ExchangeInfo exchange_info_pm4;
+		std::atomic<int> lla_return_task_id{ -1 };
+		std::atomic<int> lla_return_slot{ -1 };
+		std::atomic<int> llb_return_task_id{ -1 };
+		std::atomic<int> llb_return_slot{ -1 };
+		std::atomic<int> pm2_craft_task_id{ -1 };
 
 		// 重置所有机械手请求标志
 		void resetAllRobotFlags() {
@@ -884,46 +913,6 @@ namespace FC{
 		return UnifiedWaferTask::Location();
 	}
 
-	bool QSlotTransferCycleVTMWidgetPrivate::syncPm2ReturnTaskArm(int actualReturnArm)
-	{
-		auto returnPendingTasks = taskManager.getLoadLockReturnPendingTasks();
-		auto returnTaskIt = std::find_if(returnPendingTasks.begin(), returnPendingTasks.end(),
-			[](const UnifiedWaferTask& task)
-			{
-				return task.target_pm == UnifiedWaferTask::PM2;
-			});
-		if (returnTaskIt != returnPendingTasks.end())
-		{
-			if (returnTaskIt->arm == actualReturnArm)
-			{
-				return true;
-			}
-			logWarn("PM2", "PM2交换后检测到回片task手指不一致: taskId=%d, task.arm=%d, actualReturnArm=%d. 固定手臂规则下不修改task.arm，等待上层修正.",
-				returnTaskIt->taskId, returnTaskIt->arm, actualReturnArm);
-			return false;
-		}
-
-		auto completedTasks = taskManager.getPMCompletedTasks("PM2");
-		auto completedTaskIt = std::find_if(completedTasks.begin(), completedTasks.end(),
-			[](const UnifiedWaferTask& task)
-			{
-				return task.target_pm == UnifiedWaferTask::PM2;
-			});
-		if (completedTaskIt != completedTasks.end())
-		{
-			if (completedTaskIt->arm == actualReturnArm)
-			{
-				return true;
-			}
-			logWarn("PM2", "PM2交换后检测到PM完成task手指不一致: taskId=%d, task.arm=%d, actualReturnArm=%d. 固定手臂规则下不修改task.arm，等待上层修正.",
-				completedTaskIt->taskId, completedTaskIt->arm, actualReturnArm);
-			return false;
-		}
-
-		logWarn("PM2", "PM2交换成功后未找到待回LL任务或PM完成任务，无法同步实际回片手指.");
-		return false;
-	}
-
 	bool QSlotTransferCycleVTMWidgetPrivate::ensurePm2SubsystemReady(std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem)
 	{
 		pmSubsystem.reset();
@@ -1036,20 +1025,6 @@ namespace FC{
 		snapshot.armBHasPending = snapshot.armBHasWafer &&
 			std::any_of(pm2PendingTasksLocal.begin(), pm2PendingTasksLocal.end(), [](const UnifiedWaferTask& t) { return t.arm == 1; });
 
-		if (!snapshot.armAHasPending && !snapshot.armBHasPending &&
-			pm2PendingTasksLocal.size() == 1 &&
-			(snapshot.armAHasWafer ^ snapshot.armBHasWafer))
-		{
-			if (snapshot.armAHasWafer)
-			{
-				snapshot.armAHasPending = true;
-			}
-			else
-			{
-				snapshot.armBHasPending = true;
-			}
-		}
-
 		if (!loadlockReturnPendingTasks.empty())
 		{
 			snapshot.preferredPmArm = loadlockReturnPendingTasks.front().arm;
@@ -1059,6 +1034,112 @@ namespace FC{
 			snapshot.preferredPmArm = pm2CompletedTasksLocal.front().arm;
 		}
 
+		return true;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::tryBuildPm2ExchangePlan(const PmTaskSnapshot& pm2Snapshot,
+		const std::vector<UnifiedWaferTask>& loadlockReturnPendingTasks,
+		bool armAHasWafer,
+		bool armBHasWafer,
+		PM2ExchangePlan& plan,
+		std::string& reason)
+	{
+		plan = PM2ExchangePlan{};
+		reason.clear();
+
+		const UnifiedWaferTask* returnTask = nullptr;
+		if (!loadlockReturnPendingTasks.empty())
+		{
+			returnTask = &loadlockReturnPendingTasks.front();
+		}
+		else if (!pm2Snapshot.completedTasks.empty())
+		{
+			returnTask = &pm2Snapshot.completedTasks.front();
+		}
+
+		if (returnTask == nullptr)
+		{
+			reason = "未找到PM2当前完成片/待回片任务";
+			return false;
+		}
+
+		if (returnTask->arm != 0 && returnTask->arm != 1)
+		{
+			reason = "PM2回片任务arm字段异常";
+			return false;
+		}
+
+		const int returnArm = returnTask->arm;
+		const int pendingArm = getOtherArm(returnArm);
+		const auto pendingIt = std::find_if(pm2Snapshot.pendingTasks.begin(), pm2Snapshot.pendingTasks.end(),
+			[pendingArm](const UnifiedWaferTask& task) { return task.arm == pendingArm; });
+		if (pendingIt == pm2Snapshot.pendingTasks.end())
+		{
+			reason = "pending队列中未找到与PM2回片任务配对的对侧手臂任务";
+			return false;
+		}
+
+		const bool getArmEmpty = (returnArm == 0) ? !armAHasWafer : !armBHasWafer;
+		const bool putArmLoaded = (pendingArm == 0) ? armAHasWafer : armBHasWafer;
+		if (!getArmEmpty || !putArmLoaded)
+		{
+			reason =
+				"物理手臂状态未满足固定手臂交换条件: returnArm=" + std::to_string(returnArm) +
+				", pendingArm=" + std::to_string(pendingArm) +
+				", armA_has=" + std::to_string(static_cast<int>(armAHasWafer)) +
+				", armB_has=" + std::to_string(static_cast<int>(armBHasWafer));
+			return false;
+		}
+
+		plan.returnTaskId = returnTask->taskId;
+		plan.pendingTaskId = pendingIt->taskId;
+		plan.getArm = returnArm;
+		plan.putArm = pendingArm;
+		return true;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::tryPlanImmediateRepick(const char* loadLockName,
+		const LoadLockTaskSnapshot& snapshot,
+		bool armAHasWafer,
+		bool armBHasWafer,
+		UnifiedWaferTask::Location requiredTargetPm,
+		LLImmediateRepickState& plan)
+	{
+		plan.reset();
+		if (!(armAHasWafer ^ armBHasWafer))
+		{
+			return false;
+		}
+
+		const int occupiedArm = armAHasWafer ? 0 : 1;
+		const auto returnIt = std::find_if(snapshot.returnPendingTasks.begin(), snapshot.returnPendingTasks.end(),
+			[occupiedArm, requiredTargetPm](const UnifiedWaferTask& task)
+			{
+				return task.arm == occupiedArm && task.target_pm == requiredTargetPm;
+			});
+		if (returnIt == snapshot.returnPendingTasks.end())
+		{
+			logInform(loadLockName, "固定手臂立即补取未触发: 未找到 occupiedArm=%d 且 target_pm=%d 对应回片任务",
+				occupiedArm, static_cast<int>(requiredTargetPm));
+			return false;
+		}
+
+		const auto pendingIt = std::find_if(snapshot.pendingTasks.begin(), snapshot.pendingTasks.end(),
+			[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
+		if (pendingIt == snapshot.pendingTasks.end())
+		{
+			logInform(loadLockName, "固定手臂立即补取未触发: pending队列中未找到 occupiedArm=%d 对应任务", occupiedArm);
+			return false;
+		}
+
+		plan.enabled = true;
+		plan.taskId = pendingIt->taskId;
+		plan.arm = pendingIt->arm;
+		plan.slot = pendingIt->targetFeedingSlot;
+
+		logInform(loadLockName,
+			"固定手臂立即补取规划完成: occupiedArm=%d, repickArm=%d, repickSlot=%d, taskId=%d",
+			occupiedArm, plan.arm, plan.slot, plan.taskId);
 		return true;
 	}
 
@@ -4037,55 +4118,10 @@ namespace FC{
 							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
 								llaImmediateRepick.reset();
-
-								const bool hasSingleArmBusy = armAHasWafer ^ armBHasWafer;// 只有一只手有片
-
-								const int occupiedArm = armAHasWafer ? 0 : (armBHasWafer ? 1 : -1);// 哪只手被占用了
-
-								auto returnIt = llaSnapshot.returnPendingTasks.end();
-
-								auto pendingIt = llaSnapshot.pendingTasks.end();
-
-								if (hasSingleArmBusy && occupiedArm >= 0)
+								if (tryPlanImmediateRepick(lk1->getName().c_str(), llaSnapshot, armAHasWafer, armBHasWafer, UnifiedWaferTask::PM2, llaImmediateRepick))
 								{
-									// 这里仍然遵守 task.arm 的手指约束：
-									// 先找到“当前占用手”对应的回片任务，再找“同一只手”对应的待加工任务。
-									// 这只手在回LL完成后会变为空手，应继续按固定arm补取下一片，和时序文档保持一致。
-
-									returnIt = std::find_if(llaSnapshot.returnPendingTasks.begin(), llaSnapshot.returnPendingTasks.end(),
-										[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
-
-									if (!llaSnapshot.pendingTasks.empty())
-									{
-										pendingIt = std::find_if(llaSnapshot.pendingTasks.begin(), llaSnapshot.pendingTasks.end(),
-											[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
-										if (pendingIt == llaSnapshot.pendingTasks.end())
-										{
-											logInform(lk1->getName().c_str(),
-												"LLA回片后立即补取保持固定手臂: pending队列中未找到 returnArm=%d 对应任务, 本轮跳过立即补取",
-												occupiedArm);
-										}
-									}
-
-								}
-
-								if (returnIt != llaSnapshot.returnPendingTasks.end() && pendingIt != llaSnapshot.pendingTasks.end())
-								{
-									// 这里只是把“回LL之后还要补取哪一片”的计划先记下来，
-									// 接下来仍然先走 2000 回片；真正的补取动作会在放回 LL 成功后再由后续 case 发起
-
-									llaImmediateRepick.enabled = true;
-									llaImmediateRepick.taskId = pendingIt->taskId;
-									llaImmediateRepick.arm = pendingIt->arm;
-									llaImmediateRepick.slot = pendingIt->targetFeedingSlot;
-
-									logInform(lk1->getName().c_str(),
-										"step:1051,识别到LLA回片后立即补取场景, occupiedArm=%d, repickArm=%d, repickSlot=%d, taskId=%d",
-										occupiedArm, llaImmediateRepick.arm, llaImmediateRepick.slot, llaImmediateRepick.taskId);
-
 									loadlock1_auto_step = 2000;
 									break;
-
 								}
 								else
 								{
@@ -4564,8 +4600,9 @@ namespace FC{
 							loadlock1_auto_step = 900;
 							break;
 						}
-						loadlock1_move_slot_index = llaSnapshot.returnPendingTasks.front().targetBlankingSlot;
-						const auto put_arm = llaSnapshot.returnPendingTasks.front().arm;
+						const auto currentReturnTask = llaSnapshot.returnPendingTasks.front();
+						loadlock1_move_slot_index = currentReturnTask.targetBlankingSlot;
+						const auto put_arm = currentReturnTask.arm;
 
 						bool haswaferarm1 = wtr->hasObject(put_arm);
 						
@@ -4586,6 +4623,8 @@ namespace FC{
 						if(lk1->getTMCavityDoorOpend() && haswaferarm1)
 						{
 							// 设置请求标志，委托Robot线程执行放片到LLA
+							lla_return_task_id.store(currentReturnTask.taskId);
+							lla_return_slot.store(currentReturnTask.targetBlankingSlot);
 							robot_put_to_lla.arm.store(put_arm);
 							robot_put_to_lla.slot.store(loadlock1_move_slot_index);
 							robot_put_to_lla.done.store(false);
@@ -4595,6 +4634,8 @@ namespace FC{
 						}
 						else
 						{
+							lla_return_task_id.store(-1);
+							lla_return_slot.store(-1);
 							loadlock1_auto_step = 2000;
 						}
 					}
@@ -4618,6 +4659,8 @@ namespace FC{
 						}
 						else
 						{
+								lla_return_task_id.store(-1);
+								lla_return_slot.store(-1);
 							llaImmediateRepick.reset();
 							logFailed(wtr->getName(), "LLA放片失败.STEP=2065");
 							logFailedNotNormal(wtr->getName(), loadlock1_process_name, loadlock1_auto_step);
@@ -4647,7 +4690,20 @@ namespace FC{
 						break;
 					}
 
-					taskManager.updateTaskStatus(llaSnapshot.returnPendingTasks.at(0).taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					const int returnTaskId = lla_return_task_id.load();
+					const auto returnTaskIt = std::find_if(llaSnapshot.returnPendingTasks.begin(), llaSnapshot.returnPendingTasks.end(),
+						[returnTaskId](const UnifiedWaferTask& task) { return task.taskId == returnTaskId; });
+					if (returnTaskIt == llaSnapshot.returnPendingTasks.end())
+					{
+						logError(lk1->getName().c_str(), "LLA return completion lost locked return task: taskId=%d, refuse incorrect status writeback.", returnTaskId);
+						lla_return_task_id.store(-1);
+						lla_return_slot.store(-1);
+						llaImmediateRepick.reset();
+						loadlock1_auto_step = 900;
+						break;
+					}
+					taskManager.updateTaskStatus(returnTaskIt->taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					lla_return_task_id.store(-1);
 					llaSnapshot = buildLoadLockTaskSnapshot("LLA");
 
 					if (!llaImmediateRepick.enabled)
@@ -4777,7 +4833,19 @@ namespace FC{
 						loadlock1_auto_step = 900;
 						break;
 					}					
-					taskManager.updateTaskStatus(llaSnapshot.returnPendingTasks.front().taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					const int returnTaskId = lla_return_task_id.load();
+					const auto returnTaskIt = std::find_if(llaSnapshot.returnPendingTasks.begin(), llaSnapshot.returnPendingTasks.end(),
+						[returnTaskId](const UnifiedWaferTask& task) { return task.taskId == returnTaskId; });
+					if (returnTaskIt == llaSnapshot.returnPendingTasks.end())
+					{
+						logError(lk1->getName().c_str(), "LLA put completion lost locked return task: taskId=%d, refuse incorrect status writeback.", returnTaskId);
+						lla_return_task_id.store(-1);
+						lla_return_slot.store(-1);
+						loadlock1_auto_step = 900;
+						break;
+					}
+					taskManager.updateTaskStatus(returnTaskIt->taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					lla_return_task_id.store(-1);
 					loadlock1_auto_step = 2071;
 				}
 				break;
@@ -4795,7 +4863,8 @@ namespace FC{
 							//2026-3-27 检测mapping，再去关门
 							auto cassManager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto station_cass = cassManager->getCassette(lk1.get());
-							if (station_cass->getMapping(loadlock1_move_slot_index) == Cassette::Mapping::Present)
+							const int returnSlot = lla_return_slot.load();
+							if (returnSlot > 0 && station_cass->getMapping(returnSlot) == Cassette::Mapping::Present)
 							{
 								if (lk1->getWtrOriginSafeSignal() && !wtr->isBusy())
 								{
@@ -4808,6 +4877,7 @@ namespace FC{
 									}
 									else
 									{
+										lla_return_slot.store(-1);
 										loadlock1_auto_step = 2080;
 									}
 								}
@@ -4822,6 +4892,7 @@ namespace FC{
 							}
 							else
 							{
+								lla_return_slot.store(-1);
 								logFailedExcuteCommandHasError(lk1->getName(), "检测mapping无片，不执行关闭传输腔门阀", loadlock1_process_name, loadlock1_auto_step);
 
 							}
@@ -5679,51 +5750,9 @@ namespace FC{
 							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
 								llbImmediateRepick.reset();
-
-								const bool hasSingleArmBusy = armAHasWafer ^ armBHasWafer;//是否有手臂有晶圆
-
-								const int occupiedArm = armAHasWafer ? 0 : (armBHasWafer ? 1 : -1);//有晶圆的手臂
-
-								auto returnIt = llbSnapshot.returnPendingTasks.end();//返回任务
-
-								auto pendingIt = llbSnapshot.pendingTasks.end();//待处理任务
-
-								if (hasSingleArmBusy && occupiedArm >= 0)//是否有手臂有晶圆
+								if (tryPlanImmediateRepick(lk2->getName().c_str(), llbSnapshot, armAHasWafer, armBHasWafer, UnifiedWaferTask::PM2, llbImmediateRepick))
 								{
-									returnIt = std::find_if(llbSnapshot.returnPendingTasks.begin(), llbSnapshot.returnPendingTasks.end(),
-										[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });//返回任务
-
-									if (!llbSnapshot.pendingTasks.empty())//是否有待处理任务
-									{
-										pendingIt = std::find_if(llbSnapshot.pendingTasks.begin(), llbSnapshot.pendingTasks.end(),
-											[occupiedArm](const UnifiedWaferTask& task) { return task.arm == occupiedArm; });
-										if (pendingIt == llbSnapshot.pendingTasks.end())
-										{
-											logInform(lk2->getName().c_str(),
-												"LLB回片后立即补取保持固定手臂: pending队列中未找到 returnArm=%d 对应任务, 本轮跳过立即补取",
-												occupiedArm);
-										}
-									}
-
-								}
-
-								// 如果有返回任务，且有待处理任务，说明是回片后立即补取场景
-								if (returnIt != llbSnapshot.returnPendingTasks.end() && pendingIt != llbSnapshot.pendingTasks.end())
-								{
-									llbImmediateRepick.enabled = true;
-
-									llbImmediateRepick.taskId = pendingIt->taskId;
-
-									llbImmediateRepick.arm = pendingIt->arm;
-
-									llbImmediateRepick.slot = pendingIt->targetFeedingSlot;
-
-									logInform(lk2->getName().c_str(),
-										"step:1051,识别到LLB回片后立即补取场景, occupiedArm=%d, repickArm=%d, repickSlot=%d, taskId=%d",
-										occupiedArm, llbImmediateRepick.arm, llbImmediateRepick.slot, llbImmediateRepick.taskId);
-
 									loadlock2_auto_step = 2000;
-
 									break;
 								}
 								else
@@ -6207,8 +6236,9 @@ namespace FC{
 						loadlock2_auto_step = 900;
 						break;
 					}
-					loadlock2_move_slot_index = llbSnapshot.returnPendingTasks.front().targetBlankingSlot;
-					const auto put_arm = llbSnapshot.returnPendingTasks.front().arm;
+					const auto currentReturnTask = llbSnapshot.returnPendingTasks.front();
+					loadlock2_move_slot_index = currentReturnTask.targetBlankingSlot;
+					const auto put_arm = currentReturnTask.arm;
 					bool haswaferarm = wtr->hasObject(put_arm);
 
 					if (!haswaferarm)
@@ -6231,6 +6261,8 @@ namespace FC{
 						if(lk2->getTMCavityDoorOpend() && haswaferarm)
 						{
 							// 设置请求标志，委托Robot线程执行放片到LLB
+							llb_return_task_id.store(currentReturnTask.taskId);
+							llb_return_slot.store(currentReturnTask.targetBlankingSlot);
 							robot_put_to_llb.arm.store(put_arm);
 							robot_put_to_llb.slot.store(loadlock2_move_slot_index);
 							robot_put_to_llb.done.store(false);
@@ -6240,6 +6272,8 @@ namespace FC{
 						}
 						else
 						{
+							llb_return_task_id.store(-1);
+							llb_return_slot.store(-1);
 							loadlock2_auto_step = 2000; //跳转到2000
 						}
 					}
@@ -6263,6 +6297,8 @@ namespace FC{
 						}
 						else 
 						{
+								llb_return_task_id.store(-1);
+								llb_return_slot.store(-1);
 							llbImmediateRepick.reset();
 							logFailed(wtr->getName(), "LLB放片失败,step=2065");
 							Sleep(2000);
@@ -6290,7 +6326,20 @@ namespace FC{
 						break;
 					}
 
-					taskManager.updateTaskStatus(llbSnapshot.returnPendingTasks.front().taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					const int returnTaskId = llb_return_task_id.load();
+					const auto returnTaskIt = std::find_if(llbSnapshot.returnPendingTasks.begin(), llbSnapshot.returnPendingTasks.end(),
+						[returnTaskId](const UnifiedWaferTask& task) { return task.taskId == returnTaskId; });
+					if (returnTaskIt == llbSnapshot.returnPendingTasks.end())
+					{
+						logError(lk2->getName().c_str(), "LLB return completion lost locked return task: taskId=%d, refuse incorrect status writeback.", returnTaskId);
+						llb_return_task_id.store(-1);
+						llb_return_slot.store(-1);
+						llbImmediateRepick.reset();
+						loadlock2_auto_step = 900;
+						break;
+					}
+					taskManager.updateTaskStatus(returnTaskIt->taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED);
+					llb_return_task_id.store(-1);
 					llbSnapshot = buildLoadLockTaskSnapshot("LLB");
 
 					// 检测是否满足立即补取条件，满足则直接进入补取流程，不满足则进入正常收尾流程
@@ -6422,7 +6471,19 @@ namespace FC{
 						loadlock2_auto_step = 900;
 						break;
 					}
-					taskManager.updateTaskStatus(llbSnapshot.returnPendingTasks.front().taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					const int returnTaskId = llb_return_task_id.load();
+					const auto returnTaskIt = std::find_if(llbSnapshot.returnPendingTasks.begin(), llbSnapshot.returnPendingTasks.end(),
+						[returnTaskId](const UnifiedWaferTask& task) { return task.taskId == returnTaskId; });
+					if (returnTaskIt == llbSnapshot.returnPendingTasks.end())
+					{
+						logError(lk2->getName().c_str(), "LLB put completion lost locked return task: taskId=%d, refuse incorrect status writeback.", returnTaskId);
+						llb_return_task_id.store(-1);
+						llb_return_slot.store(-1);
+						loadlock2_auto_step = 900;
+						break;
+					}
+					taskManager.updateTaskStatus(returnTaskIt->taskId, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					llb_return_task_id.store(-1);
 
 					loadlock2_auto_step = 2071;
 				}
@@ -6441,7 +6502,8 @@ namespace FC{
 							//2026-3-27 检测mapping，再去关门
 							auto cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto station_cass = cassManager->getCassette(lk2.get());
-							if (station_cass->getMapping(loadlock2_move_slot_index) == Cassette::Mapping::Present)
+							const int returnSlot = llb_return_slot.load();
+							if (returnSlot > 0 && station_cass->getMapping(returnSlot) == Cassette::Mapping::Present)
 							{
 								if (lk2->getWtrOriginSafeSignal() && !wtr->isBusy())
 								{
@@ -6454,6 +6516,7 @@ namespace FC{
 									}
 									else
 									{
+										llb_return_slot.store(-1);
 										loadlock2_auto_step = 2080;
 									}
 								}
@@ -6468,6 +6531,7 @@ namespace FC{
 							}
 							else
 							{
+								llb_return_slot.store(-1);
 								logFailedExcuteCommandHasError(lk2->getName(), "检测mapping无片，不执行关闭传输腔门阀", loadlock2_process_name, loadlock2_auto_step);
 							}
 						}
@@ -7213,6 +7277,7 @@ namespace FC{
 					if (needReset_PM2.load()) {
 						pm2_auto_step = 10;
 						pm2_need_return_wafer = false;
+						pm2_craft_task_id.store(-1);
 						needReset_PM2 = false;
 						continue; // 跳过本次循环剩余部分
 					}
@@ -7447,33 +7512,38 @@ namespace FC{
 												Sleep(100);
 												break;
 											}
-											int returnTaskArm = -1;
-											if (!loadlockReturnPendingTasks.empty())
+											PM2ExchangePlan exchangePlan;
+											std::string exchangeReason;
+											if (tryBuildPm2ExchangePlan(pm2Snapshot, loadlockReturnPendingTasks, haswaferarm1, haswaferarm2, exchangePlan, exchangeReason))
 											{
-												returnTaskArm = loadlockReturnPendingTasks.front().arm;
-											}
-											else if (!pm2Snapshot.completedTasks.empty())
-											{
-												returnTaskArm = pm2Snapshot.completedTasks.front().arm;
-											}
-
-											if (returnTaskArm == 0 && !haswaferarm1 && arm2HasPending)
-											{
-												logInform("PM2", "PM2交换料：A取B放，依据固定手臂 task.arm(A取/B放).");
 												pm2_exchange_in_flight.store(true);
-												pm2_auto_step.store(1060);
-
-											}
-											else if (returnTaskArm == 1 && arm1HasPending && !haswaferarm2)
-											{
-												logInform("PM2", "PM2交换料：B取A放，依据固定手臂 task.arm(B取/A放).");
-												pm2_exchange_in_flight.store(true);
-												pm2_auto_step.store(1070);
+												exchange_info_pm2.getArm.store(exchangePlan.getArm);
+												exchange_info_pm2.putArm.store(exchangePlan.putArm);
+												pm2_craft_task_id.store(exchangePlan.pendingTaskId);
+												if (exchangePlan.getArm == 0 && exchangePlan.putArm == 1)
+												{
+													logInform("PM2", "PM2交换料：A取B放，依据任务对 taskId(return=%d, pending=%d) 与固定手臂规则.",
+														exchangePlan.returnTaskId, exchangePlan.pendingTaskId);
+													pm2_auto_step.store(1060);
+												}
+												else if (exchangePlan.getArm == 1 && exchangePlan.putArm == 0)
+												{
+													logInform("PM2", "PM2交换料：B取A放，依据任务对 taskId(return=%d, pending=%d) 与固定手臂规则.",
+														exchangePlan.returnTaskId, exchangePlan.pendingTaskId);
+													pm2_auto_step.store(1070);
+												}
+												else
+												{
+													pm2_exchange_in_flight.store(false);
+													pm2_craft_task_id.store(-1);
+													logWarn("PM2", "PM2交换规划结果非法: getArm=%d, putArm=%d，回到等待.", exchangePlan.getArm, exchangePlan.putArm);
+													pm2_auto_step.store(10);
+													Sleep(100);
+												}
 											}
 											else
 											{
-												logWarn("PM2", "PM2交换料前状态与固定手臂task.arm不一致: returnArm=%d, armA_has=%d, armA_pending=%d, armB_has=%d, armB_pending=%d，等待修正...",
-													returnTaskArm, haswaferarm1, arm1HasPending, haswaferarm2, arm2HasPending);
+												logWarn("PM2", "PM2交换料未发起: %s", exchangeReason.c_str());
 												pm2_auto_step.store(10);
 												Sleep(100);
 											}
@@ -7516,6 +7586,22 @@ namespace FC{
 							if (robot_put_to_pm2.success.load())
 							{
 								logInform("PM2", "step:1015,arm=%d,放到PM2成功-->recive", robot_put_to_pm2.arm);
+								const auto pm2Snapshot = buildPmTaskSnapshot("PM2");
+								const auto pendingIt = std::find_if(pm2Snapshot.pendingTasks.begin(), pm2Snapshot.pendingTasks.end(),
+									[this](const UnifiedWaferTask& task)
+									{
+										return task.arm == robot_put_to_pm2.arm.load();
+									});
+								if (pendingIt != pm2Snapshot.pendingTasks.end())
+								{
+									pm2_craft_task_id.store(pendingIt->taskId);
+								}
+								else
+								{
+									pm2_craft_task_id.store(-1);
+									logWarn("PM2", "PM2放片成功后未找到与arm=%d对应的pending task，后续工艺回写将退回队首兜底.",
+										robot_put_to_pm2.arm.load());
+								}
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
 								pm2_allow_goto_craft = true;
@@ -7524,6 +7610,7 @@ namespace FC{
 							else
 							{
 								logWarn("PM2", "放到PM2放片失败，回到step 200重新判定当前手臂/PM状态.");
+								pm2_craft_task_id.store(-1);
 								Sleep(200);
 								pm2_auto_step.store(200);
 							}
@@ -7531,6 +7618,7 @@ namespace FC{
 						else if (!robot_put_to_pm2.requested.load())
 						{
 							logWarn("PM2", "PM2 1015步检测到请求已撤销，回到step 200重新调度.");
+							pm2_craft_task_id.store(-1);
 							Sleep(100);
 							pm2_auto_step.store(200);
 						}
@@ -7649,18 +7737,7 @@ namespace FC{
 							pm2_exchange_in_flight.store(false);
 							if (robot_exchange_pm2.success.load())
 							{
-								// PM2交换后，从PM2取出工艺完成片的是 getArm。
-								// 这片在交换成功瞬间可能仍处于 PM_PROCESS/COMPLETED，
-								// 尚未推进到 LOADLOCK_RETURN/QUEUED，所以这里要兼容两种状态。
-								const int actualReturnArm = exchange_info_pm2.getArm.load();
-								if (!syncPm2ReturnTaskArm(actualReturnArm))
-								{
-									logError("PM2", "PM2交换成功(A取B放)但回片task.arm与实际手臂不一致，阻断进入工艺，等待上层处理.");
-									pm2_allow_goto_craft = false;
-									pm2_auto_step.store(10);
-									break;
-								}
-								logInform(wtr->getName().c_str(), "PM2交换料成功(A取B放)，step=%d，转到工艺步骤2000", pm2_auto_step.load());
+								logInform(wtr->getName().c_str(), "PM2 exchange success (A-get B-put), plan locked before issue, step=%d, goto craft 2000", pm2_auto_step.load());
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
 								pm2_allow_goto_craft = true; //转到工艺
@@ -7669,6 +7746,7 @@ namespace FC{
 							else
 							{
 								logWarn("PM2", "PM2交换料失败(A取B放)，回到step 200重新调度.");
+								pm2_craft_task_id.store(-1);
 								Sleep(200);
 								pm2_auto_step.store(200);
 							}
@@ -7676,6 +7754,7 @@ namespace FC{
 						else if (!robot_exchange_pm2.requested.load())
 						{
 							pm2_exchange_in_flight.store(false);
+							pm2_craft_task_id.store(-1);
 							logWarn("PM2", "PM2 1065步检测到交换请求已撤销，回到step 200重新调度.");
 							Sleep(100);
 							pm2_auto_step.store(200);
@@ -7721,15 +7800,7 @@ namespace FC{
 							pm2_exchange_in_flight.store(false);
 							if (robot_exchange_pm2.success.load())
 							{
-								const int actualReturnArm = exchange_info_pm2.getArm.load();
-								if (!syncPm2ReturnTaskArm(actualReturnArm))
-								{
-									logError("PM2", "PM2交换成功(B取A放)但回片task.arm与实际手臂不一致，阻断进入工艺，等待上层处理.");
-									pm2_allow_goto_craft = false;
-									pm2_auto_step.store(10);
-									break;
-								}
-								logInform(wtr->getName().c_str(), "PM2交换料成功(B取A放)，step=%d，转到工艺步骤2000", pm2_auto_step.load());
+								logInform(wtr->getName().c_str(), "PM2 exchange success (B-get A-put), plan locked before issue, step=%d, goto craft 2000", pm2_auto_step.load());
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
 								pm2_allow_goto_craft = true;
@@ -7738,6 +7809,7 @@ namespace FC{
 							else
 							{
 								logWarn("PM2", "PM2交换料失败(B取A放)，回到step 200重新调度.");
+								pm2_craft_task_id.store(-1);
 								Sleep(200);
 								pm2_auto_step.store(200);
 							}
@@ -7745,6 +7817,7 @@ namespace FC{
 						else if (!robot_exchange_pm2.requested.load())
 						{
 							pm2_exchange_in_flight.store(false);
+							pm2_craft_task_id.store(-1);
 							logWarn("PM2", "PM2 1075步检测到交换请求已撤销，回到step 200重新调度.");
 							Sleep(100);
 							pm2_auto_step.store(200);
@@ -7865,15 +7938,35 @@ namespace FC{
 						const auto pm2Snapshot = buildPmTaskSnapshot("PM2");
 						if (!pm2Snapshot.pendingTasks.empty())
 						{
-							const auto currentTask = pm2Snapshot.pendingTasks.front();
+							UnifiedWaferTask currentTask = pm2Snapshot.pendingTasks.front();
+							const int craftTaskId = pm2_craft_task_id.load();
+							if (craftTaskId >= 0)
+							{
+								const auto taskIt = std::find_if(pm2Snapshot.pendingTasks.begin(), pm2Snapshot.pendingTasks.end(),
+									[craftTaskId](const UnifiedWaferTask& task)
+									{
+										return task.taskId == craftTaskId;
+									});
+								if (taskIt == pm2Snapshot.pendingTasks.end())
+								{
+									logError("PM2", "PM2工艺完成后未找到锁定的pending task: taskId=%d，拒绝错误回写任务状态.", craftTaskId);
+									pm2_allow_goto_craft = false;
+									pm2_craft_task_id.store(-1);
+									pm2_auto_step.store(10);
+									break;
+								}
+								currentTask = *taskIt;
+							}
 							taskManager.updateTaskStatus(currentTask.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::COMPLETED);
 							taskManager.updateTaskStatus(currentTask.taskId, UnifiedWaferTask::TaskType::LOADLOCK_RETURN, UnifiedWaferTask::Status::QUEUED);//7
 							//pm2_need_return_wafer = true;
 							pm2_allow_goto_craft = false;
+							pm2_craft_task_id.store(-1);
 							pm2_auto_step.store(10);
 						}
 						else
 						{
+							pm2_craft_task_id.store(-1);
 							pm2_auto_step.store(10);
 						}
 					}

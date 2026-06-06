@@ -1,0 +1,580 @@
+/**
+* @file     fortrend_sunwayrobot_put_wafer_command.h
+* @brief    put_wafer command for SunwayRobot
+* @author   xielonghua
+*/
+
+// Library: Fortrend
+// Package: SubSystem/SunwayRobot
+
+#include <sstream>
+#include <vector>
+#include "Poco/Format.h"
+
+#include "Kernel/kernel.h"
+#include "Kernel/kernel_log.h"
+#include "Kernel/kernel_block.h"
+#include "Kernel/kernel_block_manager.h"
+#include "Kernel/kernel_default_block_manager.h"
+#include "kernel/kernel_command_reject_exception.h"
+#include "kernel/Fortrend/abstract_io_subsystem.h"
+#include "Kernel/Fortrend/fortrend_station.h"
+#include "Kernel/Fortrend/fortrend_wafer_robot_subsystem.h"
+#include "Kernel/Fortrend/fortrend_cassette_manager.h"
+
+#include "Aligner/fortrend_aligner_subsystem.h"
+#include "LoadLock/fortrend_loadlock_subsystem.h"
+#include "PMCavity/fortrend_pm_cavity_subsystem.h"
+#include "SunwayRobot/fortrend_sunwayrobot_put_wafer_command.h"
+#include "SunwayRobot/fortrend_sunwayrobot_subsystem.h"
+#include "SunwayRobot/fortrend_sunwayrobot_check_load_command.h"
+#include "CoolingCavity/fortrend_cooling_cavity_subsystem.h"
+
+#include "fortrend_device_kernel.h"
+#include "Kernel/kernel_event_paramters.h"
+
+#include <iostream>
+#include <string>
+#include <chrono>
+#include <regex>
+#include <algorithm>
+#include <functional>
+#include <stdexcept>
+#include <iomanip>
+#include <mutex>
+
+#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+
+
+namespace FC{
+
+	//std::mutex robot_mutex;
+/**
+* SunwayRobotPutWaferCommandPrivate
+*/
+class SunwayRobotPutWaferCommandPrivate{
+public:
+	std::string station_name;
+	//FortrendSunwayRobotSubsystem* robot;
+	IKernelCommand::RunResult result_;
+	
+};
+
+/**
+* SunwayRobotPutWaferCommand
+*/
+SunwayRobotPutWaferCommand::SunwayRobotPutWaferCommand(const std::shared_ptr<FortrendStation>&  station, 
+	int arm, int slot, SunwaySubSystemHelper* helper)
+	:SunwayCommandExecuter(helper)
+	, RobotAbstractPutWaferCommand(station, arm, slot)
+	, d(new SunwayRobotPutWaferCommandPrivate){
+
+};
+
+std::vector<IKernelResources* > SunwayRobotPutWaferCommand::resources() const{
+	std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
+	ret.push_back(getStation().get());
+	return ret;
+}
+
+SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::performRobotOperation(
+	const std::function<std::string()>& commandBuilder,
+	const std::function<bool()>& onSuccess)
+{
+	if (robotRobotOperation(commandBuilder) == RunResult::RUN_OK)
+	{
+		if (!onSuccess())
+		{
+			FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
+			if (!robot) {
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
+			}
+			logError(robot->getName().c_str(), "更新晶圆状态失败.");
+			std::string error_message = "机械手更新晶圆状态失败.";
+			int error_code = 0x101;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+		else
+		{
+			return RunResult::RUN_OK;
+		}
+	};
+}
+
+bool SunwayRobotPutWaferCommand::updateWaferMapping()
+{
+	FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
+	auto cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+	auto station_cass = cassManager->getCassette(getStation().get());
+	auto robot_cass = cassManager->getCassette(robot);
+	
+	int slot = 1;
+	if (getStation()->getName().find("LL") != std::string::npos)
+	{
+		auto loadlock = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation());
+		station_cass->setMapping(getSlot(), Cassette::Present);
+	}
+	else {
+		station_cass->setMapping(1, Cassette::Present);
+	}
+	logInform(robot->getName().c_str(), "放晶圆手指Arm indenx： %d", getArm());
+
+	robot->setObject(getArm(), false);
+
+	//对机械手的虚拟cassette，放晶圆完成后，更新状态
+	//auto robot_mapping_res = robot_cass->getAllMapping();
+	//robot_mapping_res[getArm()] = Cassette::Empty;
+
+	//std::vector<int> robot_all_alots;
+	//for (size_t i = 0; i < robot_mapping_res.size(); i++)
+	//{
+	//	robot_all_alots.push_back(i + 1);
+	//}
+	//robot_cass->setMapping(robot_all_alots, robot_mapping_res); //应该单槽置位
+
+	robot_cass->setMapping(getArm() + 1, Cassette::Mapping::Empty);
+	station_cass->setPodSize(robot_cass->getPodSize());//PM腔的工艺次数，需要本地存储，暂时使用PodSize字段
+
+	//Loadlock的cassete状态会自动更新
+	
+	//2026-2-2 放晶圆后，再次释放机械手block
+	robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+
+	logInform(robot->getName().c_str(), "放晶圆命令执行结束 %s %d %s", d->station_name, slot, station_cass->getBoxId());
+	return true;
+}
+
+SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::robotRobotOperation(const std::function<std::string()>& commandBuilder)
+{
+
+	FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
+	if (!robot) {
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
+	}
+	//get command configure
+	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
+
+	KernelCommandParameter parameter(shared_from_this());
+
+	//fill params
+	int timeout = command_config->getInt("timeout", 100000);
+	if (timeout < 10) {
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,Poco::format("超时: %s 放晶圆超时参数错误.", robot->getName()), this);
+	}
+	logInform(robot->getName().c_str(), "放晶圆命令开始,工位%s", d->station_name);
+	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
+
+	std::string res;
+	std::string error_message;
+	int error_code = 0;
+	int error_type = 1;
+	// 发送命令并等待响应
+
+	std::string command = commandBuilder();
+
+	logInform(robot->getName().c_str(), "command:%s", command.c_str());
+
+	std::string prefix;
+	std::string VerificationMessage;
+
+	size_t colonPos = command.find(':');
+	if (colonPos == std::string::npos) {
+		std::cerr << "解析失败: 未找到冒号分隔符" << std::endl;
+		error_code = 0x100;
+		AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+		setAlarm(alarm);
+		return RunResult::RUN_FAILD;
+	}
+	prefix = command.substr(0, colonPos);
+
+
+	if (prefix == "MOV")
+	{
+		VerificationMessage = "RPS:PUTOBJECT;";
+		error_message = "放晶圆命令执行失败.";
+	}
+	else if(prefix == "QRY")
+	{
+		VerificationMessage = "RPS:AWCRUNDATA";
+		error_message = "查询AWC命令执行失败.";
+	}
+
+
+	logInform(robot->getName().c_str(), "VerificationMessage:%s", VerificationMessage.c_str());
+
+	sendRequest(command);
+	const std::string ackPrefix = "ACK:" + command.substr(command.find(':') + 1);
+	const std::string commandContext = "PutWafer-" + prefix;
+
+	auto startTime = std::chrono::high_resolution_clock::now();
+	auto timeout2 = std::chrono::seconds(120);
+
+	res = recvResponseRobotMessageMatching(timeout,
+		{ ackPrefix, VerificationMessage, "ERR", "NAK" }, commandContext);
+	while (true)
+	{
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
+
+		if (res != std::string(""))
+		{
+			break;
+		}
+		if (elapsed >= timeout2)
+		{
+			error_code = 0x100;
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+			setAlarm(alarm);
+			
+			return RunResult::RUN_FAILD;
+		}
+		res = recvResponseRobotMessageMatching(timeout,
+			{ ackPrefix, VerificationMessage, "ERR", "NAK" }, commandContext);
+		Sleep(10);
+	}
+	logInform(robot->getName().c_str(), "ACK res:%s", res.c_str());
+
+	//if (res != "ACK;" && res.find(VerificationMessage) == std::string::npos)
+
+	if (res.find("ACK") == std::string::npos)//没找到
+	{
+		logError(robot->getName().c_str(), error_message.c_str());
+
+		std::string error_str = "ERR";
+		if (!handleErrorCode(res, error_str, error_type, error_code)) {
+			error_type = 5;
+			error_code = 1;
+			std::string str = Poco::format(",机械手返回的指令未定义：%s", res);
+			error_message += str;
+		}
+		else
+		{
+			auto error_strucct = getErrorCode(error_type, error_code);
+			error_type = error_strucct->type;
+			error_code = error_strucct->code;
+			error_message = error_strucct->message;
+		}
+		//set alarm data
+		AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+		setAlarm(alarm);
+		return RunResult::RUN_FAILD;
+	}
+	else
+	{
+		//等待机械手返回指令
+		//clearRobotMessage();
+		res = recvResponseRobotMessageMatching(timeout,
+			{ VerificationMessage, "ERR", "NAK" }, commandContext + "-RPS");
+		auto startTime2 = std::chrono::high_resolution_clock::now();
+		auto timeout3 = std::chrono::seconds(120);
+
+		while (true)
+		{
+			auto currentTime = std::chrono::high_resolution_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime2);
+
+			if (res.find("ACK") == std::string::npos && (!res.empty()))
+			{
+				break;
+			}
+			if (elapsed >= timeout3)
+			{
+				error_message = "返回指令超时.";
+				error_code = 0x100;
+				AlarmMessage::Ptr alarm(new AlarmMessage(1, error_code, error_message));
+				setAlarm(alarm);
+				return RunResult::RUN_FAILD;
+			}
+			res = recvResponseRobotMessageMatching(timeout,
+				{ VerificationMessage, "ERR", "NAK" }, commandContext + "-RPS");
+			Sleep(10);
+		}
+		logInform(robot->getName().c_str(), "RPS: res:%s", res.c_str());
+
+		auto found = search(res.begin(), res.end(), VerificationMessage.begin(), VerificationMessage.end());
+		if (found != res.end())
+		{
+			if (VerificationMessage == "RPS:AWCRUNDATA")
+			{
+				std::string prefix, command;
+				std::vector<std::string> params;
+				if (parseResponse(res, prefix, command, params))
+				{
+					FortrendSunwayRobotSubsystem::AWCRecordData awc_value;
+					if (params.size() == 2)
+					{
+						awc_value.R = stod(params.at(0)); //长度
+						awc_value.T = stod(params.at(1)); //宽度
+						// 设置AWC记录数
+						robot->setAWCRecordData(awc_value);
+					}
+				}
+				else {
+					std::cerr << "  解析失败\n" << std::endl;
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+						Poco::format("%s 机械手解析失败awc数据失败.", robot->getName()), this);
+				}
+			}
+			if (!sendRequest("ACK;"))
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
+					Poco::format("%s 机械手通讯错误.", robot->getName()), this);
+			}
+
+			robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+
+			return RunResult::RUN_OK;
+		}
+		else
+		{
+			logError(robot->getName().c_str(), error_message.c_str());
+			int error_type = 1;
+			int error_code = 0;
+			std::string error_str = "ERR";
+			if (!handleErrorCode(res, error_str, error_type, error_code)) {
+				error_type = 5;
+				error_code = 1;
+				std::string str = Poco::format(",机械手返回的指令未定义：%s", res);
+				error_message += str;
+				logError(robot->getName().c_str(), error_message.c_str());
+			}
+			else
+			{
+				auto error_strucct = getErrorCode(error_type, error_code);
+				error_type = error_strucct->type;
+				error_code = error_strucct->code;
+				error_message = error_strucct->message;
+			}
+			//set alarm data
+			AlarmMessage::Ptr alarm(new AlarmMessage(error_type, error_code, error_message));
+			setAlarm(alarm);
+			return RunResult::RUN_FAILD;
+		}
+	}
+	return RunResult::RUN_FAILD;
+}
+
+bool SunwayRobotPutWaferCommand::updateAwcData()
+{
+	return true;
+}
+
+
+SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(KernelException){
+
+	FortrendSunwayRobotSubsystem* robot = dynamic_cast<FortrendSunwayRobotSubsystem*>(getSubsystem());
+	if (!robot){
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误.", this);
+	}
+
+	std::lock_guard<std::mutex> lock(robot->robot_mutex); //加锁
+
+	//check subsystem state
+	if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, "机械手未处于正常状态.", this);
+	}
+	//check station state
+	if (auto sub = std::dynamic_pointer_cast<KernelAbstractSubSystem>(getStation())){
+		if (sub->getState() != IKernelSubSystem::SUB_NORMAL){
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, 
+				Poco::format("工位： %s 未处于正常状态.", getStation()->getName()), this);
+		}
+	}
+
+	if (robot->getBusyState())
+	{
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY,
+			Poco::format("%s 处于忙碌中.", robot->getName()), this);
+	}
+
+	//check door open
+	if (auto sub = std::dynamic_pointer_cast<FortrendAbstractStation>(getStation()))
+	{
+		if (!sub->hasDoorOpend()) 
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位： %s 门阀未处于打开状态（逻辑错误）.", getStation()->getName()), this);	
+		}
+	}
+	//check modules
+	auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
+	//get cass
+	auto station_cass = cassManager->getCassette(getStation().get());
+
+	if (!station_cass){
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, 
+			Poco::format("工位 %s晶圆盒不存在.", getStation()->getName()), this);
+	}
+
+	int mapping_slot = getSlot();
+
+
+	if (getStation()->getName().find("PM") != std::string::npos)
+	{
+		if (auto sub = std::dynamic_pointer_cast<FortrendPMCavitySubsystem>(getStation())){
+			if (!sub)
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "PM子系统类型错误", this);
+			}
+
+			if (!sub->getPMCavitySafeSignal())
+			{
+				logInform(sub->getName().c_str(), "PM腔未检测到安全信号 %d ,延迟50ms重新检测.", sub->getPMCavitySafeSignal());
+				Sleep(50);
+				if (!sub->getPMCavitySafeSignal())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,Poco::format("%s腔未发出安全信号.", getStation()->getName()).c_str(), this);
+				}
+			}
+
+			//2026-5-21 放晶圆时判断PM腔是否在最低平面位置
+			float zAxleLocation = sub->getPMCavityZAxleLocation();
+			if (zAxleLocation >= 1.2 || zAxleLocation <= 0.8)
+			{
+				logInform(sub->getName().c_str(), "PM腔检测到升降轴当前坐标:%f,不在安全范围 ,延迟50ms重新检测.", sub->getPMCavityZAxleLocation());
+				Sleep(50);
+
+				zAxleLocation = sub->getPMCavityZAxleLocation();
+				if (zAxleLocation >= 1.2 || zAxleLocation <= 0.8)
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("%s腔PM腔检测到升降轴当前坐标不在安全范围.", getStation()->getName()).c_str(), this);
+				}
+			}
+
+		}
+	}
+	else
+	{
+		if (auto sub = std::dynamic_pointer_cast<FortrendLoadLockSubsystem>(getStation()))
+		{
+			if (!sub)
+			{
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "Loadlock子系统类型错误", this);
+			}
+
+			if (!sub->getLoadLockCavitySafeSignal())
+			{
+				logInform(sub->getName().c_str(), "Loadlock腔未检测到安全信号 %d ,延迟50ms重新检测.", sub->getLoadLockCavitySafeSignal());
+				Sleep(50);
+				if (!sub->getLoadLockCavitySafeSignal())
+				{
+					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
+						Poco::format("%s腔未发出安全信号.", getStation()->getName()).c_str(), this);
+				}
+			}
+			
+		}
+	}
+
+	if (robot->getWithWaferModeEnable() && (station_cass->getMapping(mapping_slot) != Cassette::Mapping::Empty))
+	{
+		if (getStation()->getName().find("PM") == std::string::npos)
+		{
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION,
+				Poco::format("工位： %s 槽 %d 当前不为空.", getStation()->getName(), mapping_slot), this);
+		}
+	}
+	//fill params
+	d->station_name = getStation()->getName();
+	std::string str_arm = (getArm() == 0) ? "A" : "B";
+	// LL 工位处理
+
+	//MOV:PUTOBJECT/1/1/1;\r
+	//[P1]	工位，范围：1~30(int)
+	//[P2]	槽位（默认1）。范围：1~25(int)
+	//[P3]	手指(0:B, 1 : A)(int)
+	if (getStation()->getName().find("LL") != std::string::npos)
+	{
+		d->result_ = performRobotOperation(
+
+		[this, robot,str_arm]()->std::string {
+			//指令回调函数
+			std::string command = "MOV:PUTOBJECT/";
+			command.append(std::to_string(getStation()->getStationId(robot->getName())));
+			command.append("/");
+			command.append(std::to_string(getSlot()));
+			command.append("/");
+			command.append(str_arm);
+			command.append(";");
+			return command;
+		},
+
+		[this, robot]()->bool {
+			//更新状态回调函数
+			logInform(robot->getName().c_str(), "获取晶圆命令执行结束 %s %d", getStation()->getName(), getSlot());
+			return updateWaferMapping();
+			
+		}
+
+		);
+		//return RunResult::RUN_FAILD;
+	}
+	// PM 工位处理
+	else if (getStation()->getName().find("PM") != std::string::npos)
+	{
+		d->result_  =  performRobotOperation(
+		//指令回调函数
+		[this, robot, str_arm]() -> std::string {
+			int stationId = getStation()->getStationId(robot->getName());
+
+			std::string command = "MOV:PUTOBJECT/";
+
+			command.append(std::to_string(stationId));
+			command.append("/");
+			command.append(std::to_string(getSlot()));
+			command.append("/");
+			command.append(str_arm);
+			command.append(";");
+
+			return command;
+		},
+
+		[this, robot]()->bool {
+			//更新状态回调函数
+			logInform(robot->getName().c_str(), "获取晶圆命令执行结束 %s %d", getStation()->getName(), getSlot());
+			return updateWaferMapping();
+		}
+		);
+	}
+	Sleep(200);
+
+	//释放机械手block
+	robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
+
+	//if (d->result_ == RunResult::RUN_OK)
+	//	return RunResult::RUN_OK;
+	//else
+	//	return RunResult::RUN_FAILD;
+
+	if(d->result_ == RunResult::RUN_OK)
+	{
+		//2026-1-22 不加AWC
+		return performRobotOperation(
+			[this, robot]()->std::string {
+			int stationId = getStation()->getStationId(robot->getName());
+
+			//std::string command = "QRY:AWC_PARAM/";
+			//command.append(std::to_string(stationId));
+			//command.append(";");
+			
+			//2026-1-30 修改AWC查询指令，不带工位参数
+			std::string command = "QRY:AWCRUNDATA;";
+			return command;
+			},
+
+			[this, robot]()->bool {
+			//更新状态回调函数
+			logInform(robot->getName().c_str(), "机械手获取AWC纠偏值命令执行结束 %s %d", getStation()->getName(), getSlot());
+			return updateAwcData();
+			}
+		);
+		return RunResult::RUN_OK;
+	}
+}
+
+}
