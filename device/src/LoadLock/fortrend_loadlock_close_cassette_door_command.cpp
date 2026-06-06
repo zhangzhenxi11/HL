@@ -38,20 +38,21 @@ namespace FC{
 		//setDescription("close cassette door the laodlock");
 	};
 
-	std::vector<IKernelResources* > LoadLockCloseCassetteDoorCommand::resources() const{
-		std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
-		FortrendCassetteManager::Ptr cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
-		auto smif = cassManager->getStation("EWTR");
-		if (smif){
-			ret.push_back(smif);
-		}
-		else{
-			return KernelSubsystemCommand::resources();
-		}
-		
-		return ret;
-		//return std::vector<IKernelResources* >();
-	}
+	//2026-6-6 注释
+	//std::vector<IKernelResources* > LoadLockCloseCassetteDoorCommand::resources() const{
+	//	std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
+	//	FortrendCassetteManager::Ptr cassManager = getSubsystem()->getKernel()->getKernelModule<FortrendCassetteManager>();
+	//	auto smif = cassManager->getStation("EWTR");
+	//	if (smif){
+	//		ret.push_back(smif);
+	//	}
+	//	else{
+	//		return KernelSubsystemCommand::resources();
+	//	}
+	//	
+	//	return ret;
+	//	//return std::vector<IKernelResources* >();
+	//}
 	
 	/**
 	* return true if success else false.

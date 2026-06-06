@@ -271,7 +271,7 @@ namespace FC{
 		bool tryBuildPm2ScheduleSnapshot(PM2ScheduleSnapshot& snapshot);
 
 		// 把“当前LL是否必须让PM2优先”集中在一处，避免不同step各写一套规则。
-		bool shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const;
+		bool shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, int requestedLlArm, std::string& reason) const;
 
 		// 对齐交互片时序：PM2仍在加工且双手都空时，允许LL按固定arm预装下一片在手等待交换。
 		bool canLlImmediateRepickWaitForPm2Craft(const PM2ScheduleSnapshot& snapshot, int repickArm) const;
@@ -289,6 +289,9 @@ namespace FC{
 
 		// 发送LL取片请求前统一检查目标手臂是否已被实物、挂起请求或当前robot_step占用。
 		bool isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const;
+
+		// LL侧发送RQLoad前统一检查WTR是否已被Robot线程占用或即将占用，避免查询与取放片抢发。
+		bool shouldLlWaitForWtrFingerQuery(std::string& reason) const;
 
 
 		int getOtherArm(const int arm) const
@@ -1008,11 +1011,25 @@ namespace FC{
 		snapshot.armBHasPending = snapshot.armBHasWafer &&
 			std::any_of(pm2PendingTasksLocal.begin(), pm2PendingTasksLocal.end(), [](const UnifiedWaferTask& t) { return t.arm == 1; });
 
-		if (!loadlockReturnPendingTasks.empty())
+		const int craftTaskId = pm2_craft_task_id.load();
+		if (craftTaskId >= 0)
+		{
+			const auto craftTaskIt = std::find_if(pm2PendingTasksLocal.begin(), pm2PendingTasksLocal.end(),
+				[craftTaskId](const UnifiedWaferTask& task)
+				{
+					return task.taskId == craftTaskId;
+				});
+			if (craftTaskIt != pm2PendingTasksLocal.end())
+			{
+				snapshot.preferredPmArm = craftTaskIt->arm;
+			}
+		}
+
+		if (snapshot.preferredPmArm < 0 && !loadlockReturnPendingTasks.empty())
 		{
 			snapshot.preferredPmArm = loadlockReturnPendingTasks.front().arm;
 		}
-		else if (!pm2CompletedTasksLocal.empty())
+		else if (snapshot.preferredPmArm < 0 && !pm2CompletedTasksLocal.empty())
 		{
 			snapshot.preferredPmArm = pm2CompletedTasksLocal.front().arm;
 		}
@@ -1065,7 +1082,7 @@ namespace FC{
 		return true;
 	}
 
-	bool QSlotTransferCycleVTMWidgetPrivate::shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, std::string& reason) const
+	bool QSlotTransferCycleVTMWidgetPrivate::shouldLlWaitForPm2Priority(const PM2ScheduleSnapshot& snapshot, int requestedLlArm, std::string& reason) const
 	{
 		if (!snapshot.hasWaferPm)
 		{
@@ -1088,8 +1105,26 @@ namespace FC{
 		{
 			if (snapshot.pm2CraftInProgress)
 			{
+				if (snapshot.preferredPmArm >= 0 && requestedLlArm == snapshot.preferredPmArm)
+				{
+					reason =
+						"reason=PM2加工中但请求预装手臂与未来回片臂冲突,必须保留回片臂" +
+						std::string(", requestedLlArm=") + std::to_string(requestedLlArm) +
+						", pm2Has=" + std::to_string(static_cast<int>(snapshot.hasWaferPm)) +
+						", pm2Crafting=" + std::to_string(static_cast<int>(snapshot.pm2CraftInProgress)) +
+						", armA_has=" + std::to_string(static_cast<int>(snapshot.armAHasWafer)) +
+						", armA_pending=" + std::to_string(static_cast<int>(snapshot.armAHasPending)) +
+						", armB_has=" + std::to_string(static_cast<int>(snapshot.armBHasWafer)) +
+						", armB_pending=" + std::to_string(static_cast<int>(snapshot.armBHasPending)) +
+						", pending=" + std::to_string(snapshot.pm2PendingCount) +
+						", completed=" + std::to_string(snapshot.pm2CompletedCount) +
+						", return_pending=" + std::to_string(snapshot.returnPendingCount) +
+						", expectedPmArm=" + std::to_string(expectedPmArm);
+					return true;
+				}
 				reason =
 					"reason=PM2加工中且双手为空,允许LL预装下一片" +
+					std::string(", requestedLlArm=") + std::to_string(requestedLlArm) +
 					std::string(", pm2Has=") + std::to_string(static_cast<int>(snapshot.hasWaferPm)) +
 					", pm2Crafting=" + std::to_string(static_cast<int>(snapshot.pm2CraftInProgress)) +
 					", armA_has=" + std::to_string(static_cast<int>(snapshot.armAHasWafer)) +
@@ -1151,6 +1186,11 @@ namespace FC{
 		}
 
 		if (snapshot.armAHasWafer || snapshot.armBHasWafer)
+		{
+			return false;
+		}
+
+		if (snapshot.preferredPmArm >= 0 && repickArm == snapshot.preferredPmArm)
 		{
 			return false;
 		}
@@ -1274,6 +1314,57 @@ namespace FC{
 		default:
 			break;
 		}
+
+		reason.clear();
+		return false;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::shouldLlWaitForWtrFingerQuery(std::string& reason) const
+	{
+		auto checkRequest = [&](const RobotTransferRequest& request, const char* requestName) -> bool
+		{
+			if (request.requested.load())
+			{
+				reason = std::string(requestName) + ".requested=1";
+				return true;
+			}
+			return false;
+		};
+
+		auto checkExchange = [&](const RobotTransferRequest& request, const ExchangeInfo& info, const char* requestName) -> bool
+		{
+			if (request.requested.load())
+			{
+				reason = std::string(requestName) + ".requested=1(getArm=" +
+					std::to_string(info.getArm.load()) + ", putArm=" +
+					std::to_string(info.putArm.load()) + ")";
+				return true;
+			}
+			return false;
+		};
+
+		if (robot_step != 10)
+		{
+			reason = "robot_step=" + std::to_string(robot_step);
+			return true;
+		}
+
+		if (checkRequest(robot_get_from_lla, "robot_get_from_lla")) return true;
+		if (checkRequest(robot_get_from_llb, "robot_get_from_llb")) return true;
+		if (checkRequest(robot_put_to_lla, "robot_put_to_lla")) return true;
+		if (checkRequest(robot_put_to_llb, "robot_put_to_llb")) return true;
+		if (checkRequest(robot_put_to_pm1, "robot_put_to_pm1")) return true;
+		if (checkRequest(robot_put_to_pm2, "robot_put_to_pm2")) return true;
+		if (checkRequest(robot_put_to_pm3, "robot_put_to_pm3")) return true;
+		if (checkRequest(robot_put_to_pm4, "robot_put_to_pm4")) return true;
+		if (checkRequest(robot_get_from_pm1, "robot_get_from_pm1")) return true;
+		if (checkRequest(robot_get_from_pm2, "robot_get_from_pm2")) return true;
+		if (checkRequest(robot_get_from_pm3, "robot_get_from_pm3")) return true;
+		if (checkRequest(robot_get_from_pm4, "robot_get_from_pm4")) return true;
+		if (checkExchange(robot_exchange_pm1, exchange_info_pm1, "robot_exchange_pm1")) return true;
+		if (checkExchange(robot_exchange_pm2, exchange_info_pm2, "robot_exchange_pm2")) return true;
+		if (checkExchange(robot_exchange_pm3, exchange_info_pm3, "robot_exchange_pm3")) return true;
+		if (checkExchange(robot_exchange_pm4, exchange_info_pm4, "robot_exchange_pm4")) return true;
 
 		reason.clear();
 		return false;
@@ -3583,6 +3674,11 @@ namespace FC{
 
 				case 400://有晶圆盒
 				{
+					if(ewtr == nullptr)
+					{
+						ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+					}
+
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
@@ -3592,17 +3688,30 @@ namespace FC{
 						}
 						else
 						{
-							auto cmd = lk1->createCloseCassetteDoorCommand();
-							lk1->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							if (!ewtr->isBusy())
 							{
-								logFailedExcuteCommandHasError(lk1->getName(), "关闭放晶圆盒门阀", loadlock1_process_name, loadlock1_auto_step);
+								auto cmd = lk1->createCloseCassetteDoorCommand();
+								lk1->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(lk1->getName(), "关闭放晶圆盒门阀", loadlock1_process_name, loadlock1_auto_step);
+								}
+								else
+								{
+
+									loadlock1_auto_step = 410;
+								}
 							}
 							else
 							{
 
-								loadlock1_auto_step = 410;
+								// 添加等待状态提示
+								static int wait_ewtr_count = 0;
+								if ((wait_ewtr_count++ % 20) == 0) {  // 每20次循环打印一次
+									logInform(ewtr->getName().c_str(), "等待EFEM取放晶圆手臂空闲中...");
+								}
+								Sleep(500);
 							}
 						}
 					}
@@ -3931,7 +4040,9 @@ namespace FC{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 					}
 
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy())
+					std::string waitReason;
+					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
@@ -3956,7 +4067,14 @@ namespace FC{
 						static int wait_count = 0;
 						if ((wait_count++ % 20) == 0)
 						{
-							logWarn(lk1->getName().c_str(), "wait WTR is idle.");
+							if (!waitReason.empty())
+							{
+								logWarn(lk1->getName().c_str(), "wait WTR is idle. %s", waitReason.c_str());
+							}
+							else
+							{
+								logWarn(lk1->getName().c_str(), "wait WTR is idle.");
+							}
 						}
 						Sleep(200);
 						loadlock1_auto_step = 1999;
@@ -4108,7 +4226,7 @@ namespace FC{
 									break;
 								}
 								const bool allowPreloadWaitForCraft = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, desiredArm);
-								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
+								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, desiredArm, pm2WaitReason))
 								{
 									static int wait_count = 0;
 									if ((wait_count++ % 20) == 0)
@@ -4492,7 +4610,9 @@ namespace FC{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 					}
 
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy())
+					std::string waitReason;
+					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
@@ -4516,7 +4636,14 @@ namespace FC{
 						static int wait_count = 0;
 						if ((wait_count++ % 20) == 0)
 						{
-							logWarn(lk1->getName().c_str(), "step 2055 wait WTR is idle.");
+							if (!waitReason.empty())
+							{
+								logWarn(lk1->getName().c_str(), "step 2055 wait WTR is idle. %s", waitReason.c_str());
+							}
+							else
+							{
+								logWarn(lk1->getName().c_str(), "step 2055 wait WTR is idle.");
+							}
 						}
 						Sleep(200);
 					}
@@ -4707,7 +4834,7 @@ namespace FC{
 						break;
 					}
 					const bool allowRepickWaitForCraft = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, llaImmediateRepick.arm);
-					if (!allowRepickWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
+					if (!allowRepickWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, llaImmediateRepick.arm, pm2WaitReason))
 					{
 						logWarn(lk1->getName().c_str(),
 							"LLA立即补取前检测到当前应等待PM2优先，跳过补取. arm=%d, %s",
@@ -4815,6 +4942,37 @@ namespace FC{
 						}
 						else
 						{
+							const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
+							if (!llaSnapshot.pendingTasks.empty())
+							{
+								const int desiredArm = llaSnapshot.pendingTasks.front().arm;
+								PM2ScheduleSnapshot pm2Snapshot;
+								if (tryBuildPm2ScheduleSnapshot(pm2Snapshot))
+								{
+									const bool allowPreloadBeforeUnload = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, desiredArm);
+									if (allowPreloadBeforeUnload)
+									{
+										std::string armBusyReason;
+										if (!isRobotArmOccupiedForLlRequest(desiredArm, armBusyReason))
+										{
+											loadlock1_move_slot_index = llaSnapshot.pendingTasks.front().targetFeedingSlot;
+											logInform(lk1->getName().c_str(),
+												"LLA关门破真空前命中预装窗口: 先按固定arm=%d预装下一片, 再执行下料收尾.",
+												desiredArm);
+											lla_return_slot.store(-1);
+											robot_get_from_lla.arm.store(desiredArm);
+											robot_get_from_lla.slot.store(loadlock1_move_slot_index);
+											robot_get_from_lla.done.store(false);
+											robot_get_from_lla.success.store(false);
+											robot_get_from_lla.expedited.store(false);
+											robot_get_from_lla.requested.store(true);
+											loadlock1_auto_step = 1055;
+											break;
+										}
+									}
+								}
+							}
+
 							//2026-3-27 检测mapping，再去关门
 							auto cassManager = lk1->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto station_cass = cassManager->getCassette(lk1.get());
@@ -4970,6 +5128,11 @@ namespace FC{
 				break;
 				case 5025:
 				{
+					if (ewtr == nullptr)
+					{
+						ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+					}
+
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
@@ -4978,15 +5141,26 @@ namespace FC{
 						}
 						else 
 						{
-							auto cmd = lk1->createCloseCassetteDoorCommand();
-							lk1->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							if (!ewtr->isBusy())
 							{
-								logFailedExcuteCommandHasError(lk1->getName(), "关闭放晶圆盒门阀", loadlock1_process_name, loadlock1_auto_step);
+								auto cmd = lk1->createCloseCassetteDoorCommand();
+								lk1->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(lk1->getName(), "关闭放晶圆盒门阀", loadlock1_process_name, loadlock1_auto_step);
+								}
+								else {
+									loadlock1_auto_step = 6000;
+								}
 							}
-							else {
-								loadlock1_auto_step = 6000;
+							else
+							{
+								static int wait_log_count3 = 0;
+								if (wait_log_count3++ % 50 == 0) {
+									logInform(lk1->getName().c_str(), "等待 EFEM 下料完成...");
+								}
+								Sleep(200);
 							}
 						}
 					}
@@ -5254,6 +5428,11 @@ namespace FC{
 
 				case 400://有晶圆盒
 				{
+					if (ewtr == nullptr)
+					{
+						ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+					}
+
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 
@@ -5264,18 +5443,28 @@ namespace FC{
 						}
 						else
 						{
-							auto cmd = lk2->createCloseCassetteDoorCommand();
-							lk2->startCommand(cmd);
-							cmd->wait();
-							if (cmd->hasError())
+							if(!ewtr->isBusy())
 							{
-								logFailedExcuteCommandHasError(lk2->getName(), "关闭放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+								auto cmd = lk2->createCloseCassetteDoorCommand();
+								lk2->startCommand(cmd);
+								cmd->wait();
+								if (cmd->hasError())
+								{
+									logFailedExcuteCommandHasError(lk2->getName(), "关闭放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+								}
+								else
+								{
+									loadlock2_auto_step = 410;
+								}
 							}
 							else
 							{
-								loadlock2_auto_step = 410;
+								static int wait_log_count4 = 0;
+								if (wait_log_count4++ % 50 == 0) {
+									logInform(lk2->getName().c_str(), "等待 EFEM 下料完成...");
+								}
+								Sleep(200);
 							}
-							
 						}
 					}
 					else
@@ -5596,7 +5785,9 @@ namespace FC{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 					}
 
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy())
+					std::string waitReason;
+					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
@@ -5622,7 +5813,14 @@ namespace FC{
 						static int wait_count = 0;
 						if ((wait_count++ % 20) == 0)
 						{
-							logWarn(lk2->getName().c_str(),"wait WTR is idle.");
+							if (!waitReason.empty())
+							{
+								logWarn(lk2->getName().c_str(), "wait WTR is idle. %s", waitReason.c_str());
+							}
+							else
+							{
+								logWarn(lk2->getName().c_str(),"wait WTR is idle.");
+							}
 						}
 						Sleep(200);
 						loadlock2_auto_step = 1999;
@@ -5773,7 +5971,7 @@ namespace FC{
 									break;
 								}
 								const bool allowPreloadWaitForCraft = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, desiredArm);
-								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
+								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, desiredArm, pm2WaitReason))
 								{
 									static int wait_count = 0;
 									if ((wait_count++ % 20) == 0)
@@ -6163,7 +6361,9 @@ namespace FC{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 					}
 
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy())
+					std::string waitReason;
+					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
+					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
@@ -6187,7 +6387,14 @@ namespace FC{
 						static int wait_count = 0;
 						if ((wait_count++ % 20) == 0)
 						{
-							logWarn(lk2->getName().c_str(), "step 2055 wait WTR is idle.");
+							if (!waitReason.empty())
+							{
+								logWarn(lk2->getName().c_str(), "step 2055 wait WTR is idle. %s", waitReason.c_str());
+							}
+							else
+							{
+								logWarn(lk2->getName().c_str(), "step 2055 wait WTR is idle.");
+							}
 						}
 						Sleep(200);
 					}
@@ -6379,7 +6586,7 @@ namespace FC{
 						break;
 					}
 					const bool allowRepickWaitForCraft = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, llbImmediateRepick.arm);
-					if (!allowRepickWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, pm2WaitReason))
+					if (!allowRepickWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, llbImmediateRepick.arm, pm2WaitReason))
 					{
 						logWarn(lk2->getName().c_str(),
 							"LLB立即补取前检测到当前应等待PM2优先，跳过补取. arm=%d, %s",
@@ -6488,6 +6695,37 @@ namespace FC{
 						}
 						else
 						{
+							const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
+							if (!llbSnapshot.pendingTasks.empty())
+							{
+								const int desiredArm = llbSnapshot.pendingTasks.front().arm;
+								PM2ScheduleSnapshot pm2Snapshot;
+								if (tryBuildPm2ScheduleSnapshot(pm2Snapshot))
+								{
+									const bool allowPreloadBeforeUnload = canLlImmediateRepickWaitForPm2Craft(pm2Snapshot, desiredArm);
+									if (allowPreloadBeforeUnload)
+									{
+										std::string armBusyReason;
+										if (!isRobotArmOccupiedForLlRequest(desiredArm, armBusyReason))
+										{
+											loadlock2_move_slot_index = llbSnapshot.pendingTasks.front().targetFeedingSlot;
+											logInform(lk2->getName().c_str(),
+												"LLB关门破真空前命中预装窗口: 先按固定arm=%d预装下一片, 再执行下料收尾.",
+												desiredArm);
+											llb_return_slot.store(-1);
+											robot_get_from_llb.arm.store(desiredArm);
+											robot_get_from_llb.slot.store(loadlock2_move_slot_index);
+											robot_get_from_llb.done.store(false);
+											robot_get_from_llb.success.store(false);
+											robot_get_from_llb.expedited.store(false);
+											robot_get_from_llb.requested.store(true);
+											loadlock2_auto_step = 1055;
+											break;
+										}
+									}
+								}
+							}
+
 							//2026-3-27 检测mapping，再去关门
 							auto cassManager = lk2->getKernel()->getKernelModule<FortrendCassetteManager>();
 							auto station_cass = cassManager->getCassette(lk2.get());
@@ -6643,6 +6881,11 @@ namespace FC{
 				break;
 				case 5025:
 				{
+					if (ewtr == nullptr)
+					{
+						ewtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+					}
+
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
@@ -6653,15 +6896,27 @@ namespace FC{
 						{
 							if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 							{
-								auto cmd = lk2->createCloseCassetteDoorCommand();
-								lk2->startCommand(cmd);
-								cmd->wait();
-								if (cmd->hasError())
+								if (!ewtr->isBusy())
 								{
-									logFailedExcuteCommandHasError(lk2->getName(), "关闭放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+									auto cmd = lk2->createCloseCassetteDoorCommand();
+									lk2->startCommand(cmd);
+									cmd->wait();
+									if (cmd->hasError())
+									{
+										logFailedExcuteCommandHasError(lk2->getName(), "关闭放晶圆盒门阀", loadlock2_process_name, loadlock2_auto_step);
+									}
+									else {
+										loadlock2_auto_step = 6000;
+									}
 								}
-								else {
-									loadlock2_auto_step = 6000;
+								else
+								{
+									static int wait_count = 0;
+									if ((wait_count++ % 20) == 0) {
+										logWarn(lk2->getName().c_str(), "等待 EWTR 空闲...");
+									}
+									Sleep(200);
+									loadlock2_auto_step = 5025; //回退继续等待
 								}
 							}
 							else

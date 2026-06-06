@@ -25,7 +25,7 @@ namespace FC{
 		DECLARE_PTR(LoadLockCloseCassetteDoorCommand)
 		LoadLockCloseCassetteDoorCommand(KeyencePlcSubSystemHelper* helper);
 		virtual std::string getName()const override { return "CloseCassetteDoor"; }
-		std::vector<IKernelResources* > resources() const override;
+		//std::vector<IKernelResources* > resources() const override;
 		
 
 	protected:
