@@ -36,14 +36,14 @@ namespace FC {
 
 
         // 通过任务ID获取任务状态和类型
-        const std::pair<UnifiedWaferTask::TaskType, UnifiedWaferTask::Status>& getTaskStatusAndType(int taskId);
+        std::pair<UnifiedWaferTask::TaskType, UnifiedWaferTask::Status> getTaskStatusAndType(int taskId);
 
-        UnifiedWaferTask::TaskType& getTaskType(int taskId);
+        UnifiedWaferTask::TaskType getTaskType(int taskId);
 
         //获取所有任务
-        std::vector<UnifiedWaferTask>& getAllTasks();
+        std::vector<UnifiedWaferTask> getAllTasks();
 
-        std::vector<UnifiedWaferTask>& getAllWorksTasks();
+        std::vector<UnifiedWaferTask> getAllWorksTasks();
 
         int getAllTasksSize();
 
