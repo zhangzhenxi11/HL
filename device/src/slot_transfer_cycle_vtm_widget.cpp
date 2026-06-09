@@ -348,6 +348,7 @@ namespace FC{
 		std::shared_ptr<FortrendPMCavitySubsystem> pm3 = nullptr;
 		std::shared_ptr<FortrendPMCavitySubsystem> pm4 = nullptr;
 		std::atomic<bool> simulation_mode_enabled{ false };
+		std::atomic<bool> simulate_pm2_enabled{ false };
 		std::atomic<bool> pm2_exchange_in_flight{ false };
 		std::shared_ptr<Cassette> cass1;
 		std::shared_ptr<Cassette> cass2;
@@ -8250,7 +8251,19 @@ namespace FC{
 						{
 							if (pm2->getWithWaferModeEnable())
 							{
-								if (!runPmRecipeMotorOnUiThread(1, pm2->getName().c_str(), pm2_process_name, pm2_auto_step))
+								if (simulate_pm2_enabled.load())
+								{
+									logInform("PM2", "PM2模拟工艺已启用，仅执行取放片并模拟工艺耗时20s.");
+									for (int elapsedMs = 0; elapsedMs < 20000 && !stopRequested.load(); elapsedMs += 100)
+									{
+										Sleep(100);
+									}
+									if (stopRequested.load())
+									{
+										break;
+									}
+								}
+								else if (!runPmRecipeMotorOnUiThread(1, pm2->getName().c_str(), pm2_process_name, pm2_auto_step))
 								{
 									break;
 								}
@@ -11492,6 +11505,12 @@ namespace FC{
 			[d](int state)
 			{
 				d->simulation_mode_enabled.store(state == Qt::CheckState::Checked);
+			});
+		d->simulate_pm2_enabled.store(d->ui->simulate_pm2_cbx->checkState() == Qt::CheckState::Checked);
+		connect(d->ui->simulate_pm2_cbx, &QCheckBox::stateChanged, this,
+			[d](int state)
+			{
+				d->simulate_pm2_enabled.store(state == Qt::CheckState::Checked);
 			});
 
 		d->ui->spb_min->hide();

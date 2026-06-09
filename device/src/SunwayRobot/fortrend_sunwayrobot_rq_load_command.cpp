@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
 * @file     fortrend_sunwayrobot_reset_command.h
 * @brief    reset command for SunwayRobot
 * @author   xielonghua

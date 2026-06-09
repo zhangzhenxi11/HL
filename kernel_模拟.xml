@@ -1780,7 +1780,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>192.168.127.20</ip>
+			<ip>127.0.0.1</ip>
 			<IsVacuum>true</IsVacuum>
 			<!-- 分子泵ACC信号 -->
 			<acc_tm>MR35408</acc_tm>

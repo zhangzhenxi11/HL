@@ -404,6 +404,13 @@
            </property>
           </widget>
          </item>
+        <item>
+         <widget class="QCheckBox" name="simulate_pm2_cbx">
+          <property name="text">
+           <string>模拟PM2工艺</string>
+          </property>
+         </widget>
+        </item>
          <item>
           <widget class="QPushButton" name="loadlock1_put_cassette_finished_pbt">
            <property name="text">
