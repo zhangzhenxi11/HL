@@ -30,6 +30,7 @@
 #include "kernel/kernel_command_reject_exception.h"
 
 #include "Poco/Format.h"
+#include <mutex>
 
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
@@ -69,6 +70,8 @@ namespace FC{
 		if (!robot){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_WITHOUT_RESOURCE, "子系统类型错误", this);
 		}
+
+		std::lock_guard<std::mutex> lock(robot->robot_mutex);
 		//check subsystem state
 		if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s 不在正常状态.", robot->getName()), this);

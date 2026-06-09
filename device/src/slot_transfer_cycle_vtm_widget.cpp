@@ -293,6 +293,9 @@ namespace FC{
 		// LL侧发送RQLoad前统一检查WTR是否已被Robot线程占用或即将占用，避免查询与取放片抢发。
 		bool shouldLlWaitForWtrFingerQuery(std::string& reason) const;
 
+		// 统一检查WTR当前是否适合继续发手指查询，供A/B两次RQLoad之间复用同一套判断。
+		bool shouldWaitBeforeStartWtrFingerQuery(const std::shared_ptr<FortrendSunwayRobotSubsystem>& wtr, std::string& reason) const;
+
 
 		int getOtherArm(const int arm) const
 		{
@@ -1368,6 +1371,30 @@ namespace FC{
 
 		reason.clear();
 		return false;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::shouldWaitBeforeStartWtrFingerQuery(
+		const std::shared_ptr<FortrendSunwayRobotSubsystem>& wtr, std::string& reason) const
+	{
+		if (!wtr)
+		{
+			reason = "WTR missing";
+			return true;
+		}
+
+		if (wtr->getState() != IKernelSubSystem::State::SUB_NORMAL)
+		{
+			reason = "WTR state not normal";
+			return true;
+		}
+
+		if (wtr->isBusy())
+		{
+			reason = "WTR busy";
+			return true;
+		}
+
+		return shouldLlWaitForWtrFingerQuery(reason);
 	}
 
 	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLASubTransferDatas()
@@ -4041,12 +4068,26 @@ namespace FC{
 					}
 
 					std::string waitReason;
-					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
+					const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+					if (!shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
 						cmd1->wait();
+
+						std::string waitReasonAfterArmA;
+						const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+						if (shouldWaitRobotWtrAfterArmA)
+						{
+							static int wait_count_after_arm_a = 0;
+							if ((wait_count_after_arm_a++ % 20) == 0)
+							{
+								logWarn(lk1->getName().c_str(), "wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+							}
+							Sleep(200);
+							loadlock1_auto_step = 1999;
+							break;
+						}
 
 
 						auto cmd2 = wtr->createRQLoadCommand(1); //B手
@@ -4611,12 +4652,25 @@ namespace FC{
 					}
 
 					std::string waitReason;
-					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
+					const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+					if (!shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
 						cmd1->wait();
+
+						std::string waitReasonAfterArmA;
+						const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+						if (shouldWaitRobotWtrAfterArmA)
+						{
+							static int wait_count_after_arm_a = 0;
+							if ((wait_count_after_arm_a++ % 20) == 0)
+							{
+								logWarn(lk1->getName().c_str(), "step 2055 wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+							}
+							Sleep(200);
+							break;
+						}
 
 						auto cmd2 = wtr->createRQLoadCommand(1); //B手
 						wtr->startCommand(cmd2);
@@ -5786,12 +5840,26 @@ namespace FC{
 					}
 
 					std::string waitReason;
-					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
+					const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+					if (!shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
 						cmd1->wait();
+
+						std::string waitReasonAfterArmA;
+						const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+						if (shouldWaitRobotWtrAfterArmA)
+						{
+							static int wait_count_after_arm_a = 0;
+							if ((wait_count_after_arm_a++ % 20) == 0)
+							{
+								logWarn(lk2->getName().c_str(), "wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+							}
+							Sleep(200);
+							loadlock2_auto_step = 1999;
+							break;
+						}
 
 
 						auto cmd2 = wtr->createRQLoadCommand(1); //B手
@@ -6362,12 +6430,25 @@ namespace FC{
 					}
 
 					std::string waitReason;
-					const bool shouldWaitRobotWtr = shouldLlWaitForWtrFingerQuery(waitReason);
-					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && !wtr->isBusy() && !shouldWaitRobotWtr)
+					const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+					if (!shouldWaitRobotWtr)
 					{
 						auto cmd1 = wtr->createRQLoadCommand(0); //A手
 						wtr->startCommand(cmd1);
 						cmd1->wait();
+
+						std::string waitReasonAfterArmA;
+						const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+						if (shouldWaitRobotWtrAfterArmA)
+						{
+							static int wait_count_after_arm_a = 0;
+							if ((wait_count_after_arm_a++ % 20) == 0)
+							{
+								logWarn(lk2->getName().c_str(), "step 2055 wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+							}
+							Sleep(200);
+							break;
+						}
 
 						auto cmd2 = wtr->createRQLoadCommand(1); //B手
 						wtr->startCommand(cmd2);
@@ -7076,11 +7157,26 @@ namespace FC{
 					break;
 					case 199:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						std::string waitReason;
+						const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+						if (!shouldWaitRobotWtr)
 						{
 							auto cmd1 = wtr->createRQLoadCommand(0); //A手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
+
+							std::string waitReasonAfterArmA;
+							const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+							if (shouldWaitRobotWtrAfterArmA)
+							{
+								static int wait_count_after_arm_a = 0;
+								if ((wait_count_after_arm_a++ % 20) == 0)
+								{
+									logWarn(wtr->getName().c_str(), "PM1 step 199 wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+								}
+								Sleep(200);
+								break;
+							}
 
 
 							auto cmd2 = wtr->createRQLoadCommand(1); //B手
@@ -7098,7 +7194,23 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm1_process_name, pm1_auto_step.load());
+							static int wait_count = 0;
+							if ((wait_count++ % 20) == 0)
+							{
+								if (!waitReason.empty())
+								{
+									logWarn(wtr->getName().c_str(), "PM1 step 199 wait WTR finger query. %s", waitReason.c_str());
+								}
+								else if (wtr->isBusy())
+								{
+									logWarn(wtr->getName().c_str(), "PM1 step 199 wait WTR finger query. WTR busy.");
+								}
+								else
+								{
+									logWarn(wtr->getName().c_str(), "PM1 step 199 wait WTR finger query. WTR state not normal.");
+								}
+							}
+							Sleep(200);
 						}
 					
 					}
@@ -7584,11 +7696,26 @@ namespace FC{
 					break;
 					case 199:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						std::string waitReason;
+						const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+						if (!shouldWaitRobotWtr)
 						{
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
+
+							std::string waitReasonAfterArmA;
+							const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+							if (shouldWaitRobotWtrAfterArmA)
+							{
+								static int wait_count_after_arm_a = 0;
+								if ((wait_count_after_arm_a++ % 20) == 0)
+								{
+									logWarn(wtr->getName().c_str(), "PM2 step 199 wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+								}
+								Sleep(200);
+								break;
+							}
 
 
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
@@ -7606,7 +7733,23 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm2_process_name, pm2_auto_step.load());
+							static int wait_count = 0;
+							if ((wait_count++ % 20) == 0)
+							{
+								if (!waitReason.empty())
+								{
+									logWarn(wtr->getName().c_str(), "PM2 step 199 wait WTR finger query. %s", waitReason.c_str());
+								}
+								else if (wtr->isBusy())
+								{
+									logWarn(wtr->getName().c_str(), "PM2 step 199 wait WTR finger query. WTR busy.");
+								}
+								else
+								{
+									logWarn(wtr->getName().c_str(), "PM2 step 199 wait WTR finger query. WTR state not normal.");
+								}
+							}
+							Sleep(200);
 						}
 
 					}
@@ -8371,11 +8514,26 @@ namespace FC{
 					break;
 					case 199:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						std::string waitReason;
+						const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+						if (!shouldWaitRobotWtr)
 						{
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
+
+							std::string waitReasonAfterArmA;
+							const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+							if (shouldWaitRobotWtrAfterArmA)
+							{
+								static int wait_count_after_arm_a = 0;
+								if ((wait_count_after_arm_a++ % 20) == 0)
+								{
+									logWarn(wtr->getName().c_str(), "PM3 step 199 wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+								}
+								Sleep(200);
+								break;
+							}
 
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
 							wtr->startCommand(cmd2);
@@ -8392,11 +8550,26 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm3_process_name, pm3_auto_step);
+							static int wait_count = 0;
+							if ((wait_count++ % 20) == 0)
+							{
+								if (!waitReason.empty())
+								{
+									logWarn(wtr->getName().c_str(), "PM3 step 199 wait WTR finger query. %s", waitReason.c_str());
+								}
+								else if (wtr->isBusy())
+								{
+									logWarn(wtr->getName().c_str(), "PM3 step 199 wait WTR finger query. WTR busy.");
+								}
+								else
+								{
+									logWarn(wtr->getName().c_str(), "PM3 step 199 wait WTR finger query. WTR state not normal.");
+								}
+							}
+							Sleep(200);
 						}
 
 					}
-					break;
 					case 200:
 					{
 						//暂不考虑交互手
@@ -8803,11 +8976,26 @@ namespace FC{
 					break;
 					case 199:
 					{
-						if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
+						std::string waitReason;
+						const bool shouldWaitRobotWtr = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReason);
+						if (!shouldWaitRobotWtr)
 						{
 							auto cmd1 = wtr->createRQLoadCommand(0); //1手
 							wtr->startCommand(cmd1);
 							cmd1->wait();
+
+							std::string waitReasonAfterArmA;
+							const bool shouldWaitRobotWtrAfterArmA = shouldWaitBeforeStartWtrFingerQuery(wtr, waitReasonAfterArmA);
+							if (shouldWaitRobotWtrAfterArmA)
+							{
+								static int wait_count_after_arm_a = 0;
+								if ((wait_count_after_arm_a++ % 20) == 0)
+								{
+									logWarn(wtr->getName().c_str(), "PM4 step 199 wait WTR finger query after arm A. %s", waitReasonAfterArmA.c_str());
+								}
+								Sleep(200);
+								break;
+							}
 
 
 							auto cmd2 = wtr->createRQLoadCommand(1); //1手
@@ -8825,7 +9013,23 @@ namespace FC{
 						}
 						else
 						{
-							logFailedNotNormal(wtr->getName(), pm4_process_name, pm4_auto_step);
+							static int wait_count = 0;
+							if ((wait_count++ % 20) == 0)
+							{
+								if (!waitReason.empty())
+								{
+									logWarn(wtr->getName().c_str(), "PM4 step 199 wait WTR finger query. %s", waitReason.c_str());
+								}
+								else if (wtr->isBusy())
+								{
+									logWarn(wtr->getName().c_str(), "PM4 step 199 wait WTR finger query. WTR busy.");
+								}
+								else
+								{
+									logWarn(wtr->getName().c_str(), "PM4 step 199 wait WTR finger query. WTR state not normal.");
+								}
+							}
+							Sleep(200);
 						}
 
 					}
