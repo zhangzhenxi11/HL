@@ -4072,11 +4072,7 @@ namespace FC{
 							logInform(lk1->getName().c_str(), "step:1051,loadLockA PendingTasks 有片,触发Robot取片流程.");
 
 
-							if (!wtr->isBusy())
-							{
-								logInform(lk1->getName().c_str(), "step 1051 WTR空闲，准备取片.");
-							}
-							else
+							if (wtr->isBusy())
 							{
 								static int wait_count = 0;
 								if ((wait_count++ % 20) == 0)
@@ -4094,16 +4090,18 @@ namespace FC{
 								break;
 							}
 							bool pm2HasWafer = false;
-							if (pm2_exchange_in_flight.load())
+							const bool pm2ExchangeBlocking = pm2_exchange_in_flight.load() || robot_exchange_pm2.requested.load() || robot_step == 5100;
+							if (pm2ExchangeBlocking)
 							{
 								static int exchange_wait_count = 0;
 								if ((exchange_wait_count++ % 20) == 0)
 								{
-									logInform(lk1->getName().c_str(), "PM2交换进行中, LLA暂不发起新的取片请求.");
+									logInform(lk1->getName().c_str(), "PM2交换进行中(请求已发出或Robot正在执行), LLA暂不发起新的取片请求.");
 								}
 								Sleep(200);
 								break;
 							}
+							logInform(lk1->getName().c_str(), "step 1051 WTR空闲，准备取片.");
 
 							if (!tryGetPmHasWafer(pm2Subsystem, "PM2", pm2HasWafer))
 							{
@@ -5860,12 +5858,13 @@ namespace FC{
 								break;
 							}
 							bool pm2HasWafer = false;
-							if (pm2_exchange_in_flight.load())
+							const bool pm2ExchangeBlocking = pm2_exchange_in_flight.load() || robot_exchange_pm2.requested.load() || robot_step == 5100;
+							if (pm2ExchangeBlocking)
 							{
 								static int exchange_wait_count = 0;
 								if ((exchange_wait_count++ % 20) == 0)
 								{
-									logInform(lk2->getName().c_str(), "PM2交换进行中, LLB暂不发起新的取片请求.");
+									logInform(lk2->getName().c_str(), "PM2交换进行中(请求已发出或Robot正在执行), LLB暂不发起新的取片请求.");
 								}
 								Sleep(200);
 								break;
@@ -7843,7 +7842,6 @@ namespace FC{
 													Sleep(100);
 													break;
 												}
-												pm2_exchange_in_flight.store(true);
 												exchange_info_pm2.getArm.store(0);
 												exchange_info_pm2.putArm.store(1);
 												pm2_craft_task_id.store(pendingIt->taskId);
@@ -7862,7 +7860,6 @@ namespace FC{
 													Sleep(100);
 													break;
 												}
-												pm2_exchange_in_flight.store(true);
 												exchange_info_pm2.getArm.store(1);
 												exchange_info_pm2.putArm.store(0);
 												pm2_craft_task_id.store(pendingIt->taskId);
@@ -8053,6 +8050,7 @@ namespace FC{
 						exchange_info_pm2.getArm.store(0);//a
 						exchange_info_pm2.putArm.store(1);//b
 						logInform("PM2", "step:1060, 置位PM2交换请求 getArm=%d, putArm=%d", exchange_info_pm2.getArm.load(), exchange_info_pm2.putArm.load());
+						pm2_exchange_in_flight.store(true);
 						robot_exchange_pm2.done.store(false);
 						robot_exchange_pm2.success.store(false);
 						robot_exchange_pm2.requested.store(true);
@@ -8116,6 +8114,7 @@ namespace FC{
 						exchange_info_pm2.getArm.store(1);
 						exchange_info_pm2.putArm.store(0);
 						logInform("PM2", "step:1070, 置位PM2交换请求 getArm=%d, putArm=%d", exchange_info_pm2.getArm.load(), exchange_info_pm2.putArm.load());
+						pm2_exchange_in_flight.store(true);
 						robot_exchange_pm2.done.store(false);
 						robot_exchange_pm2.success.store(false);
 						robot_exchange_pm2.requested.store(true);

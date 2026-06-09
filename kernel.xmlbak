@@ -32,11 +32,26 @@
 			<!--错误代码关联-->
 			<ErrorTxt>./Error Code Definition/Error_SMIF.txt</ErrorTxt>
 		</SMIF>
-		
+		<!-- tcpServer -->
+		<HOST>
+			<port>13000</port>
+			<max_clients>1</max_clients>
+			<auto_enable>true</auto_enable>
+			<auto_model>0</auto_model>
+		</HOST>
+
+		<!-- PM Spindle Signal Server -->
+		<PMHOST>
+			<port>13002</port>
+			<max_clients>5</max_clients>
+			<auto_enable>true</auto_enable>
+			<auto_model>0</auto_model>
+		</PMHOST>
+
 		<EFEMClient>
 			<port>13001</port>
 			<!-- 192.168.127.123 -->
-			<ip>192.168.4.212</ip>
+			<ip>192.168.127.123</ip>
 			<!--自动通讯使能192.168.0.200-->			
 			<auto_enable>true</auto_enable>
 			<!--初始控制模式 0： offline  1： local online  2：remote online-->			
@@ -309,7 +324,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址 192.168.127.20-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -479,7 +494,7 @@
 				<!-- LLA-机械手抓放料完成信号 -->
 				<WtrActionCompletionSignalAddress>MR30300</WtrActionCompletionSignalAddress>
 				<!--EFEM 允许关_LLA上料门互锁 -->
-				<EFEMAlloweCloseCassteDoorSignal> MR30210</EFEMAlloweCloseCassteDoorSignal>
+				<EFEMAlloweCloseCassteDoorSignal>MR30210</EFEMAlloweCloseCassteDoorSignal>
 				<!--LL1上下料门阀_开到位 -->
 				<open_cassette_door_address>MR30000</open_cassette_door_address>
 				<!--LL1上下料门阀_关到位-->
@@ -520,7 +535,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -721,7 +736,7 @@
 			<!--端口号  13000-->
 			<port>13000</port>	
 			<!--ip地址 192.168.10.111-->
-			<ip>192.168.47.1</ip>
+			<ip>192.168.10.111</ip>
 			<!--可单独运动的手臂数量-->
 			<ArmCount>2</ArmCount>
 			<!--可以工作的Station列表-->	
@@ -770,7 +785,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--错误代码关联-->
@@ -922,7 +937,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址  192.168.1.10-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -1076,6 +1091,7 @@
 			<!--旋转轴动作-->
 			<RotatingAxisAction>
 				<start_address>MR8505</start_address>
+				<start_address_2>MR8510</start_address_2>
 				<finish_address>MR8509</finish_address>
 				<failed_address>DM6828</failed_address>
 				<!--目标度数-->
@@ -1244,6 +1260,8 @@
 				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
 				<!--R轴报警-->
 				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
+				<!--lifter pin角度位置-->
+				<rotating_axis_safe_Angle_address>DM6842</rotating_axis_safe_Angle_address>
 			</Update>
 			<Reset>
 				<!--清除升降轴错误-->
@@ -1264,7 +1282,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -1361,28 +1379,156 @@
 				<safe_Interlock_signal_address> MR30213</safe_Interlock_signal_address>
 				<timeout>30000</timeout>
 			</CloseTMCavityDoor>
+			<!--轴回原-->
+			<LiftingAxisHome>
+				<start_address>MR8000</start_address>
+				<running_address>MR8005</running_address>
+				<finish_address>MR8001</finish_address>
+				<timeout>60000</timeout>
+			</LiftingAxisHome>
+			<!--升降轴动作-->
+			<LiftingAxisACtion>
+				<start_address>MR8105</start_address>
+				<finish_address>MR8109</finish_address>
+				<!--z轴报警-->
+				<failed_address>DM6640</failed_address>
+				<!--目标坐标unit:mm-->
+				<abs_position_address>DM6624</abs_position_address>
+				<timeout>60000</timeout>
+			</LiftingAxisACtion>
+			
 			<!--去取料位命令-->
             <ToGetStation>
-				<start_address>MR35101</start_address>
-				<finish_address>MR35202</finish_address>
-				<failed_address>MR35203</failed_address>
-				<error_code_address>DM5567</error_code_address>
+				<!--定位开始-->
+				<start_address>MR8105</start_address>
+				<!--定位完成-->
+				<finish_address>MR8109</finish_address>
+				<!--Z轴报警-->
+				<failed_address>DM6640</failed_address>
+				<axis_target1_position_address>DM6600</axis_target1_position_address>
+				<abs_position_address>DM6624</abs_position_address>
 				<timeout>60000</timeout>
 			</ToGetStation>
+			<!--旋转位命令-->
+			<ToRotatingStation>
+				<start_address>MR8105</start_address>
+				<finish_address>MR8109</finish_address>
+				<failed_address>DM6640</failed_address>
+				<axis_target2_position_address>DM6604</axis_target2_position_address>
+				<abs_position_address>DM6624</abs_position_address>
+				<timeout>60000</timeout>
+			</ToRotatingStation>
 			<!--去工艺位命令-->
             <ToPutStation>
-				<start_address>MR35102</start_address>
-				<finish_address>MR35204</finish_address>
-				<failed_address>MR35205</failed_address>
-				<error_code_address>DM5567</error_code_address>
+				<start_address>MR8105</start_address>
+				<finish_address>MR8109</finish_address>
+				<failed_address>DM6640</failed_address>
+				<axis_target3_position_address>DM6608</axis_target3_position_address>
+				<abs_position_address>DM6624</abs_position_address>
 				<timeout>60000</timeout>
-			</ToPutStation>							
-			<!--控制PM腔分子泵插板阀开度-->
-			<InsertingPlateOpeningController>
-				<start_address>M65</start_address>
-				<valve_opening_value>D4988</valve_opening_value>
-				<timeout>2000</timeout>
-			</InsertingPlateOpeningController>
+			</ToPutStation>
+			
+			<!--旋转轴动作-->
+			<RotatingAxisAction>
+				<start_address>MR8505</start_address>
+				<start_address_2>MR8510</start_address_2>
+				<finish_address>MR8509</finish_address>
+				<failed_address>DM6828</failed_address>
+				<!--Z轴不在旋转位r轴停止-->
+				<warning_address>MR100101</warning_address>
+				<!--目标度数-->
+				<relative_position_address>DM6812</relative_position_address>
+				<timeout>60000</timeout>
+			</RotatingAxisAction>
+			<!--轴回原-->
+			<RotatingAxisHome>
+				<start_address>MR8400</start_address>
+				<running_address>MR8405</running_address>
+				<finish_address>MR8401</finish_address>
+				<timeout>60000</timeout>
+			</RotatingAxisHome>
+			<!-- 轴的可读参数-->
+			<AxisReadParameters>
+				<!--升降轴加速度-->
+				<lifting_axis_acce_address>DM6612</lifting_axis_acce_address>
+				<!--升降轴减速度-->
+				<lifting_axis_dece_address>DM6616</lifting_axis_dece_address>
+				<!--升降轴启动速度-->
+				<lifting_axis_startup_speed_address>DM6620</lifting_axis_startup_speed_address>
+				<!--升降轴目标坐标-->
+				<lifting_axis_target_position_address>DM6624</lifting_axis_target_position_address>
+				<!--升降轴目标压力-->
+				<lifting_axis_target_pressure_address>DM6628</lifting_axis_target_pressure_address>
+				<!--升降轴位置1-->
+				<lifting_axis_target1_position_address>DM6600</lifting_axis_target1_position_address>
+				<!--升降轴位置2-->
+				<lifting_axis_target2_position_address>DM6604</lifting_axis_target2_position_address>
+				<!--升降轴位置3-->
+				<lifting_axis_target3_position_address>DM6608</lifting_axis_target3_position_address>
+				<!--升降轴位置4-->
+				<lifting_axis_target4_position_address>DM6590</lifting_axis_target4_position_address>
+				<!--升降轴jog速度-->
+				<lifting_axis_jog_speed_address>DM6632</lifting_axis_jog_speed_address>
+				<!--升降轴寸动移动量-->
+				<lifting_axis_inch_movement_address>DM6636</lifting_axis_inch_movement_address>
+				<!--升降轴jerk-->
+				<lifting_axis_jerk_address>DM6644</lifting_axis_jerk_address>
+				<!--旋转轴加速度-->
+				<rotating_axis_acce_address>DM6800</rotating_axis_acce_address>
+				<!--旋转轴减速度-->
+				<rotating_axis_dece_address>DM6804</rotating_axis_dece_address>
+				<!--旋转轴定位速度 -->
+				<rotating_axis_startup_speed_address>DM6808</rotating_axis_startup_speed_address>
+				<!--旋转轴jerk-->
+				<rotating_axis_jerk_address>DM6840</rotating_axis_jerk_address>
+				<!--旋转轴目标坐标-->
+				<rotating_axis_target_position_address>DM6812</rotating_axis_target_position_address>
+				<!--旋转轴jog速度-->
+				<rotating_axis_jog_speed_address>DM6816</rotating_axis_jog_speed_address>
+				<!--旋转轴寸动移动量-->
+				<rotating_axis_inch_movement_address>DM6820</rotating_axis_inch_movement_address>
+			</AxisReadParameters>
+			<!-- 轴的可写参数-->
+			<AxisWriteParameters>
+				<!--升降轴加速度-->
+				<lifting_axis_acce_address>DM6612</lifting_axis_acce_address>
+				<!--升降轴减速度-->
+				<lifting_axis_dece_address>DM6616</lifting_axis_dece_address>
+				<!--升降轴启动速度-->
+				<lifting_axis_startup_speed_address>DM6620</lifting_axis_startup_speed_address>
+				<!--升降轴目标坐标-->
+				<lifting_axis_target_position_address>DM6624</lifting_axis_target_position_address>
+				<!--升降轴目标压力-->
+				<lifting_axis_target_pressure_address>DM6628</lifting_axis_target_pressure_address>
+				<!--升降轴位置1-->
+				<lifting_axis_target1_position_address>DM6600</lifting_axis_target1_position_address>
+				<!--升降轴位置2-->
+				<lifting_axis_target2_position_address>DM6604</lifting_axis_target2_position_address>
+				<!--升降轴位置3-->
+				<lifting_axis_target3_position_address>DM6608</lifting_axis_target3_position_address>
+				<!--升降轴位置4-->
+				<lifting_axis_target4_position_address>DM6590</lifting_axis_target4_position_address>				
+				<!--升降轴jog速度-->
+				<lifting_axis_jog_speed_address>DM6632</lifting_axis_jog_speed_address>
+				<!--升降轴寸动移动量-->
+				<lifting_axis_inch_movement_address>DM6636</lifting_axis_inch_movement_address>
+				<!--升降轴jerk-->
+				<lifting_axis_jerk_address>DM6644</lifting_axis_jerk_address>
+				<!--旋转轴加速度-->
+				<rotating_axis_acce_address>DM6800</rotating_axis_acce_address>
+				<!--旋转轴减速度-->
+				<rotating_axis_dece_address>DM6804</rotating_axis_dece_address>
+				<!--旋转轴定位速度 -->
+				<rotating_axis_startup_speed_address>DM6808</rotating_axis_startup_speed_address>
+				<!--旋转轴jerk-->
+				<rotating_axis_jerk_address>DM6840</rotating_axis_jerk_address>
+				<!--旋转轴目标坐标-->
+				<rotating_axis_target_position_address>DM6812</rotating_axis_target_position_address>
+				<!--旋转轴jog速度-->
+				<rotating_axis_jog_speed_address>DM6816</rotating_axis_jog_speed_address>
+				<!--旋转轴寸动移动量-->
+				<rotating_axis_inch_movement_address>DM6820</rotating_axis_inch_movement_address>
+			</AxisWriteParameters>	
 			<GetFinished>
 				<write_address>M210</write_address>
 				<finish_reset_address>D4920</finish_reset_address>
@@ -1400,13 +1546,79 @@
 				<PMCavitySafetySignal>MR30603</PMCavitySafetySignal>
 				<!--PM2腔-机械手抓放料完成信号-->
 				<WtrActionCompletionSignalAddress>MR30213</WtrActionCompletionSignalAddress>
+				<!--Z轴上使能-->
+				<lifting_axis_upper_enable_address>MR8100</lifting_axis_upper_enable_address>
+				<!--R轴上使能-->
+				<rotating_axis_upper_enable_address>MR8500</rotating_axis_upper_enable_address>	
+				<!-- PM1腔安全信号+_门阀开启to机械手 -->
+				<PMCavitySafetySignal>MR30602</PMCavitySafetySignal>
+				<!--PM1腔-机械手抓放料完成信号-->
+				<WtrActionCompletionSignalAddress>MR30212</WtrActionCompletionSignalAddress>
+				<!--升降轴回原完成-->
+				<lifting_axis_return_original_completion_address>MR8001</lifting_axis_return_original_completion_address>
+				<!--升降轴清除轴错误完成-->
+				<lifting_axis_clear_error_completion_address>MR8002</lifting_axis_clear_error_completion_address>
+				<!--升降轴JOG运行中-->
+				<lifting_axis_jog_running_address>MR8004</lifting_axis_jog_running_address>
+				<!--升降轴回原中-->
+				<lifting_axis_return_original_running_address>MR8005</lifting_axis_return_original_running_address>
+				<!--升降轴使能ON-->
+				<lifting_axis_enable_address>MR8006</lifting_axis_enable_address>
+				<!--升降轴移动中-->
+				<lifting_axis_moving_address>MR8106</lifting_axis_moving_address>
+				<!--升降轴移动结束-->
+				<lifting_axis_move_end_address>MR8107</lifting_axis_move_end_address>
+				<!--升降轴反馈位置-->
+				<lifting_axis_feedback_position_addresss>DM6500</lifting_axis_feedback_position_addresss>
+				<!--升降轴当前坐标-->
+				<lifting_axis_current_coordinate_addresss>DM6502</lifting_axis_current_coordinate_addresss>
+				<!--升降轴当前速度-->
+				<lifting_axis_current_speed_addresss>DM6506</lifting_axis_current_speed_addresss>
+				<!--升降轴当前控制模式-->
+				<lifting_axis_current_control_mode_addresss>DM6510</lifting_axis_current_control_mode_addresss>
+				<!--升降轴反馈转矩监视器-->
+				<lifting_axis_feedback_torque_monitor_address>DM6511</lifting_axis_feedback_torque_monitor_address>
+				<!--旋转轴回原完成-->
+				<rotating_axis_return_original_completion_address>MR8401</rotating_axis_return_original_completion_address>
+				<!--旋转轴清除轴错误完成-->
+				<rotating_axis_clear_error_completion_address>MR8402</rotating_axis_clear_error_completion_address>
+				<!--旋转轴轴停止完成-->
+				<rotating_axis_stop_completion_address>MR8403</rotating_axis_stop_completion_address>
+				<!--旋转轴JOG运行中-->
+				<rotating_axis_jog_running_address>MR8404</rotating_axis_jog_running_address>
+				<!--旋转轴回原中-->
+				<rotating_axis_return_original_running_address>MR8405</rotating_axis_return_original_running_address>
+				<!--旋转轴使能ON-->
+				<rotating_axis_enable_address>MR8406</rotating_axis_enable_address>
+				<!--旋转轴移动中-->
+				<rotating_axis_moving_address>MR8506</rotating_axis_moving_address>
+				<!--旋转轴移动结束-->	
+				<rotating_axis_move_end_address>MR8507</rotating_axis_move_end_address>
+				<!--旋转轴反馈位置-->
+				<rotating_axis_feedback_position_addresss>DM6700</rotating_axis_feedback_position_addresss>
+				<!--旋转轴当前坐标-->
+				<rotating_axis_current_coordinate_addresss>DM6702</rotating_axis_current_coordinate_addresss>
+				<!--旋转轴当前速度-->
+				<rotating_axis_current_speed_addresss>DM6706</rotating_axis_current_speed_addresss>
+				<!--Z轴报警-->
+				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
+				<!--R轴报警-->
+				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
+				<!--lifter pin角度位置-->
+				<rotating_axis_safe_Angle_address>DM6842</rotating_axis_safe_Angle_address>				
 			</Update>
 			<Reset>
-				<start_address>MR35100</start_address>
-				<finish_address>MR35200</finish_address>
-				<failed_address>MR35201</failed_address>
-				<error_code_address>DM26007</error_code_address>
-				<timeout>40000</timeout>
+				<!--清除升降轴错误-->
+				<lifting_axis_start_address>MR8104</lifting_axis_start_address>
+				<lifting_axis_finish_address>MR8002</lifting_axis_finish_address>
+				<!--清除旋转轴错误-->
+				<rotating_axis_start_address>MR8504</rotating_axis_start_address>
+				<rotating_axis_finish_address>MR8402</rotating_axis_finish_address>
+				<!--Z轴报警-->
+				<lifting_axis_alarm_address>DM6640</lifting_axis_alarm_address>
+				<!--R轴报警-->
+				<rotating_axis_alarm_address>DM6828</rotating_axis_alarm_address>
+				<timeout>30000</timeout>
 			</Reset>					
 		</PM2>
 		
@@ -1415,7 +1627,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -1550,7 +1762,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -1685,7 +1897,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--关联的Robots,复位前这些Robot必须处于READY状态-->	
@@ -1702,7 +1914,7 @@
 			<!--PLC端口号-->	
 			<port>8501</port>
 			<!--PLCIP地址-->	
-			<ip>127.0.0.1</ip>
+			<ip>192.168.127.20</ip>
 			<!--PLC通讯超时时间(ms)-->	
 			<plc_timeout>1000</plc_timeout>
 			<!--默认slot层数-->	
@@ -1813,7 +2025,7 @@
 				<failed_address>MR35309</failed_address>
 				<!-- 前级泵警告信号 -->
 				<error_code_address>MR35312</error_code_address>
-				<timeout>4500</timeout>
+				<timeout>6000</timeout>
 			</OpenMechanical>
 			<CloseMechanical>
 				<start_address>MR35306</start_address>
@@ -1821,7 +2033,7 @@
 				<failed_address>MR35310</failed_address>
 				<!-- 前级泵警告信号 -->
 				<error_code_address>MR35312</error_code_address>
-				<timeout>4500</timeout>
+				<timeout>6000</timeout>
 			</CloseMechanical>
 			<!-- 打开分子泵-->
 			<OpenMolecular>
