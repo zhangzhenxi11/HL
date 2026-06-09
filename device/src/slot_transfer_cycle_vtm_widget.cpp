@@ -214,12 +214,6 @@ namespace FC{
 
 		UnifiedWaferTask::Location getSelectPmLocation(UnifiedWaferTask task);
 
-		void UpdateLLASubTransferDatas();
-
-		void UpdateLLBSubTransferDatas();
-
-		void UpdateEfemSubTransferDatas();
-
 		void UpdatePmSubTransferDatas(std::string pmName);
 
 		/************************zzx  add*********************************/
@@ -423,20 +417,6 @@ namespace FC{
 
 		/************************EFEM*********************************/
 
-		std::vector<UnifiedWaferTask> efemUnkownStatusTasks; //未知状态的数组
-
-		std::vector<UnifiedWaferTask> efemPendingTasks;  //工艺前,待上料数组
-									  
-		std::vector<UnifiedWaferTask> efemCompletedTasks; //工艺前，放料完成的数组
-
-		std::vector<UnifiedWaferTask> efemReturnPendingTasks;  //工艺后,待下料数组
-
-		std::vector<UnifiedWaferTask> efemReturnCompletedTasks; //工艺后，下料完成的数组
-
-		std::vector<UnifiedWaferTask> efemAllocationLLAInitTasks;
-		
-		std::vector<UnifiedWaferTask> efemAllocationLLBInitTasks;
-			
 		//2026-1-23 双上料时缓存两个任务的完整信息，避免case 157更新状态后数组变化
 		UnifiedWaferTask cached_task_first;  // 第一片料缓存
 		UnifiedWaferTask cached_task_second; // 第二片料缓存
@@ -451,22 +431,6 @@ namespace FC{
 
 		std::vector<UnifiedWaferTask> loadLockReturnCompletedTasks;
 
-
-		std::vector<UnifiedWaferTask> loadLockAPendingTasks;
-									  
-		std::vector<UnifiedWaferTask> loadLockACompletedTasks;
-
-		std::vector<UnifiedWaferTask> loadLockAReturnPendingTasks;
-
-		std::vector<UnifiedWaferTask> loadLockAReturnCompletedTasks;
-							  
-		std::vector<UnifiedWaferTask> loadLockBPendingTasks;
-									  
-		std::vector<UnifiedWaferTask> loadLockBCompletedTasks;
-
-		std::vector<UnifiedWaferTask> loadLockBReturnPendingTasks;
-
-		std::vector<UnifiedWaferTask> loadLockBReturnCompletedTasks;
 
 		/************************PM*********************************/
 		std::vector<UnifiedWaferTask> pmPendingTasks;
@@ -1397,33 +1361,6 @@ namespace FC{
 		return shouldLlWaitForWtrFingerQuery(reason);
 	}
 
-	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLASubTransferDatas()
-	{
-		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();						// LP中初始状态的晶圆
-		loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");				    // 5上料 破过真空，但没抽真空的
-		loadLockACompletedTasks = taskManager.getLoadLockCompletedTasks("LLA");			    // 6上料 抽完真空，并取走的
-		loadLockAReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLA");     // 7下料 待放到LL的晶圆数量
-		loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA"); // 8下料 放到LL的晶圆数量
-	}
-
-	void QSlotTransferCycleVTMWidgetPrivate::UpdateLLBSubTransferDatas()
-	{
-		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks();						// LP中初始状态的晶圆
-		loadLockBPendingTasks = taskManager.getLoadLockPendingTasks("LLB");					// 5上料 破过真空，但没抽真空的
-		loadLockBCompletedTasks = taskManager.getLoadLockCompletedTasks("LLB");				// 6上料 抽完真空，并取走的
-		loadLockBReturnPendingTasks = taskManager.getLoadLockReturnPendingTasks("LLB");		// 7下料 待放到LL的晶圆数量
-		loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB"); // 8下料 放到LL的晶圆数量
-	}
-
-	void QSlotTransferCycleVTMWidgetPrivate::UpdateEfemSubTransferDatas()
-	{
-		efemUnkownStatusTasks = taskManager.getEfemUnkownStatusTasks(); //未知
-		efemPendingTasks = taskManager.getEfemPendingTasks(); //要上料的晶圆
-		efemReturnPendingTasks = taskManager.getEfemRuturnPendingTasks(); //已经到LL上的晶圆,待下料到efem
-		efemReturnCompletedTasks = taskManager.getEfemRuturnCompletedTasks(); //EFEM下料完成的任务
-
-	}
-
 	void QSlotTransferCycleVTMWidgetPrivate::UpdatePmSubTransferDatas(std::string pmName)
 	{
 		if(pmName == "PM1")
@@ -1575,7 +1512,6 @@ namespace FC{
 				{
 				case 10:
 				{
-					UpdateEfemSubTransferDatas();
 					Sleep(500);
 					const auto efemReturnCompletedSnapshot = taskManager.getEfemRuturnCompletedTasks();
 					// 检查循环完成状态
@@ -1613,10 +1549,12 @@ namespace FC{
 
 				case 11:
 				{
-					auto efemReturnPendingLLATasks = taskManager.getTasksByLocation(efemReturnPendingTasks, UnifiedWaferTask::Location::LLA);
-					auto efemReturnPendingLLBTasks = taskManager.getTasksByLocation(efemReturnPendingTasks, UnifiedWaferTask::Location::LLB);
-					auto efemPendingLLATasks = taskManager.getTasksByLocation(efemPendingTasks, UnifiedWaferTask::Location::LLA);
-					auto efemPendingLLBTasks = taskManager.getTasksByLocation(efemPendingTasks, UnifiedWaferTask::Location::LLB);
+					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
+					const auto efemPendingSnapshot = taskManager.getEfemPendingTasks();
+					auto efemReturnPendingLLATasks = taskManager.getTasksByLocation(efemReturnPendingSnapshot, UnifiedWaferTask::Location::LLA);
+					auto efemReturnPendingLLBTasks = taskManager.getTasksByLocation(efemReturnPendingSnapshot, UnifiedWaferTask::Location::LLB);
+					auto efemPendingLLATasks = taskManager.getTasksByLocation(efemPendingSnapshot, UnifiedWaferTask::Location::LLA);
+					auto efemPendingLLBTasks = taskManager.getTasksByLocation(efemPendingSnapshot, UnifiedWaferTask::Location::LLB);
 
 					// 处理下料请求（优先）
 					if (tool_allow_put_wafer_LLA || efemReturnPendingLLATasks.size() > 0) {
@@ -1790,15 +1728,15 @@ namespace FC{
 					if (elp != nullptr && lk != nullptr)
 					{
 						if (lk->getName() == "LLA") {
-							efemAllocationLLAInitTasks = taskManager.getEfemUnkownStatusLLATasks();
-							if(efemAllocationLLAInitTasks.size() > 0)
+							const auto efemAllocationLlaInitSnapshot = taskManager.getEfemUnkownStatusLLATasks();
+							if(efemAllocationLlaInitSnapshot.size() > 0)
 							{
 								int allocatedTaskIndex = 0;
-								for (int i = 0; i < lkmaps.size() && allocatedTaskIndex < count && allocatedTaskIndex < efemAllocationLLAInitTasks.size(); i++)
+								for (int i = 0; i < lkmaps.size() && allocatedTaskIndex < count && allocatedTaskIndex < efemAllocationLlaInitSnapshot.size(); i++)
 								{
 									if (lkmaps[i] == Cassette::Empty) //空片的槽号
 									{
-										taskManager.updateTaskStatus(efemAllocationLLAInitTasks[allocatedTaskIndex].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
+										taskManager.updateTaskStatus(efemAllocationLlaInitSnapshot[allocatedTaskIndex].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
 											UnifiedWaferTask::Status::QUEUED);
 										allocatedTaskIndex++;
 									}
@@ -1807,16 +1745,16 @@ namespace FC{
 						}
 						else if(lk->getName() == "LLB")
 						{
-							efemAllocationLLBInitTasks = taskManager.getEfemUnkownStatusLLBTasks();
+							const auto efemAllocationLlbInitSnapshot = taskManager.getEfemUnkownStatusLLBTasks();
 
-							if(efemAllocationLLBInitTasks.size() > 0)
+							if(efemAllocationLlbInitSnapshot.size() > 0)
 							{
 								int allocatedTaskIndex = 0;
-								for (int i = 0; i < lkmaps.size() && allocatedTaskIndex < count && allocatedTaskIndex < efemAllocationLLBInitTasks.size(); i++)
+								for (int i = 0; i < lkmaps.size() && allocatedTaskIndex < count && allocatedTaskIndex < efemAllocationLlbInitSnapshot.size(); i++)
 								{
 									if (lkmaps[i] == Cassette::Empty) //空片的槽号
 									{
-										taskManager.updateTaskStatus(efemAllocationLLBInitTasks[allocatedTaskIndex].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
+										taskManager.updateTaskStatus(efemAllocationLlbInitSnapshot[allocatedTaskIndex].taskId, UnifiedWaferTask::TaskType::EFEM_TRANSFER,
 											UnifiedWaferTask::Status::QUEUED);
 										allocatedTaskIndex++;
 									}
@@ -1836,11 +1774,11 @@ namespace FC{
 				case 110:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
-					efemPendingTasks = taskManager.getTasksByLocation(
+					const auto efemPendingSnapshot = taskManager.getTasksByLocation(
 						taskManager.getEfemPendingTasks(),
 						current_loadlock == "LLA" ? UnifiedWaferTask::Location::LLA : UnifiedWaferTask::Location::LLB);
 					
-					if (efemPendingTasks.size() == 1)
+					if (efemPendingSnapshot.size() == 1)
 					{
 						if (isSimulationModeEnabled())
 						{
@@ -1851,7 +1789,7 @@ namespace FC{
 							efem_auto_step = 115;//单取LP单放LK
 						}				
 					}
-					else if (efemPendingTasks.size() >= 2)
+					else if (efemPendingSnapshot.size() >= 2)
 					{
 						if (isSimulationModeEnabled())
 						{
@@ -2639,25 +2577,23 @@ namespace FC{
 					
 					//efemReturnPendingTasks 这个数组数据来源是 LL腔  8->3
 
-					loadLockAReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLA");
-					loadLockBReturnCompletedTasks = taskManager.getLoadLockReturnCompletedTasks("LLB");
+					const auto loadLockAReturnCompletedSnapshot = taskManager.getLoadLockReturnCompletedTasks("LLA");
+					const auto loadLockBReturnCompletedSnapshot = taskManager.getLoadLockReturnCompletedTasks("LLB");
 					
 					if (current_loadlock == "LLA")
 					{
-						for (auto& task : loadLockAReturnCompletedTasks)
+						for (const auto& task : loadLockAReturnCompletedSnapshot)
 						{
 							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
 						}
 					}
 					else
 					{
-						for (auto& task : loadLockBReturnCompletedTasks)
+						for (const auto& task : loadLockBReturnCompletedSnapshot)
 						{
 							taskManager.updateTaskStatus(task.taskId, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED);
 						}
 					}
-
-					UpdateEfemSubTransferDatas();
 
 					// 防止数组越界
 					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
@@ -2720,9 +2656,9 @@ namespace FC{
 				case 201:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
-					UpdateEfemSubTransferDatas();
+					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
 
-					if (efemReturnPendingTasks.size() == 1)
+					if (efemReturnPendingSnapshot.size() == 1)
 					{
 						if (isSimulationModeEnabled())
 						{
@@ -2734,7 +2670,7 @@ namespace FC{
 						}
 						
 					}
-					else if (efemReturnPendingTasks.size() >= 2)
+					else if (efemReturnPendingSnapshot.size() >= 2)
 					{
 						if (isSimulationModeEnabled())
 						{
@@ -2748,7 +2684,8 @@ namespace FC{
 					//else if(efemReturnPendingTasks.size() == 0 && efemReturnCompletedTasks.size() == originTaskSize)
 					else
 					{
-						UpdateEfemSubTransferDatas();
+						const auto efemReturnPendingSnapshotAfterUpdate = taskManager.getEfemRuturnPendingTasks();
+						const auto efemReturnCompletedSnapshotAfterUpdate = taskManager.getEfemRuturnCompletedTasks();
 
 						if (isSimulationModeEnabled())
 						{
@@ -2784,7 +2721,7 @@ namespace FC{
 								tool_allow_put_wafer_LLB = false;
 							}
 
-							if (efemReturnPendingTasks.size() == 0 && efemReturnCompletedTasks.size() == originTaskSize)
+							if (efemReturnPendingSnapshotAfterUpdate.size() == 0 && efemReturnCompletedSnapshotAfterUpdate.size() == originTaskSize)
 							{
 								//整个lp下料完成
 								logWarn(elp1->getName().c_str(), "整个lp下料完成.");
@@ -2937,7 +2874,6 @@ namespace FC{
 				case 244:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
-					UpdateEfemSubTransferDatas();
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
@@ -2970,9 +2906,6 @@ namespace FC{
 								logWarn("EFEM", "step:244,给LLB下料 LLB unLock thread...");
 								tool_allow_put_wafer_LLB = false;
 							}
-
-							UpdateEfemSubTransferDatas();//2025-8-21  获取最新数据
-
 							//考虑多片情况，返回任务数量是初始配置的数量，且无待下料任务
 							const auto efemUnknownSnapshot = taskManager.getEfemUnkownStatusTasks();
 							const auto efemReturnPendingSnapshotAfterUpdate = taskManager.getEfemRuturnPendingTasks();
@@ -3411,7 +3344,6 @@ namespace FC{
 				#pragma region 模拟EFEM给TOOL单下料
 				case 4000:
 				{
-					UpdateEfemSubTransferDatas();
 					const auto efemUnknownSnapshot = taskManager.getEfemUnkownStatusTasks();
 					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
 
@@ -3531,7 +3463,8 @@ namespace FC{
 					lp1TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP1).size();
 					lp2TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP2).size();
 
-					UpdateLLASubTransferDatas();
+					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
+					const auto efemUnknownLlaTasks = taskManager.getEfemUnkownStatusLLATasks();
 
 					bool isInterlock = isLoadingInterlock("LLA");
 					if (isInterlock)
@@ -3540,7 +3473,7 @@ namespace FC{
 					}
 
 					//在LLA槽中，没有传输任务,说明没有上料需求，所有wafer都完成下料到LP中
-					if (loadLockAPendingTasks.size() == 0 && loadLockAReturnPendingTasks.size() == 0 && loadLockAReturnCompletedTasks.size() == 0 && current_lp_cycle)
+					if (llaSnapshot.pendingTasks.empty() && llaSnapshot.returnPendingTasks.empty() && llaSnapshot.returnCompletedTasks.empty() && current_lp_cycle)
 					{
 						logInform(lk1->getName().c_str(), "此时current_lp_cycle循环.");
 						loadlock1_auto_step = 6000;
@@ -3548,7 +3481,7 @@ namespace FC{
 
                     const bool hasLlaWaferReady =
                         (!tool_allow_get_wafer_LLA) &&
-                        (loadLockAPendingTasks.size() > 0 || loadLockAReturnPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0);
+                        (!llaSnapshot.pendingTasks.empty() || !llaSnapshot.returnPendingTasks.empty() || !llaSnapshot.returnCompletedTasks.empty());
 
 					/*
 					本侧LL上层已空
@@ -3558,10 +3491,10 @@ namespace FC{
 					*/
                     const bool canRequestLlaLoad =
                         (!tool_allow_get_wafer_LLA) &&
-                        loadLockAPendingTasks.size() == 0 &&
-                        loadLockAReturnPendingTasks.size() == 0 &&
-                        loadLockAReturnCompletedTasks.size() == 0 &&
-                        (taskManager.getEfemUnkownStatusLLATasks().size() > 0 && taskManager.getEfemUnkownStatusLLATasks().size() <= originTaskSize);
+                        llaSnapshot.pendingTasks.empty() &&
+                        llaSnapshot.returnPendingTasks.empty() &&
+                        llaSnapshot.returnCompletedTasks.empty() &&
+                        (!efemUnknownLlaTasks.empty() && efemUnknownLlaTasks.size() <= originTaskSize);
 
                     //优先
                     if (hasLlaWaferReady)
@@ -3599,8 +3532,8 @@ namespace FC{
 				break;
 				case 20://需要上晶圆,先破真空
 				{
-					UpdateLLASubTransferDatas();
-					if (loadLockAReturnPendingTasks.size() > 0 || loadLockAReturnCompletedTasks.size() > 0)
+					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
+					if (!llaSnapshot.returnPendingTasks.empty() || !llaSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock1_auto_step = 400;
 						break;
@@ -3681,9 +3614,8 @@ namespace FC{
 					if (loadlock1_put_cassette_finished && !tool_allow_get_wafer_LLA)//上料完成
 					{
 						//此时task status 改成LockPendingTasks 
-						efemCompletedTasks = taskManager.getEfemCompletedTasks();
-
-						auto efemToLLACompletedTasks = taskManager.getTasksByLocation(efemCompletedTasks,UnifiedWaferTask::Location::LLA);
+						const auto efemCompletedSnapshot = taskManager.getEfemCompletedTasks();
+						auto efemToLLACompletedTasks = taskManager.getTasksByLocation(efemCompletedSnapshot, UnifiedWaferTask::Location::LLA);
 
 						for (auto& task : efemToLLACompletedTasks)
 						{
@@ -3851,14 +3783,14 @@ namespace FC{
 				case 900:
 				{
 					logInform("Cycle", "llA step 900");
-					UpdateLLASubTransferDatas();
+					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
 
-					if (loadLockAPendingTasks.size() > 0 || loadLockAReturnPendingTasks.size() > 0)
+					if (!llaSnapshot.pendingTasks.empty() || !llaSnapshot.returnPendingTasks.empty())
 					{
 						loadlock1_auto_step = 901;//取晶圆、放晶圆流程
 							
 					}
-					else if (loadLockAReturnCompletedTasks.size() > 0) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
+					else if (!llaSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
 					{
 						loadlock1_auto_step = 5000;//出空casstte的流程
 					}
@@ -3924,18 +3856,18 @@ namespace FC{
 				case 950:
 				{
 					//logInform("Cycle", "llA step 950");
-					UpdateLLASubTransferDatas();
-					if (loadLockAReturnCompletedTasks.size() > 0)
+					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
+					if (!llaSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock1_auto_step = 5000;//出空Cassette流程
 					}
-					else if (loadLockAReturnPendingTasks.size() > 0 && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
+					else if (!llaSnapshot.returnPendingTasks.empty() && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
 					{
 						//放晶圆
 						loadlock1_auto_step = 2000;//允许放晶圆流程
 							
 					}
-					else if (loadLockAPendingTasks.size() > 0 && !abortCycle)
+					else if (!llaSnapshot.pendingTasks.empty() && !abortCycle)
 					{
 						loadlock1_auto_step = 1000;//允许取晶圆流程
 					}
@@ -3961,7 +3893,7 @@ namespace FC{
 					loadlock1_move_slot_index = llaSnapshot.pendingTasks.front().targetFeedingSlot; //拿第一个task
 
 					//当取完结束，更新状态
-					logInform("Test", "loadlock1_move_slot_index %d loadLockACompletedTasks=%d", loadlock1_move_slot_index, loadLockACompletedTasks.size());
+					logInform("Test", "loadlock1_move_slot_index %d loadLockACompletedTasks=%d", loadlock1_move_slot_index, llaSnapshot.completedTasks.size());
 					loadlock1_auto_step = 1010;
 				}
 				break;
@@ -4127,7 +4059,6 @@ namespace FC{
 
 				case 1051:
 				{
-					UpdateLLASubTransferDatas();
 					if (wtr == nullptr)
 					{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
@@ -4366,8 +4297,6 @@ namespace FC{
 						logFailedExcuteCommandHasError(lk1->getName(), "数据更新错误", loadlock1_process_name, loadlock1_auto_step);
 						loadlock1_auto_step = 950;
 					}
-
-					UpdateLLASubTransferDatas();
 
 					loadlock1_auto_step = 1053;
 				}
@@ -4705,11 +4634,11 @@ namespace FC{
 				break;
 				case 2060:
 				{
-					UpdateLLASubTransferDatas();
+					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
 					if (wtr->getState() == IKernelSubSystem::State::SUB_NORMAL && lk1->hasDoorOpend())
 					{
-						//// 新增：再次检查 loadLockAReturnPendingTasks 是否为空
-						if (loadLockAReturnPendingTasks.empty())
+						//// 新增：再次检查 returnPendingTasks 是否为空
+						if (llaSnapshot.returnPendingTasks.empty())
 						{
 							logFailed(lk1->getName(), Poco::format("%s 放片任务队列为空 %s：%d", lk1->getName(), loadlock1_process_name, loadlock1_auto_step));
 							loadlock1_auto_step = 900;
@@ -4946,7 +4875,6 @@ namespace FC{
 						}
 
 						llaImmediateRepick.reset();
-						UpdateLLASubTransferDatas();
 						loadlock1_auto_step = 2071;
 					}
 					else
@@ -5227,9 +5155,9 @@ namespace FC{
 
 				case 6000:
 				{
-					loadLockAPendingTasks = taskManager.getLoadLockPendingTasks("LLA");
+					const auto llaPendingSnapshot = taskManager.getLoadLockPendingTasks("LLA");
 
-					if (loadLockAPendingTasks.size() == 0 && current_lp_cycle)
+					if (llaPendingSnapshot.empty() && current_lp_cycle)
 					{
 						if(is_lp1_cycle)
 						{
@@ -5308,8 +5236,6 @@ namespace FC{
 
 				Sleep(500);
 
-				//2026-3-27 实时刷新最新数组
-				UpdateLLBSubTransferDatas();
 				loadlock2_step_once_finished = false;
 
 				switch (loadlock2_auto_step)
@@ -5319,7 +5245,8 @@ namespace FC{
 					originTaskSize = taskManager.getAllTasksSize();
 					lp1TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP1).size();
 					lp2TaskSize = taskManager.getTasksByLocation(UnifiedWaferTask::Location::LP2).size();
-					UpdateLLBSubTransferDatas();
+					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
+					const auto efemUnknownLlbTasks = taskManager.getEfemUnkownStatusLLBTasks();
 					
 					bool isInterlock = isLoadingInterlock("LLB");
 					if (isInterlock)
@@ -5328,7 +5255,7 @@ namespace FC{
 					}
 
                     //判断是否lp2循环
-					if (loadLockBPendingTasks.size() == 0 && loadLockBReturnPendingTasks.size() == 0 && loadLockBReturnCompletedTasks.size() == 0 && current_lp_cycle)
+					if (llbSnapshot.pendingTasks.empty() && llbSnapshot.returnPendingTasks.empty() && llbSnapshot.returnCompletedTasks.empty() && current_lp_cycle)
                     {
                         logInform(lk2->getName().c_str(), "此时current_lp_cycle循环.");
                         loadlock2_auto_step = 6000;
@@ -5336,14 +5263,14 @@ namespace FC{
 
                     const bool hasLlbWaferReady =
                         (!tool_allow_get_wafer_LLB) &&
-                        (loadLockBPendingTasks.size() > 0 || loadLockBReturnPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0);
+                        (!llbSnapshot.pendingTasks.empty() || !llbSnapshot.returnPendingTasks.empty() || !llbSnapshot.returnCompletedTasks.empty());
                    
 					const bool canRequestLlbLoad =
                         (!tool_allow_get_wafer_LLB) &&
-                        loadLockBPendingTasks.size() == 0 &&
-                        loadLockBReturnPendingTasks.size() == 0 &&
-                        loadLockBReturnCompletedTasks.size() == 0 &&
-                        (taskManager.getEfemUnkownStatusLLBTasks().size() > 0 && taskManager.getEfemUnkownStatusLLBTasks().size() <= originTaskSize);
+                        llbSnapshot.pendingTasks.empty() &&
+                        llbSnapshot.returnPendingTasks.empty() &&
+                        llbSnapshot.returnCompletedTasks.empty() &&
+                        (!efemUnknownLlbTasks.empty() && efemUnknownLlbTasks.size() <= originTaskSize);
 
                     //走Loadlock流程：自己的上料完成
                     if (hasLlbWaferReady)  
@@ -5378,8 +5305,8 @@ namespace FC{
 				break;
 				case 20://需要上晶圆,先破真空
 				{
-					UpdateLLBSubTransferDatas();
-					if (loadLockBReturnPendingTasks.size() > 0 || loadLockBReturnCompletedTasks.size() > 0)
+					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
+					if (!llbSnapshot.returnPendingTasks.empty() || !llbSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock2_auto_step = 400;
 						break;
@@ -5462,9 +5389,9 @@ namespace FC{
 					if (loadlock2_put_cassette_finished && !tool_allow_get_wafer_LLB)//上料完成
 					{
 						//WARNNING:   2025-8-15: 区分开LLA线程操作，
-						efemCompletedTasks = taskManager.getEfemCompletedTasks();
+						const auto efemCompletedSnapshot = taskManager.getEfemCompletedTasks();
 						
-						auto efemToLLBCompletedTasks = taskManager.getTasksByLocation(efemCompletedTasks,UnifiedWaferTask::Location::LLB);
+						auto efemToLLBCompletedTasks = taskManager.getTasksByLocation(efemCompletedSnapshot, UnifiedWaferTask::Location::LLB);
 
 						for (auto& task : efemToLLBCompletedTasks)
 						{
@@ -5628,13 +5555,13 @@ namespace FC{
 				case 900:
 				{
 					logInform("Cycle", "llB step 900");
-					UpdateLLBSubTransferDatas();
+					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
 
-					if (loadLockBPendingTasks.size() > 0 || loadLockBReturnPendingTasks.size() > 0)
+					if (!llbSnapshot.pendingTasks.empty() || !llbSnapshot.returnPendingTasks.empty())
 					{
 						loadlock2_auto_step = 901;//取晶圆、放晶圆流程
 					}
-					else if (loadLockBReturnCompletedTasks.size() > 0) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
+					else if (!llbSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
 					{
 						loadlock2_auto_step = 5000;//出空casstte的流程
 					}
@@ -5698,18 +5625,18 @@ namespace FC{
 				case 950:
 				{
 					//logInform("Cycle", "LLB step 950");
-					UpdateLLBSubTransferDatas();
+					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
 
-					if (loadLockBReturnCompletedTasks.size() > 0)
+					if (!llbSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock2_auto_step = 5000;//出空Cassette流程
 					}
-					else if (loadLockBReturnPendingTasks.size() > 0 && !abortCycle)
+					else if (!llbSnapshot.returnPendingTasks.empty() && !abortCycle)
 					{
 						//放晶圆
 						loadlock2_auto_step = 2000;//允许放晶圆流程
 					}
-					else if (loadLockBPendingTasks.size() > 0 && !abortCycle)
+					else if (!llbSnapshot.pendingTasks.empty() && !abortCycle)
 					{
 						//取晶圆
 						loadlock2_auto_step = 1000;//允许取晶圆流程
@@ -5735,7 +5662,7 @@ namespace FC{
 					loadlock2_move_slot_index = llbSnapshot.pendingTasks.front().targetFeedingSlot; //拿第一个task
 
 					//当取完结束，更新状态
-					logInform("Test", "loadlock2_move_slot_index %d loadLockBCompletedTasks=%d", loadlock2_move_slot_index, loadLockBCompletedTasks.size());
+					logInform("Test", "loadlock2_move_slot_index %d loadLockBCompletedTasks=%d", loadlock2_move_slot_index, llbSnapshot.completedTasks.size());
 					loadlock2_auto_step = 1010;
 				}
 				break;
@@ -5899,7 +5826,6 @@ namespace FC{
 
 				case 1051:
 				{
-					UpdateLLBSubTransferDatas();
 					if (wtr == nullptr)
 					{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
@@ -6261,7 +6187,6 @@ namespace FC{
 #pragma region 允许放晶圆流程
 				case 2000:
 				{
-					UpdateLLBSubTransferDatas();
 					//放片原则，1.是上进下出， 只能放下层的， 2.是上下两层都可放，原则从下到上放，默认第2种
 					//放回到指定ll,对应的槽
 					if(lk2== nullptr)
@@ -6483,12 +6408,12 @@ namespace FC{
 				break;
 				case 2060:
 				{
-					UpdateLLBSubTransferDatas();
+					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
 					if(wtr == nullptr)
 					{
 						wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
 					}
-					if (loadLockBReturnPendingTasks.empty())
+					if (llbSnapshot.returnPendingTasks.empty())
 					{
 						logFailed(lk2->getName(), Poco::format("%s 放片任务队列为空 %s：%d", lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
 						loadlock2_auto_step = 900;
@@ -6506,7 +6431,6 @@ namespace FC{
 						break;
 					}
 
-					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
 					if (llbSnapshot.returnPendingTasks.empty())
 					{
 						logFailed(lk2->getName(), Poco::format("%s 待回片任务为空， %s：%d", lk2->getName(), loadlock2_process_name, loadlock2_auto_step));
@@ -6725,7 +6649,6 @@ namespace FC{
 						}
 
 						llbImmediateRepick.reset();
-						UpdateLLBSubTransferDatas();
 						loadlock2_auto_step = 2071;
 					}
 					else
@@ -6870,7 +6793,6 @@ namespace FC{
 #pragma region 出空casstte的流程
 				case 5000:
 				{
-					UpdateLLBSubTransferDatas();
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
@@ -7014,7 +6936,8 @@ namespace FC{
 				break;
 				case 6000:
 				{
-					if (loadLockBPendingTasks.size() == 0 && current_lp_cycle)
+					const auto llbPendingSnapshot = taskManager.getLoadLockPendingTasks("LLB");
+					if (llbPendingSnapshot.empty() && current_lp_cycle)
 					{
 						
 						if(is_lp2_cycle)
@@ -10077,20 +10000,20 @@ namespace FC{
 				{
 				case 10:
 				{
-					UpdateEfemSubTransferDatas();
+					const auto efemReturnCompletedSnapshot = taskManager.getEfemRuturnCompletedTasks();
 					Sleep(500);
 					
 					if (lp1_cycle_one_time_finished && !cycleFinished_lla)
 					{//Lp1的一次Cycle已做完
 						//2025-11-17: 多加一条检测条件：
-						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0) && isSafeCycleBoundary())
+						if (efemReturnCompletedSnapshot.size() == originTaskSize && (originTaskSize > 0) && isSafeCycleBoundary())
 						{
 							update_auto_step = 1030;
 						}
 					}
 					else if (lp2_cycle_one_time_finished && !cycleFinished_llb)
 					{//Lp2的一次Cycle已做完
-						if (efemReturnCompletedTasks.size() == originTaskSize && (originTaskSize > 0) && isSafeCycleBoundary())
+						if (efemReturnCompletedSnapshot.size() == originTaskSize && (originTaskSize > 0) && isSafeCycleBoundary())
 						{
 							update_auto_step = 1040;
 						}
@@ -10285,9 +10208,6 @@ namespace FC{
 	bool QSlotTransferCycleVTMWidgetPrivate::isLoadingInterlock(const std::string &LLName)
 	{
 		// 仅在真实下料冲突，或对侧LL下层完成片需要优先回LP时上锁。
-		UpdateLLBSubTransferDatas();
-		UpdateLLASubTransferDatas();
-
 		std::string otherLL;
 		bool otherUnloadRequested = false;
 		if (LLName == "LLB")

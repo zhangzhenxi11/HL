@@ -7,6 +7,58 @@
 #pragma execution_character_set("utf-8")
 #endif
 
+namespace
+{
+    using TaskStatusMap = std::map<FC::UnifiedWaferTask::TaskType, std::map<FC::UnifiedWaferTask::Status, std::vector<int>>>;
+    const std::vector<int> kEmptyTaskIds;
+
+    const std::vector<int>* findTaskIds(
+        const TaskStatusMap& taskTypeStatusMap,
+        FC::UnifiedWaferTask::TaskType type,
+        FC::UnifiedWaferTask::Status status)
+    {
+        const auto typeIt = taskTypeStatusMap.find(type);
+        if (typeIt == taskTypeStatusMap.end())
+        {
+            return &kEmptyTaskIds;
+        }
+
+        const auto statusIt = typeIt->second.find(status);
+        if (statusIt == typeIt->second.end())
+        {
+            return &kEmptyTaskIds;
+        }
+
+        return &statusIt->second;
+    }
+
+    template <typename Predicate>
+    std::vector<FC::UnifiedWaferTask> collectTasksByIds(
+        const std::vector<FC::UnifiedWaferTask>& tasks,
+        const std::vector<int>* taskIds,
+        Predicate predicate)
+    {
+        std::vector<FC::UnifiedWaferTask> result;
+        if (taskIds == nullptr)
+        {
+            return result;
+        }
+
+        for (int taskId : *taskIds)
+        {
+            auto it = std::find_if(tasks.begin(), tasks.end(), [taskId, &predicate](const FC::UnifiedWaferTask& task) {
+                return task.taskId == taskId && predicate(task);
+            });
+            if (it != tasks.end())
+            {
+                result.push_back(*it);
+            }
+        }
+
+        return result;
+    }
+}
+
 FC::TaskManager& FC::TaskManager::getInstance()
 {     
     static FC::TaskManager instance;
@@ -409,357 +461,136 @@ bool FC::TaskManager::detectionHasNoInitialTypeTasks()
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::UNKNOWN];
-    for (int taskId : efemTasks[UnifiedWaferTask::UNKNOWN_PROGRESS])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) { return t.taskId == taskId; });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::UNKNOWN, UnifiedWaferTask::UNKNOWN_PROGRESS),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusLLATasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::UNKNOWN];
-    for (int taskId : efemTasks[UnifiedWaferTask::UNKNOWN_PROGRESS])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) { 
-            return t.taskId == taskId && t.target == UnifiedWaferTask::Location::LLA;
-           
-        
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::UNKNOWN, UnifiedWaferTask::UNKNOWN_PROGRESS),
+        [](const UnifiedWaferTask& task) { return task.target == UnifiedWaferTask::Location::LLA; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemUnkownStatusLLBTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::UNKNOWN];
-    for (int taskId : efemTasks[UnifiedWaferTask::UNKNOWN_PROGRESS])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) {
-            return t.taskId == taskId && t.target == UnifiedWaferTask::Location::LLB;
-
-
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::UNKNOWN, UnifiedWaferTask::UNKNOWN_PROGRESS),
+        [](const UnifiedWaferTask& task) { return task.target == UnifiedWaferTask::Location::LLB; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemPendingTasks()
 {
     //先获取TaskType，再找到此类型下所有QUEUED状态下的集合  
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::EFEM_TRANSFER];
-    for (int taskId : efemTasks[UnifiedWaferTask::QUEUED]) 
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(),[taskId](const UnifiedWaferTask& t) { return t.taskId == taskId; });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::EFEM_TRANSFER, UnifiedWaferTask::QUEUED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemCompletedTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::EFEM_TRANSFER];
-    for (int taskId : efemTasks[UnifiedWaferTask::COMPLETED]) 
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(),[taskId](const UnifiedWaferTask& t) { return t.taskId == taskId; });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::EFEM_TRANSFER, UnifiedWaferTask::COMPLETED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemRuturnPendingTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::EFEM_RETURN];
-    for (int taskId : efemTasks[UnifiedWaferTask::QUEUED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) { return t.taskId == taskId; });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::QUEUED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemRuturnCompletedTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::EFEM_RETURN];
-    for (int taskId : efemTasks[UnifiedWaferTask::COMPLETED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t) { return t.taskId == taskId; });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::COMPLETED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockPendingTasks(std::string LLName)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
    /* logInform("TaskManager","LLName:%s", LLName.c_str());*/
     auto loc = stringToLocation(LLName);
-
-    // 获取所有在LoadLock上料的任务
-    auto& robotTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_TRANSFER];
-    for (int taskId : robotTasks[UnifiedWaferTask::QUEUED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(),[taskId, loc](const UnifiedWaferTask& t)
-        {
-            return t.taskId == taskId && t.target == loc;
-        });
-        if (it != tasks_.end()) 
-        {
-            result.push_back(*it);
-        }
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_TRANSFER, UnifiedWaferTask::QUEUED),
+        [loc](const UnifiedWaferTask& task) { return task.target == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockCompletedTasks(std::string LLName)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(LLName);
-
-    // 获取所有在LoadLock上料完成任务
-    auto& efemUpCompletedTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_TRANSFER];
-    for (int taskId : efemUpCompletedTasks[UnifiedWaferTask::COMPLETED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, LLName](const UnifiedWaferTask& t)
-        {
-            
-            return t.taskId == taskId && t.target == loc;
-        });
-        if (it != tasks_.end())
-        {
-            //logInform("TaskManager", "LOADLOCK_TRANSFER/COMPLETED taskId:%d", (*it).taskId);
-            result.push_back(*it);
-        }
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_TRANSFER, UnifiedWaferTask::COMPLETED),
+        [loc](const UnifiedWaferTask& task) { return task.target == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnPendingTasks(std::string LLName)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(LLName);
-
-    // 获取所有在LoadLock待下料EFEM搬运的任务
-    auto& efemReturnTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_RETURN];
-    for (int taskId : efemReturnTasks[UnifiedWaferTask::QUEUED]) {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, LLName](const UnifiedWaferTask& t)
-        {
-            
-            return t.taskId == taskId && t.target == loc;
-        });
-        if (it != tasks_.end()) 
-        {
-            //logInform("TaskManager", "找到LOADLOCK_RETURN/QUEUED taskId:%d", (*it).taskId);
-            result.push_back(*it);
-        }
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::QUEUED),
+        [loc](const UnifiedWaferTask& task) { return task.target == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnCompletedTasks(std::string LLName)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(LLName);
-
-    // 获取所有在LoadLock下料完成的任务
-    auto& efemReturnCompletedTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_RETURN];
-    for (int taskId : efemReturnCompletedTasks[UnifiedWaferTask::COMPLETED]) {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, LLName](const UnifiedWaferTask& t)
-        {
-            return t.taskId == taskId && t.target == loc;
-        });
-        if (it != tasks_.end()) 
-        {
-            //logInform("TaskManager", "LOADLOCK_RETURN/COMPLETED taskId:%d", (*it).taskId);
-            result.push_back(*it);
-        }
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED),
+        [loc](const UnifiedWaferTask& task) { return task.target == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMPendingTasks(std::string PM)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(PM);
-
-    // 获取所有在PM等待处理的任务
-    auto& pmTasks = taskTypeStatusMap_[UnifiedWaferTask::PM_PROCESS];
-    for (int taskId : pmTasks[UnifiedWaferTask::QUEUED]) 
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, PM](const UnifiedWaferTask& t)
-        {
-            
-            return t.taskId == taskId && t.target_pm == loc;
-        });
-        if (it != tasks_.end())
-        {
-            //logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
-            result.push_back(*it);
-        }
-    }
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::PM_PROCESS, UnifiedWaferTask::QUEUED),
+        [loc](const UnifiedWaferTask& task) { return task.target_pm == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMProcessTasks(std::string PM)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(PM);
-
-    // 获取正在PM工艺的任务
-    auto& pmTasks = taskTypeStatusMap_[UnifiedWaferTask::PM_PROCESS];
-    for (int taskId : pmTasks[UnifiedWaferTask::IN_PROGRESS]) {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, loc, PM](const UnifiedWaferTask& t) {
-
-            
-            return t.taskId == taskId && t.target_pm == loc;
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::PM_PROCESS, UnifiedWaferTask::IN_PROGRESS),
+        [loc](const UnifiedWaferTask& task) { return task.target_pm == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMCompletedTasks(std::string PM)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
     auto loc = stringToLocation(PM);
-
-    // 获取所有在PM完成工艺的任务
-    auto& pmTasks = taskTypeStatusMap_[UnifiedWaferTask::PM_PROCESS];
-    for (int taskId : pmTasks[UnifiedWaferTask::COMPLETED]) {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(),[taskId, loc,PM](const UnifiedWaferTask& t) {
-
-            return t.taskId == taskId && t.target_pm == loc;
-        });
-        if (it != tasks_.end())
-        {
-            //logInform("TaskManager", "PM_PROCESS/QUEUED taskId:%d", (*it).taskId);
-            result.push_back(*it);
-        }
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::PM_PROCESS, UnifiedWaferTask::COMPLETED),
+        [loc](const UnifiedWaferTask& task) { return task.target_pm == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockPendingTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    // 获取所有在LoadLock上料的任务
-    auto& robotTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_TRANSFER];
-    for (int taskId : robotTasks[UnifiedWaferTask::QUEUED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t)
-        {
-            return t.taskId == taskId;
-        });
-        if (it != tasks_.end())
-        {
-            result.push_back(*it);
-        }
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_TRANSFER, UnifiedWaferTask::QUEUED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockCompletedTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    // 获取所有在LoadLock上料完成任务
-    auto& efemUpCompletedTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_TRANSFER];
-    for (int taskId : efemUpCompletedTasks[UnifiedWaferTask::COMPLETED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t)
-        {
-            return t.taskId == taskId;
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_TRANSFER, UnifiedWaferTask::COMPLETED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnPendingTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-
-    // 获取所有在LoadLock待下料EFEM搬运的任务
-    auto& efemReturnTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_RETURN];
-    for (int taskId : efemReturnTasks[UnifiedWaferTask::QUEUED]) {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t)
-        {
-          
-            return t.taskId == taskId;
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::QUEUED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnCompletedTasks()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-  
-
-    // 获取所有在LoadLock下料完成的任务
-    auto& efemReturnCompletedTasks = taskTypeStatusMap_[UnifiedWaferTask::LOADLOCK_RETURN];
-    for (int taskId : efemReturnCompletedTasks[UnifiedWaferTask::COMPLETED]) {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId](const UnifiedWaferTask& t)
-        {
-            return t.taskId == taskId;
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED),
+        [](const UnifiedWaferTask&) { return true; });
 }
 
 bool FC::TaskManager::waitForTasks(int timeoutMs)
@@ -865,18 +696,8 @@ bool FC::TaskManager::hasEfemUnloadInProgress(const std::string& LLName)
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getEfemRuturnCompletedTasksBySource(UnifiedWaferTask::Location source)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<UnifiedWaferTask> result;
-
-    auto& efemTasks = taskTypeStatusMap_[UnifiedWaferTask::EFEM_RETURN];
-    for (int taskId : efemTasks[UnifiedWaferTask::COMPLETED])
-    {
-        auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskId, source](const UnifiedWaferTask& t) {
-            return t.taskId == taskId && t.source == source;
-        });
-        if (it != tasks_.end()) result.push_back(*it);
-    }
-
-    return result;
+    return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::EFEM_RETURN, UnifiedWaferTask::COMPLETED),
+        [source](const UnifiedWaferTask& task) { return task.source == source; });
 }
 
 // 判断是否可以重置EFEM搬回任务，条件是：同一来源的所有任务要么是未知状态，要么是已完成的搬回任务，并且至少有一个已完成的搬回任务
