@@ -81,7 +81,7 @@ public:
 	bool getIsConnected();
 
 	//新增
-	std::string SunwaySubSystemHelper::sendCommand(const std::string& command,unsigned int timeout_ms);
+	std::string sendCommand(const std::string& command,unsigned int timeout_ms);
 
 protected:
 	/**

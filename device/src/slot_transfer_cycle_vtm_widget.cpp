@@ -148,20 +148,24 @@ namespace FC{
 	private:
 		std::mutex m_mutex;
 		std::atomic<bool> m_locked{ false };
-
+		std::atomic<std::thread::id*> m_owner{ nullptr };
 	public:
 		void lock() {
 			m_mutex.lock();
+			m_owner.store(new std::thread::id(std::this_thread::get_id()));
 			m_locked = true;
 		}
 
 		void unlock() {
 			m_locked = false;
+			auto owner = m_owner.exchange(nullptr);
 			m_mutex.unlock();
+			delete owner;
 		}
 
 		bool try_lock() {
 			if (m_mutex.try_lock()) {
+				m_owner.store(new std::thread::id(std::this_thread::get_id()));
 				m_locked = true;
 				return true;
 			}
@@ -170,6 +174,18 @@ namespace FC{
 
 		bool is_locked() const {
 			return m_locked;
+		}
+		bool is_owned_by_current_thread() const {
+			auto owner = m_owner.load();
+			return owner != nullptr && *owner == std::this_thread::get_id();
+		}
+
+		bool unlock_if_owned_by_current_thread() {
+			if (!is_owned_by_current_thread()) {
+				return false;
+			}
+			unlock();
+			return true;
 		}
 	};
 
@@ -1502,6 +1518,9 @@ namespace FC{
 
 				// 检查是否需要重置
 				if (needReset_EFEM.load()) {
+					if (efem_robot_mutex.unlock_if_owned_by_current_thread()) {
+						logWarn("EFEM", "重置请求到达，EFEM线程已主动释放上下料锁.");
+					}
 					efem_auto_step = 10;
 					needReset_EFEM = false;
 					logWarn("EFEM", "重置，跳过本次循环剩余部分.");
@@ -3398,6 +3417,9 @@ namespace FC{
 	
 		}
 		catch (const std::exception& e) {
+			if (efem_robot_mutex.unlock_if_owned_by_current_thread()) {
+				logWarn("Cyclelog", "EFEM thread crashed, released efem_robot_mutex in owner thread.");
+			}
 			pauseAllThreads();
 			saveCurrentStateSnapshot(e.what(), Poco::format("EFEMTransfer step:%d", efem_auto_step));
 			onUpdateControlEnabled("execute_pbt", true);
@@ -3406,6 +3428,9 @@ namespace FC{
 			qCritical() << "EFEM thread crashed:" << e.what();
 		}
 		catch (...) {
+			if (efem_robot_mutex.unlock_if_owned_by_current_thread()) {
+				logWarn("Cyclelog", "EFEM thread crashed, released efem_robot_mutex in owner thread.");
+			}
 			pauseAllThreads();
 			saveCurrentStateSnapshot("unknown exception", Poco::format("EFEMTransfer step:%d", efem_auto_step));
 			onUpdateControlEnabled("execute_pbt", true);
@@ -10451,7 +10476,6 @@ namespace FC{
 		{
 			return;
 		}
-		efem_robot_mutex.unlock();
 
 		finished_time_lla = 0;
 
