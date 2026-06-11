@@ -1,0 +1,18 @@
+# Local IDE and agent files
+.trae/
+.qoder/
+
+# Runtime dumps and logs
+dump/
+*.dmp
+log.txt
+msbuild_*.txt
+
+# Local backups and archives
+*.bak
+*.tmp
+*.rar
+
+# OS / editor noise
+Thumbs.db
+Desktop.ini
