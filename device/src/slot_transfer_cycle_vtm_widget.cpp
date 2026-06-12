@@ -736,29 +736,76 @@ namespace FC{
 		std::atomic<int> pm3_craft_task_id{ -1 };
 		std::atomic<int> pm4_craft_task_id{ -1 };
 
-		// 重置所有机械手请求标志
+		// 统一清理运行态，避免暂停/重跑/复位后带着上一轮的请求位和门闩继续跑。
 		void resetAllRobotFlags() {
-			robot_get_from_lla.requested.store(false); robot_get_from_lla.done.store(false); robot_get_from_lla.expedited.store(false);
-			robot_get_from_llb.requested.store(false); robot_get_from_llb.done.store(false); robot_get_from_llb.expedited.store(false);
-			robot_put_to_pm1.requested.store(false); robot_put_to_pm1.done.store(false);
-			robot_put_to_pm2.requested.store(false); robot_put_to_pm2.done.store(false);
-			robot_put_to_pm3.requested.store(false); robot_put_to_pm3.done.store(false);
-			robot_put_to_pm4.requested.store(false); robot_put_to_pm4.done.store(false);
-			robot_get_from_pm1.requested.store(false); robot_get_from_pm1.done.store(false);
-			robot_get_from_pm2.requested.store(false); robot_get_from_pm2.done.store(false);
-			robot_get_from_pm3.requested.store(false); robot_get_from_pm3.done.store(false);
-			robot_get_from_pm4.requested.store(false); robot_get_from_pm4.done.store(false);
-			robot_put_to_lla.requested.store(false); robot_put_to_lla.done.store(false);
-			robot_put_to_llb.requested.store(false); robot_put_to_llb.done.store(false);
-			robot_exchange_pm1.requested.store(false); robot_exchange_pm1.done.store(false);
-			robot_exchange_pm2.requested.store(false); robot_exchange_pm2.done.store(false);
-			robot_exchange_pm3.requested.store(false); robot_exchange_pm3.done.store(false);
-			robot_exchange_pm4.requested.store(false); robot_exchange_pm4.done.store(false);
-			robot_get_from_lla.taskId.store(-1); robot_get_from_llb.taskId.store(-1);
-			robot_put_to_pm1.taskId.store(-1); robot_put_to_pm2.taskId.store(-1); robot_put_to_pm3.taskId.store(-1); robot_put_to_pm4.taskId.store(-1);
-			robot_get_from_pm1.taskId.store(-1); robot_get_from_pm2.taskId.store(-1); robot_get_from_pm3.taskId.store(-1); robot_get_from_pm4.taskId.store(-1);
-			robot_put_to_lla.taskId.store(-1); robot_put_to_llb.taskId.store(-1);
-			robot_exchange_pm1.taskId.store(-1); robot_exchange_pm2.taskId.store(-1); robot_exchange_pm3.taskId.store(-1); robot_exchange_pm4.taskId.store(-1);
+			auto resetRequest = [](RobotTransferRequest& request, int defaultArm, int defaultSlot)
+			{
+				request.requested.store(false);
+				request.done.store(false);
+				request.success.store(false);
+				request.expedited.store(false);
+				request.arm.store(defaultArm);
+				request.slot.store(defaultSlot);
+				request.taskId.store(-1);
+			};
+
+			resetRequest(robot_get_from_lla, 0, 1);
+			resetRequest(robot_get_from_llb, 1, 1);
+			resetRequest(robot_put_to_pm1, 0, 1);
+			resetRequest(robot_put_to_pm2, 0, 1);
+			resetRequest(robot_put_to_pm3, 0, 1);
+			resetRequest(robot_put_to_pm4, 0, 1);
+			resetRequest(robot_get_from_pm1, 0, 1);
+			resetRequest(robot_get_from_pm2, 0, 1);
+			resetRequest(robot_get_from_pm3, 0, 1);
+			resetRequest(robot_get_from_pm4, 0, 1);
+			resetRequest(robot_put_to_lla, 0, 1);
+			resetRequest(robot_put_to_llb, 1, 1);
+			resetRequest(robot_exchange_pm1, 0, 1);
+			resetRequest(robot_exchange_pm2, 0, 1);
+			resetRequest(robot_exchange_pm3, 0, 1);
+			resetRequest(robot_exchange_pm4, 0, 1);
+
+			exchange_info_pm1.getArm.store(0); exchange_info_pm1.putArm.store(1);
+			exchange_info_pm2.getArm.store(0); exchange_info_pm2.putArm.store(1);
+			exchange_info_pm3.getArm.store(0); exchange_info_pm3.putArm.store(1);
+			exchange_info_pm4.getArm.store(0); exchange_info_pm4.putArm.store(1);
+
+			pm2_exchange_in_flight.store(false);
+			tool_allow_get_wafer = false;
+			tool_allow_put_wafer = false;
+			tool_allow_get_wafer_LLA = false;
+			tool_allow_put_wafer_LLA = false;
+			tool_allow_get_wafer_LLB = false;
+			tool_allow_put_wafer_LLB = false;
+			tool_allow_pm1_get_wafer = false;
+			tool_allow_pm1_put_wafer = false;
+			tool_allow_pm2_get_wafer = false;
+			tool_allow_pm2_put_wafer = false;
+			tool_allow_pm3_get_wafer = false;
+			tool_allow_pm3_put_wafer = false;
+			tool_allow_pm4_get_wafer = false;
+			tool_allow_pm4_put_wafer = false;
+			tool_allow_lla = false;
+			tool_allow_llb = false;
+			pm1_allow_get_put_wafer = false;
+			pm1_allow_goto_craft = false;
+			pm2_allow_get_put_wafer = false;
+			pm2_allow_goto_craft = false;
+			pm2_need_return_wafer = false;
+			pm2_allow_loading_wafer = false;
+			pm2_allow_down_wafer = false;
+			pm3_allow_get_put_wafer = false;
+			pm3_allow_goto_craft = false;
+			pm4_allow_get_put_wafer = false;
+			pm4_allow_goto_craft = false;
+			loadlock1_allow_get_wafer = false;
+			loadlock2_allow_get_wafer = false;
+			loadlock1_allow_put_wafer = false;
+			loadlock2_allow_put_wafer = false;
+
+			lla_return_task_id.store(-1); lla_return_slot.store(-1);
+			llb_return_task_id.store(-1); llb_return_slot.store(-1);
 			loadlock1_pick_task_id.store(-1); loadlock2_pick_task_id.store(-1);
 			pm1_craft_task_id.store(-1); pm2_craft_task_id.store(-1); pm3_craft_task_id.store(-1); pm4_craft_task_id.store(-1);
 			llaImmediateRepick.reset();
@@ -4109,9 +4156,19 @@ namespace FC{
 							if (pm2ExchangeBlocking)
 							{
 								static int exchange_wait_count = 0;
-								if ((exchange_wait_count++ % 20) == 0)
+								if ((exchange_wait_count++ % 150) == 0)
 								{
-									logInform(lk1->getName().c_str(), "PM2交换进行中(请求已发出或Robot正在执行), LLA暂不发起新的取片请求.");
+									logInform(lk1->getName().c_str(),
+										"PM2交换进行中, LLA暂不发起新的取片请求. flags: pm2_exchange_in_flight=%d, robot_exchange_pm2.requested=%d, robot_exchange_pm2.done=%d, robot_exchange_pm2.success=%d, robot_step=%d, pm2_step=%d, loadlock1_pick_task_id=%d, armA_has=%d, armB_has=%d",
+										(int)pm2_exchange_in_flight.load(),
+										(int)robot_exchange_pm2.requested.load(),
+										(int)robot_exchange_pm2.done.load(),
+										(int)robot_exchange_pm2.success.load(),
+										robot_step,
+										pm2_auto_step,
+										loadlock1_pick_task_id.load(),
+										(int)wtr->hasObject(0),
+										(int)wtr->hasObject(1));
 								}
 								Sleep(200);
 								break;
@@ -4145,9 +4202,13 @@ namespace FC{
 							const bool armAHasWafer = wtr->hasObject(0);
 							const bool armBHasWafer = wtr->hasObject(1);
 
-							logWarn(lk1->getName().c_str(),
-								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
-								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+							static int status_log_wait_count = 0;
+							if ((status_log_wait_count++ % 150) == 0)
+							{
+								logWarn(lk1->getName().c_str(),
+									"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
+									(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+							}
 
 							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
@@ -4223,11 +4284,27 @@ namespace FC{
 								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, desiredArm, pm2WaitReason))
 								{
 									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
+									if ((wait_count++ % 150) == 0)
 									{
 										logWarn(lk1->getName().c_str(),
-											"step 1051禁止从LLA取片，当前应等待PM2优先. %s",
-											pm2WaitReason.c_str());
+											"step 1051禁止从LLA取片，当前应等待PM2优先. reason=%s, desiredArm=%d, allowPreloadWaitForCraft=%d, snapshot={hasWaferPm=%d, craftInProgress=%d, armAHasWafer=%d, armAHasPending=%d, armBHasWafer=%d, armBHasPending=%d, pm2PendingCount=%d, pm2CompletedCount=%d, returnPendingCount=%d, preferredPmArm=%d}, flags={pm2_exchange_in_flight=%d, robot_exchange_pm2.requested=%d, robot_step=%d, pm2_step=%d}",
+											pm2WaitReason.c_str(),
+											desiredArm,
+											(int)allowPreloadWaitForCraft,
+											(int)pm2Snapshot.hasWaferPm,
+											(int)pm2Snapshot.pm2CraftInProgress,
+											(int)pm2Snapshot.armAHasWafer,
+											(int)pm2Snapshot.armAHasPending,
+											(int)pm2Snapshot.armBHasWafer,
+											(int)pm2Snapshot.armBHasPending,
+											pm2Snapshot.pm2PendingCount,
+											pm2Snapshot.pm2CompletedCount,
+											pm2Snapshot.returnPendingCount,
+											pm2Snapshot.preferredPmArm,
+											(int)pm2_exchange_in_flight.load(),
+											(int)robot_exchange_pm2.requested.load(),
+											robot_step,
+											pm2_auto_step);
 									}
 									loadlock1_auto_step = 950;
 									Sleep(200);
@@ -4245,11 +4322,18 @@ namespace FC{
 								if ((targetArm >= 0 && targetArm <= 1) && isRobotArmOccupiedForLlRequest(targetArm, armBusyReason))
 								{
 									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
+									if ((wait_count++ % 150) == 0)
 									{
 										logWarn(lk1->getName().c_str(),
-											"WTR手臂%d发送前不可用(%s), 保持任务固定手臂并等待后重试",
-											desiredArm, armBusyReason.c_str());
+											"WTR手臂%d发送前不可用(%s), 保持任务固定手臂并等待后重试. flags: armA_has=%d, armB_has=%d, robot_step=%d, pm2_step=%d, loadlock1_pick_task_id=%d, desiredArm=%d, targetArm=%d",
+											desiredArm, armBusyReason.c_str(),
+											(int)wtr->hasObject(0),
+											(int)wtr->hasObject(1),
+											robot_step,
+											pm2_auto_step,
+											loadlock1_pick_task_id.load(),
+											desiredArm,
+											targetArm);
 									}
 									Sleep(200);
 									break;
@@ -5902,9 +5986,19 @@ namespace FC{
 							if (pm2ExchangeBlocking)
 							{
 								static int exchange_wait_count = 0;
-								if ((exchange_wait_count++ % 20) == 0)
+								if ((exchange_wait_count++ % 150) == 0)
 								{
-									logInform(lk2->getName().c_str(), "PM2交换进行中(请求已发出或Robot正在执行), LLB暂不发起新的取片请求.");
+									logInform(lk2->getName().c_str(),
+										"PM2交换进行中, LLB暂不发起新的取片请求. flags: pm2_exchange_in_flight=%d, robot_exchange_pm2.requested=%d, robot_exchange_pm2.done=%d, robot_exchange_pm2.success=%d, robot_step=%d, pm2_step=%d, loadlock2_pick_task_id=%d, armA_has=%d, armB_has=%d",
+										(int)pm2_exchange_in_flight.load(),
+										(int)robot_exchange_pm2.requested.load(),
+										(int)robot_exchange_pm2.done.load(),
+										(int)robot_exchange_pm2.success.load(),
+										robot_step,
+										pm2_auto_step,
+										loadlock2_pick_task_id.load(),
+										(int)wtr->hasObject(0),
+										(int)wtr->hasObject(1));
 								}
 								Sleep(200);
 								break;
@@ -5937,9 +6031,13 @@ namespace FC{
 							const bool armAHasWafer = wtr->hasObject(0);
 							const bool armBHasWafer = wtr->hasObject(1);
 
-							logWarn(lk2->getName().c_str(),
-								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
-								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+							static int status_log_wait_count = 0;
+							if ((status_log_wait_count++ % 150) == 0)
+							{
+								logWarn(lk2->getName().c_str(),
+									"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
+									(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
+							}
 
 							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
@@ -6016,11 +6114,27 @@ namespace FC{
 								if (!allowPreloadWaitForCraft && shouldLlWaitForPm2Priority(pm2Snapshot, desiredArm, pm2WaitReason))
 								{
 									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
+									if ((wait_count++ % 150) == 0)
 									{
 										logWarn(lk2->getName().c_str(),
-											"step 1051禁止从LLB取片，当前应等待PM2优先. %s",
-											pm2WaitReason.c_str());
+											"step 1051禁止从LLB取片，当前应等待PM2优先. reason=%s, desiredArm=%d, allowPreloadWaitForCraft=%d, snapshot={hasWaferPm=%d, craftInProgress=%d, armAHasWafer=%d, armAHasPending=%d, armBHasWafer=%d, armBHasPending=%d, pm2PendingCount=%d, pm2CompletedCount=%d, returnPendingCount=%d, preferredPmArm=%d}, flags={pm2_exchange_in_flight=%d, robot_exchange_pm2.requested=%d, robot_step=%d, pm2_step=%d}",
+											pm2WaitReason.c_str(),
+											desiredArm,
+											(int)allowPreloadWaitForCraft,
+											(int)pm2Snapshot.hasWaferPm,
+											(int)pm2Snapshot.pm2CraftInProgress,
+											(int)pm2Snapshot.armAHasWafer,
+											(int)pm2Snapshot.armAHasPending,
+											(int)pm2Snapshot.armBHasWafer,
+											(int)pm2Snapshot.armBHasPending,
+											pm2Snapshot.pm2PendingCount,
+											pm2Snapshot.pm2CompletedCount,
+											pm2Snapshot.returnPendingCount,
+											pm2Snapshot.preferredPmArm,
+											(int)pm2_exchange_in_flight.load(),
+											(int)robot_exchange_pm2.requested.load(),
+											robot_step,
+											pm2_auto_step);
 									}
 									loadlock2_auto_step = 950;
 									Sleep(200);
@@ -6038,11 +6152,18 @@ namespace FC{
 								if ((targetArm >= 0 && targetArm <= 1) && isRobotArmOccupiedForLlRequest(targetArm, armBusyReason))
 								{
 									static int wait_count = 0;
-									if ((wait_count++ % 20) == 0)
+									if ((wait_count++ % 150) == 0)
 									{
 										logWarn(lk2->getName().c_str(),
-											"WTR手臂%d发送前不可用(%s), 保持任务固定手臂并等待后重试",
-											desiredArm, armBusyReason.c_str());
+											"WTR手臂%d发送前不可用(%s), 保持任务固定手臂并等待后重试. flags: armA_has=%d, armB_has=%d, robot_step=%d, pm2_step=%d, loadlock2_pick_task_id=%d, desiredArm=%d, targetArm=%d",
+											desiredArm, armBusyReason.c_str(),
+											(int)wtr->hasObject(0),
+											(int)wtr->hasObject(1),
+											robot_step,
+											pm2_auto_step,
+											loadlock2_pick_task_id.load(),
+											desiredArm,
+											targetArm);
 									}
 									Sleep(200);
 									break;
