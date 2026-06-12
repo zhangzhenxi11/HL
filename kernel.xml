@@ -732,9 +732,11 @@
 			<ErrorTxt>./Error Code Definition/Error_Sunway_Robot.txt</ErrorTxt>
 			<PutWafer>
 				<timeout>100000</timeout>
+				<ignore_pm2_put_interlock>true</ignore_pm2_put_interlock>
 			</PutWafer>
 			<GetWafer>
 				<timeout>100000</timeout>
+				<ignore_pm2_get_interlock>true</ignore_pm2_get_interlock>
 			</GetWafer>
 			<CheckLoad>
 				<timeout>100000</timeout>

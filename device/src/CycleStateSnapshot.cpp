@@ -6,6 +6,7 @@
  */
 
 #include "CycleStateSnapshot.h"
+#include "TaskManager.h"
 #include "Poco/JSON/Parser.h"
 #include "Poco/JSON/Stringifier.h"
 #include "Poco/File.h"
@@ -45,9 +46,12 @@ Poco::JSON::Object::Ptr CycleStateSnapshot::taskToJson(const UnifiedWaferTask& t
     jsonObj->set("status", UnifiedWaferTask::statusToString(task.status));
     jsonObj->set("currentStep", task.currentStep);
     jsonObj->set("source", UnifiedWaferTask::locationToString(task.source));
+    jsonObj->set("destination", UnifiedWaferTask::locationToString(task.destination));
     jsonObj->set("target", UnifiedWaferTask::locationToString(task.target));
+    jsonObj->set("egressLoadLock", UnifiedWaferTask::locationToString(task.egressLoadLock));
     jsonObj->set("target_pm", UnifiedWaferTask::locationToString(task.target_pm));
     jsonObj->set("sourceSlot", task.sourceSlot);
+    jsonObj->set("destinationSlot", task.destinationSlot);
     jsonObj->set("targetSlot", task.targetSlot);
     jsonObj->set("targetFeedingSlot", task.targetFeedingSlot);
     jsonObj->set("targetBlankingSlot", task.targetBlankingSlot);
@@ -77,13 +81,21 @@ bool CycleStateSnapshot::jsonToTask(const Poco::JSON::Object::Ptr& jsonObj, Unif
         std::string taskTypeStr = jsonObj->getValue<std::string>("taskType");
         std::string statusStr = jsonObj->getValue<std::string>("status");
         std::string sourceStr = jsonObj->getValue<std::string>("source");
+        std::string destinationStr = jsonObj->optValue<std::string>("destination", sourceStr);
         std::string targetStr = jsonObj->getValue<std::string>("target");
+        std::string egressLoadLockStr = jsonObj->optValue<std::string>("egressLoadLock", targetStr);
         std::string targetPmStr = jsonObj->getValue<std::string>("target_pm");
         
         // 这里需要实现字符串到枚举的转换
         // 简化处理：假设有辅助函数（实际需要实现）
+        task.source = TaskManager::getInstance().stringToLocation(sourceStr);
+        task.destination = TaskManager::getInstance().stringToLocation(destinationStr);
+        task.target = TaskManager::getInstance().stringToLocation(targetStr);
+        task.egressLoadLock = TaskManager::getInstance().stringToLocation(egressLoadLockStr);
+        task.target_pm = TaskManager::getInstance().stringToLocation(targetPmStr);
         task.currentStep = jsonObj->getValue<int>("currentStep");
         task.sourceSlot = jsonObj->getValue<int>("sourceSlot");
+        task.destinationSlot = jsonObj->optValue<int>("destinationSlot", task.sourceSlot);
         task.targetSlot = jsonObj->getValue<int>("targetSlot");
         task.targetFeedingSlot = jsonObj->getValue<int>("targetFeedingSlot");
         task.targetBlankingSlot = jsonObj->getValue<int>("targetBlankingSlot");

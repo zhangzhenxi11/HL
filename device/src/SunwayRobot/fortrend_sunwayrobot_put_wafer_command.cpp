@@ -404,6 +404,7 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 	auto cassManager = robot->getKernel()->getKernelModule<FortrendCassetteManager>();
 	//get cass
 	auto station_cass = cassManager->getCassette(getStation().get());
+	std::shared_ptr<KernelConfiguration> command_config = robot->getConfigure()->createView(getName());
 
 	if (!station_cass){
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_STATION_WITHOUT_CASS_EXCEPTION, 
@@ -430,10 +431,15 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,Poco::format("%s腔未发出安全信号.", getStation()->getName()).c_str(), this);
 				}
 			}
-
+			
 			//2026-5-21 放晶圆时判断PM腔是否在最低平面位置
+			const bool ignorePm2PutInterlock =
+				(sub->getName() == "PM2") &&
+				command_config != nullptr &&
+				command_config->getBool("ignore_pm2_put_interlock", false);
+
 			float zAxleLocation = sub->getPMCavityZAxleLocation();
-			if (zAxleLocation >= 1.2 || zAxleLocation <= 0.8)
+			if (!ignorePm2PutInterlock && (zAxleLocation >= 1.2 || zAxleLocation <= 0.8))
 			{
 				logInform(sub->getName().c_str(), "PM腔检测到升降轴当前坐标:%f,不在安全范围 ,延迟50ms重新检测.", sub->getPMCavityZAxleLocation());
 				Sleep(50);
@@ -444,6 +450,10 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 					throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
 						Poco::format("%s腔PM腔检测到升降轴当前坐标不在安全范围.", getStation()->getName()).c_str(), this);
 				}
+			}
+			else if (ignorePm2PutInterlock)
+			{
+				logInform(sub->getName().c_str(), "配置已启用 ignore_pm2_put_interlock，忽略PM2放片升降轴安全范围互锁.");
 			}
 
 		}

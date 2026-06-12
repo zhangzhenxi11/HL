@@ -645,13 +645,13 @@ namespace FC{
 	 切换配方功能
 	*/
 	void QFortrendStationStatusVTMWidgetPrivate::onRecipe(){
-		//0=A模式 1=B模式 2=先A后B模式 3=先B后A模式
+		//0=单LL上进下出 1=A进B出 2=B进A出
 		emit q_ptr->signalUpdateRecipe(ui->recipe_box->currentIndex());
 	}
 
 	void QFortrendStationStatusVTMWidgetPrivate::onMode()
 	{
-		//0=上进下出模式 1=双上双下模式
+		//0=单LL上进下出模式 1=A进B出 2=B进A出
 		emit q_ptr->signalSelectTransferMode(ui->recipe_box->currentIndex());
 	}
 
@@ -941,10 +941,10 @@ namespace FC{
 		connect(d->ui->reset_all_btn, &QAbstractButton::clicked, this, &QFortrendStationStatusVTMWidget::onEfemReset);
 		
 
-		d->ui->recipe_box->addItem("单上下片模式");
-		d->ui->recipe_box->addItem("双上双下模式");
-		//d->ui->recipe_box->addItem("先A后B模式");
-		//d->ui->recipe_box->addItem("先B后A模式");
+		d->ui->recipe_box->addItem("单LL上进下出模式");
+		d->ui->recipe_box->addItem("A进B出模式");
+		d->ui->recipe_box->addItem("B进A出模式");
+
 		if (d->pm2->getState() == IKernelSubSystem::SUB_NORMAL || d->pm2->getState() == IKernelSubSystem::SUB_IDEL){
 			double AxleLocation = d->pm2->getPMCavityZAxleLocation();//PM横移轴位置初始化
 			printf("getPMCavityAxleLocation %d \r\n", AxleLocation);

@@ -1,4 +1,4 @@
-﻿
+
 /**
 * @file    fortrend_SunwayRobot_subsystem.h
 * @brief   Fortrend SunwayRobot widget
@@ -26,9 +26,28 @@
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QDoubleSpinBox>
+#include <QDir>
+#include <QSettings>
 #if _MSC_VER >1600
 #pragma execution_character_set("utf-8")
 #endif
+
+namespace {
+	QString getSunwayRobotWidgetConfigFile()
+	{
+		return QDir::currentPath() + "/config/config.ini";
+	}
+
+	QString getSunwayRobotSpeedKey(const std::string& subsystemName)
+	{
+		return QString::fromStdString(subsystemName + "_Speed");
+	}
+
+	QString getSunwayRobotAxisZSpeedKey(const std::string& subsystemName)
+	{
+		return QString::fromStdString(subsystemName + "_AxisZSpeed");
+	}
+}
 
 
 namespace FC{
@@ -115,6 +134,13 @@ namespace FC{
 			onSetLoadCommand(arm, 0);  //state=0 无片
 		});
 
+
+		QString fileName = getSunwayRobotWidgetConfigFile();
+		QSettings settings(fileName, QSettings::IniFormat);
+		d->ui->speed_value_spx->setValue(
+			settings.value(getSunwayRobotSpeedKey(getSubsystem()->getName()), d->ui->speed_value_spx->value()).toDouble());
+		d->ui->speed_value_spx_z->setValue(
+			settings.value(getSunwayRobotAxisZSpeedKey(getSubsystem()->getName()), d->ui->speed_value_spx_z->value()).toDouble());
 
 	}
 
@@ -380,12 +406,16 @@ namespace FC{
 		Q_D(QSunwayRobotSubsystemWidget);
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createSetAxisZSpeedCommand(d->ui->speed_value_spx_z->value());
 		executeCommand(getSubsystem(), cmd);
+		QSettings settings(getSunwayRobotWidgetConfigFile(), QSettings::IniFormat);
+		settings.setValue(getSunwayRobotAxisZSpeedKey(getSubsystem()->getName()), d->ui->speed_value_spx_z->value());
 	}
 
 	void QSunwayRobotSubsystemWidget::onSetSpeedCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		KernelSubsystemCommand::Ptr cmd = getSubsystem()->createSetSpeedCommand(d->ui->speed_value_spx->value());
 		executeCommand(getSubsystem(), cmd);
+		QSettings settings(getSunwayRobotWidgetConfigFile(), QSettings::IniFormat);
+		settings.setValue(getSunwayRobotSpeedKey(getSubsystem()->getName()), d->ui->speed_value_spx->value());
 	}
 
 	void QSunwayRobotSubsystemWidget::onCheckLoadCommand(){

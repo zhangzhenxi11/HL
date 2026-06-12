@@ -1042,6 +1042,7 @@ namespace FC{
 		settings.setValue("PM1Enable", d->pm1_enable);
 		settings.setValue("PM2Enable", d->pm2_enable);
 		settings.setValue("PM3Enable", d->pm3_enable);
+		settings.setValue("PM4Enable", d->pm4_enable);
 
 		settings.setValue("LoadLock1VacuumUpperLimit", d->loadlock1_vacuum_upper_limit);
 		settings.setValue("LoadLock1VacuumExtraction", d->loadlock1_vacuum_extraction);

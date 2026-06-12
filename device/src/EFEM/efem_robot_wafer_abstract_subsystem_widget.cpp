@@ -40,8 +40,22 @@
 #include <QSpacerItem>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <QDir>
+#include <QSettings>
 
  
+namespace {
+	QString getEFEMRobotWidgetConfigFile()
+	{
+		return QDir::currentPath() + "/config/config.ini";
+	}
+
+	QString getEFEMRobotSpeedKey(const std::string& subsystemName)
+	{
+		return QString::fromStdString(subsystemName + "_Speed");
+	}
+}
+
 KERNEL_NS_BEGIN
 /**
 * QEFEMRobotWaferAbstractSubsystemWidgetPrivate
@@ -99,6 +113,14 @@ QEFEMRobotWaferAbstractSubsystemWidget::QEFEMRobotWaferAbstractSubsystemWidget(
 
 	//config ui
 	configUI(robot->getConfigure());
+	QSettings settings(getEFEMRobotWidgetConfigFile(), QSettings::IniFormat);
+	QString speedText = settings.value(
+		getEFEMRobotSpeedKey(getSubsystem()->getName()),
+		d->ui->speed_combo->currentText()).toString();
+	int speedIndex = d->ui->speed_combo->findText(speedText);
+	if (speedIndex >= 0) {
+		d->ui->speed_combo->setCurrentIndex(speedIndex);
+	}
 }
 
 QEFEMRobotWaferAbstractSubsystemWidget::~QEFEMRobotWaferAbstractSubsystemWidget(){
@@ -408,6 +430,8 @@ void QEFEMRobotWaferAbstractSubsystemWidget::onSetSpeed(){
 	Q_D(QEFEMRobotWaferAbstractSubsystemWidget);
 	KernelSubsystemCommand::Ptr cmd = getSubsystem()->createSetSpeedCommand(d->ui->speed_combo->currentText().toInt());  //speed_combo
 	executeCommand(getSubsystem(), cmd);
+	QSettings settings(getEFEMRobotWidgetConfigFile(), QSettings::IniFormat);
+	settings.setValue(getEFEMRobotSpeedKey(getSubsystem()->getName()), d->ui->speed_combo->currentText());
 }
 
 void QEFEMRobotWaferAbstractSubsystemWidget::onSetSize(){

@@ -229,6 +229,12 @@ namespace FC{
 		std::string getSelectPmProcessName(UnifiedWaferTask task);
 
 		UnifiedWaferTask::Location getSelectPmLocation(UnifiedWaferTask task);
+		bool validateRecipeBeforeRun(QString& errorMessage) const;
+		bool isSingleLoadLockMode() const;
+		bool isAInBOutMode() const;
+		bool isBInAOutMode() const;
+		UnifiedWaferTask::Location getIngressLoadLock() const;
+		UnifiedWaferTask::Location getEgressLoadLock() const;
 
 		void UpdatePmSubTransferDatas(std::string pmName);
 
@@ -341,7 +347,8 @@ namespace FC{
 		typedef enum FilmTransferMode
 		{
 			Formula_Go_Up_And_Down = 0,
-			Formula_Double_Up_And_Down =1
+			Formula_First_LLA_Then_LLB = 1,
+			Formula_First_LLB_Then_LLA = 2
 		};
 
 		FilmTransferMode currentTransferMode = FilmTransferMode::Formula_Go_Up_And_Down; //传片模式
@@ -881,6 +888,206 @@ namespace FC{
 			return UnifiedWaferTask::Location::PM4;
 
 		return UnifiedWaferTask::Location();
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::validateRecipeBeforeRun(QString& errorMessage) const
+	{
+		if (ui->sequence_edit_tbw->rowCount() <= 0)
+		{
+			errorMessage = "请先配置传送配方.";
+			return false;
+		}
+
+		std::array<int, 26> lp1SourceRows{};
+		std::array<int, 26> lp2SourceRows{};
+		std::array<int, 26> lp1DestinationRows{};
+		std::array<int, 26> lp2DestinationRows{};
+		lp1SourceRows.fill(-1);
+		lp2SourceRows.fill(-1);
+		lp1DestinationRows.fill(-1);
+		lp2DestinationRows.fill(-1);
+
+		auto checkDuplicateSlot = [&](std::array<int, 26>& usedRows,
+			const QString& lpName,
+			const QString& slotType,
+			int slot,
+			int row) -> bool
+		{
+			if (slot <= 0 || slot >= static_cast<int>(usedRows.size()))
+			{
+				errorMessage = QString("第%1行%2 %3槽位无效: %4").arg(row + 1).arg(lpName).arg(slotType).arg(slot);
+				return false;
+			}
+
+			if (usedRows[slot] >= 0)
+			{
+				errorMessage = QString("%1 %2槽位重复: 第%3行与第%4行都选择了槽位%5")
+					.arg(lpName)
+					.arg(slotType)
+					.arg(usedRows[slot] + 1)
+					.arg(row + 1)
+					.arg(slot);
+				return false;
+			}
+
+			usedRows[slot] = row;
+			return true;
+		};
+
+		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i)
+		{
+			QComboBox* direction = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 1));
+			QComboBox* arm = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 3));
+			QComboBox* loadlock1_slot = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 0));
+			QComboBox* loadlock2_slot = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i, 2));
+			QCheckBox* pm1 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 4));
+			QCheckBox* pm2 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 5));
+			QCheckBox* pm3 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 6));
+			QCheckBox* pm4 = static_cast<QCheckBox*>(ui->sequence_edit_tbw->cellWidget(i, 7));
+
+			if (direction == nullptr || arm == nullptr || loadlock1_slot == nullptr || loadlock2_slot == nullptr ||
+				pm1 == nullptr || pm2 == nullptr || pm3 == nullptr || pm4 == nullptr)
+			{
+				errorMessage = QString("第%1行配方控件不完整.").arg(i + 1);
+				return false;
+			}
+
+			const QString currentArm = arm->currentText();
+			if (currentArm != "A" && currentArm != "B")
+			{
+				errorMessage = QString("第%1行机械手选择无效，只允许A或B.").arg(i + 1);
+				return false;
+			}
+
+			if (i > 0)
+			{
+				QComboBox* previousArm = static_cast<QComboBox*>(ui->sequence_edit_tbw->cellWidget(i - 1, 3));
+				if (previousArm == nullptr)
+				{
+					errorMessage = QString("第%1行上一行机械手控件缺失.").arg(i + 1);
+					return false;
+				}
+
+				const QString previousArmText = previousArm->currentText();
+				if (previousArmText != "A" && previousArmText != "B")
+				{
+					errorMessage = QString("第%1行上一行机械手选择无效，只允许A或B.").arg(i);
+					return false;
+				}
+
+				if (currentArm == previousArmText)
+				{
+					errorMessage = QString("机械手选择必须严格交替，当前第%1行与第%2行不能同时为%3.")
+						.arg(i)
+						.arg(i + 1)
+						.arg(currentArm);
+					return false;
+				}
+			}
+
+			const int selectedPmCount =
+				(pm1->isChecked() ? 1 : 0) +
+				(pm2->isChecked() ? 1 : 0) +
+				(pm3->isChecked() ? 1 : 0) +
+				(pm4->isChecked() ? 1 : 0);
+			if (selectedPmCount <= 0)
+			{
+				errorMessage = QString("第%1行未选择PM，启动前每一行必须至少选择一个PM.").arg(i + 1);
+				return false;
+			}
+
+			bool lp1SlotOk = false;
+			bool lp2SlotOk = false;
+			const int lp1Slot = loadlock1_slot->currentText().toInt(&lp1SlotOk);
+			const int lp2Slot = loadlock2_slot->currentText().toInt(&lp2SlotOk);
+			if (!lp1SlotOk || !lp2SlotOk)
+			{
+				errorMessage = QString("第%1行LP槽位解析失败.").arg(i + 1);
+				return false;
+			}
+
+			const QString directionText = direction->currentText();
+			if (directionText == "LP1<----->LP1")
+			{
+				if (!checkDuplicateSlot(lp1SourceRows, "LP1", "来源", lp1Slot, i) ||
+					!checkDuplicateSlot(lp1DestinationRows, "LP1", "目标", lp1Slot, i))
+				{
+					return false;
+				}
+			}
+			else if (directionText == "LP2<----->LP2")
+			{
+				if (!checkDuplicateSlot(lp2SourceRows, "LP2", "来源", lp2Slot, i) ||
+					!checkDuplicateSlot(lp2DestinationRows, "LP2", "目标", lp2Slot, i))
+				{
+					return false;
+				}
+			}
+			else if (directionText == "LP1----->LP2")
+			{
+				if (!checkDuplicateSlot(lp1SourceRows, "LP1", "来源", lp1Slot, i) ||
+					!checkDuplicateSlot(lp2DestinationRows, "LP2", "目标", lp2Slot, i))
+				{
+					return false;
+				}
+			}
+			else if (directionText == "LP2----->LP1")
+			{
+				if (!checkDuplicateSlot(lp2SourceRows, "LP2", "来源", lp2Slot, i) ||
+					!checkDuplicateSlot(lp1DestinationRows, "LP1", "目标", lp1Slot, i))
+				{
+					return false;
+				}
+			}
+			else
+			{
+				errorMessage = QString("第%1行晶圆传输方向无效: %2").arg(i + 1).arg(directionText);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::isSingleLoadLockMode() const
+	{
+		return currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::isAInBOutMode() const
+	{
+		return currentTransferMode == FilmTransferMode::Formula_First_LLA_Then_LLB;
+	}
+
+	bool QSlotTransferCycleVTMWidgetPrivate::isBInAOutMode() const
+	{
+		return currentTransferMode == FilmTransferMode::Formula_First_LLB_Then_LLA;
+	}
+
+	UnifiedWaferTask::Location QSlotTransferCycleVTMWidgetPrivate::getIngressLoadLock() const
+	{
+		if (isAInBOutMode())
+		{
+			return UnifiedWaferTask::Location::LLA;
+		}
+		if (isBInAOutMode())
+		{
+			return UnifiedWaferTask::Location::LLB;
+		}
+		return UnifiedWaferTask::Location::LLA;
+	}
+
+	UnifiedWaferTask::Location QSlotTransferCycleVTMWidgetPrivate::getEgressLoadLock() const
+	{
+		if (isAInBOutMode())
+		{
+			return UnifiedWaferTask::Location::LLB;
+		}
+		if (isBInAOutMode())
+		{
+			return UnifiedWaferTask::Location::LLA;
+		}
+		return getIngressLoadLock();
 	}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::ensurePm2SubsystemReady(std::shared_ptr<FortrendPMCavitySubsystem>& pmSubsystem)
@@ -1571,8 +1778,12 @@ namespace FC{
 				{
 					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
 					const auto efemPendingSnapshot = taskManager.getEfemPendingTasks();
-					auto efemReturnPendingLLATasks = taskManager.getTasksByLocation(efemReturnPendingSnapshot, UnifiedWaferTask::Location::LLA);
-					auto efemReturnPendingLLBTasks = taskManager.getTasksByLocation(efemReturnPendingSnapshot, UnifiedWaferTask::Location::LLB);
+					std::vector<UnifiedWaferTask> efemReturnPendingLLATasks;
+					std::vector<UnifiedWaferTask> efemReturnPendingLLBTasks;
+					std::copy_if(efemReturnPendingSnapshot.begin(), efemReturnPendingSnapshot.end(), std::back_inserter(efemReturnPendingLLATasks),
+						[](const UnifiedWaferTask& task) { return task.egressLoadLock == UnifiedWaferTask::Location::LLA; });
+					std::copy_if(efemReturnPendingSnapshot.begin(), efemReturnPendingSnapshot.end(), std::back_inserter(efemReturnPendingLLBTasks),
+						[](const UnifiedWaferTask& task) { return task.egressLoadLock == UnifiedWaferTask::Location::LLB; });
 					auto efemPendingLLATasks = taskManager.getTasksByLocation(efemPendingSnapshot, UnifiedWaferTask::Location::LLA);
 					auto efemPendingLLBTasks = taskManager.getTasksByLocation(efemPendingSnapshot, UnifiedWaferTask::Location::LLB);
 
@@ -1708,7 +1919,7 @@ namespace FC{
 					std::vector<Cassette::Mapping> lkmaps;
 					int count = 0;
 
-					if (currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down)
+					if (isSingleLoadLockMode())
 					{
 						lkmaps = station_cass_lk->getAllMapping();
 						for (int i = 0; i < lkmaps.size(); i++)
@@ -1721,12 +1932,10 @@ namespace FC{
 							}
 						}	
 					}
-					else if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
+					else if (isAInBOutMode() || isBInAOutMode())
 					{
-						logWarn(lk->getName().c_str(), "当前传片模式是:Double_Up_And_Down.");
+						logWarn(lk->getName().c_str(), "当前传片模式是:双LL分离模式.");
 						lkmaps = station_cass_lk->getAllMapping();
-
-						//2026-1-19  lp中有多片下，按loadlock空槽数，去上料
 
 						for (int i = 0; i < lkmaps.size(); i++)
 						{
@@ -2624,8 +2833,8 @@ namespace FC{
 						break;
 					}
 					const auto currentTask = efemReturnPendingSnapshot.front();
-					elp = currentTask.source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//下料，实际源头和目标互换
-					lk = currentTask.target == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
+					elp = currentTask.destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;//下料时按目标LP放回
+					lk = currentTask.egressLoadLock == UnifiedWaferTask::Location::LLA ? lk1 : lk2;
 
 					if (elp == nullptr || lk == nullptr)
 					{
@@ -2903,7 +3112,7 @@ namespace FC{
 							break;
 						}
 						const auto currentTask = efemReturnPendingSnapshot.front();
-						auto cmd2 = ewtr->createPutCommand(elp, 1, currentTask.sourceSlot);
+						auto cmd2 = ewtr->createPutCommand(elp, 1, currentTask.destinationSlot);
 						ewtr->startCommand(cmd2);
 						cmd2->wait();
 						if (cmd2->hasError())
@@ -2989,8 +3198,8 @@ namespace FC{
 						efem_auto_step = 10;
 						break;
 					}
-					std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingSnapshot.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
-					std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingSnapshot.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+					std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingSnapshot.at(0).destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+					std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingSnapshot.at(1).destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
 					bool elpopen = false;
 					bool elp2open = false;
@@ -3055,8 +3264,8 @@ namespace FC{
 						efem_auto_step = 10;
 						break;
 					}
-					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingSnapshot.at(0).target == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
-					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingSnapshot.at(1).target == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
+					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingSnapshot.at(0).egressLoadLock == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
+					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingSnapshot.at(1).egressLoadLock == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
 
 					bool lkopen = false;
 					bool lk2open = false;
@@ -3126,7 +3335,7 @@ namespace FC{
 						efem_auto_step = 10;
 						break;
 					}
-					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingSnapshot.at(0).target == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
+					std::shared_ptr<FortrendLoadLockSubsystem> lk1 = efemReturnPendingSnapshot.at(0).egressLoadLock == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
 
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -3158,7 +3367,7 @@ namespace FC{
 						efem_auto_step = 10;
 						break;
 					}
-					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingSnapshot.at(1).target == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
+					std::shared_ptr<FortrendLoadLockSubsystem> lk2 = efemReturnPendingSnapshot.at(1).egressLoadLock == UnifiedWaferTask::Location::LLA ? this->lk1 : this->lk2;
 
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
@@ -3192,13 +3401,13 @@ namespace FC{
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
-						std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingSnapshot.at(0).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
-						std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingSnapshot.at(1).source == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+						std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingSnapshot.at(0).destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
+						std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingSnapshot.at(1).destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
-						auto cmd3 = ewtr->createPutCommand(elp, 1, efemReturnPendingSnapshot.at(0).sourceSlot);
+						auto cmd3 = ewtr->createPutCommand(elp, 1, efemReturnPendingSnapshot.at(0).destinationSlot);
 						ewtr->startCommand(cmd3);
 
-						auto cmd4 = ewtr->createPutCommand(elp2put, 2, efemReturnPendingSnapshot.at(1).sourceSlot);
+						auto cmd4 = ewtr->createPutCommand(elp2put, 2, efemReturnPendingSnapshot.at(1).destinationSlot);
 						ewtr->startCommand(cmd4);
 
 						cmd3->wait();
@@ -3505,7 +3714,11 @@ namespace FC{
 						loadlock1_auto_step = 6000;
 					}
 
+					const bool isLlaIngress = isSingleLoadLockMode() || isAInBOutMode();
+					const bool isLlaEgress = isSingleLoadLockMode() || isBInAOutMode();
+
                     const bool hasLlaWaferReady =
+						isLlaEgress &&
                         (!tool_allow_get_wafer_LLA) &&
                         (!llaSnapshot.pendingTasks.empty() || !llaSnapshot.returnPendingTasks.empty() || !llaSnapshot.returnCompletedTasks.empty());
 
@@ -3516,6 +3729,7 @@ namespace FC{
 					=> 才允许上料
 					*/
                     const bool canRequestLlaLoad =
+						isLlaIngress &&
                         (!tool_allow_get_wafer_LLA) &&
                         llaSnapshot.pendingTasks.empty() &&
                         llaSnapshot.returnPendingTasks.empty() &&
@@ -3810,13 +4024,15 @@ namespace FC{
 				{
 					logInform("Cycle", "llA step 900");
 					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
+					const bool isLlaIngress = isSingleLoadLockMode() || isAInBOutMode();
+					const bool isLlaEgress = isSingleLoadLockMode() || isBInAOutMode();
 
-					if (!llaSnapshot.pendingTasks.empty() || !llaSnapshot.returnPendingTasks.empty())
+					if ((isLlaIngress && !llaSnapshot.pendingTasks.empty()) || (isLlaEgress && !llaSnapshot.returnPendingTasks.empty()))
 					{
 						loadlock1_auto_step = 901;//取晶圆、放晶圆流程
 							
 					}
-					else if (!llaSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
+					else if (isLlaEgress && !llaSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
 					{
 						loadlock1_auto_step = 5000;//出空casstte的流程
 					}
@@ -3883,17 +4099,19 @@ namespace FC{
 				{
 					//logInform("Cycle", "llA step 950");
 					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
-					if (!llaSnapshot.returnCompletedTasks.empty())
+					const bool isLlaIngress = isSingleLoadLockMode() || isAInBOutMode();
+					const bool isLlaEgress = isSingleLoadLockMode() || isBInAOutMode();
+					if (isLlaEgress && !llaSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock1_auto_step = 5000;//出空Cassette流程
 					}
-					else if (!llaSnapshot.returnPendingTasks.empty() && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
+					else if (isLlaEgress && !llaSnapshot.returnPendingTasks.empty() && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
 					{
 						//放晶圆
 						loadlock1_auto_step = 2000;//允许放晶圆流程
 							
 					}
-					else if (!llaSnapshot.pendingTasks.empty() && !abortCycle)
+					else if (isLlaIngress && !llaSnapshot.pendingTasks.empty() && !abortCycle)
 					{
 						loadlock1_auto_step = 1000;//允许取晶圆流程
 					}
@@ -4153,7 +4371,7 @@ namespace FC{
 								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
 								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
 
-							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
+							if (isSingleLoadLockMode() && pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
 								llaImmediateRepick.reset();
 
@@ -4746,7 +4964,7 @@ namespace FC{
 					{
 						if (robot_put_to_lla.success.load())
 						{
-							loadlock1_auto_step = llaImmediateRepick.enabled ? 2066 : 2070;
+							loadlock1_auto_step = (isSingleLoadLockMode() && llaImmediateRepick.enabled) ? 2066 : 2070;
 						}
 						else
 						{
@@ -4951,7 +5169,7 @@ namespace FC{
 						else
 						{
 							const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
-							if (!llaSnapshot.pendingTasks.empty())
+							if (isSingleLoadLockMode() && !llaSnapshot.pendingTasks.empty())
 							{
 								const int desiredArm = llaSnapshot.pendingTasks.front().arm;
 								PM2ScheduleSnapshot pm2Snapshot;
@@ -5287,11 +5505,16 @@ namespace FC{
                         loadlock2_auto_step = 6000;
                     }
 
+					const bool isLlbIngress = isSingleLoadLockMode() || isBInAOutMode();
+					const bool isLlbEgress = isSingleLoadLockMode() || isAInBOutMode();
+
                     const bool hasLlbWaferReady =
+						isLlbEgress &&
                         (!tool_allow_get_wafer_LLB) &&
                         (!llbSnapshot.pendingTasks.empty() || !llbSnapshot.returnPendingTasks.empty() || !llbSnapshot.returnCompletedTasks.empty());
                    
 					const bool canRequestLlbLoad =
+						isLlbIngress &&
                         (!tool_allow_get_wafer_LLB) &&
                         llbSnapshot.pendingTasks.empty() &&
                         llbSnapshot.returnPendingTasks.empty() &&
@@ -5582,12 +5805,14 @@ namespace FC{
 				{
 					logInform("Cycle", "llB step 900");
 					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
+					const bool isLlbIngress = isSingleLoadLockMode() || isBInAOutMode();
+					const bool isLlbEgress = isSingleLoadLockMode() || isAInBOutMode();
 
-					if (!llbSnapshot.pendingTasks.empty() || !llbSnapshot.returnPendingTasks.empty())
+					if ((isLlbIngress && !llbSnapshot.pendingTasks.empty()) || (isLlbEgress && !llbSnapshot.returnPendingTasks.empty()))
 					{
 						loadlock2_auto_step = 901;//取晶圆、放晶圆流程
 					}
-					else if (!llbSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
+					else if (isLlbEgress && !llbSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
 					{
 						loadlock2_auto_step = 5000;//出空casstte的流程
 					}
@@ -5652,17 +5877,19 @@ namespace FC{
 				{
 					//logInform("Cycle", "LLB step 950");
 					const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
+					const bool isLlbIngress = isSingleLoadLockMode() || isBInAOutMode();
+					const bool isLlbEgress = isSingleLoadLockMode() || isAInBOutMode();
 
-					if (!llbSnapshot.returnCompletedTasks.empty())
+					if (isLlbEgress && !llbSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock2_auto_step = 5000;//出空Cassette流程
 					}
-					else if (!llbSnapshot.returnPendingTasks.empty() && !abortCycle)
+					else if (isLlbEgress && !llbSnapshot.returnPendingTasks.empty() && !abortCycle)
 					{
 						//放晶圆
 						loadlock2_auto_step = 2000;//允许放晶圆流程
 					}
-					else if (!llbSnapshot.pendingTasks.empty() && !abortCycle)
+					else if (isLlbIngress && !llbSnapshot.pendingTasks.empty() && !abortCycle)
 					{
 						//取晶圆
 						loadlock2_auto_step = 1000;//允许取晶圆流程
@@ -5919,7 +6146,7 @@ namespace FC{
 								"检测状态:pm2Has=%d, armA_has=%d, armB_has=%d",
 								(int)pm2HasWafer, (int)armAHasWafer, (int)armBHasWafer);
 
-							if (pm2HasWafer && (armAHasWafer || armBHasWafer))
+							if (isSingleLoadLockMode() && pm2HasWafer && (armAHasWafer || armBHasWafer))
 							{
 								llbImmediateRepick.reset();
 
@@ -6520,7 +6747,7 @@ namespace FC{
 					{
 						if (robot_put_to_llb.success.load())
 						{
-							loadlock2_auto_step = llbImmediateRepick.enabled ? 2066 : 2070;
+							loadlock2_auto_step = (isSingleLoadLockMode() && llbImmediateRepick.enabled) ? 2066 : 2070;
 						}
 						else 
 						{
@@ -6726,7 +6953,7 @@ namespace FC{
 						else
 						{
 							const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
-							if (!llbSnapshot.pendingTasks.empty())
+							if (isSingleLoadLockMode() && !llbSnapshot.pendingTasks.empty())
 							{
 								const int desiredArm = llbSnapshot.pendingTasks.front().arm;
 								PM2ScheduleSnapshot pm2Snapshot;
@@ -10246,30 +10473,47 @@ namespace FC{
 	bool QSlotTransferCycleVTMWidgetPrivate::isLoadingInterlock(const std::string &LLName)
 	{
 		// 仅在真实下料冲突，或对侧LL下层完成片需要优先回LP时上锁。
-		std::string otherLL;
-		bool otherUnloadRequested = false;
-		if (LLName == "LLB")
+		if (isSingleLoadLockMode())
 		{
-			otherLL = "LLA";
-			otherUnloadRequested = tool_allow_put_wafer_LLA;
+			std::string otherLL;
+			bool otherUnloadRequested = false;
+			if (LLName == "LLB")
+			{
+				otherLL = "LLA";
+				otherUnloadRequested = tool_allow_put_wafer_LLA;
+			}
+			else if (LLName == "LLA")
+			{
+				otherLL = "LLB";
+				otherUnloadRequested = tool_allow_put_wafer_LLB;
+			}
+			else
+			{
+				return false;
+			}
+
+			const bool hasUnloadConflict =
+				otherUnloadRequested || taskManager.hasEfemUnloadInProgress(otherLL);
+
+			const bool hasLowerSlotPriorityReturn =
+				taskManager.hasLoadLockLowerPriorityReturn(otherLL);
+
+			return hasUnloadConflict || hasLowerSlotPriorityReturn;
 		}
-		else if (LLName == "LLA")
-		{
-			otherLL = "LLB";
-			otherUnloadRequested = tool_allow_put_wafer_LLB;
-		}
-		else
+
+		const std::string ingressLL = isAInBOutMode() ? "LLA" : "LLB";
+		const std::string egressLL = isAInBOutMode() ? "LLB" : "LLA";
+		if (LLName != ingressLL)
 		{
 			return false;
 		}
 
-		const bool hasUnloadConflict =
-			otherUnloadRequested || taskManager.hasEfemUnloadInProgress(otherLL);
+		const auto egressSnapshot = buildLoadLockTaskSnapshot(egressLL.c_str());
+		const bool unloadRequested = (egressLL == "LLA") ? tool_allow_put_wafer_LLA : tool_allow_put_wafer_LLB;
+		const bool egressHasWaferToUnload =
+			!egressSnapshot.returnPendingTasks.empty() || !egressSnapshot.returnCompletedTasks.empty();
 
-		const bool hasLowerSlotPriorityReturn =
-			taskManager.hasLoadLockLowerPriorityReturn(otherLL);
-
-		return hasUnloadConflict || hasLowerSlotPriorityReturn;
+		return unloadRequested || taskManager.hasEfemUnloadInProgress(egressLL) || egressHasWaferToUnload;
 	}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::getArmWaferIsPmPending(int arm)
@@ -11136,20 +11380,6 @@ namespace FC{
 		lk2_cass = llbManager->getCassette(lk2.get());
 
 
-		if (currentTransferMode == FilmTransferMode::Formula_Double_Up_And_Down)
-		{
-			slots_ = 2;
-		}
-		else if(currentTransferMode == FilmTransferMode::Formula_Go_Up_And_Down)
-		{
-			slots_ = 1;
-		}
-		else
-		{
-			logInform("Cycle:", "当前传片模式配置错误.");
-			return false;
-		}
-
 		// 处理UI中的每一行
 		for (int i = 0; i < ui->sequence_edit_tbw->rowCount(); ++i)
 		{
@@ -11178,14 +11408,36 @@ namespace FC{
 
 				task.source = UnifiedWaferTask::Location::LP1;
 				task.sourceSlot = loadlock1_slot->currentText().toInt();
+				task.destination = UnifiedWaferTask::Location::LP1;
+				task.destinationSlot = loadlock1_slot->currentText().toInt();
 			}
 			else if (direction->currentText() == "LP2<----->LP2") {
 
 				const std::string& id = std::to_string(task.taskId);
-				cass1->setWaferId(i, id);
+				cass2->setWaferId(i, id);
 
 				task.source = UnifiedWaferTask::Location::LP2;
 				task.sourceSlot = loadlock2_slot->currentText().toInt();
+				task.destination = UnifiedWaferTask::Location::LP2;
+				task.destinationSlot = loadlock2_slot->currentText().toInt();
+			}
+			else if (direction->currentText() == "LP1----->LP2") {
+				const std::string& id = std::to_string(task.taskId);
+				cass1->setWaferId(i, id);
+
+				task.source = UnifiedWaferTask::Location::LP1;
+				task.sourceSlot = loadlock1_slot->currentText().toInt();
+				task.destination = UnifiedWaferTask::Location::LP2;
+				task.destinationSlot = loadlock2_slot->currentText().toInt();
+			}
+			else if (direction->currentText() == "LP2----->LP1") {
+				const std::string& id = std::to_string(task.taskId);
+				cass2->setWaferId(i, id);
+
+				task.source = UnifiedWaferTask::Location::LP2;
+				task.sourceSlot = loadlock2_slot->currentText().toInt();
+				task.destination = UnifiedWaferTask::Location::LP1;
+				task.destinationSlot = loadlock1_slot->currentText().toInt();
 			}
 			else {
 				// 无效方向
@@ -11215,68 +11467,35 @@ namespace FC{
 			task.selectPmEnableList[2] = task.pm3Enabled;
 			task.selectPmEnableList[3] = task.pm4Enabled;
 
-			// 轮换式LoadLock分配
-			const int GROUP_SIZE = slots_; //可配置 1,2
-			int groupIndex = i / GROUP_SIZE;
-
-			if(GROUP_SIZE == 2)
+			task.target_pm = getSelectPmLocation(task);
+			if (isSingleLoadLockMode())
 			{
-				//2. 确定目标LoadLock：偶数组->LLA，奇数组->LLB 
-				if (groupIndex % 2 == 0)
-				{
-					task.target = UnifiedWaferTask::Location::LLA;
-					task.target_pm = getSelectPmLocation(task);
-					task.targetBlankingSlot = task.targetFeedingSlot = llaSlot++;
-
-					//setWaferId
-					//const std::string& id = std::to_string(task.taskId);
-					//lk1_cass->setWaferId(task.targetBlankingSlot, id);
-
-					if (llaSlot > GROUP_SIZE) llaSlot = 1;// 组内循环
-				}
-				else
-				{
-					task.target = UnifiedWaferTask::Location::LLB;
-					task.target_pm = getSelectPmLocation(task);
-					task.targetBlankingSlot = task.targetFeedingSlot = llbSlot++;
-
-					//setWaferId
-					//const std::string& id = std::to_string(task.taskId);
-					//lk2_cass->setWaferId(task.targetBlankingSlot, id);
-					if (llbSlot > GROUP_SIZE) llbSlot = 1;// 组内循环
-
-				}
+				const bool useLla = (i % 2 == 0);
+				task.target = useLla ? UnifiedWaferTask::Location::LLA : UnifiedWaferTask::Location::LLB;
+				task.egressLoadLock = task.target;
+				task.targetFeedingSlot = 2;
+				task.targetBlankingSlot = 1;
 			}
 			else
 			{
-				if (groupIndex % 2 == 0)
-				{
-					task.target = UnifiedWaferTask::Location::LLA;
-					task.target_pm = getSelectPmLocation(task);
-					llaSlot = 2;
-					task.targetFeedingSlot = llaSlot;//上料槽号，上层
-					task.targetBlankingSlot = 1;     //下料槽号，下层
-					if (llaSlot > GROUP_SIZE) llaSlot = 2;// 组内循环
-				}
-				else
-				{
-					task.target = UnifiedWaferTask::Location::LLB;
-					task.target_pm = getSelectPmLocation(task);
-					llbSlot = 2;
-					task.targetFeedingSlot = llbSlot;//上料槽号，上层
-					task.targetBlankingSlot = 1;     //下料槽号，下层
-					if (llbSlot > GROUP_SIZE) llbSlot = 2;// 组内循环
-				}
+				const int pairSlot = (i % 2) + 1;
+				task.target = getIngressLoadLock();
+				task.egressLoadLock = getEgressLoadLock();
+				task.targetFeedingSlot = pairSlot;
+				task.targetBlankingSlot = pairSlot;
 			}
 
 			taskManager.addTask(task);//加入到管理者
 
 			// 调试日志
-			logInform("TransferSetup", "Row %d: Source %s Group %d -> %s FeedingSlot %d  BlankingSlot  %d taskID %d  Status %s  %s ",
+			logInform("TransferSetup", "Row %d: Source %s[%d] -> Dest %s[%d], ingress=%s, egress=%s, FeedingSlot %d  BlankingSlot %d taskID %d Status %s %s",
 				i, 
 				task.locationToString(task.source), 
-				groupIndex,
+				task.sourceSlot,
+				task.locationToString(task.destination),
+				task.destinationSlot,
 				(task.target == UnifiedWaferTask::Location::LLA) ? "LLA" : "LLB",
+				(task.egressLoadLock == UnifiedWaferTask::Location::LLA) ? "LLA" : "LLB",
 				task.targetFeedingSlot,
 				task.targetBlankingSlot,
 				task.taskId,
@@ -11586,6 +11805,8 @@ namespace FC{
 		QComboBox *transfer_direction_selected_cbx = new QComboBox();
 		transfer_direction_selected_cbx->addItem("LP1<----->LP1");
 		transfer_direction_selected_cbx->addItem("LP2<----->LP2");
+		transfer_direction_selected_cbx->addItem("LP1----->LP2");
+		transfer_direction_selected_cbx->addItem("LP2----->LP1");
 		/*transfer_direction_selected_cbx->addItem("LoadLock1----->LoadLock2");
 		transfer_direction_selected_cbx->addItem("LoadLock1<-----LoadLock2");*/
 		d->ui->sequence_edit_tbw->setCellWidget(row_count, 1, transfer_direction_selected_cbx);
@@ -11615,7 +11836,7 @@ namespace FC{
 
 	void QSlotTransferCycleVTMWidget::onUpdateRecipe(int model){
 		Q_D(QSlotTransferCycleVTMWidget);
-		//0=单片上下料模式 1=双片上下料模式
+		//0=单LL上进下出 1=A进B出 2=B进A出
 		if (d->running)return;
 		try{
 			QString fileName = QCoreApplication::applicationDirPath() + "/config/config.ini";
@@ -11740,9 +11961,13 @@ namespace FC{
 				d->currentTransferMode = d->FilmTransferMode::Formula_Go_Up_And_Down;
 				break;//要加break
 			case 1:
-				d->currentTransferMode = d->FilmTransferMode::Formula_Double_Up_And_Down;
+				d->currentTransferMode = d->FilmTransferMode::Formula_First_LLA_Then_LLB;
+				break;
+			case 2:
+				d->currentTransferMode = d->FilmTransferMode::Formula_First_LLB_Then_LLA;
 				break;
 			default:
+				d->currentTransferMode = d->FilmTransferMode::Formula_Go_Up_And_Down;
 				break;
 			}
 		}
@@ -12050,6 +12275,13 @@ namespace FC{
 	void QSlotTransferCycleVTMWidget::onStart() {
 		Q_D(QSlotTransferCycleVTMWidget);
 		logWarn("Cyclelog", "start all workflow.....");
+		QString recipeValidationError;
+		if (!d->validateRecipeBeforeRun(recipeValidationError))
+		{
+			QMessageBox::warning(this, "警告", recipeValidationError);
+			logError("Cycle", recipeValidationError.toStdString().c_str());
+			return;
+		}
 		//start action & store param
 		std::shared_ptr<FortrendPMCavitySubsystem> pm1 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM1");
 		std::shared_ptr<FortrendPMCavitySubsystem> pm2 = d->kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");

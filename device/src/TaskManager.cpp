@@ -530,7 +530,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnPendingTasks
     std::lock_guard<std::mutex> lock(mutex_);
     auto loc = stringToLocation(LLName);
     return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::QUEUED),
-        [loc](const UnifiedWaferTask& task) { return task.target == loc; });
+        [loc](const UnifiedWaferTask& task) { return task.egressLoadLock == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnCompletedTasks(std::string LLName)
@@ -538,7 +538,7 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getLoadLockReturnCompletedTas
     std::lock_guard<std::mutex> lock(mutex_);
     auto loc = stringToLocation(LLName);
     return collectTasksByIds(tasks_, findTaskIds(taskTypeStatusMap_, UnifiedWaferTask::LOADLOCK_RETURN, UnifiedWaferTask::COMPLETED),
-        [loc](const UnifiedWaferTask& task) { return task.target == loc; });
+        [loc](const UnifiedWaferTask& task) { return task.egressLoadLock == loc; });
 }
 
 std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPMPendingTasks(std::string PM)
@@ -662,7 +662,7 @@ bool FC::TaskManager::hasLoadLockLowerPriorityReturn(const std::string& LLName)
     const auto loc = stringToLocation(LLName);
 
     return std::any_of(tasks_.begin(), tasks_.end(), [loc](const UnifiedWaferTask& task) {
-        if (task.target != loc || task.targetBlankingSlot != 1)
+        if (task.egressLoadLock != loc || task.targetBlankingSlot != 1)
         {
             return false;
         }
@@ -686,7 +686,7 @@ bool FC::TaskManager::hasEfemUnloadInProgress(const std::string& LLName)
     const auto loc = stringToLocation(LLName);
 
     return std::any_of(tasks_.begin(), tasks_.end(), [loc](const UnifiedWaferTask& task) {
-        return task.target == loc &&
+        return task.egressLoadLock == loc &&
             task.taskType == UnifiedWaferTask::TaskType::EFEM_RETURN &&
             task.status != UnifiedWaferTask::Status::COMPLETED &&
             task.status != UnifiedWaferTask::Status::UNKNOWN_PROGRESS;

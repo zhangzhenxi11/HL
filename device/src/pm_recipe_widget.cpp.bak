@@ -38,6 +38,27 @@
 #include <algorithm> // 在文件顶部添加
 #define TESET_PM_SERVER
 
+namespace {
+	QString getPmRecipeDefaultConfigFile()
+	{
+		return QDir::currentPath() + "/config/pm_recipe_parameters.json";
+	}
+
+	bool writePmRecipeConfigFile(const QString& fileName, const QJsonObject& rootObj)
+	{
+		QJsonDocument doc(rootObj);
+		QFile file(fileName);
+		if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+			return false;
+		}
+		QByteArray out = doc.toJson(QJsonDocument::Indented);
+		out = out.replace("\n", "\r\n");
+		file.write(out);
+		file.close();
+		return true;
+	}
+}
+
 namespace FC {
 	class QPmRecipeWidgetPrivate
 	{
@@ -888,16 +909,19 @@ namespace FC {
 			rootObj[QString::fromStdString(pmName)] = pmObj;
 		}
 		
-		QString fileName = QFileDialog::getSaveFileName(this, QStringLiteral("Save Parameters"), "./config/pm_recipe_parameters.json", QStringLiteral("JSON Files (*.json)"));
-		if (fileName.isEmpty()) return;
+		QString defaultConfigFile = getPmRecipeDefaultConfigFile();
+		if (!writePmRecipeConfigFile(defaultConfigFile, rootObj)) {
+			QMessageBox::warning(nullptr, QStringLiteral("save failed"), QStringLiteral("Unable to update default PM recipe config."));
+			return;
+		}
 
-		QJsonDocument doc(rootObj);
-		QFile file(fileName);
-		if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-			QByteArray out = doc.toJson(QJsonDocument::Indented);
-			out = out.replace("\n", "\r\n");
-			file.write(out);
-			file.close();
+		QString fileName = QFileDialog::getSaveFileName(this, QStringLiteral("Save Parameters"), defaultConfigFile, QStringLiteral("JSON Files (*.json)"));
+		if (fileName.isEmpty()) {
+			QMessageBox::information(nullptr, QStringLiteral("save success"), QStringLiteral("PM recipe parameters saved to default config."));
+			return;
+		}
+
+		if (fileName == defaultConfigFile || writePmRecipeConfigFile(fileName, rootObj)) {
 			QMessageBox::information(nullptr, QStringLiteral("save success"), QStringLiteral("PM recipe parameters saved (New Format)."));
 		} else {
 			QMessageBox::warning(nullptr, QStringLiteral("save failed"), QStringLiteral("Unable to open file for saving."));

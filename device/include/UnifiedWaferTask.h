@@ -51,22 +51,25 @@ namespace FC {
         TaskType taskType; 
         Status status;
         int currentStep = 3;  // 当前步骤索引
-        Location source;  //来源模组   lp
-        Location target;  //目标模组   loadlock
-        Location target_pm;//目标模组2  PM
+        Location source = Location::LP1;        // 工艺前来源LP
+        Location destination = Location::LP1;   // 工艺后目标LP
+        Location target = Location::LLA;        // ingress loadlock
+        Location egressLoadLock = Location::LLA;// egress loadlock
+        Location target_pm = Location::PM1;     //目标模组2  PM
         //2026-5-17
 		Location realTimePosition; // 任务的实时位置，初始值为source，过程中根据实际位置更新
 
-        int sourceSlot;  //来源模组槽
-        int targetSlot;  //目标模组槽
+        int sourceSlot = 0;       // 工艺前来源槽位
+        int destinationSlot = 0;  // 工艺后目标槽位
+        int targetSlot = 0;       //目标模组槽
 
-        int targetFeedingSlot;  //目标模组上料槽
-        int targetBlankingSlot; //目标模组下料槽
+        int targetFeedingSlot = 0;  // ingress LL 上料槽位
+        int targetBlankingSlot = 0; // egress LL 下料槽位
 
-        int arm;         // binding arm: 0=A, 1=B (immutable after creation)
-        AlignerStatus Aligner_status;
+        int arm = 0;         // binding arm: 0=A, 1=B (immutable after creation)
+        AlignerStatus Aligner_status = ALIGNER_READY;
 
-        std::array<int, 4> selectPmEnableList;
+        std::array<int, 4> selectPmEnableList{};
 
         //上下料到LOADLOCK 到位标签 ，true：上料到位  false:下料到位(初始状态)
         bool isLoadingInPlace = false;
