@@ -772,6 +772,7 @@ namespace FC {
 			if (auto dsb5 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 5))) dsb5->setValue(cfg.params.rotate_position_mm);
 			if (auto dsb6 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 6))) dsb6->setValue(cfg.params.process_position_mm);
 			if (auto dsb7 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 7))) dsb7->setValue(cfg.params.process_time_min);
+			if (auto dsb8 = qobject_cast<QDoubleSpinBox*>(d->ui->pm_cavity_param_edit_tbw->cellWidget(i, 8))) dsb8->setValue(cfg.params.last_process_time_s);
 						
 			// 触发计算
 			updateProcessTimeDistribution(i);
