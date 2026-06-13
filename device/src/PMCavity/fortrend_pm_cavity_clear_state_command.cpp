@@ -56,10 +56,12 @@ namespace FC{
 		}
 		IKernelCommand::RunResult ret = IKernelCommand::RunResult::RUN_OK;
 		logInform(sub->getName().c_str(), "清除状态命令执行开始.");
-		if (!writeBit(clear_state_address, false))
-		{
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到清除状态地址错误.", sub->getName()), this);
-		}
+
+		//2026-6-13 注释
+		//if (!writeBit(clear_state_address, false))
+		//{
+		//	throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_RESPONSE_ERROR, Poco::format(" %s 写0到清除状态地址错误.", sub->getName()), this);
+		//}
 		//check modules
 		auto cassManager = sub->getKernel()->getKernelModule<FortrendCassetteManager>();
 		//get cass

@@ -8,6 +8,8 @@ RobotDialog::RobotDialog(QWidget* parent) :
     ui(new Ui::RobotDialog)
 {
     ui->setupUi(this);
+	setModal(false);
+	setWindowModality(Qt::NonModal);
 	connect(ui->setspeed_btn, &QAbstractButton::clicked, this, &RobotDialog::onSetSpeed);
 	connect(ui->set_speed_btn_z, &QAbstractButton::clicked, this, &RobotDialog::onSetZSpeed);
 	connect(ui->put_btn, &QAbstractButton::clicked, this, &RobotDialog::onPut);
@@ -105,5 +107,20 @@ void RobotDialog::onSetSpeed(){
 
 void RobotDialog::onSetZSpeed(){
 	emit signalzspeed(ui->speed_value_spx_z->value());
+}
+
+void RobotDialog::showEvent(QShowEvent* event)
+{
+	QDialog::showEvent(event);
+	if (!first_show_) {
+		return;
+	}
+	first_show_ = false;
+	QWidget* parent = parentWidget();
+	if (!parent) {
+		return;
+	}
+	const QPoint parent_center = parent->mapToGlobal(parent->rect().center());
+	move(parent_center.x() - width() / 2, parent_center.y() - height() / 2);
 }
 

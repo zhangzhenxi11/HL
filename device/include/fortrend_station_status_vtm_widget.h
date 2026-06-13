@@ -47,7 +47,7 @@ namespace FC {
 		Q_INVOKABLE void EFEMAnimation(int station, int arm, QString action);
 		Q_INVOKABLE void updateCassetteAnimation(const std::string &name, bool isBoxOpened, const std::vector<Cassette::Mapping> &mapping);
 	signals :
-		void signalUpdateRecipe(int model); //ÇÐ»»Åä·½ÐÅºÅ
+		void signalUpdateRecipe(int model); //ï¿½Ð»ï¿½ï¿½ä·½ï¿½Åºï¿½
 		void signalSelectTransferMode(int model);
 	private slots:
 		void updateState();
@@ -127,6 +127,7 @@ namespace FC {
 		void onPMRaxisReset(std::string name);
 		void onPMClearZaxisError(std::string name);
 		void onPMClearRaxisError(std::string name);
+		void onPMClearState(std::string name);
 
 		void onPMGetStatus(std::string name);
 		void onPMReset(std::string name);

@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QRadioButton>
+#include <QShowEvent>
 #include  "Kernel/kernel.h"
 #include  "Kernel/FortrendUI/cassette_widget.h"
 #include  "Kernel/FortrendUI/slot_widget.h"
@@ -50,10 +51,13 @@ private slots:
 	void onSetSpeed();
 	void onSetZSpeed();
 
+protected:
+	void showEvent(QShowEvent* event) override;
 
 private:
     Ui::RobotDialog *ui;
 	std::shared_ptr<FC::IKernel> kernel_ = 0;
+	bool first_show_ = true;
 };
 
 #endif // ROBOTDIALOG_H

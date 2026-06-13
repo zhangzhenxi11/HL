@@ -135,7 +135,7 @@ namespace FC{
 			d->input_checkboxs.push_back(button);
 		}
 
-		d->ui->clear_pm_state_btn->setVisible(false);
+		d->ui->clear_pm_state_btn->setVisible(true);
 
 		d->tm_cavity_door_ckb = new QCheckBox(QString("取放料信号"));
 

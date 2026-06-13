@@ -50,6 +50,7 @@ void PMGDTWidget::mousePressEvent(QMouseEvent *event){
 		QAction* action9 = menu.addAction("R轴回原");
 		QAction* action10 = menu.addAction("清除Z轴报警");
 		QAction* action11 = menu.addAction("清除R轴报警");
+		QAction* action12 = menu.addAction("清除有片标记");
 
 		/*connect(action1, &QAction::triggered, this, [this](){
 			emit signalPMOpenTMCavityDoor(name);
@@ -85,6 +86,9 @@ void PMGDTWidget::mousePressEvent(QMouseEvent *event){
 			});
 		connect(action11, &QAction::triggered, this, [this]() {
 			emit signalPMClearRaxisError(name);
+			});
+		connect(action12, &QAction::triggered, this, [this]() {
+			emit signalPMClearState(name);
 			});
 
 		// 在鼠标点击的位置显示菜单

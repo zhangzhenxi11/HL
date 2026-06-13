@@ -119,6 +119,10 @@ namespace FC{
 		void onRecipe();
 		void onMode();
 		void onEfemReset();
+		QString getTransferModeLabelText(int index) const;
+		void updateTransferModeLabel(int index);
+		void syncPmWaferWidget(const std::shared_ptr<FortrendPMCavitySubsystem>& pm, PMGDTWidget* widget);
+		void syncAllPmWaferWidgets();
 	private:
 		Ui::FortrendStationStatusVTMWidget* ui;
 		//stackedWidget显示，就是模组手动界面
@@ -166,6 +170,7 @@ namespace FC{
 		std::shared_ptr<EFEMLPSubsystem> lp1;
 		std::shared_ptr<EFEMLPSubsystem> lp2;
 		std::shared_ptr<EFEMAlignerSubsystem> ealigner;
+		QLabel* transferModeLabel = nullptr;
 
 
 		//执行指令的widget，继承了QKernelModuleWidget
@@ -380,6 +385,21 @@ namespace FC{
 				}
 				else if (name == "LLB"){
 					ui->loadlockB_widget->SetCurrentSlot(0);
+				}
+				else if (name == "PM1"){
+					syncPmWaferWidget(pm1, ui->pm1_widget);
+				}
+				else if (name == "PM2"){
+					syncPmWaferWidget(pm2, ui->pm2_widget);
+				}
+				else if (name == "PM3"){
+					syncPmWaferWidget(pm3, ui->pm3_widget);
+				}
+				else if (name == "PM4"){
+					syncPmWaferWidget(pm4, ui->pm4_widget);
+				}
+				else if (name == "WTR"){
+					syncAllPmWaferWidgets();
 				}
 				return;
 			}
@@ -652,12 +672,56 @@ namespace FC{
 	void QFortrendStationStatusVTMWidgetPrivate::onMode()
 	{
 		//0=单LL上进下出模式 1=A进B出 2=B进A出
-		emit q_ptr->signalSelectTransferMode(ui->recipe_box->currentIndex());
+		const int currentIndex = ui->recipe_box->currentIndex();
+		updateTransferModeLabel(currentIndex);
+		emit q_ptr->signalSelectTransferMode(currentIndex);
 	}
 
 	void QFortrendStationStatusVTMWidgetPrivate::onEfemReset()
 	{
 		tower->EfemResetAll();
+	}
+
+	QString QFortrendStationStatusVTMWidgetPrivate::getTransferModeLabelText(int index) const
+	{
+		switch (index) {
+		case 1:
+			return QStringLiteral("当前模式：A进B出");
+		case 2:
+			return QStringLiteral("当前模式：B进A出");
+		case 0:
+		default:
+			return QStringLiteral("当前模式：单LL上进下出");
+		}
+	}
+
+	void QFortrendStationStatusVTMWidgetPrivate::updateTransferModeLabel(int index)
+	{
+		if (transferModeLabel == nullptr) {
+			return;
+		}
+		transferModeLabel->setText(getTransferModeLabelText(index));
+	}
+
+	void QFortrendStationStatusVTMWidgetPrivate::syncPmWaferWidget(const std::shared_ptr<FortrendPMCavitySubsystem>& pm, PMGDTWidget* widget)
+	{
+		if (!pm || !widget || !cassManager) {
+			return;
+		}
+		auto pmCass = cassManager->getCassette(pm.get());
+		if (!pmCass) {
+			widget->setWafer(false);
+			return;
+		}
+		widget->setWafer(pmCass->getMapping(1) == Cassette::Present);
+	}
+
+	void QFortrendStationStatusVTMWidgetPrivate::syncAllPmWaferWidgets()
+	{
+		syncPmWaferWidget(pm1, ui->pm1_widget);
+		syncPmWaferWidget(pm2, ui->pm2_widget);
+		syncPmWaferWidget(pm3, ui->pm3_widget);
+		syncPmWaferWidget(pm4, ui->pm4_widget);
 	}
 
 	
@@ -944,6 +1008,10 @@ namespace FC{
 		d->ui->recipe_box->addItem("单LL上进下出模式");
 		d->ui->recipe_box->addItem("A进B出模式");
 		d->ui->recipe_box->addItem("B进A出模式");
+		d->transferModeLabel = new QLabel(d->ui->groupBox);
+		d->transferModeLabel->setGeometry(20, 58, 141, 16);
+		d->transferModeLabel->setText(QStringLiteral("当前模式：单LL上进下出"));
+		d->ui->recipe_btn->setGeometry(20, 84, 121, 31);
 
 		if (d->pm2->getState() == IKernelSubSystem::SUB_NORMAL || d->pm2->getState() == IKernelSubSystem::SUB_IDEL){
 			double AxleLocation = d->pm2->getPMCavityZAxleLocation();//PM横移轴位置初始化
@@ -1072,6 +1140,7 @@ namespace FC{
 		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMRaxisReset, this, &QFortrendStationStatusVTMWidget::onPMRaxisReset);
 		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMClearZaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearZaxisError);
 		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMClearRaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearRaxisError);
+		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMClearState, this, &QFortrendStationStatusVTMWidget::onPMClearState);
 		QObject::connect(d->ui->pm1_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
 
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
@@ -1084,6 +1153,7 @@ namespace FC{
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMRaxisReset, this, &QFortrendStationStatusVTMWidget::onPMRaxisReset);
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMClearZaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearZaxisError);
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMClearRaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearRaxisError);
+		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMClearState, this, &QFortrendStationStatusVTMWidget::onPMClearState);
 		QObject::connect(d->ui->pm2_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
 
 		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
@@ -1096,6 +1166,7 @@ namespace FC{
 		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMRaxisReset, this, &QFortrendStationStatusVTMWidget::onPMRaxisReset);
 		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMClearZaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearZaxisError);
 		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMClearRaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearRaxisError);
+		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMClearState, this, &QFortrendStationStatusVTMWidget::onPMClearState);
 		QObject::connect(d->ui->pm3_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
 
 		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMOpenTMCavityDoor, this, &QFortrendStationStatusVTMWidget::onPMOpenTMCavityDoor);
@@ -1108,6 +1179,7 @@ namespace FC{
 		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMRaxisReset, this, &QFortrendStationStatusVTMWidget::onPMRaxisReset);
 		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMClearZaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearZaxisError);
 		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMClearRaxisError, this, &QFortrendStationStatusVTMWidget::onPMClearRaxisError);
+		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMClearState, this, &QFortrendStationStatusVTMWidget::onPMClearState);
 		QObject::connect(d->ui->pm4_widget, &PMGDTWidget::signalPMReset, this, &QFortrendStationStatusVTMWidget::onPMReset);
 
 #pragma endregion
@@ -1481,11 +1553,11 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 		auto stationcass = d->cassManager->getCassette(stationptr.get());
 		bool stationIsWafer = false;
 		
-		if (station == 0){
+		if (stationptr->getName() == "LLA"){
 			stationIsWafer = stationcass->getMapping(d->ui->loadlockA_widget->GetCurrentSlot()) == Cassette::Present;
 			station = d->stationidlk1;
 		}
-		else if (station == 6){
+		else if (stationptr->getName() == "LLB"){
 			stationIsWafer = stationcass->getMapping(d->ui->loadlockB_widget->GetCurrentSlot()) == Cassette::Present;
 			station = d->stationidlk2;
 		}
@@ -1530,11 +1602,11 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 		std::shared_ptr<FortrendStation> stationptr = d->wtr->getWorkStations().at(station);
 		auto stationcass = d->cassManager->getCassette(stationptr.get());
 		bool stationIsWafer = false;
-		if (station == 0){
+		if (stationptr->getName() == "LLA"){
 			stationIsWafer = stationcass->getMapping(d->ui->loadlockA_widget->GetCurrentSlot()) == Cassette::Present;
 			station = d->stationidlk1;
 		}
-		else if (station ==2){
+		else if (stationptr->getName() == "LLB"){
 			stationIsWafer = stationcass->getMapping(d->ui->loadlockB_widget->GetCurrentSlot()) == Cassette::Present;
 			station = d->stationidlk2;
 		}
@@ -1958,6 +2030,19 @@ Q_INVOKABLE void QFortrendStationStatusVTMWidget::EFEMAnimation(int station, int
 		Q_D(QFortrendStationStatusVTMWidget);
 		auto pm = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(name);
 		pm->setRAxisClearError(true);
+	}
+	void QFortrendStationStatusVTMWidget::onPMClearState(std::string name)
+	{
+		Q_D(QFortrendStationStatusVTMWidget);
+		int button = QMessageBox::question(this, "警告", QString("确认清除%1腔室内部有片标记吗？").arg(QString::fromStdString(name)), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+		if (QMessageBox::StandardButton::Yes != button)
+		{
+			return;
+		}
+		auto pm = d->kernel->getKernelModule<FortrendPMCavitySubsystem>(name);
+		logInform(pm->getName().c_str(), "确定清除腔室内部有片标记.");
+		KernelSubsystemCommand::Ptr cmd = pm->createClearStateCommand();
+		d->pm2widget->executeCommand(pm, cmd);
 	}
 	;
 	void QFortrendStationStatusVTMWidget::onPMGetStatus(std::string name){

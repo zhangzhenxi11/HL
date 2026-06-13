@@ -48,6 +48,7 @@ signals:
 	void signalPMRaxisReset(std::string name);
 	void signalPMClearZaxisError(std::string name);
 	void signalPMClearRaxisError(std::string name);
+	void signalPMClearState(std::string name);
 
 
 	void signalRightClick();
