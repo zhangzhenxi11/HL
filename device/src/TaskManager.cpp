@@ -11,6 +11,33 @@ namespace
 {
     using TaskStatusMap = std::map<FC::UnifiedWaferTask::TaskType, std::map<FC::UnifiedWaferTask::Status, std::vector<int>>>;
     const std::vector<int> kEmptyTaskIds;
+    const std::pair<FC::UnifiedWaferTask::TaskType, FC::UnifiedWaferTask::Status> kUnknownTaskStatus(
+        FC::UnifiedWaferTask::TaskType::UNKNOWN,
+        FC::UnifiedWaferTask::Status::UNKNOWN_PROGRESS);
+
+    FC::UnifiedWaferTask makeUnknownTask()
+    {
+        FC::UnifiedWaferTask task{};
+        task.taskId = -1;
+        task.taskType = FC::UnifiedWaferTask::TaskType::UNKNOWN;
+        task.status = FC::UnifiedWaferTask::Status::UNKNOWN_PROGRESS;
+        task.source = FC::UnifiedWaferTask::Location::LP1;
+        task.target = FC::UnifiedWaferTask::Location::LP1;
+        task.target_pm = FC::UnifiedWaferTask::Location::PM1;
+        task.realTimePosition = FC::UnifiedWaferTask::Location::LP1;
+        task.sourceSlot = 0;
+        task.targetSlot = 0;
+        task.targetFeedingSlot = 0;
+        task.targetBlankingSlot = 0;
+        task.arm = -1;
+        task.Aligner_status = FC::UnifiedWaferTask::ALIGNER_READY;
+        task.selectPmEnableList = { 0, 0, 0, 0 };
+        task.pm1Enabled = false;
+        task.pm2Enabled = false;
+        task.pm3Enabled = false;
+        task.pm4Enabled = false;
+        return task;
+    }
 
     const std::vector<int>* findTaskIds(
         const TaskStatusMap& taskTypeStatusMap,
@@ -211,7 +238,7 @@ void FC::TaskManager::updateTaskStatus(int taskId, UnifiedWaferTask::TaskType ne
     }
 }
 
-const std::pair<FC::UnifiedWaferTask::TaskType, FC::UnifiedWaferTask::Status>& FC::TaskManager::getTaskStatusAndType(int taskId)
+std::pair<FC::UnifiedWaferTask::TaskType, FC::UnifiedWaferTask::Status> FC::TaskManager::getTaskStatusAndType(int taskId)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -220,16 +247,11 @@ const std::pair<FC::UnifiedWaferTask::TaskType, FC::UnifiedWaferTask::Status>& F
         return it->second;
     }
 
-    // 返回静态默认值
-    static const auto defaultStatus = std::make_pair(
-        UnifiedWaferTask::TaskType::UNKNOWN,
-        UnifiedWaferTask::Status::UNKNOWN_PROGRESS
-    );
-    return defaultStatus;
+    return kUnknownTaskStatus;
     
 }
 
-FC::UnifiedWaferTask::TaskType& FC::TaskManager::getTaskType(int taskId)
+FC::UnifiedWaferTask::TaskType FC::TaskManager::getTaskType(int taskId)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -239,43 +261,30 @@ FC::UnifiedWaferTask::TaskType& FC::TaskManager::getTaskType(int taskId)
     {
         return it->second.first;
     }
-    UnifiedWaferTask::TaskType unkown = UnifiedWaferTask::TaskType::UNKNOWN;
-    return unkown;
+    return UnifiedWaferTask::TaskType::UNKNOWN;
 }
 
-std::vector<FC::UnifiedWaferTask>& FC::TaskManager::getAllTasks()
+std::vector<FC::UnifiedWaferTask> FC::TaskManager::getAllTasks()
 {
-    if (tasks_.size() > 0)
-    {
-        return tasks_;
-    }
-    else
-    {
-        std::vector<FC::UnifiedWaferTask> empty{};
-        return empty;
-    }  
+    std::lock_guard<std::mutex> lock(mutex_);
+    return tasks_;
 }
 
-std::vector<FC::UnifiedWaferTask>& FC::TaskManager::getAllWorksTasks()
+std::vector<FC::UnifiedWaferTask> FC::TaskManager::getAllWorksTasks()
 {
-    if (workTasks_.size() > 0)
-    {
-        return workTasks_;
-    }
-    else
-    {
-        std::vector<FC::UnifiedWaferTask> empty{};
-        return empty;
-    }
+    std::lock_guard<std::mutex> lock(mutex_);
+    return workTasks_;
 }
 
 int FC::TaskManager::getAllTasksSize()
 {
-  return tasks_.size();
+    std::lock_guard<std::mutex> lock(mutex_);
+    return static_cast<int>(tasks_.size());
 }
 
 std::vector<int> FC::TaskManager::getAllTaskIDs()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<int> allIds;
 
     for (auto& task : tasks_)
@@ -291,10 +300,13 @@ std::vector<int> FC::TaskManager::getAllTaskIDs()
 
 void FC::TaskManager::clearTasks()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!tasks_.empty())
     {
         tasks_.clear();
+        workTasks_.clear();
         taskStatusMap_.clear(); // 清空任务状态映射
+        taskTypeStatusMap_.clear();
     }
 }
 
@@ -313,21 +325,25 @@ std::vector<FC::UnifiedWaferTask> FC::TaskManager::getPendingTasks()
 
 FC::UnifiedWaferTask FC::TaskManager::getByIDFindTask(int taskID)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = std::find_if(tasks_.begin(), tasks_.end(), [taskID](const UnifiedWaferTask& t) { return t.taskId == taskID; });
     if (it != tasks_.end())
     {
         return (*it);
-    }     
+    }
+    return makeUnknownTask();
 }
 
 FC::UnifiedWaferTask FC::TaskManager::getRobotTaskInfo(int arm)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = std::find_if(tasks_.begin(), tasks_.end(), [arm](const UnifiedWaferTask& t) { 
         return t.arm == arm ; });
     if (it != tasks_.end())
     {
         return (*it);
 	}
+    return makeUnknownTask();
 }
 
 bool FC::TaskManager::hasPendingTasks()
