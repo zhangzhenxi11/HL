@@ -409,9 +409,6 @@ SunwayRobotGetWaferCommand::RunResult SunwayRobotGetWaferCommand::onRun() throw(
 		}
 		else//PM
 		{
-
-
-
 			int stationid = getStation()->getStationId(robot->getName()); 
 			//if (station_name == "PM")stationid = 15;
 			command = "MOV:GETOBJECT/";

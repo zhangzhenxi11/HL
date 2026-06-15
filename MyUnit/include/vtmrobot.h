@@ -52,6 +52,7 @@ public:
 	void setBaseSpeed(int speed);
 	void get(int arm=1, int rotationangle=40, int armangle=70);
 	void put(int arm = 1, int rotationangle = 50, int armangle = 70);
+	void rotateTo(int rotationangle);
 	void reset();
 	void animationPause();
 	void animationResume();

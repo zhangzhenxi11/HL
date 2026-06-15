@@ -498,6 +498,24 @@ namespace FC{
 				//logInform(name.c_str(), "put Animation Start stationid=%d arm=%d", station, arm);
 				return;
 			}
+			auto ready_get_command = std::dynamic_pointer_cast<SunwayRobotReadyGetWaferCommand>(command);
+			if (ready_get_command){
+				int station = ready_get_command->getStation()->getStationId(wtr->getName());
+				int arm = ready_get_command->getArm();
+				ui->robot_widget->setCurrentStation(station);
+				ui->robot_widget->setCurrentArm(arm);
+				QMetaObject::invokeMethod(q_ptr, "Animation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "ready_get"));
+				return;
+			}
+			auto ready_put_command = std::dynamic_pointer_cast<SunwayRobotReadyPutWaferCommand>(command);
+			if (ready_put_command){
+				int station = ready_put_command->getStation()->getStationId(wtr->getName());
+				int arm = ready_put_command->getArm();
+				ui->robot_widget->setCurrentStation(station);
+				ui->robot_widget->setCurrentArm(arm);
+				QMetaObject::invokeMethod(q_ptr, "Animation", Qt::AutoConnection, Q_ARG(int, station), Q_ARG(int, arm), Q_ARG(QString, "ready_put"));
+				return;
+			}
 			//过滤命令
 			auto aligner_command = std::dynamic_pointer_cast<AlignerAlignCommand>(command);
 			if (aligner_command){
@@ -1314,6 +1332,9 @@ namespace FC{
 			//printf("Get currentRotationAngle:%d  rotationangle: %d \n", currentRotationAngle, rotationangle);
 			//logInform(d->wtr->getName().c_str(), "Get currentRotationAngle:%d  rotationangle: %d station=%d stationidlk1=%d", currentRotationAngle, rotationangle, station, d->stationidlk1);
 			d->ui->robot_widget->get(arm, rotationangle, armangle);
+		}
+		else if (action == "ready_get" || action == "ready_put"){
+			d->ui->robot_widget->rotateTo(rotationangle);
 		}
 		else{
 			//printf("Put currentRotationAngle:%d  rotationangle: %d \n", currentRotationAngle, rotationangle);

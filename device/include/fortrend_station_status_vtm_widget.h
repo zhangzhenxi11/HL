@@ -47,7 +47,7 @@ namespace FC {
 		Q_INVOKABLE void EFEMAnimation(int station, int arm, QString action);
 		Q_INVOKABLE void updateCassetteAnimation(const std::string &name, bool isBoxOpened, const std::vector<Cassette::Mapping> &mapping);
 	signals :
-		void signalUpdateRecipe(int model); //�л��䷽�ź�
+		void signalUpdateRecipe(int model);
 		void signalSelectTransferMode(int model);
 	private slots:
 		void updateState();

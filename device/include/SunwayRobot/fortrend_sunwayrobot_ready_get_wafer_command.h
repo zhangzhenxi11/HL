@@ -22,7 +22,7 @@ namespace FC{
 	/**
 	* @brief ready_get_wafer command for SunwayRobot
 	*/
-	class  SunwayRobotReadyGetWaferCommand : public  RobotAbstractReadyGetWaferCommand, public SunwayCommandExecuter
+	class  SunwayRobotReadyGetWaferCommand : public std::enable_shared_from_this<SunwayRobotReadyGetWaferCommand>, public  RobotAbstractReadyGetWaferCommand, public SunwayCommandExecuter
 	{
 	public:
 		DECLARE_PTR(SunwayRobotReadyGetWaferCommand)

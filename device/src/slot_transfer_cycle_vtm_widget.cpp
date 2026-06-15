@@ -292,6 +292,9 @@ namespace FC{
 		// 对齐交互片时序：PM2仍在加工且双手都空时，允许LL按固定arm预装下一片在手等待交换。
 		bool canLlImmediateRepickWaitForPm2Craft(const PM2ScheduleSnapshot& snapshot, int repickArm) const;
 
+		// 预装成功后，如果后续是PM2交换场景，则让空闲手臂提前ready到PM2等待，节省交换前旋转时间。
+		bool tryQueuePm2StandbyReadyGet(const char* loadLockName, int preloadArm, int taskId);
+
 		bool tryPlanImmediateRepick(const char* loadLockName,
 			const LoadLockTaskSnapshot& snapshot,
 			bool armAHasWafer,
@@ -734,6 +737,7 @@ namespace FC{
 		RobotTransferRequest robot_get_from_pm2;
 		RobotTransferRequest robot_get_from_pm3;
 		RobotTransferRequest robot_get_from_pm4;
+		RobotTransferRequest robot_ready_get_pm2;
 
 		// LL放片请求：从机械手放回LL
 		RobotTransferRequest robot_put_to_lla;
@@ -783,6 +787,7 @@ namespace FC{
 			resetRequest(robot_get_from_pm2, 0, 1);
 			resetRequest(robot_get_from_pm3, 0, 1);
 			resetRequest(robot_get_from_pm4, 0, 1);
+			resetRequest(robot_ready_get_pm2, 1, 1);
 			resetRequest(robot_put_to_lla, 0, 1);
 			resetRequest(robot_put_to_llb, 1, 1);
 			resetRequest(robot_exchange_pm1, 0, 1);
@@ -1449,6 +1454,85 @@ namespace FC{
 		return repickArm == 0 || repickArm == 1;
 	}
 
+	bool QSlotTransferCycleVTMWidgetPrivate::tryQueuePm2StandbyReadyGet(const char* loadLockName, int preloadArm, int taskId)
+	{
+		if (preloadArm != 0 && preloadArm != 1)
+		{
+			return false;
+		}
+
+		PM2ScheduleSnapshot pm2Snapshot;
+		if (!tryBuildPm2ScheduleSnapshot(pm2Snapshot))
+		{
+			logWarn(loadLockName, "预装完成后读取PM2调度快照失败，跳过standby ready_get.");
+			return false;
+		}
+
+		if (!pm2Snapshot.hasWaferPm || !pm2Snapshot.pm2CraftInProgress)
+		{
+			return false;
+		}
+
+		if (pm2Snapshot.returnPendingCount > 0 || pm2Snapshot.pm2CompletedCount > 0)
+		{
+			return false;
+		}
+
+		const int standbyArm = (preloadArm == 0) ? 1 : 0;
+		if (pm2Snapshot.preferredPmArm >= 0 && pm2Snapshot.preferredPmArm != standbyArm)
+		{
+			return false;
+		}
+
+		if (wtr == nullptr)
+		{
+			wtr = kernel->getKernelModule<FortrendSunwayRobotSubsystem>("WTR");
+		}
+		if (wtr == nullptr)
+		{
+			logWarn(loadLockName, "预装完成后WTR为空，跳过standby ready_get.");
+			return false;
+		}
+
+		if (wtr->hasObject(standbyArm))
+		{
+			logInform(loadLockName, "预装完成后standby ready_get跳过: standbyArm=%d 已有片.", standbyArm);
+			return false;
+		}
+
+		if (robot_ready_get_pm2.requested.load() && robot_ready_get_pm2.arm.load() == standbyArm)
+		{
+			return true;
+		}
+
+		if (robot_ready_get_pm2.done.load() && robot_ready_get_pm2.success.load() && robot_ready_get_pm2.arm.load() == standbyArm)
+		{
+			return true;
+		}
+
+		std::string armBusyReason;
+		if (isRobotArmOccupiedForLlRequest(standbyArm, armBusyReason))
+		{
+			logInform(loadLockName,
+				"预装完成后暂不下发PM2 standby ready_get: standbyArm=%d, reason=%s",
+				standbyArm, armBusyReason.c_str());
+			return false;
+		}
+
+		robot_ready_get_pm2.arm.store(standbyArm);
+		robot_ready_get_pm2.slot.store(1);
+		robot_ready_get_pm2.taskId.store(taskId);
+		robot_ready_get_pm2.done.store(false);
+		robot_ready_get_pm2.success.store(false);
+		robot_ready_get_pm2.expedited.store(false);
+		robot_ready_get_pm2.requested.store(true);
+
+		logInform(loadLockName,
+			"命中PM2 standby场景: preloadArm=%d, standbyArm=%d, taskId=%d, queued ready_get to PM2.",
+			preloadArm, standbyArm, taskId);
+		return true;
+	}
+
 	bool QSlotTransferCycleVTMWidgetPrivate::isRobotArmOccupiedForLlRequest(int targetArm, std::string& reason) const
 	{
 		if (targetArm < 0 || targetArm > 1)
@@ -1507,6 +1591,7 @@ namespace FC{
 		if (checkRequest(robot_get_from_pm2, "robot_get_from_pm2")) return true;
 		if (checkRequest(robot_get_from_pm3, "robot_get_from_pm3")) return true;
 		if (checkRequest(robot_get_from_pm4, "robot_get_from_pm4")) return true;
+		if (checkRequest(robot_ready_get_pm2, "robot_ready_get_pm2")) return true;
 		if (checkExchange(robot_exchange_pm1, exchange_info_pm1, "robot_exchange_pm1")) return true;
 		if (checkExchange(robot_exchange_pm2, exchange_info_pm2, "robot_exchange_pm2")) return true;
 		if (checkExchange(robot_exchange_pm3, exchange_info_pm3, "robot_exchange_pm3")) return true;
@@ -1537,6 +1622,9 @@ namespace FC{
 			break;
 		case 3100:
 			if (robot_get_from_pm2.arm.load() == targetArm) { reason = "robot_step=3100(GET_FROM_PM2)"; return true; }
+			break;
+		case 3050:
+			if (robot_ready_get_pm2.arm.load() == targetArm) { reason = "robot_step=3050(READY_GET_PM2)"; return true; }
 			break;
 		case 3200:
 			if (robot_get_from_pm3.arm.load() == targetArm) { reason = "robot_step=3200(GET_FROM_PM3)"; return true; }
@@ -1612,6 +1700,7 @@ namespace FC{
 		if (checkRequest(robot_get_from_pm2, "robot_get_from_pm2")) return true;
 		if (checkRequest(robot_get_from_pm3, "robot_get_from_pm3")) return true;
 		if (checkRequest(robot_get_from_pm4, "robot_get_from_pm4")) return true;
+		if (checkRequest(robot_ready_get_pm2, "robot_ready_get_pm2")) return true;
 		if (checkExchange(robot_exchange_pm1, exchange_info_pm1, "robot_exchange_pm1")) return true;
 		if (checkExchange(robot_exchange_pm2, exchange_info_pm2, "robot_exchange_pm2")) return true;
 		if (checkExchange(robot_exchange_pm3, exchange_info_pm3, "robot_exchange_pm3")) return true;
@@ -2502,10 +2591,11 @@ namespace FC{
 						}
 						else
 						{
-							//efem_auto_step = 1540;
+							//2026-6-13 寻边
+							efem_auto_step = 1540;
 							
 							//2026-1-23 跳过寻边
-							efem_auto_step = 155;
+							//efem_auto_step = 155;
 						}
 					}
 					else {
@@ -4649,6 +4739,10 @@ namespace FC{
 						LLAPmName = getSelectPmProcessName(currentTask);
 						taskManager.updateTaskStatus(currentTask.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						taskManager.updateTaskStatus(currentTask.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+						if (LLAPmName == "PM2")
+						{
+							tryQueuePm2StandbyReadyGet(lk1->getName().c_str(), currentTask.arm, currentTask.taskId);
+						}
 						robot_get_from_lla.taskId.store(-1);
 						loadlock1_pick_task_id.store(-1);
 					}
@@ -5228,6 +5322,7 @@ namespace FC{
 						{
 							taskManager.updateTaskStatus(llaImmediateRepick.taskId, UnifiedWaferTask::LOADLOCK_TRANSFER, UnifiedWaferTask::COMPLETED);
 							taskManager.updateTaskStatus(llaImmediateRepick.taskId, UnifiedWaferTask::PM_PROCESS, UnifiedWaferTask::QUEUED);
+							tryQueuePm2StandbyReadyGet(lk1->getName().c_str(), llaImmediateRepick.arm, llaImmediateRepick.taskId);
 							logInform(lk1->getName().c_str(),
 								"LLA回片后立即补取完成, arm=%d, slot=%d, taskId=%d",
 								llaImmediateRepick.arm, llaImmediateRepick.slot, llaImmediateRepick.taskId);
@@ -6493,6 +6588,10 @@ namespace FC{
 						//真空机械手取料完成
 						taskManager.updateTaskStatus(currentTask.taskId, UnifiedWaferTask::TaskType::LOADLOCK_TRANSFER, UnifiedWaferTask::Status::COMPLETED);
 						taskManager.updateTaskStatus(currentTask.taskId, UnifiedWaferTask::TaskType::PM_PROCESS, UnifiedWaferTask::Status::QUEUED);
+						if (LLBPmName == "PM2")
+						{
+							tryQueuePm2StandbyReadyGet(lk2->getName().c_str(), currentTask.arm, currentTask.taskId);
+						}
 						robot_get_from_llb.taskId.store(-1);
 						loadlock2_pick_task_id.store(-1);
 					}
@@ -7073,6 +7172,7 @@ namespace FC{
 						{
 							taskManager.updateTaskStatus(llbImmediateRepick.taskId, UnifiedWaferTask::LOADLOCK_TRANSFER, UnifiedWaferTask::COMPLETED);
 							taskManager.updateTaskStatus(llbImmediateRepick.taskId, UnifiedWaferTask::PM_PROCESS, UnifiedWaferTask::QUEUED);
+							tryQueuePm2StandbyReadyGet(lk2->getName().c_str(), llbImmediateRepick.arm, llbImmediateRepick.taskId);
 							logInform(lk2->getName().c_str(),
 								"LLB回片后立即补取完成, arm=%d, slot=%d, taskId=%d",
 								llbImmediateRepick.arm, llbImmediateRepick.slot, llbImmediateRepick.taskId);
@@ -10179,6 +10279,20 @@ namespace FC{
 				}
 				return true;
 			};
+			auto clearPm2StandbyReadyGet = [this](const char* reason)
+			{
+				if (!robot_ready_get_pm2.requested.load())
+				{
+					return;
+				}
+				logInform(wtr->getName().c_str(),
+					"撤销PM2 standby ready_get请求: reason=%s, arm=%d, taskId=%d",
+					reason, robot_ready_get_pm2.arm.load(), robot_ready_get_pm2.taskId.load());
+				robot_ready_get_pm2.requested.store(false);
+				robot_ready_get_pm2.done.store(false);
+				robot_ready_get_pm2.success.store(false);
+				robot_ready_get_pm2.taskId.store(-1);
+			};
 			
 
 			while (!stopRequested)
@@ -10205,19 +10319,21 @@ namespace FC{
 					if (robot_get_from_llb.requested.load() && robot_get_from_llb.expedited.load()) { robot_step = 1100; break; }
 					// 优先级2: GET_FROM_PM（取回已完成工艺的片）
 					if (robot_get_from_pm1.requested.load()) { robot_step = 3000; break; }
-					if (robot_get_from_pm2.requested.load()) { robot_step = 3100; break; }
+					if (robot_get_from_pm2.requested.load()) { clearPm2StandbyReadyGet("GET_FROM_PM2 incoming"); robot_step = 3100; break; }
 					if (robot_get_from_pm3.requested.load()) { robot_step = 3200; break; }
 					if (robot_get_from_pm4.requested.load()) { robot_step = 3300; break; }
 					// 优先级3: EXCHANGE_AT_PM
 					if (robot_exchange_pm1.requested.load()) { robot_step = 5000; break; }
-					if (robot_exchange_pm2.requested.load()) { robot_step = 5100; break; }
+					if (robot_exchange_pm2.requested.load()) { clearPm2StandbyReadyGet("EXCHANGE_PM2 incoming"); robot_step = 5100; break; }
 					if (robot_exchange_pm3.requested.load()) { robot_step = 5200; break; }
 					if (robot_exchange_pm4.requested.load()) { robot_step = 5300; break; }
 					// 优先级4: PUT_TO_PM
 					if (robot_put_to_pm1.requested.load()) { robot_step = 2000; break; }
-					if (robot_put_to_pm2.requested.load()) { robot_step = 2100; break; }
+					if (robot_put_to_pm2.requested.load()) { clearPm2StandbyReadyGet("PUT_TO_PM2 incoming"); robot_step = 2100; break; }
 					if (robot_put_to_pm3.requested.load()) { robot_step = 2200; break; }
 					if (robot_put_to_pm4.requested.load()) { robot_step = 2300; break; }
+					// 优先级4.5: PM2 standby ready_get（仅用于预装后的提前旋转，不抢正式取放/exchange）
+					if (robot_ready_get_pm2.requested.load()) { robot_step = 3050; break; }
 					// 优先级5: GET_FROM_LL
 					if (robot_get_from_lla.requested.load()) { robot_step = 1000; break; }
 					if (robot_get_from_llb.requested.load()) { robot_step = 1100; break; }
@@ -10397,6 +10513,42 @@ namespace FC{
 					}
 					robot_get_from_pm1.requested.store(false);
 					robot_get_from_pm1.done.store(true);
+					robot_step = 10;
+				}
+				break;
+
+				// ===================== 3050: READY_GET_PM2 =====================
+				case 3050:
+				{
+					int arm = robot_ready_get_pm2.arm.load();
+					logInform(wtr->getName().c_str(), "Robot线程：step 3050, PM2 standby ready_get, arm=%d", arm);
+					if (!pm2)
+					{
+						robot_ready_get_pm2.success.store(false);
+						logWarn(wtr->getName().c_str(), "Robot线程：step 3050 取消PM2 standby ready_get, 原因:PM2为空.");
+					}
+					else if (!canExecuteGet("PM2", 3050, arm))
+					{
+						robot_ready_get_pm2.success.store(false);
+					}
+					else
+					{
+						auto cmd = wtr->createReadyGetCommand(pm2, arm, 1);
+						wtr->startCommand(cmd);
+						cmd->wait();
+						if (cmd->hasError())
+						{
+							robot_ready_get_pm2.success.store(false);
+							logWarn(wtr->getName().c_str(), "Robot线程：step 3050, PM2 standby ready_get失败, arm=%d", arm);
+						}
+						else
+						{
+							robot_ready_get_pm2.success.store(true);
+							logInform(wtr->getName().c_str(), "Robot线程：step 3050, PM2 standby ready_get完成, arm=%d", arm);
+						}
+					}
+					robot_ready_get_pm2.requested.store(false);
+					robot_ready_get_pm2.done.store(true);
 					robot_step = 10;
 				}
 				break;

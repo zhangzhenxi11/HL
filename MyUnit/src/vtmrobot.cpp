@@ -513,6 +513,35 @@ void vtmrobot::put(int arm, int rotationangle, int armangle) {
 
 }
 
+void vtmrobot::rotateTo(int rotationangle) {
+	animationGroup->clear();
+
+	int shortestRotation = calculateShortestRotation(currentRotationAngle, rotationangle);
+	logInform("Test", "Ready currentRotationAngle:%d  shortestRotation: %d baseRotationAngle:%d", currentRotationAngle, shortestRotation, baseRotationAngle);
+
+	if (baseRotationAngle == -270 && currentRotationAngle == 90){
+		baseRotationAngle = currentRotationAngle;
+	}
+	if (baseRotationAngle == 270 && currentRotationAngle == -90){
+		baseRotationAngle = currentRotationAngle;
+	}
+	if (baseRotationAngle == -450 && currentRotationAngle == -90){
+		baseRotationAngle = currentRotationAngle;
+	}
+	if (shortestRotation != currentRotationAngle) {
+		QPropertyAnimation *rotateAnimation = new QPropertyAnimation(this, "baseRotationAngle");
+		rotateAnimation->setDuration(baseSpeed);
+		rotateAnimation->setEndValue(shortestRotation);
+		animationGroup->addAnimation(rotateAnimation);
+		currentRotationAngle = rotationangle;
+		startAnimationGroup();
+	}
+	else{
+		baseRotationAngle = currentRotationAngle;
+		update();
+	}
+}
+
 void vtmrobot::startAnimationGroup() {
 	if (animationGroup->state() == QAbstractAnimation::Running) {
 		logWarn(name.c_str(), "操作重复!");

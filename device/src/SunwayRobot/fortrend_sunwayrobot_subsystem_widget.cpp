@@ -1,4 +1,4 @@
-
+﻿
 /**
 * @file    fortrend_SunwayRobot_subsystem.h
 * @brief   Fortrend SunwayRobot widget
@@ -111,8 +111,8 @@ namespace FC{
 		connect(d->ui->get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onGetWaferCommand);
 		connect(d->ui->check_load_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onCheckLoadCommand);
 		connect(d->ui->clear_error_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onClearErrorCommand);
-		//connect(d->ui->ready_get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyGetWaferCommand);
-		//connect(d->ui->ready_put_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyPutWaferCommand);
+		connect(d->ui->ready_get_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyGetWaferCommand);
+		connect(d->ui->ready_put_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onReadyPutWaferCommand);
 		connect(d->ui->set_speed_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onSetSpeedCommand);;
 		connect(d->ui->set_speed_btn_z, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onSetAxisZSpeedCommand);
 		connect(d->ui->home_btn, &QAbstractButton::clicked, this, &QSunwayRobotSubsystemWidget::onHomeCommand);
@@ -359,7 +359,6 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onReadyGetWaferCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
-		arm = (arm == 0) ? 1 : 0;
 		logInform(getSubsystem()->getName().c_str(), "arm:%s", arm == 0 ? "B" : "A");
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 		int slot = getSelectSlotId();
@@ -382,7 +381,6 @@ namespace FC{
 	void QSunwayRobotSubsystemWidget::onReadyPutWaferCommand(){
 		Q_D(QSunwayRobotSubsystemWidget);
 		int arm = getSelectArmId();
-		arm = (arm == 0) ? 1 : 0;
 		logInform(getSubsystem()->getName().c_str(), "arm:%s", arm == 0 ? "B" : "A");
 		std::shared_ptr<FortrendStation> station = getSelectStation();
 		int slot = getSelectSlotId();

@@ -738,6 +738,12 @@
 				<timeout>100000</timeout>
 				<ignore_pm2_get_interlock>false</ignore_pm2_get_interlock>
 			</GetWafer>
+			<ReadyPutWafer>
+				<timeout>100000</timeout>
+			</ReadyPutWafer>
+			<ReadyGetWafer>
+				<timeout>100000</timeout>
+			</ReadyGetWafer>
 			<CheckLoad>
 				<timeout>100000</timeout>
 			</CheckLoad>

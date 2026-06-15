@@ -314,6 +314,20 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="ready_get_btn">
+       <property name="text">
+        <string>准备放晶圆</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="ready_put_btn">
+       <property name="text">
+        <string>准备取晶圆</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="home_btn">
        <property name="minimumSize">
         <size>
