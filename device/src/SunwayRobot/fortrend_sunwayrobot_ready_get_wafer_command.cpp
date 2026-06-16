@@ -50,12 +50,12 @@ SunwayRobotReadyGetWaferCommand::SunwayRobotReadyGetWaferCommand(const std::shar
 	//setDescription("Ready_get_wafer on SunwayRobot");
 
 }
-std::vector<IKernelResources*> SunwayRobotReadyGetWaferCommand::resources() const
-{
-	std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
-	ret.push_back(getStation().get());
-	return ret;
-}
+//std::vector<IKernelResources*> SunwayRobotReadyGetWaferCommand::resources() const
+//{
+//	std::vector<IKernelResources* > ret = KernelSubsystemCommand::resources();
+//	ret.push_back(getStation().get());
+//	return ret;
+//}
 
 SunwayRobotReadyGetWaferCommand::RunResult SunwayRobotReadyGetWaferCommand::performRobotOperation(
 	const std::function<std::string()>& commandBuilder,

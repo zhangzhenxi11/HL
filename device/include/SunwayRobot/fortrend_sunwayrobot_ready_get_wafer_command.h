@@ -28,7 +28,7 @@ namespace FC{
 		DECLARE_PTR(SunwayRobotReadyGetWaferCommand)
 		SunwayRobotReadyGetWaferCommand(const std::shared_ptr<FortrendStation>&  station, int arm, int slot, SunwaySubSystemHelper* helper);
 		virtual std::string getName()const override { return "ReadyGetWafer"; }
-		std::vector<IKernelResources* > resources() const override;
+		/*std::vector<IKernelResources* > resources() const override;*/
 
 		// 通用操作函数
 		RunResult performRobotOperation(const std::function<std::string()>& commandBuilder, const std::function<bool()>& onSuccess);

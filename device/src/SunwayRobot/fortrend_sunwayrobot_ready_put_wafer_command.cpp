@@ -1,4 +1,4 @@
-ï»¿/**
+/**
 * @file     fortrend_sunwayrobot_ready_put_wafer_command.h
 * @brief    ready_put_wafer command for SunwayRobot
 * @author   xielonghua
@@ -58,16 +58,16 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	std::lock_guard<std::mutex> lock(robot->robot_mutex);
 
 	if (robot->getState() != IKernelSubSystem::State::SUB_NORMAL){
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s ä¸åœ¨æ­£å¸¸çŠ¶æ€.", robot->getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("%s ²»ÔÚÕý³£×´Ì¬.", robot->getName()), this);
 	}
 	if (auto sub = std::dynamic_pointer_cast<KernelAbstractSubSystem>(getStation())){
 		if (sub->getState() != IKernelSubSystem::SUB_NORMAL){
-			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("å·¥ä½ï¼š %s ä¸åœ¨æ­£å¸¸çŠ¶æ€.", getStation()->getName()), this);
+			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("¹¤Î»£º %s ²»ÔÚÕý³£×´Ì¬.", getStation()->getName()), this);
 		}
 	}
 	if (robot->getBusyState())
 	{
-		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s å¤„äºŽå¿™ç¢Œä¸­.", robot->getName()), this);
+		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_BUSY, Poco::format("%s ´¦ÓÚÃ¦ÂµÖÐ.", robot->getName()), this);
 	}
 
 
@@ -76,7 +76,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	//	if (!sub->hasDoorOpend())
 	//	{
 	//		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION,
-	//			Poco::format("å·¥ä½ï¼š %s å½“å‰é—¨é˜€å¤„äºŽå…³é—­çŠ¶æ€ï¼ˆé€»è¾‘é”™è¯¯ï¼‰.", getStation()->getName()), this);
+	//			Poco::format("¹¤Î»£º %s µ±Ç°ÃÅ·§´¦ÓÚ¹Ø±Õ×´Ì¬£¨Âß¼­´íÎó£©.", getStation()->getName()), this);
 	//	}
 	//}
 
@@ -86,12 +86,12 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	//	if (auto sub = std::dynamic_pointer_cast<FortrendPMCavitySubsystem>(getStation())){
 	//		if (!sub->getPMCavitySafeSignal())
 	//		{
-	//			logInform(sub->getName().c_str(), "PMè…”æœªæ£€æµ‹åˆ°å®‰å…¨ä¿¡å· %d ,å»¶è¿Ÿ50msé‡æ–°æ£€æµ‹.", sub->getPMCavitySafeSignal());
+	//			logInform(sub->getName().c_str(), "PMÇ»Î´¼ì²âµ½°²È«ÐÅºÅ %d ,ÑÓ³Ù50msÖØÐÂ¼ì²â.", sub->getPMCavitySafeSignal());
 	//			Sleep(50);
 	//			if (!sub->getPMCavitySafeSignal())
 	//			{
 	//				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-	//					Poco::format("%sè…”æœªå‘å‡ºå®‰å…¨ä¿¡å·.", getStation()->getName()).c_str(), this);
+	//					Poco::format("%sÇ»Î´·¢³ö°²È«ÐÅºÅ.", getStation()->getName()).c_str(), this);
 	//			}
 	//		}
 	//	}
@@ -102,12 +102,12 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	//	{
 	//		if (!sub->getLoadLockCavitySafeSignal())
 	//		{
-	//			logInform(sub->getName().c_str(), "Loadlockè…”æœªæ£€æµ‹åˆ°å®‰å…¨ä¿¡å· %d ,å»¶è¿Ÿ50msé‡æ–°æ£€æµ‹.", sub->getLoadLockCavitySafeSignal());
+	//			logInform(sub->getName().c_str(), "LoadlockÇ»Î´¼ì²âµ½°²È«ÐÅºÅ %d ,ÑÓ³Ù50msÖØÐÂ¼ì²â.", sub->getLoadLockCavitySafeSignal());
 	//			Sleep(50);
 	//			if (!sub->getLoadLockCavitySafeSignal())
 	//			{
 	//				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_SYSTEM_LOGIC_ERROR,
-	//					Poco::format("%sè…”æœªå‘å‡ºå®‰å…¨ä¿¡å·.", getStation()->getName()).c_str(), this);
+	//					Poco::format("%sÇ»Î´·¢³ö°²È«ÐÅºÅ.", getStation()->getName()).c_str(), this);
 	//			}
 	//		}
 	//	}
@@ -116,7 +116,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	int timeout = command_config->getInt("timeout", 100000);
 	if (timeout < 10) {
 		throw KernelCommandRejectException(__FILE__, KernelSysException::KR_COMMON_DATA_OUTOF_RANGE,
-			Poco::format("è¶…æ—¶: %s å‡†å¤‡æ”¾æ™¶åœ†è¶…æ—¶å‚æ•°é”™è¯¯.", robot->getName()), this);
+			Poco::format("³¬Ê±: %s ×¼±¸·Å¾§Ô²³¬Ê±²ÎÊý´íÎó.", robot->getName()), this);
 	}
 
 	std::string str_arm = (getArm() == 0) ? "A" : "B";
@@ -129,18 +129,18 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	command.append(";");
 
 	std::string verificationMessage = "RPS:RETREATHPOS;";
-	std::string error_message = "å‡†å¤‡æ”¾æ™¶åœ†å‘½ä»¤æ‰§è¡Œå¤±è´¥.";
+	std::string error_message = "×¼±¸·Å¾§Ô²ÃüÁîÖ´ÐÐÊ§°Ü.";
 	int error_type = 1;
 	int error_code = 0;
 	KernelCommandParameter parameter(shared_from_this());
 	robot->sendEvent(NEW_EVENT_ID_WITHNAME(EVENT_COMMAND_RUNNING), &parameter);
-	logInform(robot->getName().c_str(), "å‡†å¤‡æ”¾æ™¶åœ†å‘½ä»¤å¼€å§‹:command:%s", command.c_str());
+	logInform(robot->getName().c_str(), "×¼±¸·Å¾§Ô²ÃüÁî¿ªÊ¼:command:%s", command.c_str());
 
 	if (!sendRequest(command))
 	{
 		AlarmMessage::Ptr alarm(new AlarmMessage(KernelSysException::TYPE,
 			KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-			Poco::format("%s æœºæ¢°æ‰‹é€šè®¯é”™è¯¯.", robot->getName())));
+			Poco::format("%s »úÐµÊÖÍ¨Ñ¶´íÎó.", robot->getName())));
 		setAlarm(alarm);
 		return RunResult::RUN_FAILD;
 	}
@@ -171,7 +171,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 			{ ackPrefix, verificationMessage, "ERR", "NAK" }, commandContext);
 		Sleep(10);
 	}
-	logInform(robot->getName().c_str(), "å‡†å¤‡æ”¾æ™¶åœ†ACK:%s", res.c_str());
+	logInform(robot->getName().c_str(), "×¼±¸·Å¾§Ô²ACK:%s", res.c_str());
 
 	if (res.find("ACK") == std::string::npos)
 	{
@@ -179,7 +179,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 		if (!handleErrorCode(res, error_str, error_type, error_code)) {
 			error_type = 5;
 			error_code = 1;
-			error_message += Poco::format(",æœºæ¢°æ‰‹è¿”å›žçš„æŒ‡ä»¤æœªå®šä¹‰ï¼š%s", res);
+			error_message += Poco::format(",»úÐµÊÖ·µ»ØµÄÖ¸ÁîÎ´¶¨Òå£º%s", res);
 		}
 		else
 		{
@@ -207,7 +207,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 		}
 		if (elapsed >= timeoutWindow)
 		{
-			AlarmMessage::Ptr alarm(new AlarmMessage(1, 0x100, "å‡†å¤‡æ”¾æ™¶åœ†è¿”å›žæŒ‡ä»¤è¶…æ—¶."));
+			AlarmMessage::Ptr alarm(new AlarmMessage(1, 0x100, "×¼±¸·Å¾§Ô²·µ»ØÖ¸Áî³¬Ê±."));
 			setAlarm(alarm);
 			return RunResult::RUN_FAILD;
 		}
@@ -215,7 +215,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 			{ verificationMessage, "ERR", "NAK" }, commandContext + "-RPS");
 		Sleep(10);
 	}
-	logInform(robot->getName().c_str(), "å‡†å¤‡æ”¾æ™¶åœ†RPS:%s", res.c_str());
+	logInform(robot->getName().c_str(), "×¼±¸·Å¾§Ô²RPS:%s", res.c_str());
 
 	auto found = search(res.begin(), res.end(), verificationMessage.begin(), verificationMessage.end());
 	if (found != res.end())
@@ -223,7 +223,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 		if (!sendRequest("ACK;"))
 		{
 			throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_COMMUNICATION_ERROR,
-				Poco::format("%s æœºæ¢°æ‰‹é€šè®¯é”™è¯¯.", robot->getName()), this);
+				Poco::format("%s »úÐµÊÖÍ¨Ñ¶´íÎó.", robot->getName()), this);
 		}
 		robot->getKernel()->getKernelBlockManager()->releaseBlock(robot);
 		return RunResult::RUN_OK;
@@ -233,7 +233,7 @@ SunwayRobotReadyPutWaferCommand::RunResult SunwayRobotReadyPutWaferCommand::onRu
 	if (!handleErrorCode(res, error_str, error_type, error_code)) {
 		error_type = 5;
 		error_code = 1;
-		error_message += Poco::format(",æœºæ¢°æ‰‹è¿”å›žçš„æŒ‡ä»¤æœªå®šä¹‰:%s", res);
+		error_message += Poco::format(",»úÐµÊÖ·µ»ØµÄÖ¸ÁîÎ´¶¨Òå:%s", res);
 	}
 	else
 	{
