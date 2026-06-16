@@ -51,6 +51,7 @@ static std::map<std::string, EFEMAsciiApi::Base> baseMap = {
 	{ "LOAD", EFEMAsciiApi::LOAD },
 	{ "UNLOAD", EFEMAsciiApi::UNLOAD },
 	{ "ALIGN", EFEMAsciiApi::ALIGN },
+	{ "REWIND", EFEMAsciiApi::REWIND },
 	{ "HOLD", EFEMAsciiApi::HOLD },
 	{ "RESTR", EFEMAsciiApi::RESTR },
 	{ "ABORT", EFEMAsciiApi::ABORT },
@@ -90,6 +91,8 @@ public:
 	EFEMAsciiApi::State state;
 	std::mutex mtx;
 	std::condition_variable cv;
+	std::map<const void*, EFEMAsciiApi::CommandObserver> observers;
+	std::mutex observerMutex;
 };
 
 EFEMAsciiApi::Type EFEMAsciiApiPrivate::str2Type(const std::string& str){
@@ -157,6 +160,26 @@ bool EFEMAsciiApi::sendMessage(const char* data, unsigned int len){
 		logMessage(data, len, "S");
 	}
 	return ret;
+}
+
+void EFEMAsciiApi::addCommandObserver(const void* owner, const CommandObserver& observer)
+{
+	if (!owner) {
+		return;
+	}
+
+	std::lock_guard<std::mutex> lock(d->observerMutex);
+	d->observers[owner] = observer;
+}
+
+void EFEMAsciiApi::removeCommandObserver(const void* owner)
+{
+	if (!owner) {
+		return;
+	}
+
+	std::lock_guard<std::mutex> lock(d->observerMutex);
+	d->observers.erase(owner);
 }
 
 
@@ -340,6 +363,8 @@ void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 		return;
 	}
 
+	notifyCommandObservers(message, command);
+
 	if (base == READY && type == INF && msg->paramers.size() == 1 && msg->paramers.at(0) == std::string("COMM")){//收到Ready消息回复
 		sendACK(command->message);
 		logInform(getName().c_str(), "sendACK processSingleMessage=%s", message.c_str());
@@ -354,6 +379,24 @@ void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 		handle(command);
 	//}
 }
+
+void EFEMAsciiApi::notifyCommandObservers(const std::string& rawMessage, const std::shared_ptr<Command>& command)
+{
+	std::vector<CommandObserver> observers;
+	{
+		std::lock_guard<std::mutex> lock(d->observerMutex);
+		for (auto& item : d->observers) {
+			observers.push_back(item.second);
+		}
+	}
+
+	for (auto& observer : observers) {
+		if (observer) {
+			observer(rawMessage, command);
+		}
+	}
+}
+
 void EFEMAsciiApi::processEFEMessage(std::string& message)
 {
 	int pos1 = message.find(':');

@@ -12,6 +12,8 @@
 #include "Kernel/Fortrend/tcp_server_api.h"
 #include "tcp_client_api.h"
 #include "Kernel/kernel_exception.h"
+#include <functional>
+#include <map>
 #include <memory>
 
 namespace FC{
@@ -47,6 +49,7 @@ public:
 		LOAD,
 		UNLOAD,
 		ALIGN,
+		REWIND,
 		HOLD,
 		RESTR,
 		ABORT,
@@ -81,6 +84,8 @@ public:
 		std::shared_ptr<Message> message;
 	} Command;
 
+	typedef std::function<void(const std::string&, const std::shared_ptr<Command>&)> CommandObserver;
+
 	EFEMAsciiApi(IKernel*  kernel);
 	virtual std::string getName() const { return "EFEMClient"; }
 public:
@@ -97,6 +102,8 @@ public:
 	bool sendEVT(const std::shared_ptr<Message>& message);
 
 	virtual bool sendMessage(const char* data, unsigned int len)override;
+	void addCommandObserver(const void* owner, const CommandObserver& observer);
+	void removeCommandObserver(const void* owner);
 
 	std::string getData();
 
@@ -113,6 +120,7 @@ private:
 
 	void onDataRecv(const char* data, unsigned int len);
 	void processSingleMessage(const std::string& message);
+	void notifyCommandObservers(const std::string& rawMessage, const std::shared_ptr<Command>& command);
 
 	void processEFEMessage(std::string& message);
 

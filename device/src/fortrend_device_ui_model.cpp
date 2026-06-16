@@ -72,6 +72,7 @@
 #include  "slot_transfer_cycle_vtm_widget.h"
 #include  "slot_transfer_auto_vtm_widget.h"
 #include  "slot_transfer_cycle_vtm_new_widget.h"
+#include  "lp_rewind_widget.h"
 #include  "VTMSignalTower/vtm_signal_tower_widget.h"
 
 #include "kernel/Fortrend/loadport_abstract_subsystem.h"
@@ -219,6 +220,7 @@ FortrendDeviceModel::FortrendDeviceModel(){
 	kernel.reset(new FortrendDeviceKernel);
 	data_widget = nullptr;
 	datahistory_widget = nullptr;
+	lp_rewind_widget = nullptr;
 }
 
 
@@ -381,6 +383,9 @@ void FortrendDeviceModel::addManualCompoments(){
 	addAutoReleasedObject(new SubSystemWorkPanel(efemmodule_tabWidget, "EFEM", "主界面", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_manual.png"));
 	//addAutoReleasedObject(new SubSystemWorkPanel(smifmodule_tabWidget, "SMIF", "主界面", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_manual.png"));
 
+	lp_rewind_widget = new QLPRewindWidget(kernel);
+	addAutoReleasedObject(new SubSystemWorkPanel(lp_rewind_widget, "捯片", "主界面", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_formula.png"));
+
 	control_widget = new QControlModeVTMWidget(kernel);
 	addAutoReleasedObject(new SubSystemWorkPanel(control_widget, "设置", "设置", 0, UserLevel::USER_MANAGER, ":/Imageblack/main_controlsettin.png"));
 	
@@ -468,6 +473,7 @@ void FC::FortrendDeviceModel::StatusOpen()
 	tm_widget2->setEnabled(true);//破真空
 	slot_transfer_cycle_vtm_widget->setEnabled(true);// 循环 配方
 	efemmodule_tabWidget->setEnabled(true);//EFEM
+	if (lp_rewind_widget) lp_rewind_widget->setEnabled(true);//捯片
 	control_widget->setEnabled(true);//设置
 	module_tabWidget->setEnabled(true);//手动
 	if (data_widget) data_widget->setEnabled(true);//实时数据
@@ -484,6 +490,7 @@ void FC::FortrendDeviceModel::StatusClose()
 	tm_widget2->setEnabled(false);//破真空
 	slot_transfer_cycle_vtm_widget->setEnabled(false);// 循环 配方
 	efemmodule_tabWidget->setEnabled(false);//EFEM
+	if (lp_rewind_widget) lp_rewind_widget->setEnabled(false);//捯片
 	control_widget->setEnabled(false);//设置
 	module_tabWidget->setEnabled(false);//手动
 	if (data_widget) data_widget->setEnabled(false);//实时数据

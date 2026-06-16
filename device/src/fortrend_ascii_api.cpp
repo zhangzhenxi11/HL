@@ -97,6 +97,7 @@ d(new FortrendAsciiEFEMApiPrivate(this)){
 		{ Base::LOAD, std::bind(&FortrendAsciiEFEMApi::handle_LOAD, this, std::placeholders::_1) },
 		{ Base::UNLOAD, std::bind(&FortrendAsciiEFEMApi::handle_UNLOAD, this, std::placeholders::_1) },
 		{ Base::ALIGN, std::bind(&FortrendAsciiEFEMApi::handle_ALIGN, this, std::placeholders::_1) },
+		{ Base::REWIND, std::bind(&FortrendAsciiEFEMApi::handle_REWIND, this, std::placeholders::_1) },
 		{ Base::HOLD, std::bind(&FortrendAsciiEFEMApi::handle_HOLD, this, std::placeholders::_1) },
 		{ Base::RESTR, std::bind(&FortrendAsciiEFEMApi::handle_RESTR, this, std::placeholders::_1) },
 		{ Base::ABORT, std::bind(&FortrendAsciiEFEMApi::handle_ABORT, this, std::placeholders::_1) },
@@ -131,6 +132,7 @@ d(new FortrendAsciiEFEMApiPrivate(this)){
 		{ Base::LOAD,std::map<std::string, CmdState>() },
 		{ Base::UNLOAD,std::map<std::string, CmdState>() },
 		{ Base::ALIGN,std::map<std::string, CmdState>() },
+		{ Base::REWIND,std::map<std::string, CmdState>() },
 		{ Base::MODE,std::map<std::string, CmdState>() },
 		{ Base::SIGOUT,std::map<std::string, CmdState>() },
 		{ Base::STATE,std::map<std::string, CmdState>() },
@@ -356,30 +358,30 @@ void FortrendAsciiEFEMApi::handle_ALIGN(const std::shared_ptr<Command>& command)
 	aligner->handle(command);
 }
 
+void FortrendAsciiEFEMApi::handle_REWIND(const std::shared_ptr<Command>& command)
+{
+	auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+	if (!wtr)return;
+	wtr->handle(command);
+}
+
 void  FortrendAsciiEFEMApi::handle_HOLD(const std::shared_ptr<Command>& command){
-	//logError(getName().c_str(), "handle_HOLD");
-	auto& paramers = command->message->paramers;
-	if (paramers.size() == 0){
-		logError(getName().c_str(), "handle_MAPDT not paramers");
-		sendNAK(command->message, KernelSysException::ErrCode::KR_COMMON_COMMAND_PARAMER_ERROR);
-		return;
-	}
-	std::string paramer1 = paramers.at(0);
-	std::regex lp_reg("^LP(\\d+)");  //LP
-	std::smatch result;
-	if (std::regex_match(paramer1, result, lp_reg)){
-		auto lp = kernel->getKernelModule<EFEMLPSubsystem>("ELP" + result.str(1));
-		lp->handle(command);
-	}
+	auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+	if (!wtr)return;
+	wtr->handle(command);
 }
 
 void  FortrendAsciiEFEMApi::handle_RESTR(const std::shared_ptr<Command>& command){
-	//logError(getName().c_str(), "handle_RESTR");
+	auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+	if (!wtr)return;
+	wtr->handle(command);
 }
 
 
 void FortrendAsciiEFEMApi::handle_ABORT(const std::shared_ptr<Command>& command){
-	//logError(getName().c_str(), "handle_ABORT");
+	auto wtr = kernel->getKernelModule<EFEMWaferRobotSubsystem>("EWTR");
+	if (!wtr)return;
+	wtr->handle(command);
 }
 
 void FortrendAsciiEFEMApi::handle_TRANSF(const std::shared_ptr<Command>& command)

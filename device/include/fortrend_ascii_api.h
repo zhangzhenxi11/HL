@@ -70,6 +70,7 @@ private:
 	void handle_LOAD(const std::shared_ptr<Command>& command);//LOAD
 	void handle_UNLOAD(const std::shared_ptr<Command>& command);//UNLOAD
 	void handle_ALIGN(const std::shared_ptr<Command>& command);//ALIGN
+	void handle_REWIND(const std::shared_ptr<Command>& command);//REWIND
 	void handle_MODE(const std::shared_ptr<Command>& command);//MODE
 	void handle_SIGOUT(const std::shared_ptr<Command>& command);//SIGOUT
 	void handle_STATE(const std::shared_ptr<Command>& command);//STATE

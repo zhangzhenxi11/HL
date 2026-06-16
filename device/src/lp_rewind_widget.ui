@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LPRewindWidget</class>
+ <widget class="QWidget" name="LPRewindWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1470</width>
+    <height>920</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>LP Rewind</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_vertical_layout">
+   <item>
+    <layout class="QHBoxLayout" name="recipe_button_layout">
+     <item>
+      <widget class="QPushButton" name="clear_recipe_btn">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>清除配方</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="save_recipe_btn">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>保存配方</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="load_recipe_btn">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>加载配方</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="recipe_button_spacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="setting_group_box">
+     <property name="title">
+      <string>捯片设置</string>
+     </property>
+     <layout class="QGridLayout" name="setting_grid_layout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="mode_title_label">
+        <property name="text">
+         <string>模式</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="mode_combo_box">
+        <item>
+         <property name="text">
+          <string>全部捯片</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>选片捯片(预留)</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="source_title_label">
+        <property name="text">
+         <string>Source LP</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QComboBox" name="source_lp_combo_box">
+        <item>
+         <property name="text">
+          <string>LP1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>LP2</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QLabel" name="source_value_title_label">
+        <property name="text">
+         <string>当前 Source</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QLabel" name="source_lp_value_label">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-weight: bold;</string>
+        </property>
+        <property name="text">
+         <string>LP1</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QLabel" name="target_title_label">
+        <property name="text">
+         <string>Target LP</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QLabel" name="target_lp_value_label">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-weight: bold;</string>
+        </property>
+        <property name="text">
+         <string>LP2</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="8">
+       <widget class="QLabel" name="mode_hint_label">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(110, 110, 110);</string>
+        </property>
+        <property name="text">
+         <string>当前为全部捯片模式：表格不参与组包，仅保留界面占位。</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="table_group_box">
+     <property name="title">
+      <string>选片预留表格</string>
+     </property>
+     <layout class="QVBoxLayout" name="table_vertical_layout">
+      <item>
+       <layout class="QHBoxLayout" name="table_button_layout">
+        <item>
+         <widget class="QPushButton" name="add_row_btn">
+          <property name="minimumSize">
+           <size>
+            <width>110</width>
+            <height>36</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>添加行</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="remove_row_btn">
+          <property name="minimumSize">
+           <size>
+            <width>110</width>
+            <height>36</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>删除行</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="table_button_spacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QTableWidget" name="rewind_table">
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::NoSelection</enum>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="control_group_box">
+     <property name="title">
+      <string>执行控制</string>
+     </property>
+     <layout class="QVBoxLayout" name="control_vertical_layout">
+      <item>
+       <layout class="QHBoxLayout" name="control_button_layout">
+        <item>
+         <widget class="QPushButton" name="rewind_btn">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>42</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>REWIND</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="hold_btn">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>42</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>HOLD</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="restr_btn">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>42</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>RESTR</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="abort_btn">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>42</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>ABORT</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="refresh_mapping_btn">
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>42</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>刷新 Mapping</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="control_button_spacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="status_grid_layout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="state_title_label">
+          <property name="text">
+           <string>当前状态</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="state_value_label">
+          <property name="styleSheet">
+           <string notr="true">font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>待执行</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="command_title_label">
+          <property name="text">
+           <string>原始指令</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="command_value_label">
+          <property name="text">
+           <string>-</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="detail_title_label">
+          <property name="text">
+           <string>状态说明</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="detail_value_label">
+          <property name="text">
+           <string>首版仅实现独立界面与占位交互。</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="cassette_horizontal_layout">
+     <item>
+      <widget class="QGroupBox" name="lp1_group_box">
+       <property name="title">
+        <string>LP1 Cassette</string>
+       </property>
+       <layout class="QVBoxLayout" name="lp1_cassette_layout"/>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="lp2_group_box">
+       <property name="title">
+        <string>LP2 Cassette</string>
+       </property>
+       <layout class="QVBoxLayout" name="lp2_cassette_layout"/>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -18,6 +18,7 @@
 #include <kernel/CoreUI/kernel_alarm_module_widget.h>
 #include <pm_recipe_widget.h>
 #include  "slot_transfer_cycle_vtm_widget.h" 
+#include  "lp_rewind_widget.h"
 
 namespace FC{
 class FortrendDeviceKernel;
@@ -50,6 +51,7 @@ private:
 	QVacuumizeSubsystemWidget* tm_widget;
 	QBreakVacuumSubsystemWidget* tm_widget2;
 	QSlotTransferCycleVTMWidget* slot_transfer_cycle_vtm_widget;
+	QLPRewindWidget* lp_rewind_widget;
 
 	QTabWidget* efemmodule_tabWidget;
 	QWidget* control_widget;
