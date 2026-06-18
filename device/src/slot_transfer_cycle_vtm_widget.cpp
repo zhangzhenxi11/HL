@@ -333,6 +333,7 @@ namespace FC{
 
 		//仅在真实下料冲突，或对侧LL下层完成片需要优先回LP时上锁。
 		bool isLoadingInterlock(const std::string& LLName);
+		bool canStartSplitModeEgressPreVacuum(const std::string& LLName) const;
 
 	private:
 		QSlotTransferCycleVTMWidget * q_ptr;
@@ -4251,15 +4252,14 @@ namespace FC{
 					const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
 					const bool isLlaIngress = isSingleLoadLockMode() || isAInBOutMode();
 					const bool isLlaEgress = isSingleLoadLockMode() || isBInAOutMode();
-					if (isLlaEgress && !llaSnapshot.returnCompletedTasks.empty())
+					if (isLlaEgress && !llaSnapshot.returnPendingTasks.empty() && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
+					{
+						// egress 侧优先持续接收回片，避免上一片刚回完就先进入 unload 收尾，导致下一片悬在机械手上
+						loadlock1_auto_step = 2000;//允许放晶圆流程
+					}
+					else if (isLlaEgress && !llaSnapshot.returnCompletedTasks.empty())
 					{
 						loadlock1_auto_step = 5000;//出空Cassette流程
-					}
-					else if (isLlaEgress && !llaSnapshot.returnPendingTasks.empty() && !abortCycle) //2025/8/13 加!pm1_allow_get_put_wafer
-					{
-						//放晶圆
-						loadlock1_auto_step = 2000;//允许放晶圆流程
-							
 					}
 					else if (isLlaIngress && !llaSnapshot.pendingTasks.empty() && !abortCycle)
 					{
@@ -5375,6 +5375,14 @@ namespace FC{
 				{
 					if (lk1->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
+						const bool isLlaEgress = isSingleLoadLockMode() || isBInAOutMode();
+						if (isLlaEgress && !abortCycle && !llaSnapshot.returnPendingTasks.empty())
+						{
+							logInform(lk1->getName().c_str(), "LLA仍有待回片任务，保持接片态并继续下一片回片.");
+							loadlock1_auto_step = 2000;
+							break;
+						}
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "大气模式，不关闭传输腔门阀!");
@@ -5382,7 +5390,6 @@ namespace FC{
 						}
 						else
 						{
-							const auto llaSnapshot = buildLoadLockTaskSnapshot("LLA");
 							if (isSingleLoadLockMode() && !llaSnapshot.pendingTasks.empty())
 							{
 								const int desiredArm = llaSnapshot.pendingTasks.front().arm;
@@ -6095,14 +6102,14 @@ namespace FC{
 					const bool isLlbIngress = isSingleLoadLockMode() || isBInAOutMode();
 					const bool isLlbEgress = isSingleLoadLockMode() || isAInBOutMode();
 
-					if (isLlbEgress && !llbSnapshot.returnCompletedTasks.empty())
+					if (isLlbEgress && !llbSnapshot.returnPendingTasks.empty() && !abortCycle)
+					{
+						// egress 侧优先持续接收回片，避免上一片刚回完就先进入 unload 收尾，导致下一片悬在机械手上
+						loadlock2_auto_step = 2000;//允许放晶圆流程
+					}
+					else if (isLlbEgress && !llbSnapshot.returnCompletedTasks.empty()) //要兼顾到：若LLa有一片待工艺片，还有一片待efem下料的片，怎么解决？
 					{
 						loadlock2_auto_step = 5000;//出空Cassette流程
-					}
-					else if (isLlbEgress && !llbSnapshot.returnPendingTasks.empty() && !abortCycle)
-					{
-						//放晶圆
-						loadlock2_auto_step = 2000;//允许放晶圆流程
 					}
 					else if (isLlbIngress && !llbSnapshot.pendingTasks.empty() && !abortCycle)
 					{
@@ -7226,6 +7233,14 @@ namespace FC{
 				{
 					if (lk2->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
+						const bool isLlbEgress = isSingleLoadLockMode() || isAInBOutMode();
+						if (isLlbEgress && !abortCycle && !llbSnapshot.returnPendingTasks.empty())
+						{
+							logInform(lk2->getName().c_str(), "LLB仍有待回片任务，保持接片态并继续下一片回片.");
+							loadlock2_auto_step = 2000;
+							break;
+						}
 						if (ui->enableAtmosphere->checkState() == Qt::CheckState::Checked)
 						{
 							logInform("cycle", "step:2070,大气模式，不关闭TM腔门!");
@@ -7233,7 +7248,6 @@ namespace FC{
 						}
 						else
 						{
-							const auto llbSnapshot = buildLoadLockTaskSnapshot("LLB");
 							if (isSingleLoadLockMode() && !llbSnapshot.pendingTasks.empty())
 							{
 								const int desiredArm = llbSnapshot.pendingTasks.front().arm;
@@ -11212,6 +11226,28 @@ namespace FC{
 		return unloadRequested || taskManager.hasEfemUnloadInProgress(egressLL) || egressHasWaferToUnload;
 	}
 
+	bool QSlotTransferCycleVTMWidgetPrivate::canStartSplitModeEgressPreVacuum(const std::string& LLName) const
+	{
+		if (isSingleLoadLockMode())
+		{
+			return false;
+		}
+
+		const std::string egressLL = isAInBOutMode() ? "LLB" : "LLA";
+		if (LLName != egressLL)
+		{
+			return false;
+		}
+
+		const auto snapshot = buildLoadLockTaskSnapshot(LLName.c_str());
+		const bool unloadRequested = (LLName == "LLA") ? tool_allow_put_wafer_LLA : tool_allow_put_wafer_LLB;
+		const bool unloadInProgress = taskManager.hasEfemUnloadInProgress(LLName);
+		const bool hasReturnWaferToUnload =
+			!snapshot.returnPendingTasks.empty() || !snapshot.returnCompletedTasks.empty();
+
+		return !unloadRequested && !unloadInProgress && !hasReturnWaferToUnload;
+	}
+
 	bool QSlotTransferCycleVTMWidgetPrivate::getArmWaferIsPmPending(int arm)
 	{
 		auto task = taskManager.getRobotTaskInfo(arm); //任务状态
@@ -11902,25 +11938,32 @@ namespace FC{
 						// 如果有抽真空需求，先检测机器人是否安全且空闲
 						if (tm_get_vacuum || loadlock1_get_vacuum || loadlock2_get_vacuum)
 						{
-							// 核心检测：LLA、LLB 的机器人原点信号必须为真（代表手臂已缩回），且机器人软件状态不忙
-							if (lk1->getWtrOriginSafeSignal() && lk2->getWtrOriginSafeSignal() && !wtr->isBusy())
+							// 核心检测：LLA、LLB 的机器人原点安全信号必须为真。
+							// 分离模式下，egress 腔在没有“正在出料/待出料”时，允许在 WTR 于 PM 交换期间提前抽真空待放料。
+							const bool wtrOriginSafe = lk1->getWtrOriginSafeSignal() && lk2->getWtrOriginSafeSignal();
+							const bool allowLlaVacuumWithBusyWtr = loadlock1_get_vacuum && canStartSplitModeEgressPreVacuum("LLA");
+							const bool allowLlbVacuumWithBusyWtr = loadlock2_get_vacuum && canStartSplitModeEgressPreVacuum("LLB");
+							const bool canStartTmVacuum = tm_get_vacuum && !wtr->isBusy();
+							const bool canStartLlaVacuum = loadlock1_get_vacuum && (!wtr->isBusy() || allowLlaVacuumWithBusyWtr);
+							const bool canStartLlbVacuum = loadlock2_get_vacuum && (!wtr->isBusy() || allowLlbVacuumWithBusyWtr);
+							if (wtrOriginSafe && (canStartTmVacuum || canStartLlaVacuum || canStartLlbVacuum))
 							{
-								if (tm_get_vacuum)
+								if (canStartTmVacuum)
 								{
 									vacuum_auto_step = 5000;
 								}
-								else if (loadlock1_get_vacuum && !loadlock2_get_vacuum)//新增LLA、LLB的抽真空顺序判断
+								else if (canStartLlaVacuum && !canStartLlbVacuum)//新增LLA、LLB的抽真空顺序判断
 								{
 									vacuum_auto_step = 10000;
 								}
-								else if (loadlock2_get_vacuum && !loadlock1_get_vacuum)
+								else if (canStartLlbVacuum && !canStartLlaVacuum)
 								{
 									vacuum_auto_step = 20000;
 								}
-								else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() < lk2->getVacuumValue()){
+								else if (canStartLlaVacuum && canStartLlbVacuum && lk1->getVacuumValue() < lk2->getVacuumValue()){
 									vacuum_auto_step = 10000;
 								}
-								else if (loadlock1_get_vacuum && loadlock2_get_vacuum && lk1->getVacuumValue() > lk2->getVacuumValue()){
+								else if (canStartLlaVacuum && canStartLlbVacuum && lk1->getVacuumValue() > lk2->getVacuumValue()){
 									vacuum_auto_step = 20000;
 								}
 								else

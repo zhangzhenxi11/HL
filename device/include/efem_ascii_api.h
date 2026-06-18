@@ -29,9 +29,9 @@ class  EFEMAsciiApi : public TcpClientApi
 public:
 	DECLARE_PTR(EFEMAsciiApi)
 
-	// ÀýÈç£ºGET:STATE/parameter1
+	// ï¿½ï¿½ï¿½ç£ºGET:STATE/parameter1
 	//            
-	//Command ¹¹³É£º Type : Message    Message¹¹³É: Base/parameter   
+	//Command ï¿½ï¿½ï¿½É£ï¿½ Type : Message    Messageï¿½ï¿½ï¿½ï¿½: Base/parameter   
 	//Type: Base/parameters
 
 	typedef enum{ MOV, GET, SET, INF, ABS, EVT, ACK, NAK, TYPE_UNKNOWN } Type;
@@ -68,10 +68,10 @@ public:
 		ALARM,
 		POD, 
 		DOORSTAT,
-		TRANSF, //2025-7-22 ÐÂ¼Ó
+		TRANSF, //2025-7-22 ï¿½Â¼ï¿½
 		BASE_UNKNOWN
 	} Base;
-	//¿ÕÏÐ£¬µÈ´ý»Ø¸´£¬ÇëÇóÊ§°Ü£¬ÏìÓ¦³¬Ê±£¬Íê³É 
+	//ï¿½ï¿½ï¿½Ð£ï¿½ï¿½È´ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ 
 	typedef enum{ TRANS_IDEL, TRANS_WAIT_REPLY, TRANS_REQUEST_FAILD, TRANS_RESPONSE_TIMEOUT, TRANS_FINISHED }  State;
 	
 	typedef struct {
@@ -89,16 +89,16 @@ public:
 	EFEMAsciiApi(IKernel*  kernel);
 	virtual std::string getName() const { return "EFEMClient"; }
 public:
-	// response ACK for command ÏìÓ¦ACKÃüÁî ,ÔÚ¸Õ¿ªÊ¼Á¬½ÓµÄÊ±£¬¿Í»§¶ËÓÃµ½¡£ÆäËûsendxx½Ó¿ÚÓÃ²»µ½¡£
+	// response ACK for command ï¿½ï¿½Ó¦ACKï¿½ï¿½ï¿½ï¿½ ,ï¿½Ú¸Õ¿ï¿½Ê¼ï¿½ï¿½ï¿½Óµï¿½Ê±ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sendxxï¿½Ó¿ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½
 	bool sendACK(const std::shared_ptr<Message>& message);
 	// response NAK for command 
 	bool sendNAK(const std::shared_ptr<Message>& message, int code);
 	// response CAN for command
 	// response INF for command
 	bool sendINF(const std::shared_ptr<Message>& message);
-	// response ABS for command   ÏìÓ¦ABSÃüÁî
+	// response ABS for command   ï¿½ï¿½Ó¦ABSï¿½ï¿½ï¿½ï¿½
 	bool sendABS(const std::shared_ptr<Message>& message, const std::string&source,  int type,  int code);
-	// response EVT for command  ÏìÓ¦EVTÃüÁî
+	// response EVT for command  ï¿½ï¿½Ó¦EVTï¿½ï¿½ï¿½ï¿½
 	bool sendEVT(const std::shared_ptr<Message>& message);
 
 	virtual bool sendMessage(const char* data, unsigned int len)override;
