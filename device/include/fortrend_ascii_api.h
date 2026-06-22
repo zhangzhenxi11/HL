@@ -1,4 +1,4 @@
-﻿﻿// Library: LibDevicePlugin
+﻿// Library: LibDevicePlugin
 // Package: Api/ASCII
 //
 // piotech api 

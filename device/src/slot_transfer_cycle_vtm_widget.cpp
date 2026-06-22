@@ -448,6 +448,9 @@ namespace FC{
 		//2026-1-23 双上料时缓存两个任务的完整信息，避免case 157更新状态后数组变化
 		UnifiedWaferTask cached_task_first;  // 第一片料缓存
 		UnifiedWaferTask cached_task_second; // 第二片料缓存
+		// Cache dual return tasks to avoid queue order changes in case 257.
+		UnifiedWaferTask cached_return_task_first;  // 第一片回片缓存
+		UnifiedWaferTask cached_return_task_second; // 第二片回片缓存
 			
 		/************************loadLock*********************************/
 
@@ -3531,7 +3534,7 @@ namespace FC{
 						}
 						else
 						{
-							efem_auto_step = 255;
+							efem_auto_step = 256;
 						}
 					}
 					else {
@@ -3552,6 +3555,8 @@ namespace FC{
 					}
 					if (ewtr && ewtr->getState() == IKernelSubSystem::State::SUB_NORMAL)
 					{
+						cached_return_task_first = efemReturnPendingSnapshot.at(0);
+						cached_return_task_second = efemReturnPendingSnapshot.at(1);
 						std::shared_ptr<EFEMLPSubsystem> elp = efemReturnPendingSnapshot.at(0).destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 						std::shared_ptr<EFEMLPSubsystem> elp2put = efemReturnPendingSnapshot.at(1).destination == UnifiedWaferTask::Location::LP1 ? elp1 : elp2;
 
@@ -3563,44 +3568,47 @@ namespace FC{
 
 						cmd3->wait();
 						cmd4->wait();
+						bool armAPutSucceeded = !cmd3->hasError();
+						bool armBPutSucceeded = !cmd4->hasError();
 
-						if (cmd3->hasError())
+						if (!armAPutSucceeded)
 						{
 							logFailedExcuteCommandHasError(ewtr->getName(), "A手臂放LP晶圆", efem_process_name, efem_auto_step);
 						}
-						else
-						{
-							efem_auto_step = 257;
-						}
 
-						if (cmd4->hasError())
+						if (!armBPutSucceeded)
 						{
 							logFailedExcuteCommandHasError(ewtr->getName(), "B手臂放LP晶圆", efem_process_name, efem_auto_step);
 						}
-						else
+
+						if (armAPutSucceeded && armBPutSucceeded)
 						{
 							efem_auto_step = 257;
+						}
+						else
+						{
+							efem_auto_step = 201;
 						}
 					}
 					else {
 						logFailedNotNormal(ewtr->getName(), efem_process_name, efem_auto_step);
 					}
 				}
+				break;
 				case 257:
 				{
 					logWarn("EFEM", "efem_auto_step:%d", efem_auto_step);
-					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
-					// 防止数组越界
-					if (efemReturnPendingSnapshot.size() < 2)
+					if (cached_return_task_first.taskId <= 0 || cached_return_task_second.taskId <= 0)
 					{
-						logError("EFEM", "efem_auto_step:257, efemReturnPendingTasks size < 2, size=%d", efemReturnPendingSnapshot.size());
+						logError("EFEM", "efem_auto_step:257, cached return tasks invalid, firstTaskId=%d, secondTaskId=%d",
+							cached_return_task_first.taskId, cached_return_task_second.taskId);
 						efem_auto_step = 201;
 						break;
 					}
-					const auto firstTask = efemReturnPendingSnapshot.at(0);
-					const auto secondTask = efemReturnPendingSnapshot.at(1);
-					taskManager.updateTaskStatus(firstTask.taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
-					taskManager.updateTaskStatus(secondTask.taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					taskManager.updateTaskStatus(cached_return_task_first.taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					taskManager.updateTaskStatus(cached_return_task_second.taskId, UnifiedWaferTask::TaskType::EFEM_RETURN, UnifiedWaferTask::Status::COMPLETED);
+					cached_return_task_first = UnifiedWaferTask{};
+					cached_return_task_second = UnifiedWaferTask{};
 
 					//下料到lp，就置位
 					if (current_loadlock == "LLA") {
@@ -3760,6 +3768,15 @@ namespace FC{
 				#pragma region 模拟EFEM给TOOL双下料
 				case 4001:
 				{
+					const auto efemReturnPendingSnapshot = taskManager.getEfemRuturnPendingTasks();
+					if (efemReturnPendingSnapshot.size() < 2)
+					{
+						logError("SimCycle", "EFEM双下料模拟时待下料任务不足, size=%d", efemReturnPendingSnapshot.size());
+						efem_auto_step = 201;
+						break;
+					}
+					cached_return_task_first = efemReturnPendingSnapshot.at(0);
+					cached_return_task_second = efemReturnPendingSnapshot.at(1);
 					efem_auto_step = 257;
 					logWarn("SimCycle", "EFEM给LL双下料完成 .");
 				}
@@ -12336,9 +12353,9 @@ namespace FC{
 			bool success = CycleStateSnapshot::saveSnapshot(snapshot);
 			
 			if (success) {
-				logWarn("Cycle", "✅ 状态快照已保存，可用于调试恢复.");
+				logWarn("Cycle", "? 状态快照已保存，可用于调试恢复.");
 			} else {
-				logError("Cycle", "⚠️ 保存状态快照失败.");
+				logError("Cycle", "?? 保存状态快照失败.");
 			}
 		}
 		catch (const std::exception& e) {
@@ -12387,7 +12404,7 @@ namespace FC{
 			taskManager.addTask(task);
 		}
 		
-		logWarn("Cycle", "✅ 状态已从快照恢复: %s", snapshot.timestamp.c_str());
+		logWarn("Cycle", "? 状态已从快照恢复: %s", snapshot.timestamp.c_str());
 		logWarn("Cycle", "   错误位置: %s", snapshot.errorLocation.c_str());
 		logWarn("Cycle", "   任务数量: %d", (int)snapshot.allTasks.size());
 	}

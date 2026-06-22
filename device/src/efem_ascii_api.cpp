@@ -255,10 +255,10 @@ void EFEMAsciiApi::process(){
 	//		d->last_send_ready_time = time;
 	//	}
 	//}
-	memset(d->buffer, 0, sizeof(d->buffer)); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	memset(d->buffer, 0, sizeof(d->buffer)); // ÇåÁã²Ù×÷
 	//handle data
 	for (int i = 0; i < getBufferSize();i++){
-		peekBuffer(i, d->buffer, 1);//ï¿½Ó»ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
+		peekBuffer(i, d->buffer, 1);//´Ó»º´æ¶ÁÈ¡Êý¾Ý
 		if (d->buffer[0] == 0x0d){
 			size_t size = min(MAX_BUFFER_SIZE, i + 1);
 			readBuffer(d->buffer, size);  //read from buffer
@@ -365,7 +365,7 @@ void EFEMAsciiApi::processSingleMessage(const std::string& message) {
 
 	notifyCommandObservers(message, command);
 
-	if (base == READY && type == INF && msg->paramers.size() == 1 && msg->paramers.at(0) == std::string("COMM")){//ï¿½Õµï¿½Readyï¿½ï¿½Ï¢ï¿½Ø¸ï¿½
+	if (base == READY && type == INF && msg->paramers.size() == 1 && msg->paramers.at(0) == std::string("COMM")){//ÊÕµ½ReadyÏûÏ¢»Ø¸´
 		sendACK(command->message);
 		logInform(getName().c_str(), "sendACK processSingleMessage=%s", message.c_str());
 		setCommunicationState(COMMUNICATING);
