@@ -69,6 +69,8 @@ namespace FC{
 		bool loop = true;
 		std::chrono::steady_clock::time_point start_time;//开始时间点
 		std::chrono::steady_clock::time_point start_time_1;//开始时间点
+		std::chrono::steady_clock::time_point atmosphere_stable_start_time;//真空计稳定计时起点
+		bool atmosphere_stable_timing = false;
 		const  std::chrono::hours timeout = std::chrono::hours(1); //超时时间
 	};
 
@@ -343,6 +345,7 @@ namespace FC{
 			else 
 			{
 				d->start_time_1 = std::chrono::steady_clock::now();
+				d->atmosphere_stable_timing = false;
 				step = 80;
 			}
 		}
@@ -416,6 +419,7 @@ namespace FC{
 		int step = 80;
 		auto now_time = std::chrono::steady_clock::now();
 		auto elapsed = now_time - d->start_time_1;
+		const auto stable_duration = std::chrono::seconds(2);
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -423,23 +427,36 @@ namespace FC{
 
 		if (d->sub->getVacuumPressureGageState() == 1)//大气值
 		{
-			step = 70;
+			const auto stable_now = std::chrono::steady_clock::now();
+			if (!d->atmosphere_stable_timing)
+			{
+				d->atmosphere_stable_timing = true;
+				d->atmosphere_stable_start_time = stable_now;
+				logInform(d->sub->getName().c_str(), "真空计到达大气位，开始连续稳定判定2秒.");
+			}
+
+			if (stable_now - d->atmosphere_stable_start_time >= stable_duration)
+			{
+				step = 70;
+			}
+			else
+			{
+				step = 80;
+			}
 		}
 		else {
+			d->atmosphere_stable_timing = false;
 			Sleep(100); //1s
+			step = 80;
+		}
 
+		if (step == 80)
+		{
 			if (elapsed >= d->timeout)
 			{
 				addCommandExecutionAlarmMessage(d->sub->getName(), "检测是否达到大气值超时", step);
 				step = 10000;
 			}
-			else
-			{
-				auto remaining = d->timeout - elapsed;
-				auto sec = std::chrono::duration_cast<std::chrono::seconds>(remaining).count();
-				step = 80;//继续当前函数
-			}
-
 		}
 		return SystemState(step);
 	}

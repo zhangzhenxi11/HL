@@ -20,11 +20,47 @@
 #include "LoadLock/fortrend_loadlock_open_cassette_door_command.h"
 #include "LoadLock/fortrend_loadlock_subsystem.h"
 
+#include <chrono>
+
 #if _MSC_VER >= 1600
 #pragma execution_character_set("utf-8")
 #endif
 
 namespace FC{
+
+	namespace
+	{
+		bool waitVacuumPressureGageStateStable(FortrendLoadLockSubsystem* sub, int targetState, const std::chrono::milliseconds stableDuration)
+		{
+			const auto pollInterval = std::chrono::milliseconds(100);
+			std::chrono::steady_clock::time_point stableStartTime;
+			bool stableTiming = false;
+			const auto deadline = std::chrono::steady_clock::now() + stableDuration * 2;
+
+			while (std::chrono::steady_clock::now() < deadline)
+			{
+				if (sub->getVacuumPressureGageState() == targetState)
+				{
+					const auto now = std::chrono::steady_clock::now();
+					if (!stableTiming)
+					{
+						stableTiming = true;
+						stableStartTime = now;
+					}
+					else if (now - stableStartTime >= stableDuration)
+					{
+						return true;
+					}
+				}
+				else
+				{
+					stableTiming = false;
+				}
+				Sleep(static_cast<DWORD>(pollInterval.count()));
+			}
+			return false;
+		}
+	}
 
 	
 
@@ -70,9 +106,10 @@ namespace FC{
 				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_DOOR_EXCEPTION, Poco::format("工位: %s 角阀已打开（逻辑错误）", sub->getName()), this);
 			}
 			//2025-8-26 有具体数值改成读压力表信号
-			if (sub->getVacuumPressureGageState() !=1)
+			logInform(sub->getName().c_str(), "真空模式下，检测真空计是否连续稳定2秒到达大气位.");
+			if (!waitVacuumPressureGageStateStable(sub, 1, std::chrono::seconds(2)))
 			{
-				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 当前的真空值%d未达到设定值（逻辑错误）", sub->getName(), sub->getVacuumValue()), this);
+				throw KernelCommandRejectException(__FILE__, KernelSysException::KR_MODULE_STATE_EXCEPTION, Poco::format("工位: %s 当前真空计未连续稳定2秒到达大气位, 当前真空值%.3f（逻辑错误）", sub->getName(), sub->getVacuumValue()), this);
 			}
 		}
 		//get command configure
