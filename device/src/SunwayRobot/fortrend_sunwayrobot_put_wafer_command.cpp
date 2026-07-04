@@ -583,8 +583,9 @@ SunwayRobotPutWaferCommand::RunResult SunwayRobotPutWaferCommand::onRun() throw(
 			return updateAwcData();
 			}
 		);
-		return RunResult::RUN_OK;
 	}
+
+	return RunResult::RUN_FAILD;
 }
 
 }
