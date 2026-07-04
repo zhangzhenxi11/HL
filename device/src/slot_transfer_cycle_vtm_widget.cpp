@@ -333,6 +333,7 @@ namespace FC{
 
 		//仅在真实下料冲突，或对侧LL下层完成片需要优先回LP时上锁。
 		bool isLoadingInterlock(const std::string& LLName);
+		bool isEfemLoadDispatchBlocked(const std::string& LLName) const;
 		bool canStartSplitModeEgressPreVacuum(const std::string& LLName) const;
 
 	private:
@@ -3994,6 +3995,16 @@ namespace FC{
 			break;
 				case 301:
 				{
+					if (isEfemLoadDispatchBlocked("LLA"))
+					{
+						static int wait_dispatch_log_count = 0;
+						if ((wait_dispatch_log_count++ % 20) == 0)
+						{
+							logInform(lk1->getName().c_str(), "等待对侧EFEM下料请求完成后再发送上料请求...");
+						}
+						Sleep(200);
+						break;
+					}
 					tool_allow_get_wafer_LLA = true;
 					logInform(lk1->getName().c_str(), "已发送上料请求.");
 					loadlock1_auto_step = 302;
@@ -5849,6 +5860,16 @@ namespace FC{
 				break;
 				case 301:
 				{
+					if (isEfemLoadDispatchBlocked("LLB"))
+					{
+						static int wait_dispatch_log_count = 0;
+						if ((wait_dispatch_log_count++ % 20) == 0)
+						{
+							logInform(lk2->getName().c_str(), "等待对侧EFEM下料请求完成后再发送上料请求...");
+						}
+						Sleep(200);
+						break;
+					}
 					tool_allow_get_wafer_LLB = true;//呼叫LP上料
 					logInform(lk2->getName().c_str(), "已发送上料请求.");
 					loadlock2_auto_step = 302;
@@ -11228,20 +11249,26 @@ namespace FC{
 			return hasUnloadConflict || hasLowerSlotPriorityReturn;
 		}
 
-		const std::string ingressLL = isAInBOutMode() ? "LLA" : "LLB";
-		const std::string egressLL = isAInBOutMode() ? "LLB" : "LLA";
-		if (LLName != ingressLL)
-		{
-			return false;
-		}
-
-		const auto egressSnapshot = buildLoadLockTaskSnapshot(egressLL.c_str());
-		const bool unloadRequested = (egressLL == "LLA") ? tool_allow_put_wafer_LLA : tool_allow_put_wafer_LLB;
-		const bool egressHasWaferToUnload =
-			!egressSnapshot.returnPendingTasks.empty() || !egressSnapshot.returnCompletedTasks.empty();
-
-		return unloadRequested || taskManager.hasEfemUnloadInProgress(egressLL) || egressHasWaferToUnload;
+	return false;
 	}
+
+bool QSlotTransferCycleVTMWidgetPrivate::isEfemLoadDispatchBlocked(const std::string& LLName) const
+{
+	if (isSingleLoadLockMode())
+	{
+		return false;
+	}
+
+	const std::string ingressLL = isAInBOutMode() ? "LLA" : "LLB";
+	const std::string egressLL = isAInBOutMode() ? "LLB" : "LLA";
+	if (LLName != ingressLL)
+	{
+		return false;
+	}
+
+	const bool unloadRequested = (egressLL == "LLA") ? tool_allow_put_wafer_LLA : tool_allow_put_wafer_LLB;
+	return unloadRequested || taskManager.hasEfemUnloadInProgress(egressLL);
+}
 
 	bool QSlotTransferCycleVTMWidgetPrivate::canStartSplitModeEgressPreVacuum(const std::string& LLName) const
 	{
