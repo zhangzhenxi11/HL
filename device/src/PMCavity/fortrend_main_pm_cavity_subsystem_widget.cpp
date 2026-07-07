@@ -50,6 +50,8 @@ public:
 	//std::vector<QCheckBox*> arm_stat;
 	std::vector<QCheckBox*> input_checkboxs;
 	QCheckBox* tm_cavity_door_ckb = 0;
+	QCheckBox* pm_cavity_tcp_connected_ckb = 0;
+	QCheckBox* pm_open_cavity_door_interlock_ckb = 0;
 	QCheckBox* pm_cavity_motor_home_ckb,
 		* pm_cavity_motor_running_ckb, 
 		* pm_cavity_motor_forward_ckb = 0,
@@ -139,6 +141,14 @@ void QMainPMCavitySubsystemWidget::init(){
 	d->tm_cavity_door_ckb->setObjectName("io_object");
 	d->tm_cavity_door_ckb->setEnabled(false);
 
+	d->pm_cavity_tcp_connected_ckb = new QCheckBox(QString("TCP通讯状态"));
+	d->pm_cavity_tcp_connected_ckb->setObjectName("io_object");
+	d->pm_cavity_tcp_connected_ckb->setEnabled(false);
+
+	d->pm_open_cavity_door_interlock_ckb = new QCheckBox(QString("PM门开互锁"));
+	d->pm_open_cavity_door_interlock_ckb->setObjectName("io_object");
+	d->pm_open_cavity_door_interlock_ckb->setEnabled(false);
+
 	//d->pm_cavity_motor_forward_ckb = new QCheckBox(QString("电机前进到位信号"));
 	//d->pm_cavity_motor_forward_ckb->setObjectName("io_object");
 	//d->pm_cavity_motor_forward_ckb->setEnabled(false);
@@ -187,6 +197,7 @@ void QMainPMCavitySubsystemWidget::init(){
 	d->ui->operation_state_gridLayout->addWidget(d->tm_cavity_door_ckb, 0, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_home_ckb, 0, 1);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_alarm_ckb, 0, 2);
+	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_tcp_connected_ckb, 0, 3);
 	//d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_forward_ckb, 1, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_motor_running_ckb, 1, 0);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_cavity_raxis_motor_running_ckb, 1, 1);
@@ -197,6 +208,7 @@ void QMainPMCavitySubsystemWidget::init(){
 	d->ui->operation_state_gridLayout->addWidget(d->pm_max_plane_Level_ckb, 2, 1);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_rotating_plane_Level_ckb, 2, 2);
 	d->ui->operation_state_gridLayout->addWidget(d->pm_lift_pin_Level_ckb, 2, 3);
+	d->ui->operation_state_gridLayout->addWidget(d->pm_open_cavity_door_interlock_ckb, 3, 0);
 
 	d->ui->label_50->hide();
 }
@@ -341,6 +353,8 @@ void QMainPMCavitySubsystemWidget::onAttributeUpdate(){
 	d->ui->speed_realTime_Jog_speed_r->setText(QString::number(getSubsystem()->getPMCavityRAxisMotorSpeed()));
 
 	d->tm_cavity_door_ckb->setChecked(getSubsystem()->getPMCavitySafeSignal());
+	d->pm_cavity_tcp_connected_ckb->setChecked(getSubsystem()->getPmCavityConnectedStatus());
+	d->pm_open_cavity_door_interlock_ckb->setChecked(getSubsystem()->getOpenCavityDoorIntreLockStatus());
 
 	d->pm_cavity_motor_home_ckb->setChecked(getSubsystem()->getLiftingHomeDone());
 	d->pm_min_plane_Level_ckb->setChecked(getSubsystem()->getMinimumPlaneLevelSignal());

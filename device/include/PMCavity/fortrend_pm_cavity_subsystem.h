@@ -101,6 +101,9 @@ namespace FC{
 		void setVacuumEnable(const bool value);
 		bool getVacuumEnable()const;
 
+		bool getPmCavityConnectedStatus()const;
+		bool getOpenCavityDoorIntreLockStatus()const;
+
 		bool getWithWaferModeEnable()const;
 		void setWithWaferModeEnable(const bool value);
 

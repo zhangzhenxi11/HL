@@ -1354,6 +1354,15 @@
 				<!--PM腔工艺步骤地址-->
 				<ProcessingStepAddress>D4920</ProcessingStepAddress>
 			</PMCavityRecardAddress>
+			<!-- 互锁配置-->
+			<InterLock>
+				<!--读取真空度地址-->
+				<ReadValueAddress>DM8500</ReadValueAddress>
+				<!--tcp通讯状态-->
+				<TcpConnectedAddress>MR37501</TcpConnectedAddress>
+				<!--PM门开的互锁-->
+				<OpenTmCavityDoorSafetySignalAddress>MR37501</OpenTmCavityDoorSafetySignalAddress>
+			</InterLock>
 			<!-- IO配置-->
 			<IO>	
 				<!--IO的输入名称-->	

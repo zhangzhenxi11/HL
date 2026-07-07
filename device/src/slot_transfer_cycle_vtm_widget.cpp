@@ -1347,6 +1347,28 @@ namespace FC{
 	{
 		if (!snapshot.hasWaferPm)
 		{
+			if (snapshot.returnPendingCount > 0 && (snapshot.armAHasWafer || snapshot.armBHasWafer))
+			{
+				int occupiedPmArm = snapshot.preferredPmArm;
+				if (occupiedPmArm < 0 || occupiedPmArm > 1)
+				{
+					occupiedPmArm = snapshot.armAHasWafer ? 0 : 1;
+				}
+				reason =
+					"reason=PM2无片但回片仍占用手臂,应优先完成回片" +
+					std::string(", requestedLlArm=") + std::to_string(requestedLlArm) +
+					", pm2Has=" + std::to_string(static_cast<int>(snapshot.hasWaferPm)) +
+					", pm2Crafting=" + std::to_string(static_cast<int>(snapshot.pm2CraftInProgress)) +
+					", armA_has=" + std::to_string(static_cast<int>(snapshot.armAHasWafer)) +
+					", armA_pending=" + std::to_string(static_cast<int>(snapshot.armAHasPending)) +
+					", armB_has=" + std::to_string(static_cast<int>(snapshot.armBHasWafer)) +
+					", armB_pending=" + std::to_string(static_cast<int>(snapshot.armBHasPending)) +
+					", pending=" + std::to_string(snapshot.pm2PendingCount) +
+					", completed=" + std::to_string(snapshot.pm2CompletedCount) +
+					", return_pending=" + std::to_string(snapshot.returnPendingCount) +
+					", expectedPmArm=" + std::to_string(occupiedPmArm);
+				return true;
+			}
 			reason.clear();
 			return false;
 		}
@@ -4551,7 +4573,7 @@ namespace FC{
 								});
 							if (currentTaskIt == llaSnapshot.pendingTasks.end())
 							{
-								logFailed(lk1->getName().c_str(), Poco::format("step 1051未找到已锁定的LLA待取任务 taskId=%d，回到1000重新锁定任务.", lockedTaskId));
+								logWarn(lk1->getName().c_str(), "step 1051未找到已锁定的LLA待取任务 taskId=%d，回到1000重新锁定任务.", lockedTaskId);
 								loadlock1_pick_task_id.store(-1);
 								loadlock1_auto_step = 1000;
 								Sleep(200);
@@ -6412,7 +6434,7 @@ namespace FC{
 								});
 							if (currentTaskIt == llbSnapshot.pendingTasks.end())
 							{
-								logFailed(lk2->getName().c_str(), Poco::format("step 1051未找到已锁定的LLB待取任务 taskId=%d，回到1000重新锁定任务.", lockedTaskId));
+								logWarn(lk2->getName().c_str(), "step 1051未找到已锁定的LLB待取任务 taskId=%d，回到1000重新锁定任务.", lockedTaskId);
 								loadlock2_pick_task_id.store(-1);
 								loadlock2_auto_step = 1000;
 								Sleep(200);
@@ -7840,8 +7862,8 @@ namespace FC{
 								{
 									pm1_craft_task_id.store(-1);
 									robot_put_to_pm1.taskId.store(-1);
-								logFailed("PM1", Poco::format("PM1放片成功后未找到与arm=%d对应的pending task，后续工艺回写将拒绝错绑.",
-									robot_put_to_pm1.arm.load()));
+									logWarn("PM1", "PM1放片成功后未找到与arm=%d对应的pending task，后续工艺回写将拒绝错绑.",
+										robot_put_to_pm1.arm.load());
 								}
 								pm1_allow_get_put_wafer = false;
 								pm1_auto_step.store(2000);
@@ -7923,7 +7945,7 @@ namespace FC{
 								}
 								if (!foundTask)
 								{
-									logFailed(wtr->getName().c_str(), Poco::format("PM1取片完成但未找到已完成任务，回退检查 step=%d", pm1_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM1取片完成但未找到已完成任务，回退检查 step=%d", pm1_auto_step.load());
 									robot_get_from_pm1.taskId.store(-1);
 									pm1_auto_step.store(10);
 									break;
@@ -8000,7 +8022,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm1Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM1交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm1_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM1交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm1_auto_step.load());
 									pm1_auto_step.store(1060);
 									return;
 								}
@@ -8058,7 +8080,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm1Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM1交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm1_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM1交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm1_auto_step.load());
 									pm1_auto_step.store(1070);
 									return;
 								}
@@ -8111,7 +8133,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm1Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM1最终取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm1_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM1最终取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm1_auto_step.load());
 									pm1_auto_step.store(1090);
 									return;
 								}
@@ -8451,7 +8473,7 @@ namespace FC{
 										}
 										else
 										{
-											logFailed("PM2", "PM2无片但手臂有片，且未匹配到待加工任务，等待修正...");
+											logWarn("PM2", "PM2无片但手臂有片，且未匹配到待加工任务，等待修正...");
 											pm2_auto_step.store(10);
 											Sleep(100);
 										}
@@ -8514,7 +8536,7 @@ namespace FC{
 										}
 										else
 										{
-											logFailed("PM2", "PM2有片但没有待下料任务，固定手臂规则下不默认换臂取片，等待任务对齐...");
+											logWarn("PM2", "PM2有片但没有待下料任务，固定手臂规则下不默认换臂取片，等待任务对齐...");
 											pm2_auto_step.store(10);
 											Sleep(100);
 										}
@@ -8579,15 +8601,15 @@ namespace FC{
 											}
 											else
 											{
-												logFailed("PM2", Poco::format("PM2交换料前状态与固定手臂task.arm不一致: returnArm=%d, armA_has=%d, armA_pending=%d, armB_has=%d, armB_pending=%d，等待修正...",
-													returnTaskArm, haswaferarm1, arm1HasPending, haswaferarm2, arm2HasPending));
+												logWarn("PM2", "PM2交换料前状态与固定手臂task.arm不一致: returnArm=%d, armA_has=%d, armA_pending=%d, armB_has=%d, armB_pending=%d，等待修正...",
+													returnTaskArm, haswaferarm1, arm1HasPending, haswaferarm2, arm2HasPending);
 												pm2_auto_step.store(10);
 												Sleep(100);
 											}
 										}
 										else
 										{
-											logFailed("PM2", "PM2有片但没有待加工任务，无法判断取放，等待中...");
+											logWarn("PM2", "PM2有片但没有待加工任务，无法判断取放，等待中...");
 											pm2_auto_step.store(10);
 											Sleep(100);
 										}
@@ -8636,8 +8658,8 @@ namespace FC{
 								else
 								{
 									pm2_craft_task_id.store(-1);
-									logFailed("PM2", Poco::format("PM2放片成功后未找到与arm=%d对应的pending task，后续工艺回写将退回队首兜底.",
-										robot_put_to_pm2.arm.load()));
+									logWarn("PM2", "PM2放片成功后未找到与arm=%d对应的pending task，后续工艺回写将退回队首兜底.",
+										robot_put_to_pm2.arm.load());
 								}
 								//pm2_allow_get_put_wafer = false;
 								//pm2_allow_loading_wafer = false;
@@ -8815,7 +8837,7 @@ namespace FC{
 						bool arm2HasWafer = wtr->hasObject(1);  // B臂(索引1)
 						if (!arm1HasWafer || arm2HasWafer) 
 						{
-							logFailed(wtr->getName().c_str(), Poco::format("PM2交换前状态异常(1070)：arm1Has=%d, arm2Has=%d，等待修正...", arm1HasWafer, arm2HasWafer));
+							logWarn(wtr->getName().c_str(), "PM2交换前状态异常(1070)：arm1Has=%d, arm2Has=%d，等待修正...", arm1HasWafer, arm2HasWafer);
 							pm2_exchange_in_flight.store(false);
 							pm2_auto_step.store(200);
 							return;
@@ -8899,7 +8921,7 @@ namespace FC{
 							}
 							else
 							{
-								logFailed("PM2", "PM2最终取片失败，回到step 200重新调度.");
+								logWarn("PM2", "PM2最终取片失败，回到step 200重新调度.");
 								Sleep(200);
 								pm2_auto_step.store(200);
 							}
@@ -9304,8 +9326,8 @@ namespace FC{
 								{
 									pm3_craft_task_id.store(-1);
 									robot_put_to_pm3.taskId.store(-1);
-								logFailed("PM3", Poco::format("PM3放片成功后未找到与arm=%d对应的pending task，后续工艺回写将拒绝错绑.",
-									robot_put_to_pm3.arm.load()));
+									logWarn("PM3", "PM3放片成功后未找到与arm=%d对应的pending task，后续工艺回写将拒绝错绑.",
+										robot_put_to_pm3.arm.load());
 								}
 								pm3_allow_get_put_wafer = false;
 								pm3_auto_step.store(2000);
@@ -9373,7 +9395,7 @@ namespace FC{
 								}
 								if (!foundTask)
 								{
-									logFailed(wtr->getName().c_str(), Poco::format("PM3取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM3取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load());
 									robot_get_from_pm3.taskId.store(-1);
 									pm3_auto_step.store(10);
 									break;
@@ -9441,7 +9463,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm3Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM3交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM3交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load());
 									pm3_auto_step.store(1060);
 									return;
 								}
@@ -9493,7 +9515,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm3Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM3交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM3交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load());
 									pm3_auto_step.store(1070);
 									return;
 								}
@@ -9540,7 +9562,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm3Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM3最终取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM3最终取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm3_auto_step.load());
 									pm3_auto_step.store(1090);
 									return;
 								}
@@ -9888,8 +9910,8 @@ namespace FC{
 								{
 									pm4_craft_task_id.store(-1);
 									robot_put_to_pm4.taskId.store(-1);
-								logFailed("PM4", Poco::format("PM4放片成功后未找到与arm=%d对应的pending task，后续工艺回写将拒绝错绑.",
-									robot_put_to_pm4.arm.load()));
+									logWarn("PM4", "PM4放片成功后未找到与arm=%d对应的pending task，后续工艺回写将拒绝错绑.",
+										robot_put_to_pm4.arm.load());
 								}
 								pm4_allow_get_put_wafer = false;
 								pm4_auto_step.store(2000);
@@ -9974,7 +9996,7 @@ namespace FC{
 								}
 								if (!foundTask)
 								{
-									logFailed(wtr->getName().c_str(), Poco::format("PM4取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM4取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load());
 									robot_get_from_pm4.taskId.store(-1);
 									pm4_auto_step.store(10);
 									break;
@@ -10054,7 +10076,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm4Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM4交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM4交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load());
 									pm4_auto_step.store(1060);
 									return;
 								}
@@ -10112,7 +10134,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm4Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM4交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM4交换完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load());
 									pm4_auto_step.store(1070);
 									return;
 								}
@@ -10165,7 +10187,7 @@ namespace FC{
 										return task.taskId == completedTaskId;
 									});
 								if (completedIt == pm4Snapshot.completedTasks.end()) {
-									logFailed(wtr->getName().c_str(), Poco::format("PM4最终取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load()));
+									logWarn(wtr->getName().c_str(), "PM4最终取片完成但未找到锁定的已完成任务，回退检查 step=%d", pm4_auto_step.load());
 									pm4_auto_step.store(1090);
 									return;
 								}
@@ -10301,7 +10323,7 @@ namespace FC{
 				logInform(wtr->getName().c_str(), "Robot线程：step %d,GET前检查 station=%s arm=%d hasObject=%d", step, stationName, arm, (int)armHasWafer);
 				if (armHasWafer)
 				{
-					logFailed(wtr->getName().c_str(), Poco::format("Robot线程：step %d,取消GET station=%s arm=%d, 原因:手臂已有片", step, stationName, arm));
+					logWarn(wtr->getName().c_str(), "Robot线程：step %d,取消GET station=%s arm=%d, 原因:手臂已有片", step, stationName, arm);
 					return false;
 				}
 				return true;
@@ -10312,7 +10334,7 @@ namespace FC{
 				logInform(wtr->getName().c_str(), "Robot线程：step %d,PUT前检查 station=%s arm=%d hasObject=%d", step, stationName, arm, (int)armHasWafer);
 				if (!armHasWafer)
 				{
-					logFailed(wtr->getName().c_str(), Poco::format("Robot线程：step %d,取消PUT station=%s arm=%d, 原因:手臂无片", step, stationName, arm));
+					logWarn(wtr->getName().c_str(), "Robot线程：step %d,取消PUT station=%s arm=%d, 原因:手臂无片", step, stationName, arm);
 					return false;
 				}
 				return true;
@@ -10325,8 +10347,8 @@ namespace FC{
 					step, stationName, getArm, (int)getArmHasWafer, putArm, (int)putArmHasWafer);
 				if (getArmHasWafer || !putArmHasWafer)
 				{
-					logFailed(wtr->getName().c_str(), Poco::format("Robot线程：step %d,取消EXCHANGE station=%s getArm=%d putArm=%d, 原因:执行前手臂状态已变化",
-						step, stationName, getArm, putArm));
+					logWarn(wtr->getName().c_str(), "Robot线程：step %d,取消EXCHANGE station=%s getArm=%d putArm=%d, 原因:执行前手臂状态已变化",
+						step, stationName, getArm, putArm);
 					return false;
 				}
 				return true;
@@ -11772,8 +11794,9 @@ bool QSlotTransferCycleVTMWidgetPrivate::isEfemLoadDispatchBlocked(const std::st
 					(elp2->getState() == IKernelSubSystem::State::SUB_NORMAL || ui->disabledefem->checkState() == Qt::CheckState::Checked)
 					)
 				{
-					//rest_step = 200;
-					rest_step = 10000;
+					//2026-7-7 放开200
+					rest_step = 200;
+					//rest_step = 10000;
 
 				}
 				else
@@ -11840,17 +11863,17 @@ bool QSlotTransferCycleVTMWidgetPrivate::isEfemLoadDispatchBlocked(const std::st
 
 				lk1->startCommand(cmd_lk1);
 				lk2->startCommand(cmd_lk2);
-				pm1->startCommand(cmd_pm1);
+				//pm1->startCommand(cmd_pm1);
 				pm2->startCommand(cmd_pm2);
-				pm3->startCommand(cmd_pm3);
-				pm4->startCommand(cmd_pm4);
+				//pm3->startCommand(cmd_pm3);
+				//pm4->startCommand(cmd_pm4);
 
 				cmd_lk1->wait();
 				cmd_lk2->wait();
-				cmd_pm1->wait();
+				//cmd_pm1->wait();
 				cmd_pm2->wait();
-				cmd_pm3->wait();
-				cmd_pm4->wait();
+				//cmd_pm3->wait();
+				//cmd_pm4->wait();
 
 				if (cmd_lk1->hasError())
 				{
@@ -11862,26 +11885,26 @@ bool QSlotTransferCycleVTMWidgetPrivate::isEfemLoadDispatchBlocked(const std::st
 					rest_step = 15000;
 					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失.", lk2->getName()).c_str());
 				}
-				else if (cmd_pm1->hasError())
-				{
-				rest_step = 15000;
-				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm1->getName()).c_str());
-				}
+				//else if (cmd_pm1->hasError())
+				//{
+				//	rest_step = 15000;
+				//	logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm1->getName()).c_str());
+				//}
 				else if (cmd_pm2->hasError())
 				{
 					rest_step = 15000;
 					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm2->getName()).c_str());
 				}
-				else if (cmd_pm3->hasError())
-				{
-				rest_step = 15000;
-				logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm3->getName()).c_str());
-				}
-				else if (cmd_pm4->hasError())
-				{
-					rest_step = 15000;
-					logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm4->getName()).c_str());
-				}
+				//else if (cmd_pm3->hasError())
+				//{
+				//	rest_step = 15000;
+				//	logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm3->getName()).c_str());
+				//}
+				//else if (cmd_pm4->hasError())
+				//{
+				//	rest_step = 15000;
+				//	logError(reset_process_name.c_str(), Poco::format("%s关闭传输腔门阀命令执行失败.", pm4->getName()).c_str());
+				//}
 				else{
 					rest_step = 10000;
 				}

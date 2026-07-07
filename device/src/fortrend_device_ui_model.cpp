@@ -107,10 +107,16 @@
 #pragma execution_character_set("utf-8")
 #endif
 
-//手动版本号管理
+// 手动版本号仅维护业务版本，提交号/分支优先使用构建系统注入
 #define VERSION_NUMBER  "1.0.7.0522_alpha"
-#define GIT_COMMIT   "ac2f81df17ca80c7502c239c91abf4323f895b90"
-#define GIT_BRANCH  "dev"
+
+#ifndef GIT_COMMIT
+#define GIT_COMMIT   "unknown"
+#endif
+
+#ifndef GIT_BRANCH
+#define GIT_BRANCH  "unknown"
+#endif
 
 using namespace FC;
 

@@ -81,6 +81,19 @@ namespace FC{
 		std::string pm_cavity_motor_home_address = "MR35105";      //PM腔电机后退完成信号地址
 		std::string pm_cavity_motor_forward_address = "MR35104";   //PM腔电机前进完成信号地址
 
+		//pm开门互锁
+		std::string pm_cavity_door_open_interlock_address = "";  //PM腔开门互锁地址
+		//tcp通讯状态
+		std::string pm_cavity_tcp_connect_address = "";  //PM腔TCP通讯状态地址
+		//pm真空值
+		std::string pm_cavity_vacuum_value_address = "";  //PM腔真空值地址
+
+		bool  pm_cavity_door_open_interlock = false;  //PM腔开门互锁
+
+		bool  pm_cavity_tcp_connect = false;  //PM腔TCP通讯状态
+
+		float pm_cavity_vacuum_value = 0.0;  //PM腔真空值
+
 		bool pm_cavity_safe = false;				//PM腔安全信号
 		bool pm_cavity_motor_home = false;         //PM腔步进电机后退到位信号
 		bool pm_cavity_motor_forward = false;
@@ -429,11 +442,13 @@ namespace FC{
 		d->isRunning = running;
 	}
 	double FortrendPMCavitySubsystem::getVacuumValue()const{
-		if (d->pm_cavity_motiner_float_state.size() > 0)
-		{
-			return d->pm_cavity_motiner_float_state[0].last_value;
-		}
+		//if (d->pm_cavity_motiner_float_state.size() > 0)
+		//{
+		//	return d->pm_cavity_motiner_float_state[0].last_value;
+		//}
 		//return 100000;
+
+		return d->pm_cavity_vacuum_value;
 	}
 
 	double FortrendPMCavitySubsystem::getTemperatureValue()const{
@@ -453,6 +468,16 @@ namespace FC{
 
 	bool  FortrendPMCavitySubsystem::getVacuumEnable()const {
 		return d->vacuum_enable;
+	}
+
+	bool FortrendPMCavitySubsystem::getPmCavityConnectedStatus() const
+	{
+		return d->pm_cavity_tcp_connect;
+	}
+
+	bool FortrendPMCavitySubsystem::getOpenCavityDoorIntreLockStatus() const
+	{
+		return d->pm_cavity_door_open_interlock;
 	}
 
 	bool FortrendPMCavitySubsystem::getWithWaferModeEnable()const{
@@ -1489,6 +1514,11 @@ namespace FC{
 			//lift pin angle
 			io_changed |= safe_read_float(d->rotating_axis_safe_angle_address,d->rotating_axis_safe_angle_value);
 
+			io_changed |= safe_read_float(d->pm_cavity_vacuum_value_address, d->pm_cavity_vacuum_value);
+
+			io_changed |= safe_read_bit(d->pm_cavity_tcp_connect_address, d->pm_cavity_tcp_connect);
+
+			io_changed |= safe_read_bit(d->pm_cavity_door_open_interlock_address, d->pm_cavity_door_open_interlock);
 
 			if (io_changed)
 			{
@@ -1679,6 +1709,13 @@ namespace FC{
 			d->rotating_axis_jerk_address = config->getString("AxisReadParameters.rotating_axis_jerk_address","");
 		}
 
+		if (config->has("InterLock"))
+		{
+			d->pm_cavity_vacuum_value_address = config->getString("InterLock.ReadValueAddress", "");
+			d->pm_cavity_tcp_connect_address = config->getString("InterLock.TcpConnectedAddress", "");
+			d->pm_cavity_door_open_interlock_address = config->getString("InterLock.OpenTmCavityDoorSafetySignalAddress", "");	
+
+		}
 		if (config->has("Reset"))
 		{
 			d->rotating_axis_clear_error_address = config->getString("Reset.rotating_axis_start_address","");

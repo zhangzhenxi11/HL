@@ -46,7 +46,7 @@
 #include "LoadLock/fortrend_loadlock_cavity_close_inserting_plate_valve_command.h"
 #include "LoadLock/fortrend_loadlock_cavity_open_height_vacuum_baffle_valve_command.h"
 #include "LoadLock/fortrend_loadlock_cavity_close_height_vacuum_baffle_valve_command.h"
-
+#include "PMCavity/fortrend_pm_cavity_subsystem.h"
 
 #include "slidevalvewidget.h"
 #include "anglevalvewidget.h"
@@ -82,6 +82,8 @@ public:
 	std::shared_ptr<FortrendLoadLockSubsystem> lk2;
 	std::shared_ptr<FortrendTMCavitySubsystem> tm;
 	std::shared_ptr<FortrendPumpSubsystem> pump;
+	std::shared_ptr<FortrendPMCavitySubsystem> pm;
+
 	QCheckBox *widget_tm_tmp_ckb = 0, *widget_lla_tmp_ckb = 0, *widget_llb_tmp_ckb = 0, *widget_vp_ckb = 0, *widget_pav_tm_ckb = 0, *widget_pav_lla_ckb = 0;
 	QCheckBox *widget_pav_llb_ckb = 0, *widget_ppv_tm_ckb = 0, *widget_ppv_lla_ckb = 0, *widget_ppv_llb_ckb = 0, *widget_pbv_tm_ckb = 0, *widget_pbv_lla_ckb = 0, *widget_pbv_llb_ckb = 0;
 	virtual void onAttributeChange(const IKernelCommand* cmd){
@@ -109,6 +111,7 @@ public:
 		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 		tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
+		pm = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 }
 
 /**
@@ -443,7 +446,7 @@ void QVacuumizeSubsystemWidget::onAttributeUpdate()throw(KernelException){
 	d->ui->molecule_pipeline_value_let->setText(QString::number(d->tm->getBackingPipelineVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 	d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
-
+	d->ui->pm2_cavity_current_vacuum_value_let->setText(QString::number(d->pm->getVacuumValue(), 'e', 3).append("Pa"));
 	//进度条
 	//d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumUpperlimitValue(),d->lk1->getVacuumValue()));
 	//d->ui->gmfm_tm_progress->setValue(convertRange(d->tm->getTMCavityVacuumUpperlimitValue(),d->tm->getTMCavityVacuumValue()));

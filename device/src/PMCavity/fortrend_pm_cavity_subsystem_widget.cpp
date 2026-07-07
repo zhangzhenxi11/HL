@@ -328,8 +328,8 @@ namespace FC{
 				d->arm_stat.at(i)->setChecked(getSubsystem()->hasObject(i));
 				}*/
 
-			//update door state
-			d->tm_cavity_door_ckb->setChecked(getSubsystem()->hasDoorOpend());
+			//update door state  2026-7-7 注释
+			//d->tm_cavity_door_ckb->setChecked(getSubsystem()->hasDoorOpend());
 
 			if (getSubsystem()->getPMCavityUpdatAxisParameters())
 			{

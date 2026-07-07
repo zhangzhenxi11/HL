@@ -692,6 +692,39 @@
     <string>终止流程</string>
    </property>
   </widget>
+  <widget class="FeedAndDischarge" name="pm2_widget" native="true">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>140</y>
+     <width>101</width>
+     <height>131</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="pm2_cavity_current_vacuum_value_let">
+   <property name="geometry">
+    <rect>
+     <x>1080</x>
+     <y>170</y>
+     <width>161</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_6">
+   <property name="geometry">
+    <rect>
+     <x>1080</x>
+     <y>146</y>
+     <width>81</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>PM2真空值</string>
+   </property>
+  </widget>
   <zorder>ppv_llb_h_1</zorder>
   <zorder>pav_llb_w_1</zorder>
   <zorder>pav_lla_w_1</zorder>
@@ -746,6 +779,9 @@
   <zorder>gridLayoutWidget_12</zorder>
   <zorder>gridLayoutWidget_13</zorder>
   <zorder>abort_process_btn</zorder>
+  <zorder>pm2_widget</zorder>
+  <zorder>pm2_cavity_current_vacuum_value_let</zorder>
+  <zorder>label_6</zorder>
  </widget>
  <customwidgets>
   <customwidget>

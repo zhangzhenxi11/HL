@@ -27,6 +27,8 @@
 #include "Pump/fortrend_pump_subsystem.h"
 #include "Pump/fortrend_pump_open_tm_cavity_auto_vacuum_command.h"
 
+#include "PMCavity/fortrend_pm_cavity_subsystem.h"
+
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QTextCodec>
@@ -45,6 +47,7 @@ namespace FC{
 		std::shared_ptr<FortrendLoadLockSubsystem> lk2;
 		std::shared_ptr<FortrendTMCavitySubsystem> tm;
 		std::shared_ptr<FortrendPumpSubsystem> pump;
+		std::shared_ptr<FortrendPMCavitySubsystem> pm;
 
 		QCheckBox *gmfk_tm_ckb = 0, *gmfm_tm_ckb = 0, *gmfk_lla_ckb = 0, *gmfm_lla_ckb = 0, *gmfk_llb_ckb = 0, *gmfm_llb_ckb = 0;
 
@@ -92,6 +95,7 @@ namespace FC{
 		lk2 = kernel->getKernelModule<FortrendLoadLockSubsystem>("LLB");
 		tm = kernel->getKernelModule<FortrendTMCavitySubsystem>("TM");
 		pump = kernel->getKernelModule<FortrendPumpSubsystem>("PUMP");
+		pm = kernel->getKernelModule<FortrendPMCavitySubsystem>("PM2");
 	}
 
 
@@ -404,6 +408,7 @@ namespace FC{
 		d->ui->tm_cavity_current_vacuum_value_let->setText(QString::number(d->tm->getTMCavityVacuumValue(), 'e', 3).append("Pa"));
 		d->ui->lla_current_vacuum_value_let->setText(QString::number(d->lk1->getVacuumValue(), 'e', 3).append("Pa"));
 		d->ui->llb_current_vacuum_value_let->setText(QString::number(d->lk2->getVacuumValue(), 'e', 3).append("Pa"));
+		
 		
 		//进度条
 		//d->ui->gmfm_lla_progress->setValue(convertRange(d->lk1->getVacuumValue()));
